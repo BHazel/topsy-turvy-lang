@@ -1,6 +1,6 @@
-# TOPSY TURVY
+# Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.1.0
+### Language Specification — Version 0.2.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -34,6 +34,7 @@ FINALE.
 - **`FINALE.`** — Closes the program and exits. The full stop is mandatory.
 - Everything between `HARK!` and `FINALE.` is executed in order.
 - Indentation is optional and has no semantic meaning. Indentation in examples follows libretto convention.
+- Keywords are case-insensitive. `BEHOLD`, `Behold`, and `behold` are all equally valid. The examples in this specification use uppercase throughout, which is the conventional and recommended style.
 
 ### Minimal Program
 
@@ -82,19 +83,32 @@ PRINCIPALS
   PRAY WELCOME Mabel          AS A FATHOM   BEING 3.14159
   PRAY WELCOME is_guilty      AS A DECREE   BEING VERITY
   PRAY WELCOME mystery        AS A PEER
+THE CURTAIN RISES.
 ```
 
 **Syntax:**
 ```
-PRAY WELCOME <name> AS A <type> [BEING <value>]
+PRINCIPALS
+  PRAY WELCOME <name> AS A <type> [BEING <value>]
+  ...
+THE CURTAIN RISES.
 ```
 
 - `PRAY WELCOME` — the formal welcoming of a new character onto the stage; `PRAY` drawn verbatim from *The Mikado*, Act I (*"Gentlemen, I pray you tell me..."*); `WELCOME` reflecting the theatrical tradition of receiving each new arrival before the assembled company, as in the *Dramatis Personae*
 - `<name>` — any valid identifier (letters, digits, hyphens, underscores; must begin with a letter)
 - `AS A <type>` — declares the type
 - `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to `NAUGHT` (null)
+- `THE CURTAIN RISES.` — closes the `PRINCIPALS` block. Once all characters have been introduced and the company is assembled, the curtain rises and the drama begins. The full stop is mandatory.
 
-Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax.
+Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax; inline declarations are free-standing statements and do not require `THE CURTAIN RISES.`
+
+```topsy
+ASIDE: a working variable declared mid-programme, outside any PRINCIPALS block
+PRAY WELCOME tally AS A PEER BEING 0
+tally IS APPOINTED SUM OF tally AND 1
+BEHOLD tally
+ASIDE: prints 1
+```
 
 ### Types
 
@@ -194,7 +208,9 @@ If either operand is a `FATHOM`, the result is a `FATHOM`. If both are `PEER`, t
 WOVEN OF "Hello, " AND name AND "!" IF YOU PLEASE.
 ```
 
-`WOVEN OF <expr> AND <expr> [AND <expr> ...] IF YOU PLEASE.` — concatenates any number of values, automatically casting each to `YARN`. The metaphor follows naturally from `YARN`: threads of text are woven together into a single fabric. `IF YOU PLEASE.` closes the expression — drawn verbatim from *H.M.S. Pinafore*, Sir Joseph Porter's running joke about the proper form of address.
+`WOVEN OF <expr> AND <expr> [AND <expr> ...] IF YOU PLEASE.` — concatenates any number of values, automatically casting each to `YARN`. The metaphor follows naturally from `YARN`: threads of text are woven together into a single fabric.
+
+**A note on `IF YOU PLEASE.`** — This closer appears wherever a construct accepts a variable-length list of terms: string concatenation (`WOVEN OF`), function calls (`SUMMON`), and the variadic boolean operators (`ALL OF`, `ANY OF`). It is the formal signal that the enumeration is complete and the assembled company may proceed. Drawn verbatim from *H.M.S. Pinafore*: Sir Joseph Porter insists throughout the opera that every order and request be tendered *"if you please"* — the precise Victorian form for notifying an assembled party that one has finished stating one's terms. An expression-list left open without `IF YOU PLEASE.` to close it is as irregular as giving Sir Joseph a direct order without the proper form of address.
 
 ### String Interpolation
 
@@ -206,7 +222,7 @@ BEHOLD "My name is {name}, Lord High {title}."
 
 ### Escape Characters
 
-The escape character within `YARN` literals is `~` (the Victorian flourish):
+The escape character within `YARN` literals is `~` (the Victorian flourish). `~` also serves as the line-continuation character outside string literals — both roles are fully documented in §18.
 
 | Sequence | Meaning              |
 |----------|----------------------|
@@ -224,15 +240,19 @@ The escape character within `YARN` literals is `~` (the Victorian flourish):
 ```topsy
 ALIKE x AND y          ASIDE: x == y  =>  VERITY or NAY
 UNLIKE x AND y         ASIDE: x != y  =>  VERITY or NAY
+PRE-ADAMITE x AND y    ASIDE: x > y   =>  VERITY or NAY
+LOWER DEGREE x AND y   ASIDE: x < y   =>  VERITY or NAY
 ```
 
-Greater/less-than is expressed using `LARGER OF` / `SMALLER OF`:
+`PRE-ADAMITE` — drawn from *Ruddigore*, Act II, in which the ancestral portraits of the Murgatroyd baronets descend through history to a baronet *"of Pre-Adamite antiquity"* — one who predates all others; he who comes before has the greater standing. `PRE-ADAMITE x AND y` yields `VERITY` if `x` has greater standing (i.e. is greater in value) than `y`.
+
+`LOWER DEGREE` — drawn from the pervasive G&S preoccupation with social degree and rank; *The Gondoliers* and *The Mikado* alike make much of the man who occupies a lower degree than another. `LOWER DEGREE x AND y` yields `VERITY` if `x` is of lower degree (i.e. lesser in value) than `y`.
+
+Greater-than-or-equal and less-than-or-equal are expressed by negating the strict form with `HARDLY EVER`:
 
 ```topsy
-UNLIKE x AND SMALLER OF x AND y    ASIDE: x > y
-ALIKE x AND SMALLER OF x AND y     ASIDE: x <= y
-UNLIKE x AND LARGER OF x AND y     ASIDE: x < y
-ALIKE x AND LARGER OF x AND y      ASIDE: x >= y
+HARDLY EVER LOWER DEGREE x AND y    ASIDE: x >= y
+HARDLY EVER PRE-ADAMITE x AND y     ASIDE: x <= y
 ```
 
 ### Boolean Operators
@@ -270,12 +290,17 @@ SHOULD IT TRANSPIRE THAT
 SO MUCH FOR THAT.
 ```
 
+When the inline conditional form is used (`SHOULD IT TRANSPIRE THAT <expression>` or `IN WHICH CAPACITY? <expression>`), the expression is evaluated directly and `JUST SO` is bypassed — the expression's result is consumed immediately by the conditional and is not deposited into `JUST SO`.
+
 ---
 
 ## 9. Conditionals
 
 ### If / Else If / Else
 
+Two equivalent forms are supported. In the **two-line form**, the expression is evaluated on the preceding line (depositing its result in `JUST SO`), and `SHOULD IT TRANSPIRE THAT` appears alone on the next line. In the **inline form**, the expression is supplied directly on the same line as the keyword, bypassing `JUST SO`.
+
+**Two-line form:**
 ```topsy
 <expression>
 SHOULD IT TRANSPIRE THAT
@@ -288,13 +313,25 @@ SHOULD IT TRANSPIRE THAT
 SO MUCH FOR THAT.
 ```
 
-- `SHOULD IT TRANSPIRE THAT` — evaluates `JUST SO` as a `DECREE`; the conditional phrasing of the Lord Chancellor in *Iolanthe*, who frames every legal determination as something that *transpires* to be the case
+**Inline form:**
+```topsy
+SHOULD IT TRANSPIRE THAT <expression>
+  QUITE SO.
+    <true block>
+  OR, IF NOT, <expression>
+    <else-if block>
+  OTHERWISE,
+    <else block>
+SO MUCH FOR THAT.
+```
+
+- `SHOULD IT TRANSPIRE THAT` — the conditional phrasing of the Lord Chancellor in *Iolanthe*, who frames every legal determination as something that *transpires* to be the case; in the two-line form it evaluates `JUST SO` as a `DECREE`; in the inline form the supplied expression is evaluated directly
 - `QUITE SO.` — the true branch; verbatim from *The Mikado*, used by Ko-Ko and Pooh-Bah as a crisp affirmation that the established fact is confirmed
 - `OR, IF NOT, <expression>` — else-if; evaluates a new expression; the Lord Chancellor's habit of carefully enumerating alternatives
 - `OTHERWISE,` — the else branch; Pooh-Bah explicitly uses "otherwise" and "on the other hand" when switching between his many logical branches and capacities
 - `SO MUCH FOR THAT.` — closes the conditional block; Ko-Ko's characteristic dismissive summary once a matter has been disposed of
 
-**Example:**
+**Example (two-line form):**
 
 ```topsy
 ALIKE rank AND "Admiral"
@@ -308,8 +345,24 @@ SHOULD IT TRANSPIRE THAT
 SO MUCH FOR THAT.
 ```
 
+**Example (inline form):**
+
+```topsy
+SHOULD IT TRANSPIRE THAT ALIKE rank AND "Admiral"
+  QUITE SO.
+    BEHOLD "He is the Ruler of the Queen's Navee!"
+  OR, IF NOT, ALIKE rank AND "Captain"
+    BEHOLD "What, never? Well, hardly ever!"
+  OTHERWISE,
+    BEHOLD "A mere landsman."
+SO MUCH FOR THAT.
+```
+
 ### Switch / Case
 
+As with the conditional, two equivalent forms are supported. In the **two-line form**, the expression is evaluated on the preceding line (depositing its result in `JUST SO`), and `IN WHICH CAPACITY?` appears alone on the next line. In the **inline form**, the expression follows immediately after the `?`.
+
+**Two-line form:**
 ```topsy
 <expression>
 IN WHICH CAPACITY?
@@ -325,17 +378,48 @@ IN WHICH CAPACITY?
 NOTHING COULD BE MORE SATISFACTORY.
 ```
 
-- `IN WHICH CAPACITY?` — switch on `JUST SO`; drawn from Pooh-Bah's response when addressed: *"In which of my capacities?"* — he holds so many offices that the caller must specify which one they are invoking
+**Inline form:**
+```topsy
+IN WHICH CAPACITY? <expression>
+  WHEN ACTING AS <literal>
+    <block>
+    THAT WILL DO.
+  WHEN ACTING AS <literal>
+  WHEN ACTING AS <literal>
+    <block>
+    THAT WILL DO.
+  FAILING ALL OF THE ABOVE,
+    <block>
+NOTHING COULD BE MORE SATISFACTORY.
+```
+
+- `IN WHICH CAPACITY?` — drawn from Pooh-Bah's response when addressed: *"In which of my capacities?"* — he holds so many offices that the caller must specify which one they are invoking; in the two-line form it switches on `JUST SO`; in the inline form the supplied expression is evaluated directly
 - `WHEN ACTING AS <literal>` — case label; mirrors Pooh-Bah switching between his official capacities; cases fall through unless broken
-- `THAT WILL DO.` — break; used dismissively throughout the G&S canon — by the Mikado, by Ko-Ko, by the Lord Chancellor — to signal that a matter is concluded and no further elaboration is required
+- `THAT WILL DO.` — the universal break keyword; used dismissively throughout the G&S canon — by the Mikado, by Ko-Ko, by the Lord Chancellor — to signal that a matter is concluded and no further elaboration is required; valid in both switch and loop contexts
 - `FAILING ALL OF THE ABOVE,` — default case; the Lord Chancellor's catch-all when none of the specific provisions apply
 - `NOTHING COULD BE MORE SATISFACTORY.` — closes the switch block; verbatim from *The Mikado*, Act II — the Mikado's response upon receiving the report of the (entirely fictitious) execution, delivered with great satisfaction while everything is in fact catastrophically wrong
 
-**Example:**
+**Example (two-line form):**
 
 ```topsy
 office
 IN WHICH CAPACITY?
+  WHEN ACTING AS "Executioner"
+    BEHOLD "I have a little list."
+    THAT WILL DO.
+  WHEN ACTING AS "Chancellor"
+  WHEN ACTING AS "Admiral"
+    BEHOLD "A man of many parts."
+    THAT WILL DO.
+  FAILING ALL OF THE ABOVE,
+    BEHOLD "Lord High Everything Else, no doubt."
+NOTHING COULD BE MORE SATISFACTORY.
+```
+
+**Example (inline form):**
+
+```topsy
+IN WHICH CAPACITY? office
   WHEN ACTING AS "Executioner"
     BEHOLD "I have a little list."
     THAT WILL DO.
@@ -355,14 +439,17 @@ NOTHING COULD BE MORE SATISFACTORY.
 ### Basic Loop (Infinite / Manual Break)
 
 ```topsy
-BY A LEGAL FICTION KNOWN AS loopname
+BY A LEGAL FICTION [KNOWN AS <label>]
   <body>
-  FREE FROM THIS QUANDARY.     ASIDE: break out of the loop
+  THAT WILL DO.     ASIDE: break out of the loop
+  ONCE MORE.        ASIDE: skip to the next iteration
 THE TERM EXPIRES.
 ```
 
-- `BY A LEGAL FICTION KNOWN AS <label>` — begins a loop. The Lord Chancellor in *Iolanthe* and the baronets of *Ruddigore* both operate under legal fictions that force them to repeat actions indefinitely — the precise G&S metaphor for a loop: a construct that, by a convenient fiction, repeats events until reality reasserts itself.
-- `FREE FROM THIS QUANDARY.` — breaks out of the innermost loop immediately. Verbatim from the finale of *The Gondoliers*: *"Free from this quandary, contented are we."* The precise moment of release from a recurring bind.
+- `BY A LEGAL FICTION` — begins a loop. The Lord Chancellor in *Iolanthe* and the baronets of *Ruddigore* both operate under legal fictions that force them to repeat actions indefinitely — the precise G&S metaphor for a loop: a construct that, by a convenient fiction, repeats events until reality reasserts itself.
+- `KNOWN AS <label>` — optional label for the loop; a legal fiction, like all G&S legal fictions, may be named or may proceed anonymously
+- `THAT WILL DO.` — breaks out of the innermost loop immediately; the universal break keyword, valid in both loop and switch contexts — see §9
+- `ONCE MORE.` — skips the remainder of the current iteration and proceeds immediately to the next; the stage call to repeat from the top of a passage. Applies to all loop forms.
 - `THE TERM EXPIRES.` — closes the loop. Drawn from *The Grand Duke*, Act I: the Statutory Duel law *"expires to-morrow"* — a recurring obligation reaching its natural terminus.
 
 ### Ascending (Counted Up) Loop
@@ -447,8 +534,18 @@ MY DUTY IS DISCHARGED.
 
 ## 12. Exception Handling
 
+### Throwing
+
 ```topsy
-WITH THE GREATEST RESPECT, <operation>?
+A HIDEOUS CURSE ON <value>
+```
+
+`A HIDEOUS CURSE ON <value>` — raises an exception, carrying `<value>` as the exception payload. Drawn from *Ruddigore*: the Murgatroyd baronets are bound by an ancestral curse — to hurl a hideous curse upon something is the most dramatically appropriate signal that affairs have gone catastrophically wrong. May be used anywhere in the programme; if uncaught by a `WITH THE GREATEST RESPECT` block the programme terminates with an error and the cursed value is reported.
+
+### Catching
+
+```topsy
+WITH THE GREATEST RESPECT, <operation>
   WITH GRATITUDE
     <success block>
   MODIFIED RAPTURE
@@ -456,20 +553,40 @@ WITH THE GREATEST RESPECT, <operation>?
 THAT CONCLUDES THE MATTER.
 ```
 
-- `WITH THE GREATEST RESPECT, <operation>?` — wraps a potentially-failing operation
-- `WITH GRATITUDE` — the success handler
-- `MODIFIED RAPTURE` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news
+- `WITH THE GREATEST RESPECT, <operation>` — wraps a potentially-failing operation; catches any exception raised by `A HIDEOUS CURSE ON` within `<operation>`
+- `WITH GRATITUDE` — the success handler; entered when no exception is raised
+- `MODIFIED RAPTURE` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is available as `JUST SO` on entry to this block
 - `THAT CONCLUDES THE MATTER.` — closes the block
+
+**Example:**
+
+```topsy
+IT IS MY DUTY TO PERFORM checked_divide UNDER THE TERMS OF a AND b
+  ALIKE b AND 0
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      A HIDEOUS CURSE ON "Division by zero — the Pirate King is most displeased."
+  SO MUCH FOR THAT.
+  AND SO I FIND QUOTIENT OF a AND b
+MY DUTY IS DISCHARGED.
+
+WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
+  WITH GRATITUDE
+    BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
+  MODIFIED RAPTURE
+    BEHOLD WOVEN OF "A curse has been invoked: " AND JUST SO IF YOU PLEASE.
+THAT CONCLUDES THE MATTER.
+```
 
 ---
 
 ## 13. Libraries & Imports
 
 ```topsy
-PRAY SUMMON THE SERVICES OF "filename"
+PRAY ADMIT "filename"
 ```
 
-Imports another `.topsy` file. All `IT IS MY DUTY TO PERFORM` declarations in that file become available.
+`PRAY ADMIT "filename"` — admits another `.topsy` file into the current programme's company. All `IT IS MY DUTY TO PERFORM` declarations in that file become available. Drawn from the theatrical tradition of formally admitting a new party to the assembled company — the doorkeeper admits the newcomer, who then takes their place among the principals already on stage.
 
 ---
 
@@ -480,6 +597,7 @@ Imports another `.topsy` file. All `IT IS MY DUTY TO PERFORM` declarations in th
 | `HARK!`                                          | Program start               | Theatrical attention-getter throughout the canon                                  |
 | `FINALE.`                                        | Program end                 | Standard G&S ending                                                               |
 | `PRINCIPALS`                                     | Variable declaration block  | Dramatis Personae                                                                 |
+| `THE CURTAIN RISES.`                             | Close `PRINCIPALS` block    | Once all characters are assembled, the curtain rises and the drama begins         |
 | `PRAY WELCOME`                                   | Variable declaration        | *The Mikado*, Act I — `PRAY` verbatim; welcoming each new variable before the assembled company |
 | `AS A`                                           | Type annotation             | —                                                                                 |
 | `BEING`                                          | Initial value               | *Dramatis Personae* parentheticals — "Nanki-Poo, *being* the son of the Mikado..." |
@@ -502,30 +620,33 @@ Imports another `.topsy` file. All `IT IS MY DUTY TO PERFORM` declarations in th
 | `WOVEN OF ... AND ... IF YOU PLEASE.`            | String concatenation        | Threads of `YARN` woven together; `IF YOU PLEASE` verbatim from *H.M.S. Pinafore* |
 | `ALIKE ... AND ...`                              | Equality (==)               | —                                                                                 |
 | `UNLIKE ... AND ...`                             | Inequality (!=)             | —                                                                                 |
+| `PRE-ADAMITE ... AND ...`                        | Greater-than (>)            | *Ruddigore*, Act II — baronet "of Pre-Adamite antiquity"; he who predates all others has the greater standing |
+| `LOWER DEGREE ... AND ...`                       | Less-than (<)               | *The Gondoliers* / *The Mikado* — the man of lower degree is beneath another     |
 | `BOTH ... AND ...`                               | Logical AND                 | —                                                                                 |
 | `EITHER ... OR ...`                              | Logical OR                  | —                                                                                 |
 | `HARDLY EVER ...`                                | Logical NOT                 | *H.M.S. Pinafore* — "What, never? Well, **hardly ever!**"                         |
 | `ALL OF ... IF YOU PLEASE.`                      | Variadic AND                | —                                                                                 |
 | `ANY OF ... IF YOU PLEASE.`                      | Variadic OR                 | —                                                                                 |
+| `IF YOU PLEASE.`                                 | Variable-length list closer | Verbatim *H.M.S. Pinafore* — Sir Joseph's insistence on the proper form of address; closes any open-ended argument list: `WOVEN OF`, `SUMMON`, `ALL OF`, `ANY OF` |
 | `JUST SO`                                        | Implicit result variable    | *The Mikado* — "Just so!" — the thing just established                            |
 | `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
 | `NAY`                                             | Boolean false               | Throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be" |
-| `SHOULD IT TRANSPIRE THAT`                       | If condition                | Lord Chancellor's conditional reasoning, *Iolanthe*                               |
+| `SHOULD IT TRANSPIRE THAT`                       | If condition (two-line or inline) | Lord Chancellor's conditional reasoning, *Iolanthe*; two-line form reads `JUST SO`, inline form takes expression directly |
 | `QUITE SO.`                                      | True branch                 | Verbatim *The Mikado* — Ko-Ko and Pooh-Bah's crisp affirmation                    |
 | `OR, IF NOT,`                                    | Else-if                     | Lord Chancellor's enumeration of alternatives                                     |
 | `OTHERWISE,`                                     | Else branch                 | Pooh-Bah switching between logical branches and capacities                        |
 | `SO MUCH FOR THAT.`                              | End if                      | Ko-Ko's dismissive summary once a matter is disposed of                           |
-| `IN WHICH CAPACITY?`                             | Switch                      | Verbatim Pooh-Bah register, *The Mikado* — "In which of my capacities?"           |
+| `IN WHICH CAPACITY?`                             | Switch (two-line or inline) | Verbatim Pooh-Bah register, *The Mikado* — "In which of my capacities?"; two-line form switches on `JUST SO`, inline form takes expression directly |
 | `WHEN ACTING AS`                                 | Case label                  | Pooh-Bah switching between his official capacities                                |
-| `THAT WILL DO.`                                  | Break (switch)              | Used dismissively throughout the canon — Mikado, Ko-Ko, Lord Chancellor           |
+| `THAT WILL DO.`                                  | Break (loop or switch)      | Universal break — used dismissively throughout the canon; valid in both loop and switch contexts |
 | `FAILING ALL OF THE ABOVE,`                      | Default case                | Lord Chancellor's catch-all provision                                             |
 | `NOTHING COULD BE MORE SATISFACTORY.`            | End switch                  | Verbatim *The Mikado*, Act II — the Mikado's response to the fictitious execution  |
-| `BY A LEGAL FICTION KNOWN AS`                    | Loop start                  | *Iolanthe* / *Ruddigore* — the legal fiction that permits repetition              |
+| `BY A LEGAL FICTION [KNOWN AS <label>]`           | Loop start                  | *Iolanthe* / *Ruddigore* — the legal fiction that permits repetition; label is optional |
 | `ASCENDING`                                      | Increment loop var          | Ascending the peerage hierarchy — *Iolanthe*                                      |
 | `DESCENDING`                                     | Decrement loop var          | Descending same                                                                   |
 | `UNTIL`                                          | Loop exit condition         | *Pirates of Penzance* — Frederic bound *"until"* his 21st birthday                |
 | `WHILST`                                         | Loop while condition        | Continue while true                                                               |
-| `FREE FROM THIS QUANDARY.`                       | Break (loop)                | *The Gondoliers* finale — verbatim: *"Free from this quandary, contented are we"* |
+| `ONCE MORE.`                                     | Continue (loop)             | The stage call to repeat from the top of a passage; skips to the next iteration in all loop forms |
 | `THE TERM EXPIRES.`                              | End loop                    | *The Grand Duke*, Act I — verbatim: the Statutory Duel law *"expires to-morrow"*  |
 | `IT IS MY DUTY TO PERFORM`                       | Function definition         | G&S obligation formula — used throughout the canon                                |
 | `UNDER THE TERMS OF`                             | Function parameters         | *Pirates of Penzance* — Frederic's indenture specifies the *terms*                |
@@ -535,11 +656,12 @@ Imports another `.topsy` file. All `IT IS MY DUTY TO PERFORM` declarations in th
 | `MY DUTY IS PREMATURELY DISCHARGED.`             | Return (no value)           | Early exit — duty cut short                                                       |
 | `SUMMON ... WITH ... IF YOU PLEASE.`             | Function call               | *The Mikado*, Act I — Ko-Ko: *"I summon my guard"*; `IF YOU PLEASE` from *Pinafore* |
 | `SUMMON ... WITH NOTHING IF YOU PLEASE.`         | Call with no args           | —                                                                                 |
+| `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given value; terminates programme if uncaught |
 | `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
-| `MODIFIED RAPTURE`                               | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"        |
+| `MODIFIED RAPTURE`                               | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO` |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
-| `PRAY SUMMON THE SERVICES OF`                    | Import                      | —                                                                                 |
+| `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
 
 ---
 
@@ -580,10 +702,37 @@ ASIDE: then SUM OF 12 AND 5 = 17
 ## 18. Line Structure
 
 - Each statement occupies one line.
-- `~` at the end of a line continues the statement onto the next line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
 - Blank lines are ignored.
 - Leading and trailing whitespace is ignored.
+
+### The Victorian Flourish (`~`)
+
+`~` is the Victorian flourish character and serves two distinct roles, unambiguous by context:
+
+**Line continuation** — `~` at the end of a line (outside a string literal) continues the current statement onto the next line:
+
+```topsy
+AND SO I FIND ~
+  SUM OF ~
+    SUMMON fibonacci WITH DIFFERENCE OF n AND 1 IF YOU PLEASE. ~
+    AND SUMMON fibonacci WITH DIFFERENCE OF n AND 2 IF YOU PLEASE.
+```
+
+**String escape prefix** — `~` inside a `YARN` literal introduces an escape sequence (see §6):
+
+| Sequence | Meaning              |
+|----------|----------------------|
+| `~n`     | Newline              |
+| `~t`     | Tab                  |
+| `~"`     | Literal double-quote |
+| `~~`     | Literal tilde        |
+
+```topsy
+BEHOLD "First line~nSecond line~n~tIndented third line"
+```
+
+A `~` at the end of a line is always a continuation character; a `~` inside a string literal is always an escape prefix. The two roles never overlap.
 
 ---
 
@@ -596,6 +745,7 @@ The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and u
 - Give their programs a proper title *and* an `or,` subtitle
 - Treat their `PRINCIPALS` section as a genuine *Dramatis Personae* with descriptive parentheticals in `ASIDE:` comments
 - Approach every `IT IS MY DUTY TO PERFORM` with the gravity the occasion demands
+- Write keywords in uppercase — it is not required, but it is the convention, and it gives the libretto its proper authority on the page
 
 A well-written Topsy program, read aloud, should be indistinguishable from the libretto of a previously undiscovered Savoy opera.
 
@@ -612,6 +762,7 @@ ASIDE: Determine whether a number is prime.
 PRINCIPALS
   PRAY WELCOME candidate AS A PEER
   PRAY WELCOME i         AS A PEER
+THE CURTAIN RISES.
 
 IT IS MY DUTY TO PERFORM is_prime UNDER THE TERMS OF n
   ALIKE n AND SMALLER OF n AND 1
@@ -648,4 +799,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.1.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — Version 0.2.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

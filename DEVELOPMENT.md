@@ -1,10 +1,10 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-**Last Updated:** 2026-05-21
-**Current Specification Version:** 0.1.0
-**Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
-**File Extension:** `.topsy`
+* **Last Updated:** 2026-05-22
+* **Current Specification Version:** 0.2.0
+* **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
+* **File Extension:** `.topsy`
 
 ---
 
@@ -12,52 +12,58 @@
 
 | File | Role |
 |---|---|
-| `SPEC.md` | Authoritative language specification v0.1.0. Full grammar, complete keyword reference, type system, worked examples. All grammar questions are resolved by this file. |
-| `DEVELOPMENT.md` | Agent operational reference. Session state, retired keywords, grammar invariants. Not a grammar source. |
+| `AGENTS.md` | Project description, instructions to do before starting work and any constraints and rules that must be followed. |
+| `SPEC.md` | Authoritative language specification v0.2.0. Full grammar, complete keyword reference, type system, worked examples. All grammar questions are resolved by this file. |
+| `DEVELOPMENT.md` | Session state and file inventory. |
 | `examples/hello_world.topsy` | Basic output and string concatenation |
-| `examples/fizzbuzz.topsy` | While loop, modulo, conditionals, boolean type, expression casting |
+| `examples/fizzbuzz.topsy` | While loop, modulo, conditionals (including inline form), boolean type, expression casting |
 | `examples/fibonacci.topsy` | Recursive and iterative functions, line continuation |
 | `examples/pirates_calculator.topsy` | Interactive loop, switch/case, multiple functions, division-by-zero handling |
 
-All `.topsy` source files are fully compliant with `SPEC.md` v0.1.0.
+All `.topsy` source files are fully compliant with `SPEC.md` v0.2.0.
 
 ---
 
 ## 2. Last Session Summary
 
-**Session date:** 2026-05-21
-**Spec version produced:** 0.1.0 (first stable release)
+**Session date:** 2026-05-22
+**Spec version produced:** 0.2.0
 
 ### What was done this session
 
-This was the founding session. The Topsy Turvy language was designed and
-specified from scratch across a single working session.
+**Changes to the language:**
 
-**Files created:**
-- `SPEC.md` — full language specification, revised through four beta drafts to v0.1.0
-- `examples/hello_world.topsy`
-- `examples/fizzbuzz.topsy`
-- `examples/fibonacci.topsy`
-- `examples/pirates_calculator.topsy`
-- `DEVELOPMENT.md` (this file)
+- `PRINCIPALS` block given an explicit closer `THE CURTAIN RISES.`; inline `PRAY WELCOME` outside `PRINCIPALS` documented as a free-standing statement requiring no closer
+- `PRE-ADAMITE x AND y` (greater-than) and `LOWER DEGREE x AND y` (less-than) added as direct comparison operators; `>=`/`<=` expressed via `HARDLY EVER LOWER DEGREE` / `HARDLY EVER PRE-ADAMITE`
+- `SHOULD IT TRANSPIRE THAT` and `IN WHICH CAPACITY?` extended with an inline form — expression supplied directly on the same line, bypassing `JUST SO`; both two-line and inline forms are valid
+- `THAT WILL DO.` unified as the universal break keyword for both loops and switch; `FREE FROM THIS QUANDARY.` retired
+- Loop label made optional — `KNOWN AS <label>` is now `[KNOWN AS <label>]` in all loop forms
+- `ONCE MORE.` added as the loop continue statement, valid in all loop forms
+- `A HIDEOUS CURSE ON <value>` added as a throw statement, valid anywhere in the programme; if uncaught, terminates the programme with an error; the caught value is available as `JUST SO` on entry to `MODIFIED RAPTURE`
+- `WITH THE GREATEST RESPECT,` question mark removed from the syntax
+- `PRAY ADMIT "filename"` replaces `PRAY SUMMON THE SERVICES OF "filename"`
+- `~` (the Victorian flourish) fully documented in §18 covering both roles: line continuation (end of line) and string escape prefix (inside `YARN` literals); cross-reference added in §6
+- Keywords made case-insensitive; uppercase confirmed as the conventional and recommended style
+- `IF YOU PLEASE.` given a dedicated explanatory note in §6 and a standalone entry in §14, clarifying its role as the formal closer for any variable-length argument list (`WOVEN OF`, `SUMMON`, `ALL OF`, `ANY OF`)
 
-**Key structural decisions made:**
+**Keyword retirements this session:**
+All retired keywords and their replacements are recorded in the `AGENTS.md` retired keywords table.
 
-- Prefix notation adopted throughout for all arithmetic and boolean operators
-- `IF YOU PLEASE.` adopted as the universal expression-list closer, applied consistently to `WOVEN OF`, `SUMMON`, `ALL OF`, and `ANY OF`
-- `JUST SO` adopted as the sole implicit accumulator variable; feeds conditionals and switch
-- Boolean type name (`DECREE`) separated from boolean literals (`VERITY` / `NAY`) to avoid ambiguity
-- `WHILST` retained as the continue-while-true loop condition; `UNTIL` used as the exit-when-true condition — both coexist
-- Function scope is not closured; parameters are the only value-input mechanism
-- `.topsy` retained as the file extension despite the full language name being Topsy Turvy
+- `FREE FROM THIS QUANDARY.` → `THAT WILL DO.` (loop break)
+- `PRAY SUMMON THE SERVICES OF` → `PRAY ADMIT` (import)
 
-**Keyword revisions made during this session:**
-All keywords were established and revised iteratively. The complete record of
-every retired keyword and its replacement is in §3 below.
+**Files modified:**
+
+- `SPEC.md` — all changes above; version bumped to 0.2.0
+- `AGENTS.md` — grammar invariant I5 updated (loop label now optional); I3 updated (`FREE FROM THIS QUANDARY.` removed, `THE CURTAIN RISES.` and `ONCE MORE.` added); two retired keyword rows added
+- `examples/hello_world.topsy` — `THE CURTAIN RISES.` added after `PRINCIPALS`
+- `examples/fizzbuzz.topsy` — `THE CURTAIN RISES.` added; judgement conditional converted to inline form as a demonstration
+- `examples/fibonacci.topsy` — `THE CURTAIN RISES.` added after `PRINCIPALS`
+- `examples/pirates_calculator.topsy` — `THE CURTAIN RISES.` added after `PRINCIPALS`; `FREE FROM THIS QUANDARY.` replaced by `THAT WILL DO.`
 
 ### Current state
 
-The language grammar is complete and internally consistent across `SPEC.md`
+The language grammar is complete and internally consistent across `SPEC.md` v0.2.0
 and all four example files. No interpreter or compiler implementation exists.
 The grammar has not been expressed as a formal BNF or EBNF grammar file.
 
@@ -71,98 +77,3 @@ active investigation for a future session.
 **No formal grammar file** — No BNF or EBNF representation of the grammar exists.
 
 **No interpreter** — No implementation in any host language exists.
-
----
-
-## 3. Retired Keywords
-
-The following keywords appeared in earlier drafts and have been replaced. They
-must not be used in any `.topsy` source file or spec example.
-
-| Retired keyword | Replaced by | Construct |
-|---|---|---|
-| `ITZ` | `BEING` | Initial value in declaration |
-| `NOWT` | `NAUGHT` | Null type and null value |
-| `MAYHAPS` | `AS IT WERE` | Expression cast |
-| `COMPOUND OF...RESOLVED.` | `WOVEN OF...IF YOU PLEASE.` | String concatenation |
-| `ON THE CONTRARY x` | `HARDLY EVER x` | Logical NOT |
-| `STAND DOWN.` | `FREE FROM THIS QUANDARY.` | Loop break |
-| `END OF ENGAGEMENT.` | `THE TERM EXPIRES.` | Loop end |
-| `ACCEPTING` | `UNDER THE TERMS OF` | Function parameters |
-| `ACCEPTING NOTHING` | `UNDER NO OBLIGATION` | No-parameter function |
-| `RESOLVED.` | `IF YOU PLEASE.` | Function call closer |
-| `OBSERVE:` | `(ASIDE, AT SOME LENGTH:` | Multi-line comment open |
-| `ENOUGH SAID.` | `END OF ASIDE.)` | Multi-line comment close |
-| `BECOMES` | `IS APPOINTED` | Assignment |
-| `PROCLAIM` | `BEHOLD` | Print output |
-| `UPON REFLECTION?` | `SHOULD IT TRANSPIRE THAT` | If condition |
-| `INDEED.` | `QUITE SO.` | True branch |
-| `PERHAPS` | `OR, IF NOT,` | Else-if |
-| `ON THE CONTRARY` | `OTHERWISE,` | Else branch |
-| `THUS.` | `SO MUCH FOR THAT.` | End-if |
-| `WHAT IS YOUR OFFICE?` | `IN WHICH CAPACITY?` | Switch |
-| `IN THE CASE OF` | `WHEN ACTING AS` | Case label |
-| `IN ALL OTHER CASES` | `FAILING ALL OF THE ABOVE,` | Default case |
-| `MATTER RESOLVED.` | `NOTHING COULD BE MORE SATISFACTORY.` | End switch |
-| `ENGAGE` | `SUMMON` | Function call |
-| `PRAY ENGAGE THE SERVICES OF` | `PRAY SUMMON THE SERVICES OF` | Import |
-| `PRAY INTRODUCE` | `PRAY WELCOME` | Variable declaration |
-| `VERITY` (type name) | `DECREE` | Boolean type |
-| `WIN` | `VERITY` | Boolean true literal |
-| `FAIL` | `NAY` | Boolean false literal |
-
----
-
-## 4. Grammar Invariants
-
-The following rules must be preserved in any modification to the language or
-its examples. They reflect deliberate structural decisions that affect all
-constructs simultaneously.
-
-**I1 — Prefix notation throughout.**
-All operators (arithmetic, boolean, string) use prefix notation with `AND` as
-the argument separator. No infix or postfix operators exist.
-
-**I2 — `IF YOU PLEASE.` is the universal expression-list closer.**
-`WOVEN OF`, `SUMMON`, `ALL OF`, and `ANY OF` all close with `IF YOU PLEASE.`
-No other closer is used for these constructs.
-
-**I3 — Full stops are mandatory on specific keywords.**
-The following keywords require a trailing full stop as part of their token and
-are not valid without it:
-`FINALE.` `QUITE SO.` `SO MUCH FOR THAT.` `THAT WILL DO.`
-`NOTHING COULD BE MORE SATISFACTORY.` `FREE FROM THIS QUANDARY.`
-`THE TERM EXPIRES.` `MY DUTY IS DISCHARGED.`
-`MY DUTY IS PREMATURELY DISCHARGED.` `IF YOU PLEASE.`
-
-**I4 — `JUST SO` is the sole implicit variable.**
-No other implicit accumulator exists. `JUST SO` receives the result of any
-expression not explicitly assigned. Conditionals and switch always read from
-`JUST SO`.
-
-**I5 — All loops require a label.**
-`BY A LEGAL FICTION KNOWN AS <label>` requires a non-empty label identifier in
-all loop forms (infinite, ascending, descending, whilst). The label has no
-semantic effect beyond documentation but is syntactically required.
-
-**I6 — Switch operates on literals only.**
-`WHEN ACTING AS` accepts literal values only — strings, integers, floats,
-`VERITY`, `NAY`. Expressions are not valid as case labels.
-
-**I7 — Functions are not closures.**
-Functions receive values exclusively through their declared parameters.
-Global variables declared in `PRINCIPALS` are accessible everywhere except
-inside functions.
-
-**I8 — `PRAY WELCOME` is the sole declaration form.**
-Variables may only be declared with `PRAY WELCOME ... AS A ... [BEING ...]`.
-There is no implicit declaration; using an undeclared name is an error.
-
-**I9 — The boolean type is `DECREE`; its literals are `VERITY` and `NAY`.**
-`VERITY` and `NAY` are not interchangeable with `1`/`0` or `NAUGHT` in typed
-contexts. Truthiness coercion applies only when a non-`DECREE` value is used
-in a boolean context.
-
-**I10 — `.topsy` is the sole source file extension.**
-No other extension is valid. The language name is Topsy Turvy; the extension
-remains `.topsy`.
