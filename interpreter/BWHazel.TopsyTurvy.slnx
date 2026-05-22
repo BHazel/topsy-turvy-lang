@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BWHazel.TopsyTurvy.Ast/BWHazel.TopsyTurvy.Ast.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Cli/BWHazel.TopsyTurvy.Cli.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj" />
+</Solution>

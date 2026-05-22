@@ -1,0 +1,135 @@
+(* Topsy Turvy Formal Grammar v0.1 *)
+(* Based on SPEC.md v0.2.0 *)
+
+(*----------------------------------------------------------------------------*)
+(* Lexical Tokens                                                              *)
+(*----------------------------------------------------------------------------*)
+Identifier    = [a-zA-Z], { [a-zA-Z0-9_-] } ;
+StringLiteral = '"', { AnyCharExceptQuoteOrTilde | '~' AnyChar }, '"' ;
+Integer       = [ "-" ], Digit, { Digit } ;
+Float         = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
+BooleanLit    = "VERITY" | "NAY" ;
+NullLit       = "NAUGHT" ;
+
+(*----------------------------------------------------------------------------*)
+(* Program Structure                                                          *)
+(*----------------------------------------------------------------------------*)
+Program         = "HARK!", StringLiteral, [ "\n", "or,", StringLiteral ], 
+                  StatementList, "FINALE." ;
+
+StatementList   = { Statement } ;
+
+Statement       = PrincipalBlock 
+                | Declaration 
+                | Assignment 
+                | TypeCast 
+                | PrintStatement 
+                | InputStatement 
+                | Conditional 
+                | Switch 
+                | Loop 
+                | FunctionDefinition 
+                | ImportStatement 
+                | TryCatchBlock 
+                | ExpressionStatement ;
+
+(*----------------------------------------------------------------------------*)
+(* Declarations & Assignments                                                 *)
+(*----------------------------------------------------------------------------*)
+PrincipalBlock  = "PRINCIPALS", { Declaration }, "THE CURTAIN RISES." ;
+
+Declaration     = "PRAY WELCOME", Identifier, "AS A", Type, [ "BEING", Expression ] ;
+
+Type            = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+
+Assignment      = Identifier, "IS APPOINTED", Expression ;
+
+TypeCast        = ( Identifier, "IS HENCEFORTH A", Type )
+                | ( "AS IT WERE", Expression, "AS A", Type ) ;
+
+(*----------------------------------------------------------------------------*)
+(* Expressions (Prefix Notation)                                              *)
+(*----------------------------------------------------------------------------*)
+Expression      = PrefixExpression 
+                | StringLiteral 
+                | BooleanLit 
+                | NullLit 
+                | Integer 
+                | Float 
+                | Identifier ;
+
+PrefixExpression = FixedOpExpression | VariadicExpression ;
+
+FixedOpExpression = FixedOp, Expression, { "AND", Expression } ;
+
+VariadicExpression = VariadicOp, Expression, { "AND", Expression }, "IF YOU PLEASE." ;
+
+FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp ;
+
+ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF" 
+                | "QUOTIENT OF" | "REMAINDER OF" | "LARGER OF" | "SMALLER OF" ;
+
+BooleanOp       = "BOTH" | "EITHER" | "HARDLY EVER" ;
+
+ComparisonOp    = "ALIKE" | "UNLIKE" | "PRE-ADAMITE" | "LOWER DEGREE" ;
+
+VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
+
+(*----------------------------------------------------------------------------*)
+(* Control Flow                                                               *)
+(*----------------------------------------------------------------------------*)
+Conditional     = "SHOULD IT TRANSPIRE THAT", [ Expression ], 
+                  IfBody, "SO MUCH FOR THAT." ;
+
+IfBody          = "QUITE SO.", StatementList, 
+                  { "OR, IF NOT,", [ Expression ], StatementList }, 
+                  [ "OTHERWISE,", StatementList ] ;
+
+Switch          = "IN WHICH CAPACITY?", [ Expression ], 
+                  SwitchBody, "NOTHING COULD BE MORE SATISFACTORY." ;
+
+SwitchBody      = { CaseLabel, [ StatementList ], [ "THAT WILL DO." ] }, 
+                  [ "FAILING ALL OF THE ABOVE,", StatementList ] ;
+
+CaseLabel       = "WHEN ACTING AS", Literal ;
+
+Loop            = "BY A LEGAL FICTION", [ "KNOWN AS", Identifier ], 
+                  LoopType, 
+                  LoopBody, "THE TERM EXPIRES." ;
+
+LoopType        = ( "ASCENDING", Identifier, "UNTIL", Expression )
+                | ( "DESCENDING", Identifier, "UNTIL", Expression )
+                | ( "WHILST", Expression )
+                | ( (* Infinite loop *) ) ;
+
+LoopBody       = { Statement | "ONCE MORE." | "THAT WILL DO." } ;
+
+(*----------------------------------------------------------------------------*)
+(* Functions & Exceptions                                                     *)
+(*----------------------------------------------------------------------------*)
+FunctionDefinition = "IT IS MY DUTY TO PERFORM", Identifier, 
+                    ( "UNDER THE TERMS OF", ParameterList | "UNDER NO OBLIGATION" ), 
+                    FunctionBody, 
+                    ( "MY DUTY IS DISCHARGED." | "MY DUTY IS PREMATURELY DISCHARGED." ) ;
+
+ParameterList      = Identifier, { "AND", Identifier } ;
+
+FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
+
+ImportStatement    = "PRAY ADMIT", StringLiteral ;
+
+TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression, 
+                    "WITH GRATITUDE", StatementList, 
+                    "MODIFIED RAPTURE", StatementList, 
+                    "THAT CONCLUDES THE MATTER." ;
+
+(*----------------------------------------------------------------------------*)
+(* Miscellaneous                                                               *)
+(*----------------------------------------------------------------------------*)
+PrintStatement     = "BEHOLD", Expression, [ "WITHOUT CEREMONY" ] ;
+
+InputStatement     = "PRAY TELL", Identifier ;
+
+ExpressionStatement = Expression ;
+
+Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;

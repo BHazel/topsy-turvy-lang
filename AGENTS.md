@@ -116,3 +116,27 @@ The following keywords appeared in earlier drafts and versions of the language a
 
 * **`DEVELOPMENT.md`:** The current development state, which is a summary of the latest changes from the last coding session.
 * **`./examples`:** Contains example Topsy Turvy code files.
+
+## Implementation Standards (Interpreter)
+
+### Technical Stack
+
+* **Runtime:** .NET 10
+* **Root Namespace:** `BWHazel.TopsyTurvy`
+* **Key Libraries:** `Superpower` (Parsing), `System.CommandLine` (CLI), `Spectre.Console` (UX)
+* **Architecture:** LSP-ready. Parser must be decoupled from runtime and provide full source mapping (line/column) and diagnostic collections.
+
+### Project Structure
+
+- **Root Directory:** `interpreter/`
+- **Solution File:** `BWHazel.TopsyTurvy.slnx`
+- **Project Layout:** Each project in its own directory: `interpreter/[ProjectName]/[ProjectName].csproj`.
+- **Namespace Mirroring:** Folder structure must strictly mirror the namespace hierarchy.
+
+### Coding Style
+
+- **Explicit Typing:** Prefer explicit types over the `var` keyword.
+- **File Granularity:** Strictly one type per file.
+- **Naming:** Concise but descriptive variable names.
+- **Modern C#:** Use the latest C# features.
+- **Exceptions:** Use `TopsyTurvyException` for language-specific errors.
