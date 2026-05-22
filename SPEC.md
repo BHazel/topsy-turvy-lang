@@ -1,0 +1,651 @@
+# TOPSY TURVY
+## A Gilbert & Sullivan Operetta Programming Language
+### Language Specification — Version 0.1.0
+
+> *"Things are seldom what they seem; skim milk masquerades as cream."*
+> — H.M.S. Pinafore
+
+---
+
+## Overview
+
+**Topsy Turvy** is a general-purpose esoteric programming language in the tradition of LOLCODE, themed around the Gilbert & Sullivan operetta canon. Programs are written in the voice of a Victorian theatrical libretto — formal, pompous, comic, and entirely deadpan. The underlying semantics are those of a conventional dynamically-typed procedural language; only the syntax is topsy-turvy.
+
+Source files use the `.topsy` extension.
+
+The name derives from *topsy-turvy* — Gilbert's own word for his dramatic method: the establishment of an absurd premise, followed with absolute logical rigour and a straight face.
+
+---
+
+## 1. Program Structure
+
+Every Topsy program is structured as a G&S operetta. The framing keywords are mandatory.
+
+```topsy
+HARK! "The Title of the Piece"
+  or, "The Subtitle Explaining the Situation"
+
+  ...body...
+
+FINALE.
+```
+
+- **`HARK!`** — Opens the program. The string literal that follows is the program title (a comment, not evaluated). The `or,` subtitle line is optional and also a comment.
+- **`FINALE.`** — Closes the program and exits. The full stop is mandatory.
+- Everything between `HARK!` and `FINALE.` is executed in order.
+- Indentation is optional and has no semantic meaning. Indentation in examples follows libretto convention.
+
+### Minimal Program
+
+```topsy
+HARK! "The Shortest Operetta"
+
+FINALE.
+```
+
+---
+
+## 2. Comments
+
+### Single-Line Comments
+
+```topsy
+ASIDE: this is a single-line comment and is ignored by the interpreter
+```
+
+`ASIDE:` is the theatrical aside — a remark addressed to the audience, explicitly not heard by the other characters on stage, and equally ignored by the interpreter. Gilbert uses `(Aside)` as a stage direction throughout every libretto: *"(Aside.) Shall I tell her?"* — Nanki-Poo, *The Mikado*, Act I. Everything from `ASIDE:` to the end of the line is ignored.
+
+### Multi-Line Comments
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  This is a block comment. It may run to as many lines
+  as the occasion demands. The interpreter, like the other
+  characters on stage, hears none of it.
+END OF ASIDE.)
+```
+
+`(ASIDE, AT SOME LENGTH:` opens a block comment. `END OF ASIDE.)` closes it. Everything between is ignored. The form mirrors Gilbert's own parenthetical stage directions, which he routinely extended to considerable length with self-aware elaboration.
+
+---
+
+## 3. Variables & Declarations
+
+### The PRINCIPALS Section
+
+Variables are declared in the `PRINCIPALS` block, which mirrors the *Dramatis Personae* of a G&S libretto. `PRINCIPALS` may appear anywhere before first use, but by convention is placed at the top.
+
+```topsy
+PRINCIPALS
+  PRAY WELCOME Ko-Ko          AS A PEER     BEING 0
+  PRAY WELCOME Pooh-Bah       AS A YARN     BEING "Lord High Everything Else"
+  PRAY WELCOME Mabel          AS A FATHOM   BEING 3.14159
+  PRAY WELCOME is_guilty      AS A DECREE   BEING VERITY
+  PRAY WELCOME mystery        AS A PEER
+```
+
+**Syntax:**
+```
+PRAY WELCOME <name> AS A <type> [BEING <value>]
+```
+
+- `PRAY WELCOME` — the formal welcoming of a new character onto the stage; `PRAY` drawn verbatim from *The Mikado*, Act I (*"Gentlemen, I pray you tell me..."*); `WELCOME` reflecting the theatrical tradition of receiving each new arrival before the assembled company, as in the *Dramatis Personae*
+- `<name>` — any valid identifier (letters, digits, hyphens, underscores; must begin with a letter)
+- `AS A <type>` — declares the type
+- `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to `NAUGHT` (null)
+
+Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax.
+
+### Types
+
+| Type keyword  | Equivalent | Description |
+|---------------|------------|-------------|
+| `PEER`        | integer    | A Peer of the Realm — a whole number, positive or negative. *From Iolanthe.* |
+| `FATHOM`      | float      | A nautical measure — a number of real precision. *From H.M.S. Pinafore.* |
+| `YARN`        | string     | A wandering minstrel's stock-in-trade — a sequence of characters. *From The Mikado.* |
+| `DECREE`      | boolean    | A ruling that stands or does not stand — either `VERITY` or `NAY`. *The Mikado*, Act I: "So he decreed, in words succinct..." |
+| `NAUGHT`      | null       | Nothing. Not even that. |
+
+**Boolean literals:**
+- `VERITY` — true; *Utopia, Limited* — "Henceforward, **of a verity**, with Fame ourselves we link" — King Paramount
+- `NAY` — false; used throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be"
+
+### Assignment
+
+```topsy
+Ko-Ko IS APPOINTED 42
+Pooh-Bah IS APPOINTED "First Lord of the Treasury"
+is_guilty IS APPOINTED VERITY
+```
+
+`IS APPOINTED` — drawn from *The Mikado*, Act I, in which Ko-Ko is raised by official proclamation to the exalted rank of Lord High Executioner: *"Ko-Ko is appointed to the post."* A value is not merely set; it is formally appointed to the variable by due process.
+
+### Type Casting
+
+```topsy
+Ko-Ko IS HENCEFORTH A PEER          ASIDE: re-cast Ko-Ko to integer in place
+AS IT WERE Ko-Ko AS A YARN          ASIDE: cast expression without mutating the variable
+```
+
+- `IS HENCEFORTH A <type>` — casts the variable in place
+- `AS IT WERE <var> AS A <type>` — produces a cast value without mutating; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is
+
+---
+
+## 4. I/O
+
+### Output
+
+```topsy
+BEHOLD "A Most Ingenious Paradox!"
+BEHOLD Ko-Ko
+BEHOLD SUM OF Ko-Ko AND 1
+BEHOLD "The value is: " AND Ko-Ko WITHOUT CEREMONY
+```
+
+- `BEHOLD <expression>` — prints the value followed by a newline. Drawn from *The Mikado*, Act I: *"Behold the Lord High Executioner!"* — the word used for public announcement to an assembled audience. Whatever follows `BEHOLD` is presented for the audience's inspection.
+- `BEHOLD <expression> WITHOUT CEREMONY` — prints without a trailing newline
+- Multiple values may be concatenated in a `BEHOLD` using `AND`:
+
+```topsy
+BEHOLD "Ko-Ko's value is " AND Ko-Ko AND ", which is most irregular."
+```
+
+### Input
+
+```topsy
+PRAY TELL Ko-Ko
+```
+
+- `PRAY TELL <variable>` — reads a line from standard input into the variable as a `YARN`; use `IS HENCEFORTH A PEER` to cast to integer if needed. Drawn verbatim from *The Mikado*, Act I — Nanki-Poo's opening recitative: *"Gentlemen, I pray you tell me / Where a gentle maiden dwelleth..."*
+
+---
+
+## 5. Arithmetic
+
+All arithmetic uses prefix notation with `AND` as the argument separator.
+
+| Expression                      | Operation |
+|---------------------------------|-----------|
+| `SUM OF x AND y`                | x + y     |
+| `DIFFERENCE OF x AND y`         | x − y     |
+| `PRODUCT OF x AND y`            | x × y     |
+| `QUOTIENT OF x AND y`           | x ÷ y     |
+| `REMAINDER OF x AND y`          | x mod y   |
+| `LARGER OF x AND y`             | max(x, y) |
+| `SMALLER OF x AND y`            | min(x, y) |
+
+Expressions compose in prefix form:
+
+```topsy
+PRODUCT OF SUM OF a AND b AND DIFFERENCE OF c AND d
+ASIDE: computes (a + b) * (c - d)
+```
+
+If either operand is a `FATHOM`, the result is a `FATHOM`. If both are `PEER`, the result is a `PEER`. Integer division truncates.
+
+---
+
+## 6. String Operations
+
+### Concatenation
+
+```topsy
+WOVEN OF "Hello, " AND name AND "!" IF YOU PLEASE.
+```
+
+`WOVEN OF <expr> AND <expr> [AND <expr> ...] IF YOU PLEASE.` — concatenates any number of values, automatically casting each to `YARN`. The metaphor follows naturally from `YARN`: threads of text are woven together into a single fabric. `IF YOU PLEASE.` closes the expression — drawn verbatim from *H.M.S. Pinafore*, Sir Joseph Porter's running joke about the proper form of address.
+
+### String Interpolation
+
+Within a `YARN` literal, variables may be interpolated using curly braces:
+
+```topsy
+BEHOLD "My name is {name}, Lord High {title}."
+```
+
+### Escape Characters
+
+The escape character within `YARN` literals is `~` (the Victorian flourish):
+
+| Sequence | Meaning              |
+|----------|----------------------|
+| `~n`     | Newline              |
+| `~t`     | Tab                  |
+| `~"`     | Literal double-quote |
+| `~~`     | Literal tilde        |
+
+---
+
+## 7. Comparison & Boolean Logic
+
+### Comparison
+
+```topsy
+ALIKE x AND y          ASIDE: x == y  =>  VERITY or NAY
+UNLIKE x AND y         ASIDE: x != y  =>  VERITY or NAY
+```
+
+Greater/less-than is expressed using `LARGER OF` / `SMALLER OF`:
+
+```topsy
+UNLIKE x AND SMALLER OF x AND y    ASIDE: x > y
+ALIKE x AND SMALLER OF x AND y     ASIDE: x <= y
+UNLIKE x AND LARGER OF x AND y     ASIDE: x < y
+ALIKE x AND LARGER OF x AND y      ASIDE: x >= y
+```
+
+### Boolean Operators
+
+| Expression                               | Operation     |
+|------------------------------------------|---------------|
+| `BOTH x AND y`                           | Logical AND   |
+| `EITHER x OR y`                          | Logical OR    |
+| `HARDLY EVER x`                          | Logical NOT   |
+| `ALL OF a AND b AND c IF YOU PLEASE.`    | Variadic AND  |
+| `ANY OF a AND b AND c IF YOU PLEASE.`    | Variadic OR   |
+
+`HARDLY EVER` is the logical NOT operator — drawn directly from *H.M.S. Pinafore*: "What, never? / No, never! / What, never? / **Well, hardly ever!**" The absolute negative, delivered with comic deflation. `HARDLY EVER x` is the logical inverse of `x`.
+
+### Truthiness
+
+When a non-`DECREE` value is used in a boolean context:
+- `NAY`: `0`, `0.0`, `""`, `NAUGHT`
+- `VERITY`: everything else
+
+---
+
+## 8. The JUST SO Variable
+
+Any expression that is evaluated but not explicitly assigned deposits its result in the implicit variable **`JUST SO`**. This is used primarily to feed values into conditional constructs without an intermediate assignment.
+
+> *"Merely corroborative detail, intended to give artistic verisimilitude to an otherwise bald and unconvincing narrative."* — The Mikado
+
+```topsy
+ALIKE Ko-Ko AND 0
+ASIDE: JUST SO now holds VERITY or NAY
+SHOULD IT TRANSPIRE THAT
+  QUITE SO.
+    BEHOLD "Ko-Ko's value is zero — most irregular."
+SO MUCH FOR THAT.
+```
+
+---
+
+## 9. Conditionals
+
+### If / Else If / Else
+
+```topsy
+<expression>
+SHOULD IT TRANSPIRE THAT
+  QUITE SO.
+    <true block>
+  OR, IF NOT, <expression>
+    <else-if block>
+  OTHERWISE,
+    <else block>
+SO MUCH FOR THAT.
+```
+
+- `SHOULD IT TRANSPIRE THAT` — evaluates `JUST SO` as a `DECREE`; the conditional phrasing of the Lord Chancellor in *Iolanthe*, who frames every legal determination as something that *transpires* to be the case
+- `QUITE SO.` — the true branch; verbatim from *The Mikado*, used by Ko-Ko and Pooh-Bah as a crisp affirmation that the established fact is confirmed
+- `OR, IF NOT, <expression>` — else-if; evaluates a new expression; the Lord Chancellor's habit of carefully enumerating alternatives
+- `OTHERWISE,` — the else branch; Pooh-Bah explicitly uses "otherwise" and "on the other hand" when switching between his many logical branches and capacities
+- `SO MUCH FOR THAT.` — closes the conditional block; Ko-Ko's characteristic dismissive summary once a matter has been disposed of
+
+**Example:**
+
+```topsy
+ALIKE rank AND "Admiral"
+SHOULD IT TRANSPIRE THAT
+  QUITE SO.
+    BEHOLD "He is the Ruler of the Queen's Navee!"
+  OR, IF NOT, ALIKE rank AND "Captain"
+    BEHOLD "What, never? Well, hardly ever!"
+  OTHERWISE,
+    BEHOLD "A mere landsman."
+SO MUCH FOR THAT.
+```
+
+### Switch / Case
+
+```topsy
+<expression>
+IN WHICH CAPACITY?
+  WHEN ACTING AS <literal>
+    <block>
+    THAT WILL DO.
+  WHEN ACTING AS <literal>
+  WHEN ACTING AS <literal>
+    <block>
+    THAT WILL DO.
+  FAILING ALL OF THE ABOVE,
+    <block>
+NOTHING COULD BE MORE SATISFACTORY.
+```
+
+- `IN WHICH CAPACITY?` — switch on `JUST SO`; drawn from Pooh-Bah's response when addressed: *"In which of my capacities?"* — he holds so many offices that the caller must specify which one they are invoking
+- `WHEN ACTING AS <literal>` — case label; mirrors Pooh-Bah switching between his official capacities; cases fall through unless broken
+- `THAT WILL DO.` — break; used dismissively throughout the G&S canon — by the Mikado, by Ko-Ko, by the Lord Chancellor — to signal that a matter is concluded and no further elaboration is required
+- `FAILING ALL OF THE ABOVE,` — default case; the Lord Chancellor's catch-all when none of the specific provisions apply
+- `NOTHING COULD BE MORE SATISFACTORY.` — closes the switch block; verbatim from *The Mikado*, Act II — the Mikado's response upon receiving the report of the (entirely fictitious) execution, delivered with great satisfaction while everything is in fact catastrophically wrong
+
+**Example:**
+
+```topsy
+office
+IN WHICH CAPACITY?
+  WHEN ACTING AS "Executioner"
+    BEHOLD "I have a little list."
+    THAT WILL DO.
+  WHEN ACTING AS "Chancellor"
+  WHEN ACTING AS "Admiral"
+    BEHOLD "A man of many parts."
+    THAT WILL DO.
+  FAILING ALL OF THE ABOVE,
+    BEHOLD "Lord High Everything Else, no doubt."
+NOTHING COULD BE MORE SATISFACTORY.
+```
+
+---
+
+## 10. Loops
+
+### Basic Loop (Infinite / Manual Break)
+
+```topsy
+BY A LEGAL FICTION KNOWN AS loopname
+  <body>
+  FREE FROM THIS QUANDARY.     ASIDE: break out of the loop
+THE TERM EXPIRES.
+```
+
+- `BY A LEGAL FICTION KNOWN AS <label>` — begins a loop. The Lord Chancellor in *Iolanthe* and the baronets of *Ruddigore* both operate under legal fictions that force them to repeat actions indefinitely — the precise G&S metaphor for a loop: a construct that, by a convenient fiction, repeats events until reality reasserts itself.
+- `FREE FROM THIS QUANDARY.` — breaks out of the innermost loop immediately. Verbatim from the finale of *The Gondoliers*: *"Free from this quandary, contented are we."* The precise moment of release from a recurring bind.
+- `THE TERM EXPIRES.` — closes the loop. Drawn from *The Grand Duke*, Act I: the Statutory Duel law *"expires to-morrow"* — a recurring obligation reaching its natural terminus.
+
+### Ascending (Counted Up) Loop
+
+```topsy
+BY A LEGAL FICTION KNOWN AS counter ASCENDING i UNTIL ALIKE i AND 10
+  BEHOLD i
+THE TERM EXPIRES.
+```
+
+- `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` begins at `0`
+- `UNTIL <expression>` — exits when the expression is `VERITY` (checked before each iteration). From *The Pirates of Penzance* — Frederic's indenture binds him *"until"* his twenty-first birthday.
+
+### Descending (Counted Down) Loop
+
+```topsy
+BY A LEGAL FICTION KNOWN AS countdown DESCENDING i UNTIL ALIKE i AND 0
+  BEHOLD i
+THE TERM EXPIRES.
+```
+
+- `DESCENDING <var>` — decrements `<var>` by 1 at the end of each iteration
+
+### While Loop
+
+```topsy
+BY A LEGAL FICTION KNOWN AS watchman WHILST UNLIKE Ko-Ko AND 0
+  BEHOLD Ko-Ko
+  Ko-Ko IS APPOINTED DIFFERENCE OF Ko-Ko AND 1
+THE TERM EXPIRES.
+```
+
+- `WHILST <expression>` — continues while expression is `VERITY` (checked before each iteration; no automatic variable mutation)
+
+---
+
+## 11. Functions
+
+### Declaration
+
+```topsy
+IT IS MY DUTY TO PERFORM <name> UNDER THE TERMS OF <param1> [AND <param2> ...]
+  <body>
+  AND SO I FIND <expression>
+MY DUTY IS DISCHARGED.
+```
+
+- `IT IS MY DUTY TO PERFORM <name>` — declares a function; the G&S obligation formula, used throughout the canon
+- `UNDER THE TERMS OF <param1> [AND <param2> ...]` — declares parameters. From *The Pirates of Penzance*: Frederic's indenture specifies the exact *terms* under which his obligation is to be performed. Parameters are the terms of the indenture.
+- `UNDER NO OBLIGATION` — for functions with no parameters
+- `AND SO I FIND <expression>` — returns a value; the judicial verdict formula from *Trial by Jury*
+- `MY DUTY IS DISCHARGED.` — closes the function; the obligation is fulfilled
+- `MY DUTY IS PREMATURELY DISCHARGED.` — early return with no value
+- Functions have their own scope; they receive values only through parameters
+
+### Calling
+
+```topsy
+SUMMON factorial WITH 5 IF YOU PLEASE.
+PRAY WELCOME answer AS A PEER BEING SUMMON factorial WITH n IF YOU PLEASE.
+SUMMON greet WITH NOTHING IF YOU PLEASE.
+```
+
+- `SUMMON <name> WITH <arg1> [AND <arg2> ...] IF YOU PLEASE.` — calls a function. `SUMMON` is verbatim from *The Mikado*, Act I — Ko-Ko: *"I summon my guard."* To summon a named party to perform their duty, with the specified terms, if they would be so kind. `IF YOU PLEASE` is verbatim from *H.M.S. Pinafore* — Sir Joseph Porter's insistence on the proper form of address.
+- `SUMMON <name> WITH NOTHING IF YOU PLEASE.` — calls a function with no arguments
+- The return value becomes `JUST SO`, or can be used directly in an expression
+
+**Example — Factorial:**
+
+```topsy
+IT IS MY DUTY TO PERFORM factorial UNDER THE TERMS OF n
+  ALIKE n AND 0
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      AND SO I FIND 1
+  SO MUCH FOR THAT.
+  AND SO I FIND PRODUCT OF n AND SUMMON factorial WITH DIFFERENCE OF n AND 1 IF YOU PLEASE.
+MY DUTY IS DISCHARGED.
+```
+
+---
+
+## 12. Exception Handling
+
+```topsy
+WITH THE GREATEST RESPECT, <operation>?
+  WITH GRATITUDE
+    <success block>
+  MODIFIED RAPTURE
+    <exception block>
+THAT CONCLUDES THE MATTER.
+```
+
+- `WITH THE GREATEST RESPECT, <operation>?` — wraps a potentially-failing operation
+- `WITH GRATITUDE` — the success handler
+- `MODIFIED RAPTURE` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news
+- `THAT CONCLUDES THE MATTER.` — closes the block
+
+---
+
+## 13. Libraries & Imports
+
+```topsy
+PRAY SUMMON THE SERVICES OF "filename"
+```
+
+Imports another `.topsy` file. All `IT IS MY DUTY TO PERFORM` declarations in that file become available.
+
+---
+
+## 14. Complete Keyword Reference
+
+| Keyword                                          | Role                        | G&S Source / Note                                                                 |
+|--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
+| `HARK!`                                          | Program start               | Theatrical attention-getter throughout the canon                                  |
+| `FINALE.`                                        | Program end                 | Standard G&S ending                                                               |
+| `PRINCIPALS`                                     | Variable declaration block  | Dramatis Personae                                                                 |
+| `PRAY WELCOME`                                   | Variable declaration        | *The Mikado*, Act I — `PRAY` verbatim; welcoming each new variable before the assembled company |
+| `AS A`                                           | Type annotation             | —                                                                                 |
+| `BEING`                                          | Initial value               | *Dramatis Personae* parentheticals — "Nanki-Poo, *being* the son of the Mikado..." |
+| `IS APPOINTED`                                   | Assignment                  | *The Mikado*, Act I — Ko-Ko raised to Lord High Executioner by official proclamation |
+| `IS HENCEFORTH A`                                | In-place cast               | *Iolanthe* — the Fairy Queen's transforming declaration                           |
+| `AS IT WERE`                                     | Expression cast             | G&S hedging construction — invoking a convenient fiction about what something is  |
+| `BEHOLD`                                         | Print output                | *The Mikado*, Act I — "Behold the Lord High Executioner!" — public announcement   |
+| `WITHOUT CEREMONY`                               | Suppress newline on output  | Victorian politeness turned off                                                   |
+| `PRAY TELL`                                      | Read input                  | *The Mikado*, Act I — Nanki-Poo: *"Gentlemen, I pray you tell me..."*             |
+| `ASIDE:`                                         | Single-line comment         | Stage direction throughout every G&S libretto — heard by the audience, not the characters |
+| `(ASIDE, AT SOME LENGTH:`                        | Multi-line comment (open)   | Gilbert's own parenthetical stage direction style                                 |
+| `END OF ASIDE.)`                                 | Multi-line comment (close)  | Closes the parenthetical aside                                                    |
+| `SUM OF ... AND ...`                             | Addition                    | —                                                                                 |
+| `DIFFERENCE OF ... AND ...`                      | Subtraction                 | —                                                                                 |
+| `PRODUCT OF ... AND ...`                         | Multiplication              | —                                                                                 |
+| `QUOTIENT OF ... AND ...`                        | Division                    | —                                                                                 |
+| `REMAINDER OF ... AND ...`                       | Modulo                      | —                                                                                 |
+| `LARGER OF ... AND ...`                          | Maximum                     | —                                                                                 |
+| `SMALLER OF ... AND ...`                         | Minimum                     | —                                                                                 |
+| `WOVEN OF ... AND ... IF YOU PLEASE.`            | String concatenation        | Threads of `YARN` woven together; `IF YOU PLEASE` verbatim from *H.M.S. Pinafore* |
+| `ALIKE ... AND ...`                              | Equality (==)               | —                                                                                 |
+| `UNLIKE ... AND ...`                             | Inequality (!=)             | —                                                                                 |
+| `BOTH ... AND ...`                               | Logical AND                 | —                                                                                 |
+| `EITHER ... OR ...`                              | Logical OR                  | —                                                                                 |
+| `HARDLY EVER ...`                                | Logical NOT                 | *H.M.S. Pinafore* — "What, never? Well, **hardly ever!**"                         |
+| `ALL OF ... IF YOU PLEASE.`                      | Variadic AND                | —                                                                                 |
+| `ANY OF ... IF YOU PLEASE.`                      | Variadic OR                 | —                                                                                 |
+| `JUST SO`                                        | Implicit result variable    | *The Mikado* — "Just so!" — the thing just established                            |
+| `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
+| `NAY`                                             | Boolean false               | Throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be" |
+| `SHOULD IT TRANSPIRE THAT`                       | If condition                | Lord Chancellor's conditional reasoning, *Iolanthe*                               |
+| `QUITE SO.`                                      | True branch                 | Verbatim *The Mikado* — Ko-Ko and Pooh-Bah's crisp affirmation                    |
+| `OR, IF NOT,`                                    | Else-if                     | Lord Chancellor's enumeration of alternatives                                     |
+| `OTHERWISE,`                                     | Else branch                 | Pooh-Bah switching between logical branches and capacities                        |
+| `SO MUCH FOR THAT.`                              | End if                      | Ko-Ko's dismissive summary once a matter is disposed of                           |
+| `IN WHICH CAPACITY?`                             | Switch                      | Verbatim Pooh-Bah register, *The Mikado* — "In which of my capacities?"           |
+| `WHEN ACTING AS`                                 | Case label                  | Pooh-Bah switching between his official capacities                                |
+| `THAT WILL DO.`                                  | Break (switch)              | Used dismissively throughout the canon — Mikado, Ko-Ko, Lord Chancellor           |
+| `FAILING ALL OF THE ABOVE,`                      | Default case                | Lord Chancellor's catch-all provision                                             |
+| `NOTHING COULD BE MORE SATISFACTORY.`            | End switch                  | Verbatim *The Mikado*, Act II — the Mikado's response to the fictitious execution  |
+| `BY A LEGAL FICTION KNOWN AS`                    | Loop start                  | *Iolanthe* / *Ruddigore* — the legal fiction that permits repetition              |
+| `ASCENDING`                                      | Increment loop var          | Ascending the peerage hierarchy — *Iolanthe*                                      |
+| `DESCENDING`                                     | Decrement loop var          | Descending same                                                                   |
+| `UNTIL`                                          | Loop exit condition         | *Pirates of Penzance* — Frederic bound *"until"* his 21st birthday                |
+| `WHILST`                                         | Loop while condition        | Continue while true                                                               |
+| `FREE FROM THIS QUANDARY.`                       | Break (loop)                | *The Gondoliers* finale — verbatim: *"Free from this quandary, contented are we"* |
+| `THE TERM EXPIRES.`                              | End loop                    | *The Grand Duke*, Act I — verbatim: the Statutory Duel law *"expires to-morrow"*  |
+| `IT IS MY DUTY TO PERFORM`                       | Function definition         | G&S obligation formula — used throughout the canon                                |
+| `UNDER THE TERMS OF`                             | Function parameters         | *Pirates of Penzance* — Frederic's indenture specifies the *terms*                |
+| `UNDER NO OBLIGATION`                            | No parameters               | A function bound by no terms                                                      |
+| `AND SO I FIND`                                  | Return with value           | *Trial by Jury* — the judicial verdict formula                                    |
+| `MY DUTY IS DISCHARGED.`                         | End function                | The obligation is fulfilled                                                       |
+| `MY DUTY IS PREMATURELY DISCHARGED.`             | Return (no value)           | Early exit — duty cut short                                                       |
+| `SUMMON ... WITH ... IF YOU PLEASE.`             | Function call               | *The Mikado*, Act I — Ko-Ko: *"I summon my guard"*; `IF YOU PLEASE` from *Pinafore* |
+| `SUMMON ... WITH NOTHING IF YOU PLEASE.`         | Call with no args           | —                                                                                 |
+| `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
+| `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
+| `MODIFIED RAPTURE`                               | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"        |
+| `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
+| `PRAY SUMMON THE SERVICES OF`                    | Import                      | —                                                                                 |
+
+---
+
+## 15. Type Reference
+
+| Keyword  | Type    | Values                               |
+|----------|---------|--------------------------------------|
+| `PEER`   | Integer | Any whole number                     |
+| `FATHOM` | Float   | Any real number                      |
+| `YARN`   | String  | Any sequence of characters in `""`   |
+| `DECREE` | Boolean | `VERITY` or `NAY`                      |
+| `NAUGHT` | Null    | `NAUGHT`                             |
+
+---
+
+## 16. Operator Precedence
+
+Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
+
+```topsy
+SUM OF PRODUCT OF 3 AND 4 AND 5
+ASIDE: = (3 * 4) + 5 = 17
+ASIDE: PRODUCT OF 3 AND 4 resolves first, yielding 12
+ASIDE: then SUM OF 12 AND 5 = 17
+```
+
+---
+
+## 17. Scoping
+
+- Variables declared in `PRINCIPALS` or at the top level are **global**.
+- Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
+- Functions do not close over outer scope — they receive values only through parameters.
+- Loop bodies share the scope of their enclosing block.
+
+---
+
+## 18. Line Structure
+
+- Each statement occupies one line.
+- `~` at the end of a line continues the statement onto the next line.
+- `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
+- Blank lines are ignored.
+- Leading and trailing whitespace is ignored.
+
+---
+
+## 19. A Note on Style
+
+The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
+
+- Name their variables after G&S characters and concepts
+- Write comments in the style of stage directions
+- Give their programs a proper title *and* an `or,` subtitle
+- Treat their `PRINCIPALS` section as a genuine *Dramatis Personae* with descriptive parentheticals in `ASIDE:` comments
+- Approach every `IT IS MY DUTY TO PERFORM` with the gravity the occasion demands
+
+A well-written Topsy program, read aloud, should be indistinguishable from the libretto of a previously undiscovered Savoy opera.
+
+---
+
+## 20. Complete Example
+
+```topsy
+HARK! "The Gondolier's Dilemma"
+  or, "A Computation in Which Primality is Determined"
+
+ASIDE: Determine whether a number is prime.
+
+PRINCIPALS
+  PRAY WELCOME candidate AS A PEER
+  PRAY WELCOME i         AS A PEER
+
+IT IS MY DUTY TO PERFORM is_prime UNDER THE TERMS OF n
+  ALIKE n AND SMALLER OF n AND 1
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      AND SO I FIND NAY
+  SO MUCH FOR THAT.
+  PRAY WELCOME i AS A PEER BEING 2
+  BY A LEGAL FICTION KNOWN AS trial WHILST UNLIKE i AND PRODUCT OF i AND i
+    UNLIKE REMAINDER OF n AND i AND 0
+    SHOULD IT TRANSPIRE THAT
+      QUITE SO.
+        AND SO I FIND NAY
+    SO MUCH FOR THAT.
+    i IS APPOINTED SUM OF i AND 1
+  THE TERM EXPIRES.
+  AND SO I FIND VERITY
+MY DUTY IS DISCHARGED.
+
+BEHOLD "Pray enter a number for examination:"
+PRAY TELL candidate
+candidate IS HENCEFORTH A PEER
+
+SUMMON is_prime WITH candidate IF YOU PLEASE.
+SHOULD IT TRANSPIRE THAT
+  QUITE SO.
+    BEHOLD WOVEN OF candidate AND " is prime — a most singular distinction." IF YOU PLEASE.
+  OTHERWISE,
+    BEHOLD WOVEN OF candidate AND " is not prime — as one might have expected." IF YOU PLEASE.
+SO MUCH FOR THAT.
+
+FINALE.
+```
+
+---
+
+*Topsy Turvy — Version 0.1.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

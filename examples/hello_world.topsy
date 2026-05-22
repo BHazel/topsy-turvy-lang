@@ -1,0 +1,23 @@
+HARK! "A Most Agreeable Salutation"
+  or, "In Which the World is Greeted with Appropriate Ceremony"
+
+(ASIDE, AT SOME LENGTH:
+  The traditional opening gambit of any self-respecting program.
+  We have spared no expense in its composition.
+END OF ASIDE.)
+
+PRINCIPALS
+  PRAY WELCOME greeting  AS A YARN  BEING "Hello, World!"
+  PRAY WELCOME recipient AS A YARN  BEING "World"
+
+BEHOLD "A Most Agreeable Salutation"
+BEHOLD "================================"
+
+BEHOLD greeting
+
+BEHOLD WOVEN OF "I am delighted to make your acquaintance, " AND recipient AND "." IF YOU PLEASE.
+
+BEHOLD "Yours, with the utmost sincerity and corroborative detail,"
+BEHOLD "  A Topsy Program"
+
+FINALE.

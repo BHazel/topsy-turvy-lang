@@ -1,0 +1,57 @@
+HARK! "The Mikado's Little List"
+  or, "In Which Numbers are Subjected to Divisibility and Found Wanting"
+
+(ASIDE, AT SOME LENGTH:
+  The Lord High Executioner Ko-Ko has compiled his celebrated list.
+  Numbers divisible by three are marked as "Fizz" (a trifling offence).
+  Numbers divisible by five are marked as "Buzz" (a more serious matter).
+  Numbers divisible by both are marked as "FizzBuzz" (the gravest category).
+  All others are proclaimed in their natural state, which is punishment enough.
+
+  "As someday it may happen that a victim must be found,
+   I've got a little list — I've got a little list."
+END OF ASIDE.)
+
+PRINCIPALS
+  PRAY WELCOME i          AS A PEER    BEING 1
+  PRAY WELCOME limit      AS A PEER    BEING 100
+  PRAY WELCOME by_three   AS A DECREE
+  PRAY WELCOME by_five    AS A DECREE
+  PRAY WELCOME output     AS A YARN
+
+BEHOLD "THE MIKADO'S LITTLE LIST"
+BEHOLD "Numbers 1 to 100, sorted and condemned as appropriate."
+BEHOLD "----------------------------------------------------------"
+
+BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE i AND LARGER OF i AND limit
+
+  ASIDE: determine divisibility — the matter is of the gravest importance
+  ALIKE REMAINDER OF i AND 3 AND 0
+  by_three IS APPOINTED JUST SO
+
+  ALIKE REMAINDER OF i AND 5 AND 0
+  by_five IS APPOINTED JUST SO
+
+  ASIDE: render judgement with appropriate ceremony
+  BOTH by_three AND by_five
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      output IS APPOINTED "FizzBuzz"
+    OR, IF NOT, by_three
+      output IS APPOINTED "Fizz"
+    OR, IF NOT, by_five
+      output IS APPOINTED "Buzz"
+    OTHERWISE,
+      output IS APPOINTED AS IT WERE i AS A YARN
+  SO MUCH FOR THAT.
+
+  BEHOLD output
+
+  i IS APPOINTED SUM OF i AND 1
+
+THE TERM EXPIRES.
+
+BEHOLD "----------------------------------------------------------"
+BEHOLD "The list is complete. I am satisfied."
+
+FINALE.

@@ -1,0 +1,128 @@
+HARK! "The Pirate King's Arithmetical Engine"
+  or, "In Which Two Numbers are Submitted to the Indignity of Calculation"
+
+(ASIDE, AT SOME LENGTH:
+  The Pirate King, though a man of many parts, has always felt
+  that his crew lacked a reliable means of division of plunder.
+  He has therefore commissioned this arithmetical engine, which
+  will take two numbers and subject them to any of the four
+  principal operations, as the occasion demands.
+
+  "I am the Pirate King!
+   And it is, it is a glorious thing to be a Pirate King!"
+   — The Pirates of Penzance
+
+  The Major-General, who knows everything except military matters,
+  has certified this calculator as mathematically sound.
+END OF ASIDE.)
+
+PRINCIPALS
+  PRAY WELCOME first_plunder   AS A FATHOM  ASIDE: the first number
+  PRAY WELCOME second_plunder  AS A FATHOM  ASIDE: the second number
+  PRAY WELCOME operation       AS A YARN    ASIDE: the chosen operation
+  PRAY WELCOME result          AS A FATHOM  ASIDE: the computed result
+  PRAY WELCOME another         AS A YARN    ASIDE: whether to continue
+
+ASIDE: -----------------------------------------------------------------------
+ASIDE: Functions — the duties of the crew, each assigned his particular role
+ASIDE: -----------------------------------------------------------------------
+
+IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF a AND b
+  AND SO I FIND SUM OF a AND b
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM subtract UNDER THE TERMS OF a AND b
+  AND SO I FIND DIFFERENCE OF a AND b
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM multiply UNDER THE TERMS OF a AND b
+  AND SO I FIND PRODUCT OF a AND b
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM divide UNDER THE TERMS OF a AND b
+  ALIKE b AND 0.0
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      BEHOLD "  ERROR: Division by zero is not permitted, even by pirates."
+      BEHOLD "         The Sergeant of Police has been notified."
+      MY DUTY IS PREMATURELY DISCHARGED.
+  SO MUCH FOR THAT.
+  AND SO I FIND QUOTIENT OF a AND b
+MY DUTY IS DISCHARGED.
+
+ASIDE: -----------------------------------------------------------------------
+ASIDE: Main programme — the operation of the engine
+ASIDE: -----------------------------------------------------------------------
+
+BEHOLD "=============================================="
+BEHOLD "  THE PIRATE KING'S ARITHMETICAL ENGINE"
+BEHOLD "  Certified by Major-General Stanley"
+BEHOLD "=============================================="
+BEHOLD ""
+
+BY A LEGAL FICTION KNOWN AS main_loop
+
+  BEHOLD "Please enter the first number:"
+  PRAY TELL first_plunder
+  first_plunder IS HENCEFORTH A FATHOM
+
+  BEHOLD "Please enter the second number:"
+  PRAY TELL second_plunder
+  second_plunder IS HENCEFORTH A FATHOM
+
+  BEHOLD "Please select your operation:"
+  BEHOLD "  + (addition, the most honourable)"
+  BEHOLD "  - (subtraction, a necessary evil)"
+  BEHOLD "  * (multiplication, favoured by the unscrupulous)"
+  BEHOLD "  / (division, for equitable distribution of plunder)"
+  PRAY TELL operation
+
+  ASIDE: render judgement upon the operation — with appropriate solemnity
+  operation
+  IN WHICH CAPACITY?
+    WHEN ACTING AS "+"
+      result IS APPOINTED SUMMON add WITH first_plunder AND second_plunder IF YOU PLEASE.
+      BEHOLD WOVEN OF "  " AND first_plunder AND " + " AND second_plunder AND " = " AND result IF YOU PLEASE.
+      THAT WILL DO.
+    WHEN ACTING AS "-"
+      result IS APPOINTED SUMMON subtract WITH first_plunder AND second_plunder IF YOU PLEASE.
+      BEHOLD WOVEN OF "  " AND first_plunder AND " - " AND second_plunder AND " = " AND result IF YOU PLEASE.
+      THAT WILL DO.
+    WHEN ACTING AS "*"
+      result IS APPOINTED SUMMON multiply WITH first_plunder AND second_plunder IF YOU PLEASE.
+      BEHOLD WOVEN OF "  " AND first_plunder AND " * " AND second_plunder AND " = " AND result IF YOU PLEASE.
+      THAT WILL DO.
+    WHEN ACTING AS "/"
+      SUMMON divide WITH first_plunder AND second_plunder IF YOU PLEASE.
+      result IS APPOINTED JUST SO
+      ALIKE result AND NAUGHT
+      SHOULD IT TRANSPIRE THAT
+        OTHERWISE,
+          BEHOLD WOVEN OF "  " AND first_plunder AND " / " AND second_plunder AND " = " AND result IF YOU PLEASE.
+      SO MUCH FOR THAT.
+      THAT WILL DO.
+    FAILING ALL OF THE ABOVE,
+      BEHOLD "  That operation is unknown to the Pirate King. He is most displeased."
+  NOTHING COULD BE MORE SATISFACTORY.
+
+  BEHOLD ""
+  BEHOLD "Shall we perform another calculation? (yes/no)"
+  BEHOLD "A policeman's lot, as you know, is not a happy one — but the engine stands ready."
+  PRAY TELL another
+
+  ALIKE another AND "no"
+  SHOULD IT TRANSPIRE THAT
+    QUITE SO.
+      FREE FROM THIS QUANDARY.
+  SO MUCH FOR THAT.
+
+  BEHOLD ""
+
+THE TERM EXPIRES.
+
+BEHOLD ""
+BEHOLD "The Pirate King thanks you for your patronage."
+BEHOLD "He is, it is a glorious thing, a Pirate King."
+BEHOLD "Good day."
+
+FINALE.
