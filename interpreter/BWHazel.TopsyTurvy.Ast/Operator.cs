@@ -3,7 +3,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Defines the operators supported by the Topsy Turvy language.
 /// </summary>
-public enum TopsyTurvyOperator
+public enum Operator
 {
     /// <summary>SUM OF</summary>
     Sum,
@@ -49,7 +49,7 @@ public enum TopsyTurvyOperator
 
     /// <summary>WOVEN OF</summary>
     WovenOf,
-    
+
     /// <summary>SUMMON</summary>
     Summon,
 

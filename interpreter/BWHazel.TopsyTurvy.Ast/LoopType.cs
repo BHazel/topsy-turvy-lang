@@ -13,7 +13,7 @@ public enum LoopType
 
     /// <summary>A loop that decrements a counter until a condition is met.</summary>
     Descending,
-    
+
     /// <summary>A loop that continues while a condition is true.</summary>
     Whilst
 }

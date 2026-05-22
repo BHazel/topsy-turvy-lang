@@ -6,4 +6,4 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <param name="Message">The descriptive error message.</param>
 /// <param name="Severity">The severity of the diagnostic.</param>
 /// <param name="Span">The source code span associated with the diagnostic.</param>
-public record TopsyTurvyDiagnostic(string Message, TopsyTurvyDiagnosticSeverity Severity, TopsyTurvySourceSpan Span);
+public record Diagnostic(string Message, DiagnosticSeverity Severity, SourceSpan Span);

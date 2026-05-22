@@ -3,7 +3,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents a variable name or function identifier in the AST.
 /// </summary>
-public class IdentifierNode : TopsyTurvyExpression
+public class IdentifierNode : Expression
 {
     /// <summary>
     /// Gets or initialises the name of the identifier.

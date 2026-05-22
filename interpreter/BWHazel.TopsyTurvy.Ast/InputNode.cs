@@ -3,7 +3,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents an input statement.
 /// </summary>
-public class InputNode : TopsyTurvyStatement
+public class InputNode : Statement
 {
     /// <summary>
     /// Gets or initialises the variable to store the input in.

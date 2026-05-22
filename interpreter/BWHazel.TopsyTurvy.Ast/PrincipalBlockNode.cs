@@ -5,7 +5,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents the PRINCIPALS section where global variables are declared.
 /// </summary>
-public class PrincipalBlockNode : TopsyTurvyStatement
+public class PrincipalBlockNode : Statement
 {
     /// <summary>
     /// Gets or initialises the list of variable declarations in the block.

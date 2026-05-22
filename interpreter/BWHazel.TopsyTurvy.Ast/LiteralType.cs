@@ -3,7 +3,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Defines the supported literal types in the Topsy Turvy language.
 /// </summary>
-public enum TopsyTurvyLiteralType
+public enum LiteralType
 {
     /// <summary>A whole number (PEER).</summary>
     Integer,
@@ -16,7 +16,7 @@ public enum TopsyTurvyLiteralType
 
     /// <summary>A boolean value (DECREE).</summary>
     Boolean,
-    
+
     /// <summary>A null value (NAUGHT).</summary>
     Null
 }

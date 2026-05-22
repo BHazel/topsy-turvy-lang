@@ -5,7 +5,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents a loop statement.
 /// </summary>
-public class LoopNode : TopsyTurvyStatement
+public class LoopNode : Statement
 {
     /// <summary>
     /// Gets or initialises the optional label for the loop.
@@ -20,15 +20,15 @@ public class LoopNode : TopsyTurvyStatement
     /// <summary>
     /// Gets or initialises the exit or continuation condition.
     /// </summary>
-    public TopsyTurvyExpression? Condition { get; init; }
+    public Expression? Condition { get; init; }
 
     /// <summary>
     /// Gets or initialises the variable used for counting in ascending/descending loops.
     /// </summary>
     public string? LoopVariable { get; init; }
-    
+
     /// <summary>
     /// Gets or initialises the body of the loop.
     /// </summary>
-    public required IReadOnlyList<TopsyTurvyStatement> Body { get; init; }
+    public required IReadOnlyList<Statement> Body { get; init; }
 }

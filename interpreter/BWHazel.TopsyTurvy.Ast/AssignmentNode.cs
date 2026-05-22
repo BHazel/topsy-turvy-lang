@@ -3,7 +3,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents a variable assignment.
 /// </summary>
-public class AssignmentNode : TopsyTurvyStatement
+public class AssignmentNode : Statement
 {
     /// <summary>
     /// Gets or initialises the name of the variable to assign to.
@@ -13,5 +13,5 @@ public class AssignmentNode : TopsyTurvyStatement
     /// <summary>
     /// Gets or initialises the value to assign.
     /// </summary>
-    public required TopsyTurvyExpression Value { get; init; }
+    public required Expression Value { get; init; }
 }
