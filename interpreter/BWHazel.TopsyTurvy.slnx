@@ -3,4 +3,5 @@
   <Project Path="BWHazel.TopsyTurvy.Cli/BWHazel.TopsyTurvy.Cli.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Tests/BWHazel.TopsyTurvy.Tests.csproj" />
 </Solution>

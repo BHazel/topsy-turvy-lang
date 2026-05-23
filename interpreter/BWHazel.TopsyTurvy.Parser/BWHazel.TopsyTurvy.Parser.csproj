@@ -10,4 +10,8 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Superpower" Version="3.2.1" />
+  </ItemGroup>
+
 </Project>
