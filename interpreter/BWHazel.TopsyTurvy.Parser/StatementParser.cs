@@ -168,8 +168,7 @@ public static class StatementParser
                 .Or(Lexer.IntegerLiteral.Select(v => (object?)v))
                 .Or(Lexer.StringLiteral.Select(v => (object?)v)))
             from body in Ws(Parse.Ref(() => Statement)).Many()
-            from brk  in Ws(Lexer.Keyword("THAT WILL DO.")).Try().OptionalOrDefault(null!)
-            select new SwitchCase(lit, body.ToList(), brk is not null)
+            select new SwitchCase(lit, body.ToList())
         ).Many()
         from def in (
             from _     in Ws(Lexer.Keyword("FAILING ALL OF THE ABOVE,"))
@@ -217,12 +216,18 @@ public static class StatementParser
         .Or(Parse.Return(new LoopDefinition(LoopType.Infinite, null, null)));
 
     /// <summary>
-    /// Parses a statement within a loop body.
+    /// Parses a break statement.
     /// </summary>
-    private static readonly TextParser<Statement?> LoopBodyStatement =
-        Lexer.Keyword("ONCE MORE.").Select(_ => (Statement?)null)
-        .Or(Lexer.Keyword("THAT WILL DO.").Select(_ => (Statement?)null))
-        .Or(Parse.Ref(() => Statement).Select(s => (Statement?)s));
+    public static readonly TextParser<Statement> Break =
+        Lexer.Keyword("THAT WILL DO.")
+             .Value((Statement)new BreakNode { Span = PlaceholderSpan });
+
+    /// <summary>
+    /// Parses a continue statement.
+    /// </summary>
+    public static readonly TextParser<Statement> Continue =
+        Lexer.Keyword("ONCE MORE.")
+             .Value((Statement)new ContinueNode { Span = PlaceholderSpan });
 
     /// <summary>
     /// Parses a loop.
@@ -232,7 +237,7 @@ public static class StatementParser
         from label   in Ws(Lexer.Keyword("KNOWN AS").IgnoreThen(Ws(Lexer.Identifier)))
                          .Try().OptionalOrDefault(null!)
         from loopDef in LoopTypeParser
-        from body    in Ws(LoopBodyStatement).Many()
+        from body    in Ws(Parse.Ref(() => Statement)).Many()
         from _end    in Ws(Lexer.Keyword("THE TERM EXPIRES."))
         select (Statement)new LoopNode
             {
@@ -240,7 +245,7 @@ public static class StatementParser
                 Type         = loopDef.Type,
                 Condition    = loopDef.Condition,
                 LoopVariable = loopDef.Variable,
-                Body         = body.Where(s => s is not null).Select(s => s!).ToList(),
+                Body         = body.ToList(),
                 Span         = PlaceholderSpan
             };
 
@@ -274,6 +279,29 @@ public static class StatementParser
         .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION")).Select(_ => new List<string>()));
 
     /// <summary>
+    /// Parses a return statement.
+    /// </summary>
+    public static readonly TextParser<Statement> Return =
+        from _ in Lexer.Keyword("AND SO I FIND")
+        from v in Ws(ExpressionParser.Expression)
+        select (Statement)new ReturnNode { Value = v, Span = PlaceholderSpan };
+
+    /// <summary>
+    /// Parses an early no-value return.
+    /// </summary>
+    public static readonly TextParser<Statement> EarlyDischarge =
+        Lexer.Keyword("MY DUTY IS PREMATURELY DISCHARGED.")
+             .Value((Statement)new ReturnNode { Value = null, Span = PlaceholderSpan });
+
+    /// <summary>
+    /// Parses a throw statement.
+    /// </summary>
+    public static readonly TextParser<Statement> Curse =
+        from _ in Lexer.Keyword("A HIDEOUS CURSE ON")
+        from v in Ws(ExpressionParser.Expression)
+        select (Statement)new ThrowNode { Value = v, Span = PlaceholderSpan };
+
+    /// <summary>
     /// Parses a function definition.
     /// </summary>
     public static readonly TextParser<Statement> FunctionDefinition =
@@ -281,18 +309,13 @@ public static class StatementParser
         from name  in Ws(Lexer.Identifier)
         from terms in ParameterList
         from body  in Ws(Parse.Ref(() => Statement)).Many()
-        from ret   in Ws(Lexer.Keyword("AND SO I FIND").IgnoreThen(Ws(ExpressionParser.Expression)))
-                       .Try().OptionalOrDefault(null!)
-        from _end  in Ws(
-            Lexer.Keyword("MY DUTY IS PREMATURELY DISCHARGED.")
-            .Or(Lexer.Keyword("MY DUTY IS DISCHARGED.")))
+        from _end  in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED."))
         select (Statement)new FunctionDefinitionNode
             {
-                Name        = name,
-                Parameters  = terms,
-                Body        = body.ToList(),
-                ReturnValue = ret,
-                Span        = PlaceholderSpan
+                Name       = name,
+                Parameters = terms,
+                Body       = body.ToList(),
+                Span       = PlaceholderSpan
             };
 
     /// <summary>
@@ -339,5 +362,10 @@ public static class StatementParser
         .Or(TryCatch)
         .Or(FunctionDefinition)
         .Or(Import)
+        .Or(EarlyDischarge)
+        .Or(Return)
+        .Or(Curse)
+        .Or(Break)
+        .Or(Continue)
         .Or(ExpressionStatementParser);
 }

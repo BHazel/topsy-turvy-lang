@@ -5,7 +5,6 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <summary>
 /// Represents a single switch case.
 /// </summary>
-/// <param name="Literal">The literal value for the case.</param>
-/// <param name="Block">The block of statements to execute if the case matches.</param>
-/// <param name="HasBreak">Indicates whether the case block ends with a break statement.</param>
-public record SwitchCase(object? Literal, IReadOnlyList<Statement> Block, bool HasBreak);
+/// <param name="Literal">The literal value for the case, or <c>null</c> for a fall-through label with no distinct value.</param>
+/// <param name="Block">The block of statements to execute if the case matches. A <see cref="BreakNode"/> anywhere in the block prevents fall-through to subsequent cases.</param>
+public record SwitchCase(object? Literal, IReadOnlyList<Statement> Block);

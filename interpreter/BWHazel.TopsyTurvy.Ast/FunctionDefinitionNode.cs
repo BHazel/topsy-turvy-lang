@@ -20,10 +20,8 @@ public class FunctionDefinitionNode : Statement
     /// <summary>
     /// Gets or initialises the block of statements in the function body.
     /// </summary>
+    /// <remarks>
+    /// Return statements are represented by <see cref="ReturnNode"/>.
+    /// </remarks>
     public required IReadOnlyList<Statement> Body { get; init; }
-
-    /// <summary>
-    /// Gets or initialises the value returned by the function, if any.
-    /// </summary>
-    public Expression? ReturnValue { get; init; }
 }
