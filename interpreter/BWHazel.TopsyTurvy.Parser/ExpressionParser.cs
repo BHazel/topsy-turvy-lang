@@ -56,6 +56,13 @@ public static class ExpressionParser
         ).Select(node => (Expression)node);
 
     /// <summary>
+    /// Parses the implicit variable.
+    /// </summary>
+    public static readonly TextParser<Expression> JustSoExpression =
+        Lexer.Keyword("JUST SO")
+             .Select(_ => (Expression)new IdentifierNode { Name = "JUST SO", Span = PlaceholderSpan });
+
+    /// <summary>
     /// Parses a variable or function name into an <see cref="IdentifierNode"/>.
     /// </summary>
     public static readonly TextParser<Expression> IdentifierExpression =
@@ -89,6 +96,7 @@ public static class ExpressionParser
     public static readonly TextParser<Expression> Expression =
         Parse.Ref(() => PrefixExpression)
             .Or(Parse.Ref(() => LiteralExpression))
+            .Or(JustSoExpression)
             .Or(Parse.Ref(() => IdentifierExpression));
 
     /// <summary>

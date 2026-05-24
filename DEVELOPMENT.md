@@ -1,9 +1,9 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-23
+* **Last Updated:** 2026-05-24
 * **Current Specification Version:** 0.2.0
-* **Interpreter Status:** Under Development (Phase 2 Complete)
+* **Interpreter Status:** Under Development (Phase 3, Parts A & B1 Complete)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -28,101 +28,183 @@
 ## 2. Last Session Summary
 
 ### Phase 1: Foundation & Design (Already Completed)
-The AST is implemented as a strongly-typed hierarchy in `BWHazel.TopsyTurvy.Ast`, designed for LSP-readiness with mandatory source tracking.
+All AST types implemented and fully XML-documented.
 
-**AST Implementation Details:**
-*   **Core Infrastructure**: 
-    *   `TopsyTurvyNode`: Base abstract class. Every node must possess a `TopsyTurvySourceSpan Span`, ensuring every AST element maps back to its exact source coordinates (`Line`, `Column`).
-    *   `TopsyTurvyExpression` / `TopsyTurvyStatement`: Primary base types for all language constructs.
-*   **Expression Nodes**:
-    *   `LiteralNode`: Stores values of type `TopsyTurvyLiteralType` (`Integer`, `Float`, `String`, `Boolean`, `Null`).
-    *   `IdentifierNode`: Represents variable or function names.
-    *   `PrefixExpressionNode`: Implements the prefix notation requirements. Uses `TopsyTurvyOperator` to distinguish between Fixed-arity (Arithmetic, Boolean, Comparison) and Variadic operators (Concatenation, Function Calls, Variadic Logic).
-*   **Statement Nodes**:
-    *   `TopsyTurvyProgramNode`: The root node capturing the operetta's `Title`, optional `Subtitle`, and the sequence of `Statements`.
-    *   `PrincipalBlockNode`: Encapsulates the `PRINCIPALS` section.
-    *   `DeclarationNode`: Handles variable declarations (`PRAY WELCOME`), including type and optional initial values.
-    *   `AssignmentNode`: Maps the `IS APPOINTED` operation.
-    *   `TypeCastNode`: Split into `InPlaceCastNode` (mutating) and `ExpressionCastNode` (non-mutating).
-    *   `PrintNode` & `InputNode`: Map `BEHOLD` (with newline toggle) and `PRAY TELL`.
-    *   `ConditionalNode`: Implements the `SHOULD IT TRANSPIRE THAT` logic, supporting a true block, a list of `ElseIfBranch` records, and an optional else block.
-    *   `SwitchNode`: Maps `IN WHICH CAPACITY?`, managing a list of `SwitchCase` records (Literal, Block, Break-flag) and a default block.
-    *   `LoopNode`: Supports all four loop types (`Infinite`, `Ascending`, `Descending`, `Whilst`) along with optional labels and loop variables.
-    *   `FunctionDefinitionNode`: Captures function signatures (`UNDER THE TERMS OF`), bodies, and return expressions.
-    *   `ImportNode`: Maps the `PRAY ADMIT` directive.
-    *   `TryCatchNode`: Implements the `WITH THE GREATEST RESPECT` block with success and exception (`MODIFIED RAPTURE`) handlers.
-    *   `ExpressionStatement`: Allows standalone expressions to be treated as statements.
-*   **I/O Abstraction**: Implemented `ITopsyTurvyIO` in `BWHazel.TopsyTurvy.Runtime` to decouple the interpreter from the console.
-*   **Infrastructure**: Established project references (`Ast` $\rightarrow$ `Parser` $\rightarrow$ `Runtime` $\rightarrow$ `Cli`).
+### Phase 2: The Parser (Already Completed)
+Parser fully implemented using Superpower 3.2.1. Build: 0 errors, 0 warnings. Tests: 4/4 passing.
 
-### Phase 2: The Parser (Completed)
-- **Pre-processing**: `ITopsyTurvyPreProcessor`, `TopsyTurvyPreProcessorPipeline`, and `VictorianFlourishPreProcessor` remain as implemented.
-- **Lexing**: `TopsyTurvyLexer` rewritten to use the correct Superpower 3.2.1 API (`Parsers.Character`, `Parsers.Span`, `Parsers.Numerics`). `Keyword()` wraps `Span.EqualToIgnoreCase` in `Try()` to ensure clean backtracking on partial keyword matches.
-- **Expression Parsing**: `TopsyTurvyExpressionParser` fully fixed:
-  - `OperatorToken` uses `Parse.OneOf(...)` with each keyword wrapped in `.Try()`.
-  - `.Return()` replaced by `.Value()` throughout.
-  - Explicit `(TopsyTurvyExpression)` casts added to `LiteralExpression` and `IdentifierExpression`.
-  - `PrefixExpression` uses `Parse.Ref(() => Expression)` for recursive argument slots (breaking static-init circular dependency).
-  - Static fields reordered so `OperatorToken`, `LiteralExpression`, `IdentifierExpression`, `PrefixExpression` are all declared before `Expression`.
-- **Statement Parsing**: `TopsyTurvyStatementParser` fully fixed:
-  - All `Token.*` replaced with correct Superpower API.
-  - `Statement` field made `public static readonly`.
-  - `Optional<T>` replaced with `.Try().OptionalOrDefault(null!)` throughout (reference types cannot use `Combinators.Optional<T>`).
-  - `Assignment` and `InPlaceCast` wrapped in `.Try()` so greedy identifier consumption backtracks cleanly.
-  - Static fields reordered in strict dependency order; `Statement` declared last.
-  - `Parse.Ref(() => Statement)` used in recursive body parsers (conditional, switch, loop, function, try/catch bodies).
-- **Parser Entry**: `TopsyTurvyParser` fixed to use `TryParse` and handle `Result<T>`.
-- **New files**: `ExpressionStatement.cs` and `TopsyTurvyParseException.cs` extracted as separate files per the one-type-per-file rule.
-- **Solution**: `BWHazel.TopsyTurvy.Tests` added to `BWHazel.TopsyTurvy.slnx`.
-- **Build result**: 0 errors, 0 warnings across all 5 projects.
-- **Test result**: 5/5 tests passing (`ParserTests` + `UnitTest1`).
+### Type rename pass (Already Completed)
+All types had the `TopsyTurvy` prefix dropped (e.g. `TopsyTurvyNode` → `Node`), except interfaces and the public `TopsyTurvyParser` entry-point class.
 
-### Type rename and XML documentation pass
-All types across all four projects were renamed to drop the `TopsyTurvy` prefix (except the two interfaces, per the standing convention, and the public `TopsyTurvyParser` entry-point class). File names were updated to match. Full XML `<summary>`, `<remarks>`, `<param>`, and `<returns>` documentation was added to every type and public member across all projects.
+---
 
-**Rename map (type → new name):**
+### Phase 3: The Runtime (In Progress)
 
-| Old | New | Project |
+#### Part A — Parser Prerequisite Fixes (Completed)
+
+Four parser gaps blocked execution of the example programs. All are now fixed.
+
+**New AST node types (`BWHazel.TopsyTurvy.Ast/`):**
+
+| File | Node | Surface Syntax |
 |---|---|---|
-| `TopsyTurvyNode` | `Node` | Ast |
-| `TopsyTurvyExpression` | `Expression` | Ast |
-| `TopsyTurvyStatement` | `Statement` | Ast |
-| `TopsyTurvyProgramNode` | `ProgramNode` | Ast |
-| `TopsyTurvySourceLocation` | `SourceLocation` | Ast |
-| `TopsyTurvySourceSpan` | `SourceSpan` | Ast |
-| `TopsyTurvyDiagnostic` | `Diagnostic` | Ast |
-| `TopsyTurvyDiagnosticSeverity` | `DiagnosticSeverity` | Ast |
-| `TopsyTurvyDiagnosticCollection` | `DiagnosticCollection` | Ast |
-| `TopsyTurvyLiteralType` | `LiteralType` | Ast |
-| `TopsyTurvyOperator` | `Operator` | Ast |
-| `TopsyTurvyLexer` | `Lexer` | Parser |
-| `TopsyTurvyExpressionParser` | `ExpressionParser` | Parser |
-| `TopsyTurvyStatementParser` | `StatementParser` | Parser |
-| `TopsyTurvyParseException` | `SyntaxException` | Parser |
-| `TopsyTurvyPreProcessorPipeline` | `PreProcessorPipeline` | Parser |
-| `TopsyTurvyPreProcessResult` | `PreProcessResult` | Parser |
-| `TopsyTurvySourceMap` | `SourceMap` | Parser |
+| `ReturnNode.cs` | `ReturnNode : Statement` | `AND SO I FIND <expr>` (Value non-null) or `MY DUTY IS PREMATURELY DISCHARGED.` (Value null) |
+| `ThrowNode.cs` | `ThrowNode : Statement` | `A HIDEOUS CURSE ON <expr>` |
+| `BreakNode.cs` | `BreakNode : Statement` | `THAT WILL DO.` (loop and switch) |
+| `ContinueNode.cs` | `ContinueNode : Statement` | `ONCE MORE.` (loop only) |
 
-- **Build result**: 0 errors, 0 warnings.
-- **Test result**: 5/5 tests passing.
+**AST modifications:**
+- `FunctionDefinitionNode.cs` — removed `ReturnValue` property; returns are now `ReturnNode` instances in the body list
+- `SwitchCase.cs` — removed `HasBreak` property; break is now a `BreakNode` in the case body
+
+**Parser modifications (`StatementParser.cs`):**
+- Added 5 new combinators: `Return`, `EarlyDischarge`, `Curse`, `Break`, `Continue`
+- `FunctionDefinition`: closer is now exclusively `MY DUTY IS DISCHARGED.`; premature discharge is a body statement
+- Loop body: simplified — `BreakNode`/`ContinueNode` parse at any nesting depth (removed null-filtering)
+- Switch case body: no trailing `THAT WILL DO.` clause; `BreakNode` appears naturally in the body
+
+**Additional parser fix (`ExpressionParser.cs`):**
+- Added `JustSoExpression` combinator: matches the two-word keyword `JUST SO` before the single-word `IdentifierExpression`, producing `IdentifierNode { Name = "JUST SO" }`. Without this fix, `JUST SO` in expressions would parse as two separate identifier tokens.
+
+**Build result:** 0 errors, 0 warnings. **Test result:** 4/4 passing (no behaviour change).
 
 ---
 
-## Next Phases
+#### Part B1 — Runtime Value and Scope Types (Completed)
 
-**Phase 3: The Runtime (Next)**
-- Implement the `Environment`, `JustSoRegister`, and the recursive AST evaluator.
-- Implement the "Curse" mechanism (`TopsyTurvyException`) and scoping rules.
+All new files are in `BWHazel.TopsyTurvy.Runtime/`.
 
-**Phase 4: CLI & Integration**
-- Implement the CLI entrance using `System.CommandLine` and `Spectre.Console`.
-- Implement the `PRAY ADMIT` multi-file loader.
-- Validate the interpreter against the `examples/` suite.
+**Type naming note:** The user applied the following naming refinements after initial implementation. These are the canonical names to use going forward:
+
+| My initial name | Canonical name |
+|---|---|
+| `RuntimeException` | `TopsyTurvyRuntimeException` |
+| `TopsyTurvyCurseException` | `TopsyTurvyThrowException` |
+| `BreakSignal` | `BreakSignalException` |
+| `CreateChild()` / `CreateFunctionScope()` | `CreateNested()` / `CreateFunctionEnvironment()` |
+| `TopsyTurvyValue.Raw` / `.Type` | `TopsyTurvyValue.RawValue` / `.TopsyTurvyType` |
+
+**New files:**
+
+| File | Class | Role |
+|---|---|---|
+| `TopsyTurvyValue.cs` | `TopsyTurvyValue` | Runtime value wrapper. Wraps `object? RawValue` + `LiteralType TopsyTurvyType`. Static factories: `Integer`, `Float`, `String`, `Boolean`, `Null`. `IsTruthy()`, `CastTo(LiteralType)`, `ToString()`. Booleans render as `VERITY`/`NAY`; null as `NAUGHT`. |
+| `TopsyTurvyEnvironment.cs` | `TopsyTurvyEnvironment` | Variable scope with enclosing-chain lookup. `JustSo` property holds the implicit register. `CreateGlobal()`, `CreateNested()`, `CreateFunctionEnvironment()` factory methods. `Get("JUST SO")` returns `JustSo` directly. |
+| `TopsyTurvyRuntimeException.cs` | `TopsyTurvyRuntimeException` | Interpreter errors (undeclared variable, type mismatch, etc.). Carries optional `SourceSpan?` for LSP diagnostics. |
+| `TopsyTurvyThrowException.cs` | `TopsyTurvyThrowException` | Language-level throw (`A HIDEOUS CURSE ON`). Carries `TopsyTurvyValue` as the cursed payload. Caught by `TryCatchNode` evaluator; if uncaught, terminates the programme. |
+| `ReturnSignal.cs` | `ReturnSignal` | Internal stack-unwinding signal for `ReturnNode`. Not language-visible. `TopsyTurvyValue? Value` (null = premature discharge). |
+| `BreakSignal.cs` | `BreakSignalException` | Internal signal for `THAT WILL DO.` in loops and switches. Not language-visible. |
+| `ContinueSignal.cs` | `ContinueSignal` | Internal signal for `ONCE MORE.` in loops. Not language-visible. |
+| `ConsoleIO.cs` | `ConsoleIO` | Concrete `ITopsyTurvyIO` for real console I/O. |
+
+**Build result:** 0 errors, 11 warnings (pre-existing Superpower nullability warnings). **Test result:** 4/4 passing.
 
 ---
 
-## 3. Next Steps
-- Add xUnit integration tests parsing the `examples/` suite files end-to-end.
-- Initialise Phase 3: The Runtime (`Environment`, `JustSoRegister`, recursive AST evaluator, scoping rules).
-- Wire up the `TopsyTurvyPreProcessorPipeline` source-map so parse errors report original line/column numbers through line-continuations.
-- Expand the `Identifier` reserved-keyword exclusion list to cover all single-word Topsy Turvy keywords that could be mistaken for variable names.
+## 3. Next Phases
+
+### Phase 3 (Continued): Part B2 — The Interpreter
+
+**New file:** `BWHazel.TopsyTurvy.Runtime/Interpreter.cs`
+
+Public API:
+```csharp
+public sealed class Interpreter
+{
+    public Interpreter(ITopsyTurvyIO io) { … }
+
+    /// <summary>
+    /// Executes a parsed programme. Returns a DiagnosticCollection for LSP readiness.
+    /// An empty collection with no errors indicates successful execution.
+    /// </summary>
+    public DiagnosticCollection Execute(ProgramNode program) { … }
+}
+```
+
+The interpreter is a recursive AST walker. Key design points:
+
+**Statement dispatch** — `ExecuteStatement(Statement stmt, TopsyTurvyEnvironment env)`:
+
+| Node type | Action |
+|---|---|
+| `PrincipalBlockNode` | Declare all variables; use `env.Declare(name, value)` |
+| `DeclarationNode` | Evaluate `InitialValue` (or `Null()`); `env.Declare` |
+| `AssignmentNode` | Evaluate `Value`; `env.Assign` |
+| `InPlaceCastNode` | `env.Get`; `CastTo`; `env.Assign` |
+| `ExpressionCastNode` | Evaluate expression; `CastTo`; set `env.JustSo` |
+| `PrintNode` | Evaluate; interpolate `{variable}` in string; `_io.WriteLine` |
+| `InputNode` | `_io.ReadLine()`; `env.Assign` as YARN |
+| `ExpressionStatement` | Evaluate; **set `env.JustSo`** to result |
+| `ConditionalNode` | Read `env.JustSo` (two-line form) or evaluate inline condition; execute matching block in the **same** `env` (spec §17: loops and conditionals share scope) |
+| `SwitchNode` | Same two-form rule; walk cases; catch `BreakSignalException` to prevent fall-through |
+| `LoopNode` | Per type — see below; catch `BreakSignalException` / `ContinueSignal` |
+| `FunctionDefinitionNode` | Register in `_functions` dictionary |
+| `ReturnNode` | Evaluate `Value` (or `Null()`); `throw new ReturnSignal(value)` |
+| `ThrowNode` | Evaluate `Value`; `throw new TopsyTurvyThrowException(value)` |
+| `BreakNode` | `throw new BreakSignalException()` |
+| `ContinueNode` | `throw new ContinueSignal()` |
+| `TryCatchNode` | Evaluate `Operation`; on success: set `JustSo`, run `SuccessBlock`; on `TopsyTurvyThrowException`: set `JustSo` to cursed value, run `ExceptionBlock` |
+| `ImportNode` | Read file; re-parse; register function definitions only |
+
+**Loop execution** — `BY A LEGAL FICTION`:
+
+| Type | Behaviour |
+|---|---|
+| `Infinite` | Execute body; repeat; catch `BreakSignalException` to exit |
+| `Ascending` | `env.Assign(var, Integer(0))`; check `UNTIL` condition before each iter; execute body; increment by 1; catch `BreakSignalException`/`ContinueSignal` (continue still increments) |
+| `Descending` | Check `UNTIL` condition before each iter; execute body; decrement by 1; catch signals as above |
+| `Whilst` | Check condition (truthy) before each iter; catch signals as above |
+
+**Function calls** — `PrefixExpressionNode` with `Operator.Summon`:
+1. Evaluate all arguments
+2. Look up function in `_functions`; throw `TopsyTurvyRuntimeException` if not found
+3. Check argument count matches parameter count
+4. `TopsyTurvyEnvironment scope = TopsyTurvyEnvironment.CreateFunctionEnvironment()`
+5. Declare each parameter in `scope` with evaluated argument value
+6. `ExecuteStatements(body, scope)`; catch `ReturnSignal` for return value
+7. If no `ReturnSignal`, return value is `TopsyTurvyValue.Null()`
+8. Set **calling** env's `JustSo` to the return value
+
+**String interpolation** — helper method scans a YARN value for `{identifier}` patterns and substitutes with `env.Get(name).ToString()`. Called by `PrintNode` and `WOVEN OF` evaluation.
+
+**JUST SO update rules:**
+- Set by: `ExpressionStatement`, function call result (on calling env), `TryCatchNode` entering `WITH GRATITUDE` (operation result), `TryCatchNode` entering `MODIFIED RAPTURE` (cursed value)
+- NOT set by: assignment, declaration, print, input, in-place cast, inline conditional/switch
+
+**LSP readiness:** `Execute` catches `TopsyTurvyRuntimeException` and uncaught `TopsyTurvyThrowException`, converts them to `Diagnostic` entries (severity `Error`) using the existing `DiagnosticCollection` from the Ast project, and returns the collection. The CLI reports errors with line/column.
+
+---
+
+### Phase 3 (Continued): Part C — Tests
+
+**New file:** `BWHazel.TopsyTurvy.Tests/TopsyTurvyInterpreterTests.cs`
+
+Use a `TestIO` stub that captures output into `List<string>` and feeds a pre-configured `Queue<string>` for `ReadLine`. Priority test scenarios:
+
+1. Hello World — basic output, `WOVEN OF` concatenation
+2. Arithmetic — `SUM OF`, `PRODUCT OF`, composition
+3. Conditional — two-line and inline `SHOULD IT TRANSPIRE THAT`
+4. Loop — `WHILST` and `ASCENDING`
+5. Function — recursive fibonacci (validates `ReturnNode`, mid-body return)
+6. Switch — fall-through and `THAT WILL DO.`
+7. Exception — `A HIDEOUS CURSE ON` caught by `WITH THE GREATEST RESPECT`
+8. Type cast — `IS HENCEFORTH A`, `AS IT WERE`
+
+---
+
+### Phase 4: CLI & Integration
+
+- Implement the CLI entry point using `System.CommandLine` and `Spectre.Console`
+- Implement `PRAY ADMIT` multi-file loader
+- Validate the interpreter against all four example programs in `examples/`
+
+---
+
+## 4. Next Steps (Start of Next Session)
+
+1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
+2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (expect: 0 errors, 4/4 tests).
+3. Implement **Part B2**: `Interpreter.cs` in `BWHazel.TopsyTurvy.Runtime/` following the specification in section 3 above.
+4. Wire `Program.cs` minimally to run `hello_world.topsy` as a smoke test.
+5. Implement **Part C**: `TopsyTurvyInterpreterTests.cs`.
+6. Proceed to Phase 4: CLI & Integration.

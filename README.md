@@ -10,6 +10,7 @@ AI has been extensively used in the development of Topsy Turvy, in fact, it is a
 
 **AI Services & Tooling**
 
+* **[Claude Code](https://claude.com/product/claude-code):** Coding agent developed by Anthropic used for planning and development.
 * **[Google Gemini](https://gemini.google.com):** Research, assistance and alternative model verification.
 * **[Ollama](https://ollama.com):** Hosting models locally or in Vast.ai.
 * **[OpenCode](https://opencode.ai):** Open source coding agent, and hosted models via Zen, used for planning and development.
@@ -17,6 +18,6 @@ AI has been extensively used in the development of Topsy Turvy, in fact, it is a
 
 **Models**
 
-* **[Anthropic Claude Sonnet](https://www.anthropic.com/claude/sonnet) _(4.6)_:** Planning and development in OpenCode via Zen.
+* **[Anthropic Claude Sonnet](https://www.anthropic.com/claude/sonnet) _(4.6)_:** Planning and development in OpenCode via Zen and Claude Code.
 * **[Google Gemini](https://deepmind.google/models/gemini) _(3.5 Flash)_:** Research, assistance and alternative model verification.
 * **[Google Gemma](https://deepmind.google/models/gemma) _(4)_:** Planning and development in OpenCode via Ollama.

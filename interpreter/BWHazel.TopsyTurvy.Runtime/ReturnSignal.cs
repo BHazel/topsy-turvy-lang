@@ -1,0 +1,26 @@
+using System;
+
+namespace BWHazel.TopsyTurvy.Runtime;
+
+/// <summary>
+/// Internal signal used to unwind the call stack when a return statement is executed.
+/// </summary>
+/// <remarks>
+/// This is not a language-visible exception.
+/// </remarks>
+internal sealed class ReturnSignal : Exception
+{
+    /// <summary>
+    /// Initialises a new instance of the <see cref="ReturnSignal"/> class with the specified return value.
+    /// </summary>
+    /// <param name="value">The return value, or <c>null</c> for no return value.</param>
+    internal ReturnSignal(TopsyTurvyValue? value) : base()
+    {
+        this.Value = value;
+    }
+
+    /// <summary>
+    /// Gets the return value, or <c>null</c> for no return value.
+    /// </summary>
+    internal TopsyTurvyValue? Value { get; }
+}
