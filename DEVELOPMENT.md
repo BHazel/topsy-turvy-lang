@@ -1,7 +1,7 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-25
+* **Last Updated:** 2026-05-26
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
 * **LSP & VS Code Extension:** Basic Implementation Complete (Phase 5)
@@ -200,6 +200,12 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
    - `Keyword("THE CURTAIN RISES.")` in `PrincipalBlock` → `"THE CURTAIN RISES. (end of declarations)"`.
    - `Lexer.StringLiteral` in `ProgramParser` title position → `"program title"` (inline, does not affect other string literal uses).
    - `Keyword("FINALE.")` in `ProgramParser` → `"FINALE. (program end)"`. The `onlyExpectsFinale` detection in `TryParse` still matches because the string still contains "FINALE".
+
+**Fixes applied in session 2026-05-26:**
+
+10. **Case-insensitive keyword highlighting** (`topsy-turvy.tmLanguage.json`): Added the Oniguruma `(?i)` inline flag to every pattern in the grammar that contains letter characters — all `"match"` patterns that previously started with `\b` now start with `(?i)\b`, and the comment patterns (`"ASIDE:.*$"`, `\(ASIDE,\s+AT\s+SOME\s+LENGTH:`, `END\s+OF\s+ASIDE\.\)`) are also prefixed with `(?i)`. This ensures keywords highlight correctly when written in any mixture of upper and lower case (e.g. `hark!`, `Hark!`, `HARK!` all highlight identically). Number and identifier patterns are unaffected functionally; `(?i)` on a digit-only or `[A-Za-z]` class pattern is harmless.
+
+11. **`or,` subtitle keyword** (`topsy-turvy.tmLanguage.json`): Added `"(?i)\\bor,"` to the `"program-structure"` patterns group alongside `HARK!` and `FINALE.`. The `or,` keyword is used in the optional programme subtitle line (`HARK! "Title" or, "Subtitle"`) and was previously not syntax-highlighted at all.
 
 ---
 
