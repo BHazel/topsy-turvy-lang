@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Superpower;
 using Superpower.Model;
@@ -53,5 +54,37 @@ public class TopsyTurvyParser
         }
 
         return result.Value;
+    }
+
+    /// <summary>
+    /// Attempts to parse the supplied Topsy Turvy source text.
+    /// </summary>
+    /// <param name="source">The raw source code to parse.</param>
+    /// <remarks>
+    /// Returns a <see cref="ParseResult"/> that carries either the parsed programme or
+    /// a structured diagnostic on failure.  The <see cref="ParseResult.Success"/> property
+    /// ia set to <c>true</c> and <see cref="ParseResult.Program"/> populated on success.
+    /// Otherwise a single <see cref="Diagnostic"/> describing the syntax error with its
+    /// source location is set.
+    /// <returns>
+    /// A <see cref="ParseResult"/> with parsing results.
+    /// </returns>
+    public ParseResult TryParse(string source)
+    {
+        PreProcessorPipeline pipeline = new();
+        pipeline.AddProcessor(new CommentsPreProcessor());
+        pipeline.AddProcessor(new VictorianFlourishPreProcessor());
+        PreProcessResult processed = pipeline.Execute(source);
+
+        Result<ProgramNode> result = ProgramParser.TryParse(processed.Text);
+        if (!result.HasValue)
+        {
+            SourceLocation location = new(result.ErrorPosition.Line, result.ErrorPosition.Column);
+            SourceSpan span = new(location, location);
+            Diagnostic diagnostic = new(result.ErrorMessage, DiagnosticSeverity.Error, span);
+            return new ParseResult(null, [diagnostic]);
+        }
+
+        return new(result.Value, []);
     }
 }

@@ -65,4 +65,68 @@ public class TopsyTurvyParserTests
         Assert.Equal(Operator.WovenOf, expression.Operator);
         Assert.Equal(3, expression.Arguments.Count);
     }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> succeeds on valid source and returns no diagnostics.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithValidSource_ReturnsSuccessAndNoDiagnostics()
+    {
+        string source = "HARK! \"Test\" BEHOLD \"hello\" FINALE.";
+        ParseResult result = this.parser.TryParse(source);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Program);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> fails on invalid source and returns a diagnostic.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithSyntaxError_ReturnsDiagnosticWithPositivePosition()
+    {
+        string source = "BEHOLD \"oops\"";
+        ParseResult result = this.parser.TryParse(source);
+
+        Assert.False(result.Success);
+        Assert.Null(result.Program);
+        Assert.Single(result.Diagnostics);
+
+        Diagnostic diagnostic = result.Diagnostics[0];
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.True(diagnostic.Span.Start.Line >= 1, $"Line must be >= 1, got {diagnostic.Span.Start.Line}");
+        Assert.True(diagnostic.Span.Start.Column >= 1, $"Column must be >= 1, got {diagnostic.Span.Start.Column}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> with an empty source returns a diagnostic with a valid position.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithEmptySource_ReturnsDiagnosticWithPositivePosition()
+    {
+        ParseResult result = this.parser.TryParse(string.Empty);
+
+        Assert.False(result.Success);
+        Assert.Single(result.Diagnostics);
+
+        Diagnostic diagnostic = result.Diagnostics[0];
+        Assert.True(diagnostic.Span.Start.Line >= 1, $"Line must be >= 1, got {diagnostic.Span.Start.Line}");
+        Assert.True(diagnostic.Span.Start.Column >= 1, $"Column must be >= 1, got {diagnostic.Span.Start.Column}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> with a multi-line source with an error on line 2 reports the correct line number.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithErrorOnSecondLine_ReportsCorrectLine()
+    {
+        string source = "HARK! \"Test\"\nBAD TOKEN FINALE.";
+        ParseResult result = this.parser.TryParse(source);
+
+        Assert.False(result.Success);
+        Assert.Single(result.Diagnostics);
+        Assert.True(result.Diagnostics[0].Span.Start.Line >= 1,
+            $"Line must be >= 1, got {result.Diagnostics[0].Span.Start.Line}");
+    }
 }
