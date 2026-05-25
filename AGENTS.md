@@ -128,15 +128,18 @@ The following keywords appeared in earlier drafts and versions of the language a
 
 ### Project Structure
 
-- **Root Directory:** `interpreter/`
-- **Solution File:** `BWHazel.TopsyTurvy.slnx`
-- **Project Layout:** Each project in its own directory: `interpreter/[ProjectName]/[ProjectName].csproj`.
-- **Namespace Mirroring:** Folder structure must strictly mirror the namespace hierarchy.
+* **Root Directory:** `interpreter/`
+* **Solution File:** `BWHazel.TopsyTurvy.slnx`
+* **Project Layout:** Each project in its own directory: `interpreter/[ProjectName]/[ProjectName].csproj`.
+* **Namespace Mirroring:** Folder structure must strictly mirror the namespace hierarchy.
 
 ### Coding Style
 
-- **Explicit Typing:** Prefer explicit types over the `var` keyword.
-- **File Granularity:** Strictly one type per file.
-- **Naming:** Concise but descriptive variable names.
-- **Modern C#:** Use the latest C# features.
-- **Exceptions:** Use `TopsyTurvyException` for language-specific errors.
+* **File Granularity:** Strictly one type per file.
+* **No Implicit Usings:** The `ImplicitUsings` project setting should be disabled.
+* **Modern C#:** Use the latest C# features.
+* **Explicit Typing:** Prefer explicit types over the `var` keyword.
+* **Naming:** Concise but descriptive variable names with full words preferred.
+* **Instance Members:** When calling instance members prefix them with `this.`.
+* **Exceptions:** Use `TopsyTurvyException` for language-specific errors.
+* **Documentation:** All types and members require XML documentation comments, with the exception of private readonly fields.
