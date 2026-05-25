@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,7 @@ using BWHazel.TopsyTurvy.Parser;
 
 using AstDiagnostic = BWHazel.TopsyTurvy.Ast.Diagnostic;
 using AstDiagnosticSeverity = BWHazel.TopsyTurvy.Ast.DiagnosticSeverity;
+using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -89,32 +91,38 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 
     private void PublishDiagnostics(DocumentUri uri, string text)
     {
-        ParseResult result = this.parser.TryParse(text);
-        this.languageServer.Window.ShowMessage(new ShowMessageParams
+        try
         {
-            Type = MessageType.Info,
-            Message = $"Topsy Turvy: parsed, errors={result.Diagnostics.Count}"
-        });
-        IEnumerable<Diagnostic> lspDiagnostics = result.Diagnostics.Select(
-            (AstDiagnostic diagnostic) => new Diagnostic
-            {
-                Range = new Range(
-                    new Position(diagnostic.Span.Start.Line - 1, diagnostic.Span.Start.Column - 1),
-                    new Position(diagnostic.Span.End.Line - 1, diagnostic.Span.End.Column - 1)),
-                Severity = diagnostic.Severity switch
+            ParseResult result = this.parser.TryParse(text);
+            List<Diagnostic> lspDiagnostics = result.Diagnostics.Select(
+                (AstDiagnostic diagnostic) => new Diagnostic
                 {
-                    AstDiagnosticSeverity.Error   => DiagnosticSeverity.Error,
-                    AstDiagnosticSeverity.Warning => DiagnosticSeverity.Warning,
-                    _                             => DiagnosticSeverity.Information
-                },
-                Message = diagnostic.Message,
-                Source  = LanguageId
-            });
+                    Range = new LspRange(
+                        new Position(diagnostic.Span.Start.Line - 1, diagnostic.Span.Start.Column - 1),
+                        new Position(diagnostic.Span.End.Line - 1, diagnostic.Span.End.Column - 1)),
+                    Severity = diagnostic.Severity switch
+                    {
+                        AstDiagnosticSeverity.Error   => DiagnosticSeverity.Error,
+                        AstDiagnosticSeverity.Warning => DiagnosticSeverity.Warning,
+                        _                             => DiagnosticSeverity.Information
+                    },
+                    Message = diagnostic.Message,
+                    Source  = LanguageId
+                }).ToList();
 
-        this.languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
+            this.languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
+            {
+                Uri         = uri,
+                Diagnostics = new Container<Diagnostic>(lspDiagnostics)
+            });
+        }
+        catch (Exception ex)
         {
-            Uri         = uri,
-            Diagnostics = new Container<Diagnostic>(lspDiagnostics)
-        });
+            this.languageServer.Window.ShowMessage(new ShowMessageParams
+            {
+                Type    = MessageType.Error,
+                Message = $"Topsy Turvy LSP error: {ex.Message}"
+            });
+        }
     }
 }

@@ -4,7 +4,7 @@
 * **Last Updated:** 2026-05-25
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
-* **LSP & VS Code Extension:** In Progress (Phase 5)
+* **LSP & VS Code Extension:** Basic Implementation Complete (Phase 5)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -93,7 +93,15 @@ Six parser bugs were found and fixed during integration. Notable decisions:
 
 ## 3. Known Gaps
 
-Phase 5 is in progress. See the open issues section in Phase 5 below. All four example programs execute correctly. Build: 0 errors. Tests: 17/17.
+Build: 0 errors. Tests: 17/17. All four example programs execute correctly.
+
+**LSP diagnostic squiggle accuracy** — the primary outstanding issue (see §4 for full history and what has been tried):
+
+1. **Multi-line construct errors**: when there is a syntax error inside a block construct (function definition, loop, conditional, switch, try/catch), the squiggle lands on the **opening line** of the construct rather than the line with the actual error. Root cause: `Ws(Statement).Try()` in `ProgramParser` resets the Superpower error position to before the entire construct whenever any part of it fails. The inner error extraction added in session 2026-05-26 (`StatementParser.Statement.TryParse` re-run at `startOffset`) can only recover the deeper position when the construct parser has **no** `.Try()` in the `Statement.Or()` chain — confirmed for `FunctionDefinition` but the improvement is still limited in practice. All block constructs (`FunctionDefinition`, `Loop`, `Conditional`, `TryCatch`, `Switch`) have been confirmed to lack individual `.Try()` calls, so the inner extraction is attempted for all of them; however user testing shows squiggle placement remains imprecise for block construct errors.
+
+2. **Error messages for block errors** — `.Named()` annotations added in session 2026-05-26 improve the message text (e.g. `"Expected: MY DUTY IS DISCHARGED. (end of function)"` instead of `` "Expected: `MY DUTY IS DISCHARGED.`" ``), but messages are still tied to the wrong source location when the squiggle position is incorrect, making them confusing in practice.
+
+**Root cause of the remaining positioning issue**: `Ws(Statement).Try()` in `ProgramParser.body` is the fundamental constraint. `.Try()` intentionally discards the inner error position so `.Many()` can continue. Any improvement to squiggle placement for block-level errors requires either (a) removing the outer `.Try()` on complex block parsers and replacing with a custom error-recovery loop, or (b) a two-pass strategy where the first pass identifies which line is bad, and the second pass provides a targeted diagnostic. Both are significant parser refactoring tasks.
 
 ---
 
@@ -149,46 +157,49 @@ Add developer tooling: a Language Server Protocol server that publishes syntax-e
 
 ### Open Issues
 
-#### Issue 1 — `PublishDiagnostics` produces no squiggles in VS Code
+See §3 Known Gaps for remaining squiggle accuracy issues.
 
-**Symptom**: `window/showMessage` notifications work; `TryParse` returns the correct error count; but `textDocument/publishDiagnostics` notifications do not produce red squiggles in VS Code.
+**Fixes applied in session 2026-05-25:**
 
-**Investigation so far**:
-- `TextDocumentSyncHandler.DidOpen` and `DidChange` handlers are definitely invoked (confirmed with `ShowMessage`).
-- `TryParse` returns correct error counts (0 for valid, 1 for invalid — Superpower reports at most one error per parse attempt). This is expected and by design: Superpower is a single-pass parser combinator that stops at the first unrecoverable token; there is no built-in error recovery. Supporting multiple simultaneous diagnostics would require implementing error-recovery (e.g. synchronising at statement boundaries after each failure), which is a non-trivial future enhancement.
-- Positions are valid: `ErrorPosition.Line` and `.Column` are both ≥ 1 from Superpower; after subtracting 1 the LSP positions are ≥ 0.
-- Build is clean; no compile errors on the handler.
+1. **`PublishDiagnostics` squiggles** (`TextDocumentSyncHandler.cs`, `TopsyTurvyParser.cs`):
+   - Materialised the LINQ projection with `.ToList()` before passing to `Container<Diagnostic>`.
+   - Wrapped the full `PublishDiagnostics` method body in `try/catch`; exceptions surface as `ShowMessage` errors instead of being swallowed silently.
+   - Added `using LspRange = ...Range` alias to resolve `System.Range` / OmniSharp `Range` ambiguity introduced by `using System;`.
+   - **Squiggle position fix** (`TopsyTurvyParser.cs`): `TryParse` now uses `result.ErrorPosition.Absolute` (Superpower's zero-based character offset) with `processed.SourceMap.GetOriginalLocation()` to remap the error from pre-processed text coordinates back to original source coordinates. Previously the raw `Line`/`Column` from the pre-processed text was used directly, causing squiggles to land in wrong positions when comments or `~` continuations shifted offsets.
+   - **Zero-width span fix** (`TopsyTurvyParser.cs`): `TryParse` now extends the diagnostic span from the error position to the end of the bad line (scanning forward to the next `\n`/`\r` in the pre-processed text, then remapping via `SourceMap`). Previously `Start == End` produced a zero-width range, which VS Code renders unpredictably (squiggle at wrong line, no hover tooltip).
+   - **Hover message fix** (`TopsyTurvyParser.cs`): Superpower's `Result<T>.ErrorMessage` is always null when parsers have no `.Named(...)` annotations. The diagnostic message is now built from `result.Expectations[]` with a "Syntax error" fallback.
 
-**Potential causes and fixes to try (in order)**:
+2. **Multi-line block comments** (`topsy-turvy.tmLanguage.json`): Removed the inner `"patterns": [{ "match": ".*" }]` from `"block-comments"`. The outer `begin`/`end` rule is sufficient for multi-line colouring.
 
-1. **Lazy LINQ evaluation** — `result.Diagnostics.Select(...)` is lazy; if `Container<Diagnostic>` defers enumeration and an exception is thrown during serialisation, OmniSharp may silently drop the notification. Fix: materialise with `.ToList()` before passing to `new Container<Diagnostic>(...)`.
+3. **`IT IS MY DUTY TO PERFORM` keyword** (`topsy-turvy.tmLanguage.json`): Added to `"functions"` patterns. Replaced the invalid `ALL HANDS ON DECK` entry (not in SPEC.md) with the correct declaration form.
 
-2. **Silent exception in `PublishDiagnostics`** — OmniSharp may swallow exceptions thrown in notification handlers. Fix: wrap the `PublishDiagnostics` call in a try/catch and route errors to `this.languageServer.Window.ShowMessage` or server-side logging.
+4. **Grammar audit fixes** (`topsy-turvy.tmLanguage.json`):
+   - Types pattern corrected from `NUMBER|DECIMAL` (invalid) to `PEER|FATHOM` (SPEC.md §3).
+   - Added `LARGER` and `SMALLER` to the arithmetic operator group (SPEC.md §5).
+   - Added `IS HENCEFORTH A` to the `"cast"` patterns (SPEC.md §3).
+   - Added `WITHOUT CEREMONY` to the `"io"` patterns (SPEC.md §4).
 
-3. **`Diagnostic.Message` is null** — Superpower's `Result<T>.ErrorMessage` is `string?` and may be null or empty for certain failures. A null `Message` could cause a JSON serialisation error that kills the notification silently. Fix: default to a non-null fallback: `result.ErrorMessage ?? "Syntax error"`.
+5. **Whitespace skip fix** (`TopsyTurvyParser.cs`): After `result.ErrorPosition.Absolute`, `TryParse` now skips any leading whitespace before computing the span. When `Ws(Statement).Try()` fails in the body, Superpower resets the error position to the `\n` at the end of the previous valid statement (before the `Ws` call), not the start of the bad line — so without this skip, squiggles appeared one line above the actual error. Fixed by advancing `startOffset` past all whitespace characters.
 
-4. **Position pre-processing offset mismatch** — `TryParse` runs `CommentsPreProcessor` and `VictorianFlourishPreProcessor` before parsing; error positions are relative to the pre-processed text, not the original source. This would produce wrong squiggle positions rather than missing ones, but could cause negative column values in some edge cases. Fix (long-term): integrate `SourceMap` position remapping.
+6. **SourceMap line-shift fix** (`VictorianFlourishPreProcessor.cs`): `currentLine` is now always incremented for every physical line processed, including `~` continuation lines. Previously it was only incremented for non-continuation lines. A continuation block of N physical lines (e.g. the 3-line `AND SO I FIND ~ / SUM OF ~ / SUMMON...` in `fibonacci.topsy`) left `currentLine` under-counted by N−1, shifting all subsequent SourceMap entries N−1 lines too low. The fibonacci file's 3-line continuation block shifted entries by −3, causing the squiggle for an error near `BEHOLD` on line 52 to appear on line 49 instead.
 
-5. **`DidSave` handler not sending diagnostics on initial open** — The extension sends `DidOpen` on file open. Confirm the OmniSharp routing is calling the correct overload; if `DidSave` is being called instead of `DidOpen` at some point and does not call `PublishDiagnostics` in all code paths, squiggles could be cleared immediately. Check: add identical `ShowMessage` probes to `DidSave` and `DidClose` to distinguish.
+7. **Inner error extraction** (`TopsyTurvyParser.cs`): After finding `startOffset` (the beginning of the failing construct), `TryParse` now re-runs `StatementParser.Statement.TryParse` on the content starting there. `FunctionDefinition` has no `.Try()` in the `Statement.Or()` chain, so when it fails deep inside (e.g. a typo in `MY DUTY IS DISCHARGED.`), the hard failure preserves the inner error position (`innerResult.ErrorPosition.Absolute > 0`). That inner offset is used for the span and message instead of the outer reset position. Result: squiggle lands on `MY DUTY IS DISCHARsGED.` with message `"Expected: \`MY DUTY IS DISCHARGED.\`"` rather than on `IT IS MY DUTY TO PERFORM...` with `"Unexpected: IT IS MY DUTY..."`.
+   - **Limitation**: this only helps for constructs that have no `.Try()` in the `Statement.Or()` chain. Other multi-statement constructs (`Loop`, `Conditional`, `TryCatch`, `Switch`) need to be checked — if any of them have `.Try()` applied individually, the inner error extraction approach will see `innerResult.ErrorPosition.Absolute = 0` (reset by `.Try()`) and fall back to the outer reset position.
 
-#### Issue 2 — Multi-line block comments highlighted on first line only
+8. **Message fix for body errors** (`TopsyTurvyParser.cs`): When `Ws(Statement).Try().Many()` swallows the inner error, the only remaining `Expectations` is `["FINALE."]` — correct but unhelpful. When `Expectations` contains only "FINALE." and the error is not at EOF, the message now shows the bad line content (`"Unexpected: <line>"`) rather than `"Expected: FINALE."`. If the error is at EOF, `"Expected: \`FINALE.\`"` is preserved as it is correct in that context (missing program end marker).
 
-**Symptom**: `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` spanning multiple lines only applies `comment.block.topsy` colouring to the first line.
-
-**Cause**: The `"block-comments"` repository entry in `topsy-turvy.tmLanguage.json` contains inner `"patterns": [{ "match": ".*", "name": "comment.block.topsy" }]`. The `.*` regex does not match newlines, so the scope is only applied to the content of the first matched line. The outer `begin`/`end` rule provides multi-line span and the correct `name` already — the inner patterns are not only redundant but actively break the behaviour.
-
-**Fix**: Remove the `"patterns"` array from the `"block-comments"` repository entry. The `begin`/`end` rule with `name: "comment.block.topsy"` is sufficient to colour the entire block.
-
-#### Issue 3 — `IT IS MY DUTY TO PERFORM` not highlighted
-
-**Symptom**: The function declaration keyword is not coloured as a keyword.
-
-**Cause**: `IT IS MY DUTY TO PERFORM` is absent from the `"functions"` pattern group in the tmLanguage grammar. The grammar has `MY DUTY IS DISCHARGED.` and `MY DUTY IS PREMATURELY DISCHARGED.` (return keywords) but not the opening declaration form.
-
-**Fix**: Add to the `"functions"` patterns array:
-```json
-{ "match": "\\bIT\\s+IS\\s+MY\\s+DUTY\\s+TO\\s+PERFORM\\b", "name": "keyword.other.function.topsy" }
-```
+9. **`.Named()` annotations** (`Lexer.cs`, `StatementParser.cs`, `TopsyTurvyParser.cs`): Added `.Named("description")` to key parsers so that `Expectations[]` — and therefore the hover message — reads as plain English rather than backtick-wrapped raw syntax. Superpower's `.Named(name)` replaces the parser's failure expectation with `name`. Changes:
+   - `Lexer.StringLiteral` → `"string literal"` (was `"\""` — a bare quote character).
+   - `Lexer.Identifier` → `"identifier"` (was `"letter"` or `"identifier (not a reserved keyword)"`).
+   - `Keyword("QUITE SO.")` in `ConditionalBody` → `"QUITE SO. (then-block)"`.
+   - `Keyword("SO MUCH FOR THAT.")` in `Conditional` → `"SO MUCH FOR THAT. (end of conditional)"`.
+   - `Keyword("NOTHING COULD BE MORE SATISFACTORY.")` in `Switch` → `"NOTHING COULD BE MORE SATISFACTORY. (end of switch)"`.
+   - `Keyword("THE TERM EXPIRES.")` in `Loop` → `"THE TERM EXPIRES. (end of loop)"`.
+   - `Keyword("THAT CONCLUDES THE MATTER.")` in `TryCatch` → `"THAT CONCLUDES THE MATTER. (end of try/catch)"`.
+   - `Keyword("MY DUTY IS DISCHARGED.")` in `FunctionDefinition` → `"MY DUTY IS DISCHARGED. (end of function)"`.
+   - `Keyword("THE CURTAIN RISES.")` in `PrincipalBlock` → `"THE CURTAIN RISES. (end of declarations)"`.
+   - `Lexer.StringLiteral` in `ProgramParser` title position → `"program title"` (inline, does not affect other string literal uses).
+   - `Keyword("FINALE.")` in `ProgramParser` → `"FINALE. (program end)"`. The `onlyExpectsFinale` detection in `TryParse` still matches because the string still contains "FINALE".
 
 ---
 
@@ -196,17 +207,12 @@ Add developer tooling: a Language Server Protocol server that publishes syntax-e
 
 1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (0 errors, 17/17 tests).
-3. Work through Phase 5 open issues in order:
-   - **Issue 1 (diagnostics)**: try the potential fixes in order — materialise LINQ, add try/catch, fix null message, check DidSave probe.
-   - **Issue 2 (block comments)**: remove inner `patterns` from the `block-comments` repository entry in `topsy-turvy.tmLanguage.json`.
-   - **Issue 3 (function keyword)**: add `IT IS MY DUTY TO PERFORM` pattern to the `functions` group.
-   - After fixes: audit the full tmLanguage grammar against `SPEC.md` for any other missing multi-word keywords.
-4. Once Phase 5 issues are resolved, consider Phase 6:
-   - LSP hover support (show variable type / function signature on hover)
-   - LSP go-to-definition (navigate to `IT IS MY DUTY TO PERFORM` declaration)
-   - LSP completion (suggest keywords at the current cursor position)
-   - `PRAY ADMIT` multi-file import integration testing
-   - **Error message improvements** (three layers, work in order):
-     1. **Source map verification** — confirm `TryParse` and `Parse` use `SourceMap`/`SourceMapping` to remap Superpower error positions from pre-processed text back to original source line/column. Without this, errors point at the wrong line when comments or line-continuation syntax have shifted offsets.
-     2. **Runtime error messages** — review every `throw new TopsyTurvyRuntimeException(...)` in `Interpreter.cs` and replace terse messages with context-rich ones (e.g. include the actual vs. expected type, the variable name, or a hint about the relevant keyword). Straightforward string-editing work.
-     3. **Parser error messages** — add `.Named("...")` annotations to key combinators in `Lexer.cs`, `StatementParser.cs`, and `ExpressionParser.cs`. Superpower uses these names when building its error strings, so annotating e.g. the `FINALE.` parser as `.Named("program end (FINALE.)")` produces a readable "expected program end (FINALE.)" instead of a raw token description.
+3. Consider Phase 6:
+   - **Remaining LSP squiggle accuracy** (see §3 Known Gaps — known limitation, deferred):
+     - The root cause is `Ws(Statement).Try()` in `ProgramParser.body`. Fixing this properly requires a custom error-recovery loop in place of `.Try().Many()`, which is significant parser refactoring. The current behaviour (squiggle on the opening line of the failing construct) is a known limitation.
+     - What has already been tried and is still in place: whitespace skip, non-zero-width spans, SourceMap line-shift fix (`VictorianFlourishPreProcessor`), inner error extraction via `StatementParser.Statement.TryParse`, `.Named()` annotations on all block-end markers and Lexer primitives.
+   - **Runtime error messages** — review every `throw new TopsyTurvyRuntimeException(...)` in `Interpreter.cs` and replace terse messages with context-rich ones (e.g. include the actual vs. expected type, the variable name, or a hint about the relevant keyword). Straightforward string-editing work with no architectural risk.
+   - **LSP hover support** — show variable type / function signature on hover.
+   - **LSP go-to-definition** — navigate to `IT IS MY DUTY TO PERFORM` declaration.
+   - **LSP completion** — suggest keywords at the current cursor position.
+   - **`PRAY ADMIT` multi-file import** — integration testing.

@@ -37,10 +37,7 @@
       "end": "END\\s+OF\\s+ASIDE\\.\\)",
       "endCaptures": {
         "0": { "name": "comment.block.topsy" }
-      },
-      "patterns": [
-        { "match": ".*", "name": "comment.block.topsy" }
-      ]
+      }
     },
     "line-comments": {
       "name": "comment.line.topsy",
@@ -209,7 +206,7 @@
       "patterns": [
         {
           "name": "keyword.other.function.topsy",
-          "match": "\\bALL\\s+HANDS\\s+ON\\s+DECK\\b"
+          "match": "\\bIT\\s+IS\\s+MY\\s+DUTY\\s+TO\\s+PERFORM\\b"
         },
         {
           "name": "keyword.other.function.topsy",
@@ -250,6 +247,10 @@
         {
           "name": "support.function.topsy",
           "match": "\\bPRAY\\s+TELL\\b"
+        },
+        {
+          "name": "support.function.topsy",
+          "match": "\\bWITHOUT\\s+CEREMONY\\b"
         }
       ]
     },
@@ -262,6 +263,10 @@
         {
           "name": "keyword.operator.cast.topsy",
           "match": "\\bAS\\s+IT\\s+WERE\\b"
+        },
+        {
+          "name": "keyword.operator.cast.topsy",
+          "match": "\\bIS\\s+HENCEFORTH\\s+A\\b"
         }
       ]
     },
@@ -287,7 +292,7 @@
     },
     "types": {
       "name": "storage.type.topsy",
-      "match": "\\b(YARN|NUMBER|DECIMAL|DECREE)\\b"
+      "match": "\\b(PEER|FATHOM|YARN|DECREE)\\b"
     },
     "operators": {
       "patterns": [
@@ -325,7 +330,7 @@
         },
         {
           "name": "keyword.operator.topsy",
-          "match": "\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|ALIKE|UNALIKE)\\b"
+          "match": "\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|ALIKE|UNALIKE)\\b"
         },
         {
           "name": "keyword.operator.topsy",

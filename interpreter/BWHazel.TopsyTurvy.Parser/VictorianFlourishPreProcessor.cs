@@ -31,8 +31,9 @@ public class VictorianFlourishPreProcessor : ITopsyTurvyPreProcessor
             else
             {
                 output.AppendLine(line);
-                currentLine++;
             }
+
+            currentLine++;
         }
 
         return new(output.ToString(), currentSourceMap);

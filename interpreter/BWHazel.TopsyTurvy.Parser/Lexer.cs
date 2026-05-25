@@ -24,7 +24,7 @@ public static class Lexer
     /// Parses a double-quoted string literal.
     /// </summary>
     public static readonly TextParser<string> StringLiteral =
-        from open    in Character.EqualTo('"')
+        (from open    in Character.EqualTo('"')
         from content in
             (
                 from escape in Character.EqualTo('~')
@@ -38,7 +38,7 @@ public static class Lexer
             .Or(Character.Except('"').Select(c => c.ToString()))
             .Many()
         from close in Character.EqualTo('"')
-        select string.Concat(content);
+        select string.Concat(content)).Named("string literal");
 
     /// <summary>
     /// Parses a floating-point numeric literal.
@@ -95,7 +95,8 @@ public static class Lexer
                   && !name.Equals("QUITE",       System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("WHEN",        System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("NOTHING",     System.StringComparison.OrdinalIgnoreCase),
-            "identifier (not a reserved keyword)");
+            "identifier (not a reserved keyword)")
+        .Named("identifier");
 
     /// <summary>
     /// Returns a parser that matches the exact <paramref name="keyword"/> text.

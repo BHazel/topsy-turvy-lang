@@ -119,7 +119,7 @@ public static class StatementParser
     /// Parses the body of a conditional.
     /// </summary>
     public static readonly TextParser<(IReadOnlyList<Statement> TrueBlock, IReadOnlyList<ElseIfBranch> ElseIfs, IReadOnlyList<Statement> ElseBlock)> ConditionalBody =
-        from _trueMark in Ws(Lexer.Keyword("QUITE SO."))
+        from _trueMark in Ws(Lexer.Keyword("QUITE SO.").Named("QUITE SO. (then-block)"))
         from trueBr    in Ws(Parse.Ref(() => Statement)).Try().Many()
         from elseIfs   in (
             from _     in Ws(Lexer.Keyword("OR, IF NOT,"))
@@ -145,7 +145,7 @@ public static class StatementParser
         from _    in Lexer.Keyword("SHOULD IT TRANSPIRE THAT")
         from cond in Ws(ExpressionParser.Expression).Try().OptionalOrDefault(null!)
         from body in ConditionalBody
-        from _end in Ws(Lexer.Keyword("SO MUCH FOR THAT."))
+        from _end in Ws(Lexer.Keyword("SO MUCH FOR THAT.").Named("SO MUCH FOR THAT. (end of conditional)"))
         select (Statement)new ConditionalNode
             {
                 Condition = cond,
@@ -187,7 +187,7 @@ public static class StatementParser
         from _    in Lexer.Keyword("IN WHICH CAPACITY?")
         from expr in Ws(ExpressionParser.Expression).Try().OptionalOrDefault(null!)
         from body in SwitchBody
-        from _end in Ws(Lexer.Keyword("NOTHING COULD BE MORE SATISFACTORY."))
+        from _end in Ws(Lexer.Keyword("NOTHING COULD BE MORE SATISFACTORY.").Named("NOTHING COULD BE MORE SATISFACTORY. (end of switch)"))
         select (Statement)new SwitchNode
             {
                 Expression   = expr,
@@ -238,7 +238,7 @@ public static class StatementParser
                          .Try().OptionalOrDefault(null!)
         from loopDef in LoopTypeParser
         from body    in Ws(Parse.Ref(() => Statement)).Try().Many()
-        from _end    in Ws(Lexer.Keyword("THE TERM EXPIRES."))
+        from _end    in Ws(Lexer.Keyword("THE TERM EXPIRES.").Named("THE TERM EXPIRES. (end of loop)"))
         select (Statement)new LoopNode
             {
                 Label        = label,
@@ -259,7 +259,7 @@ public static class StatementParser
         from succ in Ws(Parse.Ref(() => Statement)).Try().Many()
         from _mr  in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
         from ex   in Ws(Parse.Ref(() => Statement)).Try().Many()
-        from _end in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER."))
+        from _end in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER.").Named("THAT CONCLUDES THE MATTER. (end of try/catch)"))
         select (Statement)new TryCatchNode
             {
                 Operation      = op,
@@ -309,7 +309,7 @@ public static class StatementParser
         from name  in Ws(Lexer.Identifier)
         from terms in ParameterList
         from body  in Ws(Parse.Ref(() => Statement)).Try().Many()
-        from _end  in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED."))
+        from _end  in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED.").Named("MY DUTY IS DISCHARGED. (end of function)"))
         select (Statement)new FunctionDefinitionNode
             {
                 Name       = name,
@@ -324,7 +324,7 @@ public static class StatementParser
     public static readonly TextParser<Statement> PrincipalBlock =
         from _     in Lexer.Keyword("PRINCIPALS")
         from decls in (from d in Ws(Declaration) select (DeclarationNode)d).Try().Many()
-        from _end  in Ws(Lexer.Keyword("THE CURTAIN RISES."))
+        from _end  in Ws(Lexer.Keyword("THE CURTAIN RISES.").Named("THE CURTAIN RISES. (end of declarations)"))
         select (Statement)new PrincipalBlockNode
             {
                 Declarations = decls.ToList(),
