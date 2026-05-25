@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

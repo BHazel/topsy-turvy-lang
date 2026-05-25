@@ -1,6 +1,4 @@
-using BWHazel.TopsyTurvy.Ast;
-
-namespace BWHazel.TopsyTurvy.Parser;
+namespace BWHazel.TopsyTurvy.Ast;
 
 /// <summary>
 /// A statement node that wraps a standalone expression.

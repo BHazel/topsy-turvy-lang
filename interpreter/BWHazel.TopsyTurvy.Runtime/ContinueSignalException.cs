@@ -8,12 +8,12 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// <remarks>
 /// This is not a language-visible exception.
 /// </remarks>
-internal sealed class ContinueSignal : Exception
+internal sealed class ContinueSignalException : Exception
 {
     /// <summary>
-    /// Initialises a new instance of the <see cref="ContinueSignal"/> class.
+    /// Initialises a new instance of the <see cref="ContinueSignalException"/> class.
     /// </summary>
-    internal ContinueSignal()
+    internal ContinueSignalException()
         : base()
     {
     }

@@ -8,13 +8,13 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// <remarks>
 /// This is not a language-visible exception.
 /// </remarks>
-internal sealed class ReturnSignal : Exception
+internal sealed class ReturnSignalException : Exception
 {
     /// <summary>
-    /// Initialises a new instance of the <see cref="ReturnSignal"/> class with the specified return value.
+    /// Initialises a new instance of the <see cref="ReturnSignalException"/> class with the specified return value.
     /// </summary>
     /// <param name="value">The return value, or <c>null</c> for no return value.</param>
-    internal ReturnSignal(TopsyTurvyValue? value) : base()
+    internal ReturnSignalException(TopsyTurvyValue? value) : base()
     {
         this.Value = value;
     }

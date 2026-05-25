@@ -56,14 +56,14 @@ public static class Lexer
     /// Parses a boolean literal.
     /// </summary>
     public static readonly TextParser<bool> BooleanLiteral =
-        Span.EqualToIgnoreCase("VERITY").Select(_ => true)
-            .Or(Span.EqualToIgnoreCase("NAY").Select(_ => false));
+        Span.EqualToIgnoreCase("VERITY").Try().Select(_ => true)
+            .Or(Span.EqualToIgnoreCase("NAY").Try().Select(_ => false));
 
     /// <summary>
     /// Parses the null literal.
     /// </summary>
     public static readonly TextParser<object?> NullLiteral =
-        Span.EqualToIgnoreCase("NAUGHT").Select(_ => (object?)null);
+        Span.EqualToIgnoreCase("NAUGHT").Try().Select(_ => (object?)null);
 
     /// <summary>
     /// Parses a valid Topsy Turvy identifier.
@@ -82,7 +82,8 @@ public static class Lexer
                   && !name.Equals("BEHOLD",     System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("NAUGHT",     System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("VERITY",     System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NAY",        System.StringComparison.OrdinalIgnoreCase),
+                  && !name.Equals("NAY",        System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("SO",         System.StringComparison.OrdinalIgnoreCase),
             "identifier (not a reserved keyword)");
 
     /// <summary>

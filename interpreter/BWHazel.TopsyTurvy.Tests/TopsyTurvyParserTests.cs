@@ -7,7 +7,7 @@ namespace BWHazel.TopsyTurvy.Tests;
 /// <summary>
 /// Tests for <see cref="TopsyTurvyParser"/> class.
 /// </summary>
-public class ParserTests
+public class TopsyTurvyParserTests
 {
     private readonly TopsyTurvyParser parser = new();
 

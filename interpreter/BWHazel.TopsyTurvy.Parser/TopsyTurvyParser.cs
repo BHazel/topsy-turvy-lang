@@ -42,6 +42,7 @@ public class TopsyTurvyParser
     public ProgramNode Parse(string source)
     {
         PreProcessorPipeline pipeline = new();
+        pipeline.AddProcessor(new CommentsPreProcessor());
         pipeline.AddProcessor(new VictorianFlourishPreProcessor());
         PreProcessResult processed = pipeline.Execute(source);
 

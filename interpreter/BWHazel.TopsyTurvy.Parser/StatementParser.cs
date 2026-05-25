@@ -120,16 +120,16 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<(IReadOnlyList<Statement> TrueBlock, IReadOnlyList<ElseIfBranch> ElseIfs, IReadOnlyList<Statement> ElseBlock)> ConditionalBody =
         from _trueMark in Ws(Lexer.Keyword("QUITE SO."))
-        from trueBr    in Ws(Parse.Ref(() => Statement)).Many()
+        from trueBr    in Ws(Parse.Ref(() => Statement)).Try().Many()
         from elseIfs   in (
             from _     in Ws(Lexer.Keyword("OR, IF NOT,"))
             from cond  in Ws(ExpressionParser.Expression).Try().OptionalOrDefault(null!)
-            from block in Ws(Parse.Ref(() => Statement)).Many()
+            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
             select new ElseIfBranch(cond, block.ToList())
-        ).Many()
+        ).Try().Many()
         from elseBr    in (
             from _     in Ws(Lexer.Keyword("OTHERWISE,"))
-            from block in Ws(Parse.Ref(() => Statement)).Many()
+            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
             select (IReadOnlyList<Statement>)block.ToList()
         ).Try().OptionalOrDefault(null!)
         select (
@@ -167,12 +167,12 @@ public static class StatementParser
                 .Or(Lexer.FloatLiteral.Select(v => (object?)v))
                 .Or(Lexer.IntegerLiteral.Select(v => (object?)v))
                 .Or(Lexer.StringLiteral.Select(v => (object?)v)))
-            from body in Ws(Parse.Ref(() => Statement)).Many()
+            from body in Ws(Parse.Ref(() => Statement)).Try().Many()
             select new SwitchCase(lit, body.ToList())
-        ).Many()
+        ).Try().Many()
         from def in (
             from _     in Ws(Lexer.Keyword("FAILING ALL OF THE ABOVE,"))
-            from block in Ws(Parse.Ref(() => Statement)).Many()
+            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
             select (IReadOnlyList<Statement>)block.ToList()
         ).Try().OptionalOrDefault(null!)
         select (
@@ -204,15 +204,15 @@ public static class StatementParser
           from var  in Ws(Lexer.Identifier)
           from _u   in Ws(Lexer.Keyword("UNTIL"))
           from cond in Ws(ExpressionParser.Expression)
-          select new LoopDefinition(LoopType.Ascending, cond, var))
-        .Or(from _    in Ws(Lexer.Keyword("DESCENDING"))
-             from var  in Ws(Lexer.Identifier)
-             from _u   in Ws(Lexer.Keyword("UNTIL"))
-             from cond in Ws(ExpressionParser.Expression)
-             select new LoopDefinition(LoopType.Descending, cond, var))
-        .Or(from _    in Ws(Lexer.Keyword("WHILST"))
-             from cond in Ws(ExpressionParser.Expression)
-             select new LoopDefinition(LoopType.Whilst, cond, null))
+          select new LoopDefinition(LoopType.Ascending, cond, var)).Try()
+        .Or((from _    in Ws(Lexer.Keyword("DESCENDING"))
+              from var  in Ws(Lexer.Identifier)
+              from _u   in Ws(Lexer.Keyword("UNTIL"))
+              from cond in Ws(ExpressionParser.Expression)
+              select new LoopDefinition(LoopType.Descending, cond, var)).Try())
+        .Or((from _    in Ws(Lexer.Keyword("WHILST"))
+              from cond in Ws(ExpressionParser.Expression)
+              select new LoopDefinition(LoopType.Whilst, cond, null)).Try())
         .Or(Parse.Return(new LoopDefinition(LoopType.Infinite, null, null)));
 
     /// <summary>
@@ -237,7 +237,7 @@ public static class StatementParser
         from label   in Ws(Lexer.Keyword("KNOWN AS").IgnoreThen(Ws(Lexer.Identifier)))
                          .Try().OptionalOrDefault(null!)
         from loopDef in LoopTypeParser
-        from body    in Ws(Parse.Ref(() => Statement)).Many()
+        from body    in Ws(Parse.Ref(() => Statement)).Try().Many()
         from _end    in Ws(Lexer.Keyword("THE TERM EXPIRES."))
         select (Statement)new LoopNode
             {
@@ -256,9 +256,9 @@ public static class StatementParser
         from _op  in Lexer.Keyword("WITH THE GREATEST RESPECT,")
         from op   in Ws(ExpressionParser.Expression)
         from _wg  in Ws(Lexer.Keyword("WITH GRATITUDE"))
-        from succ in Ws(Parse.Ref(() => Statement)).Many()
+        from succ in Ws(Parse.Ref(() => Statement)).Try().Many()
         from _mr  in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
-        from ex   in Ws(Parse.Ref(() => Statement)).Many()
+        from ex   in Ws(Parse.Ref(() => Statement)).Try().Many()
         from _end in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER."))
         select (Statement)new TryCatchNode
             {
@@ -274,7 +274,7 @@ public static class StatementParser
     public static readonly TextParser<List<string>> ParameterList =
         (from _     in Ws(Lexer.Keyword("UNDER THE TERMS OF"))
           from first in Ws(Lexer.Identifier)
-          from rest  in Ws(Lexer.Keyword("AND").IgnoreThen(Ws(Lexer.Identifier))).Many()
+          from rest  in Ws(Lexer.Keyword("AND").IgnoreThen(Ws(Lexer.Identifier))).Try().Many()
           select new List<string>(rest.Length + 1) { first }.Concat(rest).ToList())
         .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION")).Select(_ => new List<string>()));
 
@@ -308,7 +308,7 @@ public static class StatementParser
         from _     in Lexer.Keyword("IT IS MY DUTY TO PERFORM")
         from name  in Ws(Lexer.Identifier)
         from terms in ParameterList
-        from body  in Ws(Parse.Ref(() => Statement)).Many()
+        from body  in Ws(Parse.Ref(() => Statement)).Try().Many()
         from _end  in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED."))
         select (Statement)new FunctionDefinitionNode
             {
@@ -323,7 +323,7 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<Statement> PrincipalBlock =
         from _     in Lexer.Keyword("PRINCIPALS")
-        from decls in (from d in Ws(Declaration) select (DeclarationNode)d).Many()
+        from decls in (from d in Ws(Declaration) select (DeclarationNode)d).Try().Many()
         from _end  in Ws(Lexer.Keyword("THE CURTAIN RISES."))
         select (Statement)new PrincipalBlockNode
             {
@@ -343,7 +343,9 @@ public static class StatementParser
     /// Parses a standalone expression as a statement.
     /// </summary>
     public static readonly TextParser<Statement> ExpressionStatementParser =
-        ExpressionParser.Expression
+        ExpressionParser.PrefixExpression
+            .Or(ExpressionParser.LiteralExpression)
+            .Or(ExpressionParser.JustSoExpression)
             .Select(e => (Statement)new ExpressionStatement { Expression = e, Span = PlaceholderSpan });
 
     /// <summary>
