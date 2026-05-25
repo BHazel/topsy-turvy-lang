@@ -343,7 +343,8 @@ public static class StatementParser
     /// Parses a standalone expression as a statement.
     /// </summary>
     public static readonly TextParser<Statement> ExpressionStatementParser =
-        ExpressionParser.PrefixExpression
+        ExpressionParser.SummonExpression
+            .Or(ExpressionParser.PrefixExpression)
             .Or(ExpressionParser.LiteralExpression)
             .Or(ExpressionParser.JustSoExpression)
             .Select(e => (Statement)new ExpressionStatement { Expression = e, Span = PlaceholderSpan });

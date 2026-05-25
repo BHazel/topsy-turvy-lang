@@ -191,9 +191,9 @@ public class TopsyTurvyInterpreterTests
                 QUITE SO.
                   AND SO I FIND 1
               SO MUCH FOR THAT.
-              AND SO I FIND SUM OF SUMMON fib AND DIFFERENCE OF n AND 1 IF YOU PLEASE. AND SUMMON fib AND DIFFERENCE OF n AND 2 IF YOU PLEASE.
+              AND SO I FIND SUM OF SUMMON fib WITH DIFFERENCE OF n AND 1 IF YOU PLEASE. AND SUMMON fib WITH DIFFERENCE OF n AND 2 IF YOU PLEASE.
             MY DUTY IS DISCHARGED.
-            result IS APPOINTED SUMMON fib AND 6 IF YOU PLEASE.
+            result IS APPOINTED SUMMON fib WITH 6 IF YOU PLEASE.
             BEHOLD result
             FINALE.
             """;
@@ -255,7 +255,7 @@ public class TopsyTurvyInterpreterTests
             IT IS MY DUTY TO PERFORM risky UNDER NO OBLIGATION
               A HIDEOUS CURSE ON "catastrophe"
             MY DUTY IS DISCHARGED.
-            WITH THE GREATEST RESPECT, SUMMON risky IF YOU PLEASE.
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
                 result IS APPOINTED "success"
               MODIFIED RAPTURE

@@ -43,8 +43,16 @@ public static class Lexer
     /// <summary>
     /// Parses a floating-point numeric literal.
     /// </summary>
+    /// <remarks>
+    /// Requires a decimal point to disambiguate from integers.
+    /// </remarks>
     public static readonly TextParser<double> FloatLiteral =
-        Numerics.DecimalDouble;
+        (from intPart  in Numerics.IntegerInt32
+         from _dot     in Character.EqualTo('.')
+         from fracPart in Character.Digit.AtLeastOnce()
+         select double.Parse(
+             $"{intPart}.{new string(fracPart)}",
+             System.Globalization.CultureInfo.InvariantCulture)).Try();
 
     /// <summary>
     /// Parses a signed integer literal.
@@ -82,8 +90,11 @@ public static class Lexer
                   && !name.Equals("BEHOLD",     System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("NAUGHT",     System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("VERITY",     System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NAY",        System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("SO",         System.StringComparison.OrdinalIgnoreCase),
+                  && !name.Equals("NAY",         System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("SO",          System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("QUITE",       System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("WHEN",        System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("NOTHING",     System.StringComparison.OrdinalIgnoreCase),
             "identifier (not a reserved keyword)");
 
     /// <summary>

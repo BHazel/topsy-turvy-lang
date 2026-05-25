@@ -33,7 +33,6 @@ public static class ExpressionParser
             Lexer.Keyword("PRE-ADAMITE").Try().Value(Operator.PreAdamite),
             Lexer.Keyword("LOWER DEGREE").Try().Value(Operator.LowerDegree),
             Lexer.Keyword("WOVEN OF").Try().Value(Operator.WovenOf),
-            Lexer.Keyword("SUMMON").Try().Value(Operator.Summon),
             Lexer.Keyword("ALL OF").Try().Value(Operator.AllOf),
             Lexer.Keyword("ANY OF").Try().Value(Operator.AnyOf)
         );
@@ -69,17 +68,27 @@ public static class ExpressionParser
         Lexer.Identifier
             .Select(name => (Expression)new IdentifierNode { Name = name, Span = PlaceholderSpan });
 
+    private static readonly TextParser<Expression[]> AndExpression =
+        Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("AND"))
+            .IgnoreThen(Lexer.WhitespaceRequired)
+            .IgnoreThen(Parse.Ref(() => Expression)).Try()
+        .Many();
+
     /// <summary>
     /// Parses a prefix-notation operator.
     /// </summary>
     public static readonly TextParser<Expression> PrefixExpression =
         from op      in OperatorToken.Try()
         from first   in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression))
-        from rest    in Lexer.WhitespaceRequired
-                            .IgnoreThen(Lexer.Keyword("AND"))
-                            .IgnoreThen(Lexer.WhitespaceRequired)
-                            .IgnoreThen(Parse.Ref(() => Expression)).Try()
-                        .Many()
+        from rest    in IsVariadic(op)
+            ? AndExpression
+            : Lexer.WhitespaceRequired
+                   .IgnoreThen(Lexer.Keyword("AND"))
+                   .IgnoreThen(Lexer.WhitespaceRequired)
+                   .IgnoreThen(Parse.Ref(() => Expression)).Try()
+               .Select(e => new Expression[] { e })
+               .OptionalOrDefault(System.Array.Empty<Expression>())
         from _closer in IsVariadic(op)
             ? Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("IF YOU PLEASE."))
             : Parse.Return<string>(string.Empty)
@@ -91,10 +100,41 @@ public static class ExpressionParser
         };
 
     /// <summary>
+    /// Parses a function call.
+    /// </summary>
+    public static readonly TextParser<Expression> SummonExpression =
+        (from _     in Lexer.Keyword("SUMMON")
+         from name  in Lexer.WhitespaceRequired.IgnoreThen(Lexer.Identifier)
+         from _with in Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("WITH"))
+         from args  in
+             Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("NOTHING")).Try()
+                 .Select(_ => new List<Expression>())
+             .Or(
+                 from first in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression))
+                 from rest  in (
+                     Lexer.WhitespaceRequired
+                         .IgnoreThen(Lexer.Keyword("AND"))
+                         .IgnoreThen(Lexer.WhitespaceRequired)
+                         .IgnoreThen(Parse.Ref(() => Expression)).Try()
+                 ).Many()
+                 select new List<Expression>(rest.Length + 1) { first }.Concat(rest).ToList()
+             )
+         from _cl   in Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("IF YOU PLEASE."))
+         select (Expression)new PrefixExpressionNode
+         {
+             Operator  = Operator.Summon,
+             Arguments = args
+                 .Prepend(new IdentifierNode { Name = name, Span = PlaceholderSpan })
+                 .ToList(),
+             Span      = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
     /// Parses any valid Topsy Turvy expression.
     /// </summary>
     public static readonly TextParser<Expression> Expression =
-        Parse.Ref(() => PrefixExpression)
+        SummonExpression
+            .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)
             .Or(Parse.Ref(() => IdentifierExpression));

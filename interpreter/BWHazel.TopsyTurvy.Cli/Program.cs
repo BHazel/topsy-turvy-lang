@@ -20,7 +20,20 @@ if (!File.Exists(path))
 string source = File.ReadAllText(path);
 
 TopsyTurvyParser parser = new();
-ProgramNode program = parser.Parse(source);
+ProgramNode program;
+try
+{
+    program = parser.Parse(source);
+}
+catch (TopsyTurvySyntaxException ex)
+{
+    foreach (string error in ex.Errors)
+    {
+        Console.Error.WriteLine(error);
+    }
+    
+    return 1;
+}
 
 Interpreter interpreter = new(new ConsoleIO());
 DiagnosticCollection diagnostics = interpreter.Execute(program);

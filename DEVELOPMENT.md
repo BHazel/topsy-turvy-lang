@@ -1,9 +1,9 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-24
+* **Last Updated:** 2026-05-25
 * **Current Specification Version:** 0.2.0
-* **Interpreter Status:** Under Development (Phase 3 Complete, Phase 4 In Progress)
+* **Interpreter Status:** Under Development (Phase 4 Complete)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -143,26 +143,32 @@ Additional: `SO` added to `Lexer.Identifier` exclusion list to prevent `AND SO I
 
 ## 3. Known Gaps
 
-### `fizzbuzz.topsy` — `AS IT WERE` as expression
-
-`output IS APPOINTED AS IT WERE i AS A YARN` cannot currently parse as an assignment because `AS IT WERE` is a statement-level parser, not an expression. The fizzbuzz example line must be split:
-```
-AS IT WERE i AS A YARN
-output IS APPOINTED JUST SO
-```
-This is a Phase 4 concern.
+None at this time. All four example programs execute correctly.
 
 ---
 
-## 4. Next Phase
+## 4. Phase 4: CLI & Integration (Completed)
 
-### Phase 4: CLI & Integration
+All four example programs validated and passing. Six parser issues were discovered and resolved:
 
-- Validate the interpreter against all four example programs in `examples/` (hello_world ✓, fizzbuzz pending, fibonacci pending, pirates_calculator pending)
-- Fix `fizzbuzz.topsy` per the known gap above (or extend the parser to support cast expressions)
-- Validate `PRAY ADMIT` multi-file loader (implemented in interpreter, needs integration testing)
+| # | File(s) | Root Cause | Fix |
+|---|---|---|---|
+| 1 | `ExpressionParser.cs`, `Lexer.cs` | `SUMMON` lacked dedicated parser; examples use `WITH` keyword but parser used `AND` | Added `SummonExpression` combinator: `SUMMON <name> WITH <args> IF YOU PLEASE.` / `SUMMON <name> WITH NOTHING IF YOU PLEASE.`; removed SUMMON from OperatorToken |
+| 2 | `Lexer.cs` | `Numerics.DecimalDouble` matched plain integers as floats, causing type errors in arithmetic | Replaced `FloatLiteral` with a parser requiring a decimal point (`intPart.fracPart`) |
+| 3 | `ExpressionParser.cs` | Non-variadic operators (SUM, ALIKE, etc.) used `Many()` for AND-args, greedily consuming arguments intended for enclosing variadic operators (WOVEN OF) | Changed non-variadic ops to accept at most one `AND <expr>` (optional); variadic ops keep `Many()` |
+| 4 | `Lexer.cs` | `QUITE` (start of `QUITE SO.`) not excluded from `Identifier`, so optional expressions after `SHOULD IT TRANSPIRE THAT` consumed `QUITE` as an identifier | Added `QUITE`, `WHEN`, `NOTHING` to Identifier exclusion list |
+| 5 | `fizzbuzz.topsy` | `AS IT WERE` cannot appear as an expression in an assignment RHS | Split `output IS APPOINTED AS IT WERE i AS A YARN` into two statements |
+| 6 | `pirates_calculator.topsy` | Standalone identifier as switch subject (two-line form), and `OTHERWISE,` block with no `QUITE SO.` | Changed to inline `IN WHICH CAPACITY? operation`; added `QUITE SO.` before the otherwise-only block |
 
----
+**Additional files changed:** `TopsyTurvyInterpreterTests.cs` — updated all SUMMON calls to use `WITH` / `WITH NOTHING` syntax; `BWHazel.TopsyTurvy.Cli/Program.cs` — added catch for `TopsyTurvySyntaxException` to print detailed errors.
+
+**Build result:** 0 errors, 13 warnings (pre-existing Superpower nullability warnings). **Test result:** 13/13 passing.
+
+**Example results:**
+- `examples/hello_world.topsy` ✓
+- `examples/fizzbuzz.topsy` ✓ (1 to 100 with Fizz/Buzz/FizzBuzz)
+- `examples/fibonacci.topsy` ✓ (term sequence with recursive confirmation)
+- `examples/pirates_calculator.topsy` ✓ (all four operations, division-by-zero guard)
 
 ---
 
@@ -171,8 +177,7 @@ This is a Phase 4 concern.
 1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline.
    - Expected: 0 build errors, 0 test failures, 13/13 passing.
-3. Proceed to Phase 4: run each example program through the CLI and fix any issues.
-   - `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- examples/hello_world.topsy` ✓
-   - `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- examples/fizzbuzz.topsy` (known gap — see §3)
-   - `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- examples/fibonacci.topsy`
-   - `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- examples/pirates_calculator.topsy`
+3. Consider Phase 5 items:
+   - `PRAY ADMIT` multi-file import integration testing
+   - LSP integration / language server prototype
+   - Additional test coverage for edge cases discovered in Phase 4
