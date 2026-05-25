@@ -1,0 +1,12 @@
+{
+  "comments": {
+    "lineComment": "ASIDE:",
+    "blockComment": ["(ASIDE, AT SOME LENGTH:", "END OF ASIDE.)"]
+  },
+  "autoClosingPairs": [
+    { "open": "\"", "close": "\"", "notIn": ["string"] }
+  ],
+  "surroundingPairs": [
+    { "open": "\"", "close": "\"" }
+  ]
+}

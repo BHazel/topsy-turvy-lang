@@ -3,7 +3,8 @@
 
 * **Last Updated:** 2026-05-25
 * **Current Specification Version:** 0.2.0
-* **Interpreter Status:** Under Development (Phase 4 Complete)
+* **Interpreter Status:** Complete (Phase 4)
+* **LSP & VS Code Extension:** In Progress (Phase 5)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -11,173 +12,201 @@
 
 ## 1. File Inventory
 
-| File | Role |
+| File / Directory | Role |
 |---|---|
-| `AGENTS.md` | Project description, instructions to do before starting work and any constraints and rules that must be followed. |
-| `SPEC.md` | Authoritative language specification v0.2.0. Full grammar, complete keyword reference, type system, worked examples. All grammar questions are resolved by this file. |
+| `AGENTS.md` | Project description, standing rules, and constraints that must be read before starting work. |
+| `SPEC.md` | Authoritative language specification v0.2.0. Full grammar, keyword reference, type system, worked examples. |
 | `DEVELOPMENT.md` | Session state and file inventory. |
-| `GRAMMAR.ebnf` | Formal EBNF grammar of the language, serving as the blueprint for the parser. |
-| `examples/hello_world.topsy` | Basic output and string concatenation |
-| `examples/fizzbuzz.topsy` | While loop, modulo, conditionals (including inline form), boolean type, expression casting |
-| `examples/fibonacci.topsy` | Recursive and iterative functions, line continuation |
-| `examples/pirates_calculator.topsy` | Interactive loop, switch/case, multiple functions, division-by-zero handling |
-| `interpreter/` | Root directory for the .NET 10 interpreter implementation. |
+| `GRAMMAR.ebnf` | Formal EBNF grammar serving as the blueprint for the parser. |
+| `examples/hello_world.topsy` | Basic output and string concatenation. |
+| `examples/fizzbuzz.topsy` | While loop, modulo, conditionals, boolean type, expression casting. |
+| `examples/fibonacci.topsy` | Recursive and iterative functions, line continuation. |
+| `examples/pirates_calculator.topsy` | Interactive loop, switch/case, multiple functions, division-by-zero handling. |
+| `interpreter/` | Root directory for the .NET 10 interpreter. |
+| `interpreter/BWHazel.TopsyTurvy.slnx` | Solution file. |
+| `interpreter/BWHazel.TopsyTurvy.Ast/` | AST node types. All nodes inherit from `Node` (with `SourceSpan Span`). Includes `Diagnostic`, `DiagnosticCollection`, `DiagnosticSeverity`, `SourceSpan`, `SourceLocation`. |
+| `interpreter/BWHazel.TopsyTurvy.Parser/` | Superpower-based parser. Entry point: `TopsyTurvyParser`. Includes pre-processors (`CommentsPreProcessor`, `VictorianFlourishPreProcessor`), `SourceMap`/`SourceMapping` for offset tracking, and `TopsyTurvySyntaxException`. |
+| `interpreter/BWHazel.TopsyTurvy.Runtime/` | Tree-walking interpreter. Entry point: `Interpreter`. Includes `TopsyTurvyValue`, `TopsyTurvyEnvironment`, `TopsyTurvyRuntimeException`, signal exceptions for break/continue/return/throw. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/` | Minimal CLI (`Program.cs`) that runs a `.topsy` file. |
+| `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit test suite (17/17 passing). |
+| `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server (Phase 5, in progress). |
+| `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting (Phase 5, in progress). |
 
 ---
 
-## 2. Last Session Summary
+## 2. Completed Phases Summary
 
-### Phase 1: Foundation & Design (Already Completed)
-All AST types implemented and fully XML-documented.
+### Phase 1 — AST (Complete)
 
-### Phase 2: The Parser (Already Completed)
-Parser fully implemented using Superpower 3.2.1. Build: 0 errors, 0 warnings. Tests: 4/4 passing.
+All AST node types implemented and XML-documented. Key design decisions:
+- All nodes inherit from `Node` which carries `required SourceSpan Span`.
+- `SourceSpan(SourceLocation Start, SourceLocation End)` — 1-indexed line/column.
+- `Diagnostic` / `DiagnosticCollection` / `DiagnosticSeverity` provide LSP-ready error reporting.
+- Boolean type is `DECREE`; literals are `VERITY` / `NAY`. Null is `NAUGHT`.
+- `JUST SO` is the sole implicit variable (accumulator).
 
-### Type rename pass (Already Completed)
-All types had the `TopsyTurvy` prefix dropped (e.g. `TopsyTurvyNode` → `Node`), except interfaces and the public `TopsyTurvyParser` entry-point class.
+### Phase 2 — Parser (Complete)
 
-### Phase 3: The Runtime (In Progress)
+Superpower 3.2.1 parser. Build: 0 errors. Tests: 17/17 (includes 4 `TryParse` tests added in Phase 5).
 
-#### Part A — Parser Prerequisite Fixes (Completed)
+Key files: `Lexer.cs`, `StatementParser.cs`, `ExpressionParser.cs`, `TopsyTurvyParser.cs`.
 
-Four parser gaps blocked execution of the example programs. All are now fixed.
+Pre-processing pipeline (`PreProcessorPipeline`) runs before parsing:
+1. `CommentsPreProcessor` — strips `ASIDE:` line comments and `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block comments; preserves newlines for line-number accuracy.
+2. `VictorianFlourishPreProcessor` — handles line-continuation syntax.
 
-**New AST node types (`BWHazel.TopsyTurvy.Ast/`):**
+`SourceMap` / `SourceMapping` map offsets in pre-processed text back to original source positions.
 
-| File | Node | Surface Syntax |
-|---|---|---|
-| `ReturnNode.cs` | `ReturnNode : Statement` | `AND SO I FIND <expr>` (Value non-null) or `MY DUTY IS PREMATURELY DISCHARGED.` (Value null) |
-| `ThrowNode.cs` | `ThrowNode : Statement` | `A HIDEOUS CURSE ON <expr>` |
-| `BreakNode.cs` | `BreakNode : Statement` | `THAT WILL DO.` (loop and switch) |
-| `ContinueNode.cs` | `ContinueNode : Statement` | `ONCE MORE.` (loop only) |
+### Phase 3 — Runtime (Complete)
 
-**AST modifications:**
-- `FunctionDefinitionNode.cs` — removed `ReturnValue` property; returns are now `ReturnNode` instances in the body list
-- `SwitchCase.cs` — removed `HasBreak` property; break is now a `BreakNode` in the case body
+Tree-walking interpreter in `Interpreter.cs`. Build: 0 errors. Tests: 13/13.
 
-**Parser modifications (`StatementParser.cs`):**
-- Added 5 new combinators: `Return`, `EarlyDischarge`, `Curse`, `Break`, `Continue`
-- `FunctionDefinition`: closer is now exclusively `MY DUTY IS DISCHARGED.`; premature discharge is a body statement
-- Loop body: simplified — `BreakNode`/`ContinueNode` parse at any nesting depth (removed null-filtering)
-- Switch case body: no trailing `THAT WILL DO.` clause; `BreakNode` appears naturally in the body
+Key naming decisions (canonical names to use going forward):
 
-**Additional parser fix (`ExpressionParser.cs`):**
-- Added `JustSoExpression` combinator: matches the two-word keyword `JUST SO` before the single-word `IdentifierExpression`, producing `IdentifierNode { Name = "JUST SO" }`. Without this fix, `JUST SO` in expressions would parse as two separate identifier tokens.
-
-**Build result:** 0 errors, 0 warnings. **Test result:** 4/4 passing (no behaviour change).
-
-#### Part B1 — Runtime Value and Scope Types (Completed)
-
-All new files are in `BWHazel.TopsyTurvy.Runtime/`.
-
-**Type naming note:** The user applied the following naming refinements after initial implementation. These are the canonical names to use going forward:
-
-| My initial name | Canonical name |
+| Type | Note |
 |---|---|
-| `RuntimeException` | `TopsyTurvyRuntimeException` |
-| `TopsyTurvyCurseException` | `TopsyTurvyThrowException` |
-| `BreakSignal` | `BreakSignalException` |
-| `CreateChild()` / `CreateFunctionScope()` | `CreateNested()` / `CreateFunctionEnvironment()` |
-| `TopsyTurvyValue.Raw` / `.Type` | `TopsyTurvyValue.RawValue` / `.TopsyTurvyType` |
+| `TopsyTurvyEnvironment` | Variable scope (not `Environment`, to avoid clash with `System.Environment`). Factory methods: `CreateGlobal()`, `CreateNested()`, `CreateFunctionEnvironment()`. |
+| `TopsyTurvyValue` | Runtime value wrapper. Properties: `RawValue`, `TopsyTurvyType`. |
+| `TopsyTurvyRuntimeException` | Interpreter errors. Carries optional `SourceSpan?` for LSP. |
+| `TopsyTurvyThrowException` | Language-level `A HIDEOUS CURSE ON` throw. Carries `TopsyTurvyValue` payload. |
+| `BreakSignalException` | Internal signal for `THAT WILL DO.` |
+| `ReturnSignalException` | Internal stack-unwinding signal for `ReturnNode`. |
+| `ContinueSignal` | Internal signal for `ONCE MORE.` |
 
-**New files:**
+`ITopsyTurvyIO` / `ConsoleIO` abstract console I/O (used for testing with `TestIO` stub).
 
-| File | Class | Role |
-|---|---|---|
-| `TopsyTurvyValue.cs` | `TopsyTurvyValue` | Runtime value wrapper. Wraps `object? RawValue` + `LiteralType TopsyTurvyType`. Static factories: `Integer`, `Float`, `String`, `Boolean`, `Null`. `IsTruthy()`, `CastTo(LiteralType)`, `ToString()`. Booleans render as `VERITY`/`NAY`; null as `NAUGHT`. |
-| `TopsyTurvyEnvironment.cs` | `TopsyTurvyEnvironment` | Variable scope with enclosing-chain lookup. `JustSo` property holds the implicit register. `CreateGlobal()`, `CreateNested()`, `CreateFunctionEnvironment()` factory methods. `Get("JUST SO")` returns `JustSo` directly. |
-| `TopsyTurvyRuntimeException.cs` | `TopsyTurvyRuntimeException` | Interpreter errors (undeclared variable, type mismatch, etc.). Carries optional `SourceSpan?` for LSP diagnostics. |
-| `TopsyTurvyThrowException.cs` | `TopsyTurvyThrowException` | Language-level throw (`A HIDEOUS CURSE ON`). Carries `TopsyTurvyValue` as the cursed payload. Caught by `TryCatchNode` evaluator; if uncaught, terminates the programme. |
-| `ReturnSignal.cs` | `ReturnSignal` | Internal stack-unwinding signal for `ReturnNode`. Not language-visible. `TopsyTurvyValue? Value` (null = premature discharge). |
-| `BreakSignal.cs` | `BreakSignalException` | Internal signal for `THAT WILL DO.` in loops and switches. Not language-visible. |
-| `ContinueSignal.cs` | `ContinueSignal` | Internal signal for `ONCE MORE.` in loops. Not language-visible. |
-| `ConsoleIO.cs` | `ConsoleIO` | Concrete `ITopsyTurvyIO` for real console I/O. |
+### Phase 4 — CLI & Integration (Complete)
 
-**Build result:** 0 errors, 11 warnings (pre-existing Superpower nullability warnings). **Test result:** 4/4 passing.
+All four example programs execute correctly:
+- `examples/hello_world.topsy` ✓
+- `examples/fizzbuzz.topsy` ✓
+- `examples/fibonacci.topsy` ✓
+- `examples/pirates_calculator.topsy` ✓
 
-#### Part B2 — The Interpreter (Completed)
-
-**Files created/modified:**
-
-| File | Action |
-|---|---|
-| `BWHazel.TopsyTurvy.Ast/ExpressionStatement.cs` | Created (moved from Parser project) |
-| `BWHazel.TopsyTurvy.Parser/ExpressionStatement.cs` | Deleted |
-| `BWHazel.TopsyTurvy.Runtime/Interpreter.cs` | Created |
-| `BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj` | Added `ProjectReference` to Parser |
-| `BWHazel.TopsyTurvy.Tests/TopsyTurvyInterpreterTests.cs` | Created |
-| `BWHazel.TopsyTurvy.Tests/BWHazel.TopsyTurvy.Tests.csproj` | Added `ProjectReference` to Runtime |
-| `BWHazel.TopsyTurvy.Cli/Program.cs` | Rewritten as minimal file runner |
-
-**`Interpreter.cs` design:**
-- Fields use `this.` prefix: `private readonly ITopsyTurvyIO io;` and `private readonly Dictionary<string, FunctionDefinitionNode> functions = [];`
-- Statement handler methods use `environment` as parameter name; expression evaluators use `env`
-- Full coverage: all loop types, conditionals, switch with fall-through, try-catch, recursive functions, imports
-
-**Tests:** 9 tests total — HelloWorld, WovenOf, Arithmetic, InlineConditional, WhilstLoop, AscendingLoop, RecursiveFunction (Fibonacci fib(6)=13), Switch, CaughtException — plus `TestIO` stub.
-
-**Build result:** 0 errors, 11 warnings (pre-existing Superpower nullability warnings). **Test result:** 13/13 passing.
-
-#### Part C — Parser Bug Fixes (Completed)
-
-Five parser bugs resolved (three documented + two discovered during interpreter testing):
-
-| # | Location | Root Cause | Fix |
-|---|---|---|---|
-| 1 | `StatementParser.LoopTypeParser` | `.Or()` alternatives not wrapped in `.Try()`, so whitespace consumption prevented fallback | Added `.Try()` to each alternative |
-| 2 | All body `Many()` calls | `Ws(Statement).Many()` propagates partial failures from whitespace consumption | Changed to `Ws(Statement).Try().Many()` throughout |
-| 3 | `ExpressionStatementParser` | Bare `IdentifierExpression` consumed first word of closing keywords | Restricted to `PrefixExpression`, `LiteralExpression`, `JustSoExpression` only |
-| 4 | `ParameterList.rest` | `AND SO I FIND` partially consumed as `AND <identifier>` | Added `.Try().Many()` to `rest` parser |
-| 5 | `Lexer.NullLiteral`, `Lexer.BooleanLiteral` | `Span.EqualToIgnoreCase` without `.Try()` caused partial-match failures for identifiers starting with `N` or `V` (e.g. `n` partially matched `NAUGHT`/`NAY`) | Added `.Try()` to both span comparisons in each literal |
-
-Additional: `SO` added to `Lexer.Identifier` exclusion list to prevent `AND SO I FIND` being consumed as `AND <identifier>`.
-
-#### Part D — Comment Preprocessor (Completed)
-
-- Created `BWHazel.TopsyTurvy.Parser/AsidePreProcessor.cs` — strips `ASIDE: ...` single-line and `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block comments; preserves newlines for line-number accuracy.
-- Registered in `TopsyTurvyParser.cs` before `VictorianFlourishPreProcessor`.
-
-**Smoke test:** `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- examples/hello_world.topsy` produces correct output. ✓
+Six parser bugs were found and fixed during integration. Notable decisions:
+- `SUMMON` uses `WITH` as argument separator (not `AND`): `SUMMON name WITH arg1 AND arg2 IF YOU PLEASE.` / `SUMMON name WITH NOTHING IF YOU PLEASE.`
+- Float literal requires decimal point to disambiguate from integer.
+- Non-variadic operators (`SUM`, `ALIKE`, etc.) accept at most one `AND <expr>`.
+- `AS IT WERE` cannot appear as an expression in an assignment RHS — must be a separate statement.
 
 ---
 
 ## 3. Known Gaps
 
-None at this time. All four example programs execute correctly.
+Phase 5 is in progress. See the open issues section in Phase 5 below. All four example programs execute correctly. Build: 0 errors. Tests: 17/17.
 
 ---
 
-## 4. Phase 4: CLI & Integration (Completed)
+## 4. Phase 5: LSP + VS Code Extension (In Progress)
 
-All four example programs validated and passing. Six parser issues were discovered and resolved:
+### Goal
 
-| # | File(s) | Root Cause | Fix |
-|---|---|---|---|
-| 1 | `ExpressionParser.cs`, `Lexer.cs` | `SUMMON` lacked dedicated parser; examples use `WITH` keyword but parser used `AND` | Added `SummonExpression` combinator: `SUMMON <name> WITH <args> IF YOU PLEASE.` / `SUMMON <name> WITH NOTHING IF YOU PLEASE.`; removed SUMMON from OperatorToken |
-| 2 | `Lexer.cs` | `Numerics.DecimalDouble` matched plain integers as floats, causing type errors in arithmetic | Replaced `FloatLiteral` with a parser requiring a decimal point (`intPart.fracPart`) |
-| 3 | `ExpressionParser.cs` | Non-variadic operators (SUM, ALIKE, etc.) used `Many()` for AND-args, greedily consuming arguments intended for enclosing variadic operators (WOVEN OF) | Changed non-variadic ops to accept at most one `AND <expr>` (optional); variadic ops keep `Many()` |
-| 4 | `Lexer.cs` | `QUITE` (start of `QUITE SO.`) not excluded from `Identifier`, so optional expressions after `SHOULD IT TRANSPIRE THAT` consumed `QUITE` as an identifier | Added `QUITE`, `WHEN`, `NOTHING` to Identifier exclusion list |
-| 5 | `fizzbuzz.topsy` | `AS IT WERE` cannot appear as an expression in an assignment RHS | Split `output IS APPOINTED AS IT WERE i AS A YARN` into two statements |
-| 6 | `pirates_calculator.topsy` | Standalone identifier as switch subject (two-line form), and `OTHERWISE,` block with no `QUITE SO.` | Changed to inline `IN WHICH CAPACITY? operation`; added `QUITE SO.` before the otherwise-only block |
+Add developer tooling: a Language Server Protocol server that publishes syntax-error diagnostics to editors, and a VS Code extension that integrates with it and provides syntax highlighting for `.topsy` files.
 
-**Additional files changed:** `TopsyTurvyInterpreterTests.cs` — updated all SUMMON calls to use `WITH` / `WITH NOTHING` syntax; `BWHazel.TopsyTurvy.Cli/Program.cs` — added catch for `TopsyTurvySyntaxException` to print detailed errors.
+### Part 1 — Parser Enhancement (`BWHazel.TopsyTurvy.Parser`) — Complete
 
-**Build result:** 0 errors, 13 warnings (pre-existing Superpower nullability warnings). **Test result:** 13/13 passing.
+**New file: `ParseResult.cs`**
+- Record: `ParseResult(ProgramNode? Program, IReadOnlyList<Diagnostic> Diagnostics)`
+- `bool Success => Program is not null`
 
-**Example results:**
-- `examples/hello_world.topsy` ✓
-- `examples/fizzbuzz.topsy` ✓ (1 to 100 with Fizz/Buzz/FizzBuzz)
-- `examples/fibonacci.topsy` ✓ (term sequence with recursive confirmation)
-- `examples/pirates_calculator.topsy` ✓ (all four operations, division-by-zero guard)
+**New method: `TopsyTurvyParser.TryParse(string source) : ParseResult`**
+- Runs pre-processor pipeline and attempts to parse.
+- On failure: reads `result.ErrorPosition.Line/Column` from Superpower (1-indexed), constructs a `Diagnostic(message, Error, SourceSpan)`, returns `ParseResult(null, [diagnostic])`.
+- On success: returns `ParseResult(program, [])`.
+- Note: Superpower stops at the first parse error, so `TryParse` returns at most one diagnostic.
+- Existing `Parse()` method is unchanged (CLI and tests unaffected).
+- 4 new unit tests added in `TopsyTurvyParserTests.cs` covering valid source, syntax error, empty source, and multi-line error position.
+
+### Part 2 — Language Server (`BWHazel.TopsyTurvy.LanguageServer`) — Partially Working
+
+**Project**: Added `ProjectReference` to `BWHazel.TopsyTurvy.Parser`.
+
+**`Program.cs`**: OmniSharp LSP host on stdio. Registers `TextDocumentSyncHandler`.
+- Key fix: `.ClearProviders()` must be called before `.AddLanguageProtocolLogging()`. Without it, .NET's default console logger writes to stdout and corrupts the LSP stdio stream, causing the client to error with "Header must provide a Content-Length property".
+
+**`TextDocumentSyncHandler.cs`**: Implements `TextDocumentSyncHandlerBase` (OmniSharp abstract base).
+- `DidOpen` / `DidChange` / `DidSave`: call `TryParse`, map `Diagnostic[]` to LSP diagnostics (1-indexed `SourceLocation` → 0-indexed LSP `Position`), publish via `languageServer.TextDocument.PublishDiagnostics`.
+- `DidClose`: publishes empty diagnostics to clear squiggles.
+- Sync kind: `Full` (resend whole document on change).
+- OmniSharp API notes: use `TextDocumentSelector.ForLanguage(id)` (not `DocumentSelector`); capability parameter type is `TextSynchronizationCapability` (not `TextDocumentSyncCapability`); use `Container<Diagnostic>` for the diagnostics list.
+- `BWHazel.TopsyTurvy.Ast.Diagnostic` and `DiagnosticSeverity` are aliased as `AstDiagnostic` / `AstDiagnosticSeverity` to avoid clash with the OmniSharp types of the same name.
+- **Status**: server starts, connects, `DidOpen`/`DidChange` handlers are confirmed invoked (verified with a temporary `window/showMessage` notification). `TryParse` returns correct counts (0 for valid code, 1 for invalid). However, `PublishDiagnostics` notifications are not producing squiggles in VS Code — root cause not yet identified (see open issues).
+
+### Part 3 — VS Code Extension (`extensions/vscode/topsy-turvy`) — Partially Working
+
+**`package.json`**:
+- `vscode-languageclient ^9.0.1` in `dependencies`.
+- Language contribution: id `topsy-turvy`, extension `.topsy`.
+- Grammar contribution: `syntaxes/topsy-turvy.tmLanguage.json`, scope `source.topsy`.
+- Setting `topsy-turvy.serverPath` (overridable path to the language server binary).
+- Activation on `onLanguage:topsy-turvy`.
+
+**`language-configuration.json`** (new): line comment `ASIDE:`, block comment `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)`, auto-close `"`.
+
+**`syntaxes/topsy-turvy.tmLanguage.json`**: TextMate grammar covering keywords, comments, strings, numbers, boolean/null literals, operators, I/O, exceptions, import, implicit variable, types, and identifiers. **Partially working — see open issues.**
+
+**`extension.ts`**: Creates and starts a `LanguageClient` (stdio transport) pointing at the compiled language server binary. Path is read from `topsy-turvy.serverPath` setting, defaulting to the Debug build output path.
+
+### Open Issues
+
+#### Issue 1 — `PublishDiagnostics` produces no squiggles in VS Code
+
+**Symptom**: `window/showMessage` notifications work; `TryParse` returns the correct error count; but `textDocument/publishDiagnostics` notifications do not produce red squiggles in VS Code.
+
+**Investigation so far**:
+- `TextDocumentSyncHandler.DidOpen` and `DidChange` handlers are definitely invoked (confirmed with `ShowMessage`).
+- `TryParse` returns correct error counts (0 for valid, 1 for invalid — Superpower reports at most one error per parse attempt). This is expected and by design: Superpower is a single-pass parser combinator that stops at the first unrecoverable token; there is no built-in error recovery. Supporting multiple simultaneous diagnostics would require implementing error-recovery (e.g. synchronising at statement boundaries after each failure), which is a non-trivial future enhancement.
+- Positions are valid: `ErrorPosition.Line` and `.Column` are both ≥ 1 from Superpower; after subtracting 1 the LSP positions are ≥ 0.
+- Build is clean; no compile errors on the handler.
+
+**Potential causes and fixes to try (in order)**:
+
+1. **Lazy LINQ evaluation** — `result.Diagnostics.Select(...)` is lazy; if `Container<Diagnostic>` defers enumeration and an exception is thrown during serialisation, OmniSharp may silently drop the notification. Fix: materialise with `.ToList()` before passing to `new Container<Diagnostic>(...)`.
+
+2. **Silent exception in `PublishDiagnostics`** — OmniSharp may swallow exceptions thrown in notification handlers. Fix: wrap the `PublishDiagnostics` call in a try/catch and route errors to `this.languageServer.Window.ShowMessage` or server-side logging.
+
+3. **`Diagnostic.Message` is null** — Superpower's `Result<T>.ErrorMessage` is `string?` and may be null or empty for certain failures. A null `Message` could cause a JSON serialisation error that kills the notification silently. Fix: default to a non-null fallback: `result.ErrorMessage ?? "Syntax error"`.
+
+4. **Position pre-processing offset mismatch** — `TryParse` runs `CommentsPreProcessor` and `VictorianFlourishPreProcessor` before parsing; error positions are relative to the pre-processed text, not the original source. This would produce wrong squiggle positions rather than missing ones, but could cause negative column values in some edge cases. Fix (long-term): integrate `SourceMap` position remapping.
+
+5. **`DidSave` handler not sending diagnostics on initial open** — The extension sends `DidOpen` on file open. Confirm the OmniSharp routing is calling the correct overload; if `DidSave` is being called instead of `DidOpen` at some point and does not call `PublishDiagnostics` in all code paths, squiggles could be cleared immediately. Check: add identical `ShowMessage` probes to `DidSave` and `DidClose` to distinguish.
+
+#### Issue 2 — Multi-line block comments highlighted on first line only
+
+**Symptom**: `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` spanning multiple lines only applies `comment.block.topsy` colouring to the first line.
+
+**Cause**: The `"block-comments"` repository entry in `topsy-turvy.tmLanguage.json` contains inner `"patterns": [{ "match": ".*", "name": "comment.block.topsy" }]`. The `.*` regex does not match newlines, so the scope is only applied to the content of the first matched line. The outer `begin`/`end` rule provides multi-line span and the correct `name` already — the inner patterns are not only redundant but actively break the behaviour.
+
+**Fix**: Remove the `"patterns"` array from the `"block-comments"` repository entry. The `begin`/`end` rule with `name: "comment.block.topsy"` is sufficient to colour the entire block.
+
+#### Issue 3 — `IT IS MY DUTY TO PERFORM` not highlighted
+
+**Symptom**: The function declaration keyword is not coloured as a keyword.
+
+**Cause**: `IT IS MY DUTY TO PERFORM` is absent from the `"functions"` pattern group in the tmLanguage grammar. The grammar has `MY DUTY IS DISCHARGED.` and `MY DUTY IS PREMATURELY DISCHARGED.` (return keywords) but not the opening declaration form.
+
+**Fix**: Add to the `"functions"` patterns array:
+```json
+{ "match": "\\bIT\\s+IS\\s+MY\\s+DUTY\\s+TO\\s+PERFORM\\b", "name": "keyword.other.function.topsy" }
+```
 
 ---
 
 ## 5. Next Steps (Start of Next Session)
 
 1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
-2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline.
-   - Expected: 0 build errors, 0 test failures, 13/13 passing.
-3. Consider Phase 5 items:
+2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (0 errors, 17/17 tests).
+3. Work through Phase 5 open issues in order:
+   - **Issue 1 (diagnostics)**: try the potential fixes in order — materialise LINQ, add try/catch, fix null message, check DidSave probe.
+   - **Issue 2 (block comments)**: remove inner `patterns` from the `block-comments` repository entry in `topsy-turvy.tmLanguage.json`.
+   - **Issue 3 (function keyword)**: add `IT IS MY DUTY TO PERFORM` pattern to the `functions` group.
+   - After fixes: audit the full tmLanguage grammar against `SPEC.md` for any other missing multi-word keywords.
+4. Once Phase 5 issues are resolved, consider Phase 6:
+   - LSP hover support (show variable type / function signature on hover)
+   - LSP go-to-definition (navigate to `IT IS MY DUTY TO PERFORM` declaration)
+   - LSP completion (suggest keywords at the current cursor position)
    - `PRAY ADMIT` multi-file import integration testing
-   - LSP integration / language server prototype
-   - Additional test coverage for edge cases discovered in Phase 4
+   - **Error message improvements** (three layers, work in order):
+     1. **Source map verification** — confirm `TryParse` and `Parse` use `SourceMap`/`SourceMapping` to remap Superpower error positions from pre-processed text back to original source line/column. Without this, errors point at the wrong line when comments or line-continuation syntax have shifted offsets.
+     2. **Runtime error messages** — review every `throw new TopsyTurvyRuntimeException(...)` in `Interpreter.cs` and replace terse messages with context-rich ones (e.g. include the actual vs. expected type, the variable name, or a hint about the relevant keyword). Straightforward string-editing work.
+     3. **Parser error messages** — add `.Named("...")` annotations to key combinators in `Lexer.cs`, `StatementParser.cs`, and `ExpressionParser.cs`. Superpower uses these names when building its error strings, so annotating e.g. the `FINALE.` parser as `.Named("program end (FINALE.)")` produces a readable "expected program end (FINALE.)" instead of a raw token description.

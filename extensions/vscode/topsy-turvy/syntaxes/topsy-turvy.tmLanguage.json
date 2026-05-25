@@ -1,0 +1,349 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Topsy Turvy",
+  "scopeName": "source.topsy",
+  "fileTypes": ["topsy"],
+  "patterns": [
+    { "include": "#block-comments" },
+    { "include": "#line-comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#boolean-literals" },
+    { "include": "#null-literal" },
+    { "include": "#implicit-variable" },
+    { "include": "#program-structure" },
+    { "include": "#sections" },
+    { "include": "#control-flow" },
+    { "include": "#switch" },
+    { "include": "#loops" },
+    { "include": "#exceptions" },
+    { "include": "#functions" },
+    { "include": "#io" },
+    { "include": "#import" },
+    { "include": "#cast" },
+    { "include": "#declaration" },
+    { "include": "#assignment" },
+    { "include": "#types" },
+    { "include": "#operators" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "block-comments": {
+      "name": "comment.block.topsy",
+      "begin": "\\(ASIDE,\\s+AT\\s+SOME\\s+LENGTH:",
+      "beginCaptures": {
+        "0": { "name": "comment.block.topsy" }
+      },
+      "end": "END\\s+OF\\s+ASIDE\\.\\)",
+      "endCaptures": {
+        "0": { "name": "comment.block.topsy" }
+      },
+      "patterns": [
+        { "match": ".*", "name": "comment.block.topsy" }
+      ]
+    },
+    "line-comments": {
+      "name": "comment.line.topsy",
+      "match": "ASIDE:.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.topsy",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.topsy",
+          "match": "~[nt\"~]"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.topsy",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.topsy",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "boolean-literals": {
+      "name": "constant.language.boolean.topsy",
+      "match": "\\b(VERITY|NAY)\\b"
+    },
+    "null-literal": {
+      "name": "constant.language.null.topsy",
+      "match": "\\bNAUGHT\\b"
+    },
+    "implicit-variable": {
+      "name": "variable.language.topsy",
+      "match": "\\bJUST\\s+SO\\b"
+    },
+    "program-structure": {
+      "patterns": [
+        {
+          "name": "keyword.control.program.topsy",
+          "match": "\\bHARK!"
+        },
+        {
+          "name": "keyword.control.program.topsy",
+          "match": "\\bFINALE\\."
+        }
+      ]
+    },
+    "sections": {
+      "patterns": [
+        {
+          "name": "keyword.control.section.topsy",
+          "match": "\\bPRINCIPALS\\b"
+        },
+        {
+          "name": "keyword.control.section.topsy",
+          "match": "\\bTHE\\s+CURTAIN\\s+RISES\\."
+        }
+      ]
+    },
+    "control-flow": {
+      "patterns": [
+        {
+          "name": "keyword.control.topsy",
+          "match": "\\bSHOULD\\s+IT\\s+TRANSPIRE\\s+THAT\\b"
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "\\bQUITE\\s+SO\\."
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "\\bOR,\\s+IF\\s+NOT,"
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "\\bOTHERWISE,"
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "\\bSO\\s+MUCH\\s+FOR\\s+THAT\\."
+        }
+      ]
+    },
+    "switch": {
+      "patterns": [
+        {
+          "name": "keyword.control.switch.topsy",
+          "match": "\\bIN\\s+WHICH\\s+CAPACITY\\?"
+        },
+        {
+          "name": "keyword.control.switch.topsy",
+          "match": "\\bWHEN\\s+ACTING\\s+AS\\b"
+        },
+        {
+          "name": "keyword.control.switch.topsy",
+          "match": "\\bFAILING\\s+ALL\\s+OF\\s+THE\\s+ABOVE,"
+        },
+        {
+          "name": "keyword.control.switch.topsy",
+          "match": "\\bNOTHING\\s+COULD\\s+BE\\s+MORE\\s+SATISFACTORY\\."
+        }
+      ]
+    },
+    "loops": {
+      "patterns": [
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bBY\\s+A\\s+LEGAL\\s+FICTION\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bKNOWN\\s+AS\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bASCENDING\\s+TO\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bDESCENDING\\s+TO\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bWHILST\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bTHE\\s+TERM\\s+EXPIRES\\."
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bTHAT\\s+WILL\\s+DO\\."
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "\\bONCE\\s+MORE\\."
+        }
+      ]
+    },
+    "exceptions": {
+      "patterns": [
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "\\bA\\s+HIDEOUS\\s+CURSE\\s+ON\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "\\bSHOULD\\s+A\\s+CURSE\\s+BEFALL\\s+YOU\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "\\bTHOUGH\\s+CURSED,\\s+CONTINUE\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "\\bFREE\\s+FROM\\s+ALL\\s+CURSES\\."
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bALL\\s+HANDS\\s+ON\\s+DECK\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bUNDER\\s+THE\\s+TERMS\\s+OF\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bUNDER\\s+NO\\s+OBLIGATION\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bMY\\s+DUTY\\s+IS\\s+DISCHARGED\\."
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bMY\\s+DUTY\\s+IS\\s+PREMATURELY\\s+DISCHARGED\\."
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bAND\\s+SO\\s+I\\s+FIND\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bSUMMON\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "\\bIF\\s+YOU\\s+PLEASE\\."
+        }
+      ]
+    },
+    "io": {
+      "patterns": [
+        {
+          "name": "support.function.topsy",
+          "match": "\\bBEHOLD\\b"
+        },
+        {
+          "name": "support.function.topsy",
+          "match": "\\bPRAY\\s+TELL\\b"
+        }
+      ]
+    },
+    "import": {
+      "name": "keyword.control.import.topsy",
+      "match": "\\bPRAY\\s+ADMIT\\b"
+    },
+    "cast": {
+      "patterns": [
+        {
+          "name": "keyword.operator.cast.topsy",
+          "match": "\\bAS\\s+IT\\s+WERE\\b"
+        }
+      ]
+    },
+    "declaration": {
+      "patterns": [
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "\\bPRAY\\s+WELCOME\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "\\bAS\\s+A\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "\\bBEING\\b"
+        }
+      ]
+    },
+    "assignment": {
+      "name": "keyword.operator.assignment.topsy",
+      "match": "\\bIS\\s+APPOINTED\\b"
+    },
+    "types": {
+      "name": "storage.type.topsy",
+      "match": "\\b(YARN|NUMBER|DECIMAL|DECREE)\\b"
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bWOVEN\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bHARDLY\\s+EVER\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bMORE\\s+THAN\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bFEWER\\s+THAN\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bAT\\s+LEAST\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bAT\\s+MOST\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bALL\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bANY\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|ALIKE|UNALIKE)\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bAND\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bWITH\\s+NOTHING\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "\\bWITH\\b"
+        }
+      ]
+    },
+    "identifiers": {
+      "name": "variable.other.topsy",
+      "match": "\\b[A-Za-z][A-Za-z0-9_-]*\\b"
+    }
+  }
+}
