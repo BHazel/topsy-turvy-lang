@@ -26,15 +26,18 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 {
     private const string LanguageId = "topsy-turvy";
     private readonly ILanguageServerFacade languageServer;
+    private readonly DocumentStateManager documentStateManager;
     private readonly TopsyTurvyParser parser = new();
 
     /// <summary>
     /// Initialises a new instance of the <see cref="TextDocumentSyncHandler"/> class.
     /// </summary>
     /// <param name="languageServer">The language server facade used to send notifications to the client.</param>
-    public TextDocumentSyncHandler(ILanguageServerFacade languageServer)
+    /// <param name="documentStateManager">The manager used to cache per-document symbol state.</param>
+    public TextDocumentSyncHandler(ILanguageServerFacade languageServer, DocumentStateManager documentStateManager)
     {
         this.languageServer = languageServer;
+        this.documentStateManager = documentStateManager;
     }
 
     /// <inheritdoc/>
@@ -80,6 +83,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
     /// <inheritdoc/>
     public override Task<Unit> Handle(DidCloseTextDocumentParams request, CancellationToken cancellationToken)
     {
+        this.documentStateManager.Remove(request.TextDocument.Uri);
         this.languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
         {
             Uri = request.TextDocument.Uri,
@@ -94,6 +98,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
         try
         {
             ParseResult result = this.parser.TryParse(text);
+            this.documentStateManager.Update(uri, text, result);
             List<Diagnostic> lspDiagnostics = result.Diagnostics.Select(
                 (AstDiagnostic diagnostic) => new Diagnostic
                 {

@@ -4,7 +4,7 @@
 * **Last Updated:** 2026-05-26
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
-* **LSP & VS Code Extension:** Basic Implementation Complete (Phase 5)
+* **LSP & VS Code Extension:** Core LSP Features Complete (Phase 5)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -155,6 +155,61 @@ Add developer tooling: a Language Server Protocol server that publishes syntax-e
 
 **`extension.ts`**: Creates and starts a `LanguageClient` (stdio transport) pointing at the compiled language server binary. Path is read from `topsy-turvy.serverPath` setting, defaulting to the Debug build output path.
 
+### Part 4 — Symbol Infrastructure — Complete
+
+Five new files added to `BWHazel.TopsyTurvy.LanguageServer/`:
+
+| File | Purpose |
+|---|---|
+| `SymbolKind.cs` | Enum: `Variable`, `Function`, `Parameter` |
+| `SymbolInfo.cs` | Per-symbol metadata: name, kind, type display name, parameter list, definition line/column (1-indexed; 0 = unknown) |
+| `SymbolTable.cs` | Built from `(ProgramNode, string originalSource)`. Walks the AST to collect symbols; scans source lines to recover definition positions (workaround for all-zero `PlaceholderSpan`). Static `ExtractWordAt(source, line, column)` extracts the identifier at a 0-indexed LSP position. Case-insensitive `Dictionary<string, SymbolInfo>`. `JUST SO` always added as a built-in variable. |
+| `DocumentState.cs` | Per-document: `Source` (current text) + `SymbolTable?` (null until first successful parse) |
+| `DocumentStateManager.cs` | Singleton. `Update` always refreshes `Source` but only rebuilds the `SymbolTable` when the parse succeeds, preserving the last good table during syntax errors. Thread-safe via `lock`. |
+
+**`TextDocumentSyncHandler.cs`** updated to inject `DocumentStateManager`; calls `Update(uri, text, result)` after `TryParse` and `Remove(uri)` on `DidClose`.
+
+**`Program.cs`** updated to register `DocumentStateManager` as a singleton and add the three new handlers.
+
+**Known constraint — PlaceholderSpan**: every AST node carries `Span = (0,0)-(0,0)` because source positions were never wired up in the Superpower parser. Definition positions are recovered by scanning original source lines for `PRAY WELCOME <name>` and `IT IS MY DUTY TO PERFORM <name>` patterns. Hover and completion work from the `SymbolTable`; go-to-definition returns a result only when a definition line is found via the scan.
+
+### Part 5 — Hover Handler — Complete
+
+**`HoverHandler.cs`**: extends `HoverHandlerBase`. Extracts the word at the cursor with `SymbolTable.ExtractWordAt`, looks it up in the `SymbolTable`, and returns a Markdown hover. Hover content per kind:
+
+| Kind | Markdown |
+|---|---|
+| `JUST SO` | `**implicit variable** \`JUST SO\` — receives the result of the last expression` |
+| Variable | `**(variable)** \`name\` : PEER` (or FATHOM / YARN / DECREE / NAUGHT) |
+| Function | `**(function)** \`name\`(param1, param2)` |
+| Parameter | `**(parameter)** \`name\`` |
+
+Returns `null` hover (no tooltip) when the word at cursor is not in the symbol table.
+
+### Part 6 — Go-to-Definition Handler — Complete
+
+**`DefinitionHandler.cs`**: extends `DefinitionHandlerBase`. Extracts word at cursor, looks it up, and returns a `Location` covering the name token on its definition line. Returns an empty result if `DefinitionLine == 0` (position not recoverable from source scan — e.g. parameter, or symbol added before any parse succeeded).
+
+### Part 7 — Completion Handler — Complete (with known limitations)
+
+**`CompletionHandler.cs`**: extends `CompletionHandlerBase`. Returns two merged item groups:
+
+**Symbols** (from `SymbolTable`): `CompletionItemKind.Variable` / `CompletionItemKind.Function`, filtered by the current last word.
+
+**Keywords** (74 static entries): `CompletionItemKind.Keyword`, covering the full keyword set from SPEC.md v0.2.0. The static list was audited against the spec and corrected in this session (removed several non-existent entries, added missing ones). Keywords use `FilterText` and `InsertText` to handle multi-word phrases correctly (see below).
+
+**Multi-word keyword completion approach**: VS Code's completion model treats the text since the last word separator (space) as the "current word" for client-side filtering. Multi-word keywords like `SHOULD IT TRANSPIRE THAT` are therefore invisible to the client-side filter once the user has typed past the first space. The server-side workaround:
+1. `GetPhraseContext` reads the trimmed text from line start to cursor (`phrase`) and the last space-delimited word (`lastWord`).
+2. Keywords are filtered server-side: only keywords where `keyword.StartsWith(phrase, OrdinalIgnoreCase)` are returned — but only when `phrase` is itself a prefix of at least one keyword. When no keyword starts with `phrase` (e.g. after `result `), all keywords are returned.
+3. `FilterText = lastWord` satisfies VS Code's client-side filter for the current word.
+4. `InsertText = keyword[insertOffset..]` where `insertOffset = phrase.Length - lastWord.Length` — VS Code deletes its current word and inserts this suffix, reconstructing the full keyword without duplicating already-typed text.
+5. `isIncomplete = true` tells VS Code to re-request on each keystroke so the server can return a freshly-filtered list.
+6. `TriggerCharacters = [" "]` reopens the list on every space so the list stays live as the user types through multi-word phrases.
+
+**Known limitations**:
+- If a variable or function name is a prefix of any keyword (e.g. a variable named `by` when `BY A LEGAL FICTION` is a keyword), keyword-context mode is triggered and insertion may be incorrect. Fix planned — see §5.
+- The context check is case-insensitive, so lowercase keyword usage (the language allows it) is handled correctly.
+
 ### Open Issues
 
 See §3 Known Gaps for remaining squiggle accuracy issues.
@@ -201,11 +256,23 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
    - `Lexer.StringLiteral` in `ProgramParser` title position → `"program title"` (inline, does not affect other string literal uses).
    - `Keyword("FINALE.")` in `ProgramParser` → `"FINALE. (program end)"`. The `onlyExpectsFinale` detection in `TryParse` still matches because the string still contains "FINALE".
 
-**Fixes applied in session 2026-05-26:**
+**Fixes applied in session 2026-05-26 (session 1):**
 
 10. **Case-insensitive keyword highlighting** (`topsy-turvy.tmLanguage.json`): Added the Oniguruma `(?i)` inline flag to every pattern in the grammar that contains letter characters — all `"match"` patterns that previously started with `\b` now start with `(?i)\b`, and the comment patterns (`"ASIDE:.*$"`, `\(ASIDE,\s+AT\s+SOME\s+LENGTH:`, `END\s+OF\s+ASIDE\.\)`) are also prefixed with `(?i)`. This ensures keywords highlight correctly when written in any mixture of upper and lower case (e.g. `hark!`, `Hark!`, `HARK!` all highlight identically). Number and identifier patterns are unaffected functionally; `(?i)` on a digit-only or `[A-Za-z]` class pattern is harmless.
 
 11. **`or,` subtitle keyword** (`topsy-turvy.tmLanguage.json`): Added `"(?i)\\bor,"` to the `"program-structure"` patterns group alongside `HARK!` and `FINALE.`. The `or,` keyword is used in the optional programme subtitle line (`HARK! "Title" or, "Subtitle"`) and was previously not syntax-highlighted at all.
+
+**Fixes applied in session 2026-05-26 (session 2):**
+
+12. **LSP symbol infrastructure** (`SymbolKind.cs`, `SymbolInfo.cs`, `SymbolTable.cs`, `DocumentState.cs`, `DocumentStateManager.cs`): Full implementation of per-document symbol state, AST walking, and source-scan-based definition position recovery. `TextDocumentSyncHandler` and `Program.cs` updated to wire in `DocumentStateManager`.
+
+13. **Hover handler** (`HoverHandler.cs`): Implemented `HoverHandlerBase`. Extracts word at cursor, looks up symbol, returns Markdown hover content.
+
+14. **Go-to-definition handler** (`DefinitionHandler.cs`): Implemented `DefinitionHandlerBase`. Returns `Location` at the definition line for known symbols; empty result when position is unknown (PlaceholderSpan limitation).
+
+15. **Completion handler** (`CompletionHandler.cs`): Implemented `CompletionHandlerBase`. Returns all declared symbols plus 74 keywords from SPEC.md v0.2.0. Keyword list audited and corrected against the spec. Multi-word keyword completion uses server-side phrase filtering, `InsertText` with character offset, `FilterText = lastWord`, `isIncomplete = true`, and a space trigger character. Context detection (`isKeywordContext`) uses `Keywords.Any(k => k.Keyword.StartsWith(phrase, OrdinalIgnoreCase))` to avoid false-positive keyword mode after variable names, and to correctly handle case-insensitive keyword usage.
+
+16. **Semantic tokens handler** (`SemanticTokensHandler.cs`): Implemented `SemanticTokensHandlerBase`. Registers a legend with token types `["variable", "parameter", "function"]`. On each `textDocument/semanticTokens/full` request, scans the source text line-by-line for whole-word occurrences of every symbol in the `SymbolTable` (case-insensitive, skipping `JUST SO` which contains a space), collects `(line, char, length, tokenType)` tuples, sorts them by position, and pushes to `SemanticTokensBuilder`. Multi-word built-ins (currently only `JUST SO`) are excluded from scanning as they cannot be tokenised reliably as a single span. Editor themes (e.g. GitHub Dark) then apply colours: `variable` → white, `parameter` → orange, `function` → purple/blue.
 
 ---
 
@@ -214,11 +281,21 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (0 errors, 17/17 tests).
 3. Consider Phase 6:
+
+   - **Prevent keywords as variable/function names** (planned, low-medium complexity):
+     The language allows identifiers to start with uppercase and keywords are case-insensitive, so `BEHOLD`, `SUMMON`, or `by` are currently valid variable names — creating an ambiguity in completion context detection and potential parser confusion.
+     **Implementation plan:**
+     - Define a static `HashSet<string>` of reserved words in `TopsyTurvyParser` (or a shared constants file). Reserve the **first word** of each multi-word keyword and all complete single-word keywords (e.g. `BEHOLD`, `SUMMON`, `PEER`, `FATHOM`, `YARN`, `DECREE`, `PRAY`, `BY`, `SHOULD`, `SUMMON`, `WITH`, etc.). Avoid reserving very common English words that appear only mid-keyword (e.g. `AND`, `OF`, `AS`) to keep the language expressive.
+     - After a successful parse, add a **semantic validation walk** inside `TopsyTurvyParser.TryParse`: iterate all `DeclarationNode.Name` and `FunctionDefinitionNode.Name` values in the AST, checking each case-insensitively against the reserved set.
+     - Emit a `Diagnostic` with `DiagnosticSeverity.Error` for any match, appended to the `ParseResult.Diagnostics` list before returning.
+     - No changes required to the runtime, LSP server, or VS Code extension — the diagnostic surfaces as a red squiggle automatically via the existing `TextDocumentSyncHandler` pipeline.
+
+   - **Fix hard-coded LSP server path in VS Code extension**:
+     `extension.ts` (compiled to `dist/extension.js`) resolves the server binary via `context.asAbsolutePath(path.join("..", "..", "..", "interpreter", "BWHazel.TopsyTurvy.LanguageServer", "bin", "Debug", "net10.0", "BWHazel.TopsyTurvy.LanguageServer"))`. This is hard-coded to the `Debug` build configuration and `net10.0` target, and only works when the extension folder is in its current position relative to the repo root. It should be made configurable (read from the `topsy-turvy.serverPath` setting with a sensible default, handling the `Release` vs `Debug` distinction and/or using a `dotnet run` invocation as the transport).
+
    - **Remaining LSP squiggle accuracy** (see §3 Known Gaps — known limitation, deferred):
-     - The root cause is `Ws(Statement).Try()` in `ProgramParser.body`. Fixing this properly requires a custom error-recovery loop in place of `.Try().Many()`, which is significant parser refactoring. The current behaviour (squiggle on the opening line of the failing construct) is a known limitation.
-     - What has already been tried and is still in place: whitespace skip, non-zero-width spans, SourceMap line-shift fix (`VictorianFlourishPreProcessor`), inner error extraction via `StatementParser.Statement.TryParse`, `.Named()` annotations on all block-end markers and Lexer primitives.
+     The root cause is `Ws(Statement).Try()` in `ProgramParser.body`. Fixing this properly requires a custom error-recovery loop in place of `.Try().Many()`, which is significant parser refactoring. The current behaviour (squiggle on the opening line of the failing construct) is a known limitation.
+
    - **Runtime error messages** — review every `throw new TopsyTurvyRuntimeException(...)` in `Interpreter.cs` and replace terse messages with context-rich ones (e.g. include the actual vs. expected type, the variable name, or a hint about the relevant keyword). Straightforward string-editing work with no architectural risk.
-   - **LSP hover support** — show variable type / function signature on hover.
-   - **LSP go-to-definition** — navigate to `IT IS MY DUTY TO PERFORM` declaration.
-   - **LSP completion** — suggest keywords at the current cursor position.
+
    - **`PRAY ADMIT` multi-file import** — integration testing.

@@ -38,7 +38,17 @@
           "description": "Path to the Topsy Turvy language server executable. Leave empty to use the default Debug build path."
         }
       }
-    }
+    },
+    "semanticTokenScopes": [
+      {
+        "language": "topsy-turvy",
+        "scopes": {
+          "variable":  ["variable.other.readwrite"],
+          "parameter": ["variable.parameter"],
+          "function":  ["entity.name.function"]
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
