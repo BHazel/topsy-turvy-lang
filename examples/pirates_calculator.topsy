@@ -28,27 +28,27 @@ ASIDE: -----------------------------------------------------------------------
 ASIDE: Functions — the duties of the crew, each assigned his particular role
 ASIDE: -----------------------------------------------------------------------
 
-IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF a AND b
-  AND SO I FIND SUM OF a AND b
+IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+  AND SO I FIND SUM OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM subtract UNDER THE TERMS OF a AND b
-  AND SO I FIND DIFFERENCE OF a AND b
+IT IS MY DUTY TO PERFORM subtract UNDER THE TERMS OF lhs AND rhs
+  AND SO I FIND DIFFERENCE OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM multiply UNDER THE TERMS OF a AND b
-  AND SO I FIND PRODUCT OF a AND b
+IT IS MY DUTY TO PERFORM multiply UNDER THE TERMS OF lhs AND rhs
+  AND SO I FIND PRODUCT OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM divide UNDER THE TERMS OF a AND b
-  ALIKE b AND 0.0
+IT IS MY DUTY TO PERFORM divide UNDER THE TERMS OF lhs AND rhs
+  ALIKE rhs AND 0.0
   SHOULD IT TRANSPIRE THAT
     QUITE SO.
       BEHOLD "  ERROR: Division by zero is not permitted, even by pirates."
       BEHOLD "         The Sergeant of Police has been notified."
       MY DUTY IS PREMATURELY DISCHARGED.
   SO MUCH FOR THAT.
-  AND SO I FIND QUOTIENT OF a AND b
+  AND SO I FIND QUOTIENT OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
 ASIDE: -----------------------------------------------------------------------

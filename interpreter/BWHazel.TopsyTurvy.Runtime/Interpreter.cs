@@ -50,7 +50,7 @@ public sealed class Interpreter
         catch (TopsyTurvyThrowException ex)
         {
             diagnostics.Add(new(
-                $"Unhandled curse: {ex.ThrowValue}",
+                $"Unhandled exception (A HIDEOUS CURSE ON): {ex.ThrowValue}",
                 DiagnosticSeverity.Error,
                 program.Span));
         }
@@ -558,11 +558,11 @@ public sealed class Interpreter
         switch (op)
         {
             case Operator.Sum:
-                return ApplyArithmetic(left, right, (a, b) => a + b, (a, b) => a + b, span);
+                return ApplyArithmetic(left, right, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
             case Operator.Difference:
-                return ApplyArithmetic(left, right, (a, b) => a - b, (a, b) => a - b, span);
+                return ApplyArithmetic(left, right, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
             case Operator.Product:
-                return ApplyArithmetic(left, right, (a, b) => a * b, (a, b) => a * b, span);
+                return ApplyArithmetic(left, right, (a, b) => a * b, (a, b) => a * b, span, "PRODUCT OF");
             case Operator.Quotient:
                 return ApplyQuotient(left, right, span);
             case Operator.Remainder:
@@ -576,8 +576,16 @@ public sealed class Interpreter
             case Operator.Unlike:
                 return TopsyTurvyValue.Boolean(!AreEqual(left, right));
             case Operator.PreAdamite:
+                if (!IsNumeric(left) || !IsNumeric(right))
+                    throw new TopsyTurvyRuntimeException(
+                        $"PRE-ADAMITE requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                        span);
                 return TopsyTurvyValue.Boolean(CompareNumeric(left, right, span) > 0);
             case Operator.LowerDegree:
+                if (!IsNumeric(left) || !IsNumeric(right))
+                    throw new TopsyTurvyRuntimeException(
+                        $"LOWER DEGREE requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                        span);
                 return TopsyTurvyValue.Boolean(CompareNumeric(left, right, span) < 0);
             default:
                 throw new TopsyTurvyRuntimeException($"Unhandled binary operator: {op}", span);
@@ -598,6 +606,7 @@ public sealed class Interpreter
     /// <param name="intOp">The operation to apply if both operands are integers.</param>
     /// <param name="floatOp">The operation to apply if at least one operand is a float.</param>
     /// <param name="span">The source span of the operation.</param>
+    /// <param name="operatorName">The Topsy Turvy keyword for the operator, used in error messages.</param>
     /// <returns>The result of the arithmetic operation.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operands are not numeric.</exception>
     private static TopsyTurvyValue ApplyArithmetic(
@@ -605,7 +614,8 @@ public sealed class Interpreter
         TopsyTurvyValue right,
         Func<int, int, int> intOp,
         Func<double, double, double> floatOp,
-        SourceSpan span)
+        SourceSpan span,
+        string operatorName)
     {
         if (left.TopsyTurvyType == LiteralType.Integer && right.TopsyTurvyType == LiteralType.Integer)
         {
@@ -618,7 +628,7 @@ public sealed class Interpreter
         }
 
         throw new TopsyTurvyRuntimeException(
-            $"Arithmetic requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+            $"{operatorName} requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
             span);
     }
 
@@ -639,7 +649,7 @@ public sealed class Interpreter
         {
             int divisor = (int)right.RawValue!;
             if (divisor == 0)
-                throw new TopsyTurvyRuntimeException("Division by zero.", span);
+                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
             return TopsyTurvyValue.Integer((int)left.RawValue! / divisor);
         }
 
@@ -647,7 +657,7 @@ public sealed class Interpreter
         {
             double divisor = ToDouble(right);
             if (divisor == 0.0)
-                throw new TopsyTurvyRuntimeException("Division by zero.", span);
+                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
             return TopsyTurvyValue.Float(ToDouble(left) / divisor);
         }
 
@@ -670,7 +680,7 @@ public sealed class Interpreter
         {
             int divisor = (int)right.RawValue!;
             if (divisor == 0)
-                throw new TopsyTurvyRuntimeException("Division by zero.", span);
+                throw new TopsyTurvyRuntimeException("Division by zero in REMAINDER OF.", span);
             return TopsyTurvyValue.Integer((int)left.RawValue! % divisor);
         }
 

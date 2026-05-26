@@ -14,10 +14,10 @@ END OF ASIDE.)
 
 PRINCIPALS
   PRAY WELCOME n     AS A PEER  ASIDE: which term to compute up to
-  PRAY WELCOME a     AS A PEER  BEING 0
+  PRAY WELCOME prev  AS A PEER  BEING 0
   PRAY WELCOME b     AS A PEER  BEING 1
   PRAY WELCOME temp  AS A PEER  BEING 0
-  PRAY WELCOME i     AS A PEER  BEING 0
+  PRAY WELCOME idx   AS A PEER  BEING 0
 THE CURTAIN RISES.
 
 ASIDE: -----------------------------------------------------------------------
@@ -61,21 +61,21 @@ ASIDE: -----------------------------------------------------------------------
 ASIDE: DUTY THE THIRD: print the sequence iteratively (more efficient for display)
 ASIDE: -----------------------------------------------------------------------
 
-a IS APPOINTED 0
+prev IS APPOINTED 0
 b IS APPOINTED 1
-i IS APPOINTED 0
+idx IS APPOINTED 0
 
-BY A LEGAL FICTION KNOWN AS sequence WHILST UNLIKE i AND LARGER OF i AND DIFFERENCE OF n AND 1
+BY A LEGAL FICTION KNOWN AS sequence WHILST UNLIKE idx AND LARGER OF idx AND DIFFERENCE OF n AND 1
 
   ASIDE: output the current term with appropriate ceremony
-  BEHOLD WOVEN OF "  Term " AND SUM OF i AND 1 AND ": " AND a IF YOU PLEASE.
+  BEHOLD WOVEN OF "  Term " AND SUM OF idx AND 1 AND ": " AND prev IF YOU PLEASE.
 
   ASIDE: advance the sequence — indentures demand it
   temp IS APPOINTED b
-  b IS APPOINTED SUM OF a AND b
-  a IS APPOINTED temp
+  b IS APPOINTED SUM OF prev AND b
+  prev IS APPOINTED temp
 
-  i IS APPOINTED SUM OF i AND 1
+  idx IS APPOINTED SUM OF idx AND 1
 
 THE TERM EXPIRES.
 

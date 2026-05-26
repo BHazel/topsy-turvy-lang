@@ -13,7 +13,7 @@ HARK! "The Mikado's Little List"
 END OF ASIDE.)
 
 PRINCIPALS
-  PRAY WELCOME i          AS A PEER    BEING 1
+  PRAY WELCOME idx        AS A PEER    BEING 1
   PRAY WELCOME limit      AS A PEER    BEING 100
   PRAY WELCOME by_three   AS A DECREE
   PRAY WELCOME by_five    AS A DECREE
@@ -24,13 +24,13 @@ BEHOLD "THE MIKADO'S LITTLE LIST"
 BEHOLD "Numbers 1 to 100, sorted and condemned as appropriate."
 BEHOLD "----------------------------------------------------------"
 
-BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE i AND LARGER OF i AND limit
+BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE idx AND LARGER OF idx AND limit
 
   ASIDE: determine divisibility — the matter is of the gravest importance
-  ALIKE REMAINDER OF i AND 3 AND 0
+  ALIKE REMAINDER OF idx AND 3 AND 0
   by_three IS APPOINTED JUST SO
 
-  ALIKE REMAINDER OF i AND 5 AND 0
+  ALIKE REMAINDER OF idx AND 5 AND 0
   by_five IS APPOINTED JUST SO
 
   ASIDE: render judgement with appropriate ceremony
@@ -42,13 +42,13 @@ BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE i AND LARGER OF i AND limit
     OR, IF NOT, by_five
       output IS APPOINTED "Buzz"
     OTHERWISE,
-      AS IT WERE i AS A YARN
+      AS IT WERE idx AS A YARN
       output IS APPOINTED JUST SO
   SO MUCH FOR THAT.
 
   BEHOLD output
 
-  i IS APPOINTED SUM OF i AND 1
+  idx IS APPOINTED SUM OF idx AND 1
 
 THE TERM EXPIRES.
 

@@ -129,12 +129,12 @@ public class TopsyTurvyInterpreterTests
         string source = """
             HARK! "Whilst Loop"
             PRINCIPALS
-              PRAY WELCOME i AS A PEER BEING 1
+              PRAY WELCOME idx AS A PEER BEING 1
               PRAY WELCOME total AS A PEER BEING 0
             THE CURTAIN RISES.
-            BY A LEGAL FICTION WHILST LOWER DEGREE i AND 4
-              total IS APPOINTED SUM OF total AND i
-              i IS APPOINTED SUM OF i AND 1
+            BY A LEGAL FICTION WHILST LOWER DEGREE idx AND 4
+              total IS APPOINTED SUM OF total AND idx
+              idx IS APPOINTED SUM OF idx AND 1
             THE TERM EXPIRES.
             BEHOLD total
             FINALE.
@@ -157,10 +157,10 @@ public class TopsyTurvyInterpreterTests
         string source = """
             HARK! "Ascending Loop"
             PRINCIPALS
-              PRAY WELCOME i AS A PEER BEING 0
+              PRAY WELCOME idx AS A PEER BEING 0
               PRAY WELCOME count AS A PEER BEING 0
             THE CURTAIN RISES.
-            BY A LEGAL FICTION ASCENDING i UNTIL ALIKE i AND 5
+            BY A LEGAL FICTION ASCENDING idx UNTIL ALIKE idx AND 5
               count IS APPOINTED SUM OF count AND 1
             THE TERM EXPIRES.
             BEHOLD count
