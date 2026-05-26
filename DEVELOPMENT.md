@@ -1,10 +1,11 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-26
+* **Last Updated:** 2026-05-27
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
-* **LSP & VS Code Extension:** Core LSP Features Complete (Phase 5)
+* **LSP & VS Code Extension:** Core LSP Features + Rename Complete (Phase 5)
+* **Keyword Guards / Error Messages / LSP Path:** Complete (Phase 5)
 * **CLI:** Basic Run Command ("perform") Complete (Phase 6)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
@@ -34,7 +35,7 @@
 | `interpreter/BWHazel.TopsyTurvy.Cli/ProgramRunner.cs` | Static `Run(filePath, ITopsyTurvyIO)`: reads file, parses, executes, returns `ProgramExecutionResult`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/PerformCommandBuilder.cs` | Builds `perform` command. Option `--tiptoe` suppresses Spectre branding and errors to `Console.Error`. Success shows G&S panel; failure shows "Crushed Again!" (syntax) or "A Hideous Curse!" (runtime) panel. |
 | `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit test suite (17/17 passing). |
-| `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server (Phase 5, in progress). |
+| `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server. Handlers: `TextDocumentSyncHandler`, `HoverHandler`, `DefinitionHandler`, `CompletionHandler`, `SemanticTokensHandler`, `RenameHandler`. |
 | `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting (Phase 5, in progress). |
 
 ---
@@ -110,7 +111,7 @@ Build: 0 errors. Tests: 17/17. All four example programs execute correctly.
 
 ---
 
-## 4. Phase 5: LSP + VS Code Extension (In Progress)
+## 4. Phase 5: LSP + VS Code Extension + Language Hardening + Rename (Complete)
 
 ### Goal
 
@@ -279,6 +280,20 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 
 16. **Semantic tokens handler** (`SemanticTokensHandler.cs`): Implemented `SemanticTokensHandlerBase`. Registers a legend with token types `["variable", "parameter", "function"]`. On each `textDocument/semanticTokens/full` request, scans the source text line-by-line for whole-word occurrences of every symbol in the `SymbolTable` (case-insensitive, skipping `JUST SO` which contains a space), collects `(line, char, length, tokenType)` tuples, sorts them by position, and pushes to `SemanticTokensBuilder`. Multi-word built-ins (currently only `JUST SO`) are excluded from scanning as they cannot be tokenised reliably as a single span. Editor themes (e.g. GitHub Dark) then apply colours: `variable` → white, `parameter` → orange, `function` → purple/blue.
 
+**Fixes applied in session 2026-05-26 (session 3):**
+
+17. **Keyword-as-name prevention** (`TopsyTurvyParser.cs`): Added a static `ReservedWords` `HashSet<string>` containing every individual word from every keyword (case-insensitive — all words reserved, no common-word exclusions). `ValidateSymbolNames` walks the AST post-parse for `DeclarationNode`, `FunctionDefinitionNode`, and `PrincipalBlockNode.Declarations`, emitting a `Diagnostic` for any reserved name. Function parameters (`FunctionDefinitionNode.Parameters`) are also validated. Source-scan regex (`PRAY WELCOME <name>` / `IT IS MY DUTY TO PERFORM <name>` / `UNDER THE TERMS OF ... <name>`) recovers a 1-indexed span for each kind. `TryParse` returns `ParseResult(program, errors)` — non-null program so the symbol table still builds while squiggles appear. `Parse` throws `TopsyTurvySyntaxException` for the CLI. Message: `'<name>' is a reserved keyword and cannot be used as a variable/function/parameter name.` Examples and tests updated: `i` → `idx`, `a` → `prev` (both are reserved as they appear in keywords).
+
+18. **LSP path fix** (`extension.ts`, `package.json`): New VS Code setting `topsy-turvy.buildConfiguration` (enum `Debug`/`Release`, default `Debug`) replaces the hard-coded `'Debug'` string in the default server binary path. Added `fs.existsSync` check: if the binary is not found, a `showWarningMessage` shows the path and instructs the user to build or configure `topsy-turvy.serverPath`; `activate` returns early instead of crashing with `ENOENT`.
+
+19. **Runtime error messages** (`Interpreter.cs`): `ApplyArithmetic` now takes `operatorName` parameter — errors read `"SUM OF requires numeric operands..."`, `"DIFFERENCE OF..."`, `"PRODUCT OF..."`. Division-by-zero messages now name the operator: `"Division by zero in QUOTIENT OF."` / `"...in REMAINDER OF."`. `EvaluateBinaryOp` (`PreAdamite`/`LowerDegree`) now has explicit `IsNumeric` guards with operator-named messages. Unhandled-curse message → `"Unhandled exception (A HIDEOUS CURSE ON): {value}"`.
+
+**Fixes applied in session 2026-05-27:**
+
+20. **Example reserved-word audit** (`examples/pirates_calculator.topsy`, `examples/hello.topsy`): Parameters `a`/`b` (reserved: `A` appears in `AS A`, `BY A LEGAL FICTION`, `A HIDEOUS CURSE ON`) renamed to `lhs`/`rhs` in all four function definitions of `pirates_calculator.topsy`. Variable `PEER` (reserved: Topsy Turvy integer type keyword) renamed to `peer_count` in `hello.topsy`.
+
+21. **Rename handler** (`RenameHandler.cs`): Implements `RenameHandlerBase` for `textDocument/rename`. On request: extracts the word at the cursor with `SymbolTable.ExtractWordAt`, confirms it is a known user symbol (returns `null` for keywords, string content, and unknowns), then scans the source line-by-line for every whole-word case-insensitive occurrence — skipping block comments, line comments, and string literals using the same `FindSkipRanges`/`IsInSkipRange`/`IsIdentifierChar` approach as `SemanticTokensHandler`. Each occurrence becomes a `TextEdit` replacing the found range with `request.NewName`. Returns a `WorkspaceEdit` keyed on the document URI. Multi-word built-ins (currently only `JUST SO`) are excluded (their name contains a space). Single-file only; cross-file rename deferred until `PRAY ADMIT` multi-file imports are in use. Registered in `Program.cs` via `.WithHandler<RenameHandler>()`.
+
 ---
 
 ## 5. Phase 6 — CLI (In Progress)
@@ -317,16 +332,7 @@ A structured, G&S-flavoured command-line interface for running Topsy Turvy progr
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (0 errors, 17/17 tests).
 3. Consider Phase 6:
 
-   - **Prevent keywords as variable/function names** (planned, low-medium complexity):
-     The language allows identifiers to start with uppercase and keywords are case-insensitive, so `BEHOLD`, `SUMMON`, or `by` are currently valid variable names — creating an ambiguity in completion context detection and potential parser confusion.
-     **Implementation plan:**
-     - Define a static `HashSet<string>` of reserved words in `TopsyTurvyParser` (or a shared constants file). Reserve the **first word** of each multi-word keyword and all complete single-word keywords (e.g. `BEHOLD`, `SUMMON`, `PEER`, `FATHOM`, `YARN`, `DECREE`, `PRAY`, `BY`, `SHOULD`, `SUMMON`, `WITH`, etc.). Avoid reserving very common English words that appear only mid-keyword (e.g. `AND`, `OF`, `AS`) to keep the language expressive.
-     - After a successful parse, add a **semantic validation walk** inside `TopsyTurvyParser.TryParse`: iterate all `DeclarationNode.Name` and `FunctionDefinitionNode.Name` values in the AST, checking each case-insensitively against the reserved set.
-     - Emit a `Diagnostic` with `DiagnosticSeverity.Error` for any match, appended to the `ParseResult.Diagnostics` list before returning.
-     - No changes required to the runtime, LSP server, or VS Code extension — the diagnostic surfaces as a red squiggle automatically via the existing `TextDocumentSyncHandler` pipeline.
-
-   - **Fix hard-coded LSP server path in VS Code extension**:
-     `extension.ts` (compiled to `dist/extension.js`) resolves the server binary via `context.asAbsolutePath(path.join("..", "..", "..", "interpreter", "BWHazel.TopsyTurvy.LanguageServer", "bin", "Debug", "net10.0", "BWHazel.TopsyTurvy.LanguageServer"))`. This is hard-coded to the `Debug` build configuration and `net10.0` target, and only works when the extension folder is in its current position relative to the repo root. It should be made configurable (read from the `topsy-turvy.serverPath` setting with a sensible default, handling the `Release` vs `Debug` distinction and/or using a `dotnet run` invocation as the transport).
+   - **LSP server packaging for deployment**: the current default path (`context.asAbsolutePath(path.join('..', '..', '..', 'interpreter', ...))`) only works from the dev repo layout and cannot be distributed as a `.vsix`. Proposed approach: (1) add a `dotnet publish` step to the extension build/package script that outputs the server into `extensions/vscode/topsy-turvy/server/`; (2) update the default path in `extension.ts` to `context.asAbsolutePath(path.join('server', 'BWHazel.TopsyTurvy.LanguageServer'))`; (3) add `server/` to `.vscodeignore` for development (to avoid committing binaries) but ensure `vsce package` includes it by running `dotnet publish` before packaging; (4) use a framework-dependent publish (`--no-self-contained`) as the pragmatic starting point, with a README note that the .NET runtime is required. Full cross-platform support would require per-RID self-contained builds with the VS Code Marketplace `"platforms"` field (the Rust Analyzer approach) — deferred.
 4. Continue Phase 6 (CLI) or consider Phase 7:
 
    - **More CLI commands** — `check` command for syntax-only validation; `version` command.
@@ -334,6 +340,8 @@ A structured, G&S-flavoured command-line interface for running Topsy Turvy progr
    - **Remaining LSP squiggle accuracy** (see §3 Known Gaps — known limitation, deferred):
      The root cause is `Ws(Statement).Try()` in `ProgramParser.body`. Fixing this properly requires a custom error-recovery loop in place of `.Try().Many()`, which is significant parser refactoring. The current behaviour (squiggle on the opening line of the failing construct) is a known limitation.
 
-   - **Runtime error messages** — review every `throw new TopsyTurvyRuntimeException(...)` in `Interpreter.cs` and replace terse messages with context-rich ones (e.g. include the actual vs. expected type, the variable name, or a hint about the relevant keyword). Straightforward string-editing work with no architectural risk.
-
    - **`PRAY ADMIT` multi-file import** — integration testing.
+
+   - **Keyword-as-name squiggle precision**: spans recovered by source-line scanning (`FindDeclarationSpan`) as a workaround for `PlaceholderSpan`. Once proper source-position wiring is added to the parser, `FindDeclarationSpan` can be replaced with the AST node's own `Span`.
+
+   - **LSP `prepareRename`** (`textDocument/prepareRename`): optional companion to the implemented `rename` handler. Would validate the cursor position before VS Code shows the rename input box, returning the current name span on success or `null` to suppress the box on keywords/unknowns. Currently omitted — VS Code handles the missing handler gracefully (silent no-op if `rename` returns null). Implement via `PrepareRenameHandlerBase` in OmniSharp when desired.

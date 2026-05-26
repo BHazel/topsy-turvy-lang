@@ -14,6 +14,7 @@ var server = await LanguageServer.From(options =>
         .WithHandler<DefinitionHandler>()
         .WithHandler<CompletionHandler>()
         .WithHandler<SemanticTokensHandler>()
+        .WithHandler<RenameHandler>()
         .ConfigureLogging(logging =>
             logging
                 .ClearProviders()
