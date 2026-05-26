@@ -1,51 +1,13 @@
 using System;
-using System.IO;
-using BWHazel.TopsyTurvy.Ast;
-using BWHazel.TopsyTurvy.Parser;
-using BWHazel.TopsyTurvy.Runtime;
+using System.CommandLine;
+using Spectre.Console;
+using BWHazel.TopsyTurvy.Cli;
+using BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
-if (args.Length == 0)
+string rootDescription = $"{TopsyTurvyBranding.Title}\n\nTopsy Turvy - A Gilbert & Sullivan Programming Language";
+RootCommand rootCommand = new RootCommand(rootDescription)
 {
-    Console.Error.WriteLine("Usage: topsyturvy <file.topsy>");
-    return 1;
-}
+    PerformCommandBuilder.Build()
+};
 
-string path = args[0];
-if (!File.Exists(path))
-{
-    Console.Error.WriteLine($"File not found: {path}");
-    return 1;
-}
-
-string source = File.ReadAllText(path);
-
-TopsyTurvyParser parser = new();
-ProgramNode program;
-try
-{
-    program = parser.Parse(source);
-}
-catch (TopsyTurvySyntaxException ex)
-{
-    foreach (string error in ex.Errors)
-    {
-        Console.Error.WriteLine(error);
-    }
-    
-    return 1;
-}
-
-Interpreter interpreter = new(new ConsoleIO());
-DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-if (diagnostics.HasErrors)
-{
-    foreach (Diagnostic diagnostic in diagnostics.Diagnostics)
-    {
-        Console.Error.WriteLine($"[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}] {diagnostic.Message}");
-    }
-
-    return 1;
-}
-
-return 0;
+return await rootCommand.Parse(args).InvokeAsync();

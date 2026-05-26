@@ -5,6 +5,7 @@
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
 * **LSP & VS Code Extension:** Core LSP Features Complete (Phase 5)
+* **CLI:** Basic Run Command ("perform") Complete (Phase 6)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
 * **File Extension:** `.topsy`
 
@@ -27,7 +28,11 @@
 | `interpreter/BWHazel.TopsyTurvy.Ast/` | AST node types. All nodes inherit from `Node` (with `SourceSpan Span`). Includes `Diagnostic`, `DiagnosticCollection`, `DiagnosticSeverity`, `SourceSpan`, `SourceLocation`. |
 | `interpreter/BWHazel.TopsyTurvy.Parser/` | Superpower-based parser. Entry point: `TopsyTurvyParser`. Includes pre-processors (`CommentsPreProcessor`, `VictorianFlourishPreProcessor`), `SourceMap`/`SourceMapping` for offset tracking, and `TopsyTurvySyntaxException`. |
 | `interpreter/BWHazel.TopsyTurvy.Runtime/` | Tree-walking interpreter. Entry point: `Interpreter`. Includes `TopsyTurvyValue`, `TopsyTurvyEnvironment`, `TopsyTurvyRuntimeException`, signal exceptions for break/continue/return/throw. |
-| `interpreter/BWHazel.TopsyTurvy.Cli/` | Minimal CLI (`Program.cs`) that runs a `.topsy` file. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/` | Structured CLI. Entry point `Program.cs` registers the `perform` command (aliases `stage`, `run`) via `System.CommandLine`. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/TopsyTurvyBranding.cs` | Static class with ASCII art banner, shown in non-`--tiptoe` mode. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/ProgramExecutionResult.cs` | Discriminated result type: `Success()`, `Failure(msg)`, `SyntaxError(errors)`, `RuntimeError(diagnostics)`. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/ProgramRunner.cs` | Static `Run(filePath, ITopsyTurvyIO)`: reads file, parses, executes, returns `ProgramExecutionResult`. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/PerformCommandBuilder.cs` | Builds `perform` command. Option `--tiptoe` suppresses Spectre branding and errors to `Console.Error`. Success shows G&S panel; failure shows "Crushed Again!" (syntax) or "A Hideous Curse!" (runtime) panel. |
 | `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit test suite (17/17 passing). |
 | `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server (Phase 5, in progress). |
 | `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting (Phase 5, in progress). |
@@ -276,7 +281,37 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 
 ---
 
-## 5. Next Steps (Start of Next Session)
+## 5. Phase 6 — CLI (In Progress)
+
+### Goal
+
+A structured, G&S-flavoured command-line interface for running Topsy Turvy programmes.
+
+### Part 1 — Basic Run Command — Complete
+
+**Command:** `perform <filename>` (aliases `stage`, `run`). **Option:** `--tiptoe` (suppress Spectre branding; only programme output and plain-text errors go to stdout/stderr).
+
+**Key types:**
+
+| File | Role |
+|---|---|
+| `Program.cs` | Entry point. Registers `perform` via `System.CommandLine` root command. |
+| `TopsyTurvyBranding.cs` | Static `Title` property — ASCII art banner shown in non-`--tiptoe` mode. |
+| `ProgramExecutionResult.cs` | Discriminated result: `Success()`, `Failure(msg)`, `SyntaxError(errors)`, `RuntimeError(diagnostics)`. |
+| `ProgramRunner.cs` | Static `Run(filePath, ITopsyTurvyIO)`: reads file, parses, executes, returns result. |
+| `CommandBuilders/PerformCommandBuilder.cs` | Builds `perform` command. Success: G&S panel. Failure: "Crushed Again!" (syntax) or "A Hideous Curse!" (runtime) Spectre panels, or plain `Console.Error` in `--tiptoe` mode. |
+
+**Dependencies:** `Spectre.Console 0.55.2`, `System.CommandLine 2.0.8`.
+
+### Open Items
+
+- Additional commands (e.g. `check` for syntax-only validation, `version`, `help` improvements).
+- Shell completion scripts.
+- Exit code conventions.
+
+---
+
+## 6. Next Steps (Start of Next Session)
 
 1. Read `AGENTS.md` and `DEVELOPMENT.md` before starting any work.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline (0 errors, 17/17 tests).
@@ -292,6 +327,9 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 
    - **Fix hard-coded LSP server path in VS Code extension**:
      `extension.ts` (compiled to `dist/extension.js`) resolves the server binary via `context.asAbsolutePath(path.join("..", "..", "..", "interpreter", "BWHazel.TopsyTurvy.LanguageServer", "bin", "Debug", "net10.0", "BWHazel.TopsyTurvy.LanguageServer"))`. This is hard-coded to the `Debug` build configuration and `net10.0` target, and only works when the extension folder is in its current position relative to the repo root. It should be made configurable (read from the `topsy-turvy.serverPath` setting with a sensible default, handling the `Release` vs `Debug` distinction and/or using a `dotnet run` invocation as the transport).
+4. Continue Phase 6 (CLI) or consider Phase 7:
+
+   - **More CLI commands** — `check` command for syntax-only validation; `version` command.
 
    - **Remaining LSP squiggle accuracy** (see §3 Known Gaps — known limitation, deferred):
      The root cause is `Ws(Statement).Try()` in `ProgramParser.body`. Fixing this properly requires a custom error-recovery loop in place of `.Try().Many()`, which is significant parser refactoring. The current behaviour (squiggle on the opening line of the failing construct) is a known limitation.
