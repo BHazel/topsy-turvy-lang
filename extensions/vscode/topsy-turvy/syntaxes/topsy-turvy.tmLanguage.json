@@ -338,7 +338,11 @@
         },
         {
           "name": "keyword.operator.topsy",
-          "match": "(?i)\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|ALIKE|UNLIKE|PRE-ADAMITE)\\b"
+          "match": "(?i)\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER)\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\b(ALIKE|UNLIKE|PRE-ADAMITE)\\b"
         },
         {
           "name": "keyword.operator.topsy",

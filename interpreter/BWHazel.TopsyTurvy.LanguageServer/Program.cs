@@ -15,6 +15,13 @@ var server = await LanguageServer.From(options =>
         .WithHandler<CompletionHandler>()
         .WithHandler<SemanticTokensHandler>()
         .WithHandler<RenameHandler>()
+        .WithHandler<PrepareRenameHandler>()
+        .WithHandler<DocumentSymbolHandler>()
+        .WithHandler<ReferencesHandler>()
+        .WithHandler<SignatureHelpHandler>()
+        .WithHandler<FoldingRangeHandler>()
+        .WithHandler<DocumentFormattingHandler>()
+        .WithHandler<CodeLensHandler>()
         .ConfigureLogging(logging =>
             logging
                 .ClearProviders()

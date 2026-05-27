@@ -4,7 +4,7 @@
 * **Last Updated:** 2026-05-27
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
-* **LSP & VS Code Extension:** Core LSP Features + Rename Complete (Phase 5)
+* **LSP & VS Code Extension:** Core LSP Features + Rename + prepareRename + Document Symbols + References + Signature Help + Folding Ranges + Document Formatting + CodeLens Complete (Phase 5)
 * **Keyword Guards / Error Messages / LSP Path:** Complete (Phase 5)
 * **CLI:** Basic Run Command ("perform") Complete (Phase 6)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
@@ -35,7 +35,7 @@
 | `interpreter/BWHazel.TopsyTurvy.Cli/ProgramRunner.cs` | Static `Run(filePath, ITopsyTurvyIO)`: reads file, parses, executes, returns `ProgramExecutionResult`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/PerformCommandBuilder.cs` | Builds `perform` command. Option `--tiptoe` suppresses Spectre branding and errors to `Console.Error`. Success shows G&S panel; failure shows "Crushed Again!" (syntax) or "A Hideous Curse!" (runtime) panel. |
 | `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit test suite (17/17 passing). |
-| `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server. Handlers: `TextDocumentSyncHandler`, `HoverHandler`, `DefinitionHandler`, `CompletionHandler`, `SemanticTokensHandler`, `RenameHandler`. |
+| `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server. Handlers: `TextDocumentSyncHandler`, `HoverHandler`, `DefinitionHandler`, `CompletionHandler`, `SemanticTokensHandler`, `RenameHandler`, `PrepareRenameHandler`, `DocumentSymbolHandler`, `ReferencesHandler`, `SignatureHelpHandler`, `FoldingRangeHandler`, `DocumentFormattingHandler`, `CodeLensHandler`. |
 | `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting (Phase 5, in progress). |
 
 ---
@@ -108,6 +108,17 @@ Build: 0 errors. Tests: 17/17. All four example programs execute correctly.
 2. **Error messages for block errors** — `.Named()` annotations added in session 2026-05-26 improve the message text (e.g. `"Expected: MY DUTY IS DISCHARGED. (end of function)"` instead of `` "Expected: `MY DUTY IS DISCHARGED.`" ``), but messages are still tied to the wrong source location when the squiggle position is incorrect, making them confusing in practice.
 
 **Root cause of the remaining positioning issue**: `Ws(Statement).Try()` in `ProgramParser.body` is the fundamental constraint. `.Try()` intentionally discards the inner error position so `.Many()` can continue. Any improvement to squiggle placement for block-level errors requires either (a) removing the outer `.Try()` on complex block parsers and replacing with a custom error-recovery loop, or (b) a two-pass strategy where the first pass identifies which line is bad, and the second pass provides a targeted diagnostic. Both are significant parser refactoring tasks.
+
+### Deferred LSP Features
+
+The following LSP features were considered during the Phase 5 feature survey but require
+infrastructure that is not yet in place.  They are recorded here so they are not forgotten.
+
+| Feature | LSP method(s) | What it provides | Blocker |
+|---|---|---|---|
+| **Inlay Hints** | `textDocument/inlayHint` | Show variable types inline after `IS APPOINTED` (e.g. `: PEER`). `SymbolInfo.TypeDisplayName` already carries the data. | Handler not yet written; no infrastructure blocker — implementable with the current symbol table. |
+| **Call Hierarchy** | `textDocument/prepareCallHierarchy`, `callHierarchy/incomingCalls`, `callHierarchy/outgoingCalls` | Navigate incoming and outgoing function calls from any call site. | Requires a call-graph (caller → callees map) not currently built by `SymbolTable`. Would need a second AST walk or an augmented build step. |
+| **Workspace Symbols** | `workspace/symbol` | Search symbols across all open `.topsy` files, not just the active document. | `DocumentStateManager` tracks one document at a time; needs multi-document state and a cross-file index. Deferred until `PRAY ADMIT` multi-file imports are in active use. |
 
 ---
 
@@ -296,6 +307,22 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 
 22. **Rename handler** (`RenameHandler.cs`): Implements `RenameHandlerBase` for `textDocument/rename`. On request: extracts the word at the cursor with `SymbolTable.ExtractWordAt`, confirms it is a known user symbol (returns `null` for keywords, string content, and unknowns), then scans the source line-by-line for every whole-word case-insensitive occurrence — skipping block comments, line comments, and string literals using the same `FindSkipRanges`/`IsInSkipRange`/`IsIdentifierChar` approach as `SemanticTokensHandler`. Each occurrence becomes a `TextEdit` replacing the found range with `request.NewName`. Returns a `WorkspaceEdit` keyed on the document URI. Multi-word built-ins (currently only `JUST SO`) are excluded (their name contains a space). Single-file only; cross-file rename deferred until `PRAY ADMIT` multi-file imports are in use. Registered in `Program.cs` via `.WithHandler<RenameHandler>()`.
 
+26. **Signature help handler** (`SignatureHelpHandler.cs`): Implements `SignatureHelpHandlerBase`. Triggered on space. Scans the text before the cursor on the current line for the last `SUMMON` token. Extracts the function name, confirms it is a known `Function` symbol, then finds `WITH` (case-insensitive) to verify the argument list has started. Counts whole-word `AND` tokens between `WITH` and the cursor to derive the active parameter index (0-based, clamped to param count − 1). Returns a `SignatureHelp` with one `SignatureInformation` whose `Label` is `name(param1, param2)` and whose `Parameters` list drives active-parameter highlighting. Returns `null` (no tooltip) when the cursor is not inside a `SUMMON` call, the call has already been closed with `IF YOU PLEASE.`, the function is not in the symbol table, or the call uses `WITH NOTHING`. Registered in `Program.cs` via `.WithHandler<SignatureHelpHandler>()`.
+
+27. **Folding range handler** (`FoldingRangeHandler.cs`): Implements `FoldingRangeHandlerBase`. Stack-based single-pass scan over raw source lines (no symbol table needed). Eight opener patterns push `(lineIndex, kind)` onto the stack; eight corresponding closer patterns pop and emit `FoldingRange { StartLine = popped, EndLine = lineIndex − 1 }`. Block comments get `Kind = FoldingRangeKind.Comment`; all other blocks get `Kind = FoldingRangeKind.Region`. Uses `LineStartsWith` (case-insensitive, word-boundary safe) for all pattern matching. Mismatched openers/closers in malformed source are silently discarded. Registered in `Program.cs` via `.WithHandler<FoldingRangeHandler>()`.
+
+28. **Document formatting handler** (`DocumentFormattingHandler.cs`): Implements `DocumentFormattingHandlerBase`. Returns a single `TextEdit` replacing the entire document. Two transforms are applied in a single line-by-line pass:
+   - **Keyword casing**: all 74 language keywords normalised to their canonical case (UPPERCASE for most; `or,` remains lowercase per the spec). Keywords inside string literals and `ASIDE:` line comments are preserved verbatim. Each keyword has a compiled `(?i)\b...\b` regex (spaces replaced with `\s+`); patterns are sorted longest-first to prevent partial matches; replacements are applied right-to-left to avoid position shifts.
+   - **Indentation**: 2-space libretto style, verified against `fizzbuzz.topsy` and `pirates_calculator.topsy`. Depth rules: `PostIncrease1` for `PRINCIPALS`, `IT IS MY DUTY TO PERFORM`, `BY A LEGAL FICTION`, `SHOULD IT TRANSPIRE THAT`, `WITH THE GREATEST RESPECT,`, `QUITE SO.`; `PostIncrease2` for `IN WHICH CAPACITY?`; `PreDecrease1` for `THE CURTAIN RISES.`, `MY DUTY IS DISCHARGED.`, `THE TERM EXPIRES.`, `THAT CONCLUDES THE MATTER.`; `PreDecrease2` for `SO MUCH FOR THAT.`, `NOTHING COULD BE MORE SATISFACTORY.`; `MidBlock` (depth−1 before, depth+1 after) for `OR, IF NOT,`, `OTHERWISE,`, `WHEN ACTING AS`, `FAILING ALL OF THE ABOVE,`, `WITH GRATITUDE`, `MODIFIED RAPTURE`. Block comment interiors are emitted verbatim. Blank lines are preserved. The `or,` subtitle line is always written at 2 spaces. Registered in `Program.cs` via `.WithHandler<DocumentFormattingHandler>()`.
+
+23. **prepareRename handler** (`PrepareRenameHandler.cs`): Implements `PrepareRenameHandlerBase`. On request: extracts the word at the cursor with `SymbolTable.ExtractWordAt`, confirms it is a known user symbol (returns `null` for unknowns and multi-word built-ins), then computes the start column by scanning left from the cursor position while `IsIdentifierChar`. Returns a `RangeOrPlaceholderRange` wrapping a `PlaceholderRange { Range, Placeholder = word }` — VS Code highlights the token and pre-populates the input box with the current name. Returning `null` suppresses the rename box entirely (e.g. over a keyword). `CreateRegistrationOptions` returns `RenameRegistrationOptions { PrepareProvider = true }`, which is the OmniSharp requirement for `PrepareRenameHandlerBase`. Registered in `Program.cs` via `.WithHandler<PrepareRenameHandler>()`.
+
+24. **Document symbols handler** (`DocumentSymbolHandler.cs`): Implements `DocumentSymbolHandlerBase`. Iterates `state.SymbolTable.AllSymbols()` and builds a flat `SymbolInformation` for each — populating the VS Code Outline panel and enabling quick navigation. Symbol kind mapping: `Variable` → `LspSymbolKind.Variable`, `Function` → `LspSymbolKind.Function`, `Parameter` → `LspSymbolKind.TypeParameter`. Definition location built from `DefinitionLine`/`DefinitionColumn` (1-indexed → 0-indexed); symbols with `DefinitionLine == 0` receive a zero-point location so they still appear in the outline without navigation. Uses `LspSymbolKind` alias to avoid clash with `BWHazel.TopsyTurvy.LanguageServer.SymbolKind`. Registered in `Program.cs` via `.WithHandler<DocumentSymbolHandler>()`.
+
+25. **References handler** (`ReferencesHandler.cs`): Implements `ReferencesHandlerBase`. On request: extracts word and confirms it is a known symbol; multi-word built-ins (`JUST SO`) are excluded. Performs the same line-by-line scan as `RenameHandler` — same three regex patterns (`BlockCommentPattern`, `StringLiteralPattern`, `LineCommentPattern`), same `FindSkipRanges`/`IsInSkipRange`/`BuildLineOffsets`/`IsIdentifierChar` helpers (private copies consistent with the existing pattern). Each match becomes a `Location { Uri, Range }`. Respects `request.Context.IncludeDeclaration`: when `false`, the occurrence on `info.DefinitionLine - 1` is excluded. Returns `new LocationContainer(locations)`. Registered in `Program.cs` via `.WithHandler<ReferencesHandler>()`.
+
+29. **Code lens handler** (`CodeLensHandler.cs`): Implements `CodeLensHandlerBase`. Emits an inline reference-count annotation above each function and variable declaration (`SymbolKind.Parameter` symbols are excluded — their scope is local to the enclosing function; symbols with `DefinitionLine == 0` are excluded because no display position is known). Reference counts are computed eagerly at request time (`ResolveProvider = false`), using the same word-boundary, skip-range-aware scan as `ReferencesHandler` — the declaration line is excluded from the count so that `0 references` clearly indicates an unused symbol. Each lens carries a `Command` with `Name = "editor.action.findReferences"` and `Arguments = [uri, { line, character }]` so that clicking the annotation opens the Find All References panel at the declaration position. `CodeLensHandlerBase` also requires a `codeLens/resolve` override; a passthrough implementation is provided (returns the lens unchanged). Registered in `Program.cs` via `.WithHandler<CodeLensHandler>()`.
+
 ---
 
 ## 5. Phase 6 — CLI (In Progress)
@@ -345,5 +372,3 @@ A structured, G&S-flavoured command-line interface for running Topsy Turvy progr
    - **`PRAY ADMIT` multi-file import** — integration testing.
 
    - **Keyword-as-name squiggle precision**: spans recovered by source-line scanning (`FindDeclarationSpan`) as a workaround for `PlaceholderSpan`. Once proper source-position wiring is added to the parser, `FindDeclarationSpan` can be replaced with the AST node's own `Span`.
-
-   - **LSP `prepareRename`** (`textDocument/prepareRename`): optional companion to the implemented `rename` handler. Would validate the cursor position before VS Code shows the rename input box, returning the current name span on success or `null` to suppress the box on keywords/unknowns. Currently omitted — VS Code handles the missing handler gracefully (silent no-op if `rename` returns null). Implement via `PrepareRenameHandlerBase` in OmniSharp when desired.

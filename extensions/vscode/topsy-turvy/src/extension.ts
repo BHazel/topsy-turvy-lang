@@ -60,6 +60,21 @@ export function activate(context: vscode.ExtensionContext): void {
 
     client.start();
     context.subscriptions.push(client);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'topsy-turvy.showReferences',
+            async (uriString: string, line: number, character: number) => {
+                const uri = vscode.Uri.parse(uriString);
+                const position = new vscode.Position(line, character);
+                await vscode.commands.executeCommand(
+                    'editor.action.findReferences',
+                    uri,
+                    position
+                );
+            }
+        )
+    );
 }
 
 export function deactivate(): Thenable<void> | undefined {
