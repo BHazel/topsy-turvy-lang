@@ -9,13 +9,36 @@ import {
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
+let runTaskExecution: vscode.TaskExecution | undefined;
+
+function resolveTopsyTurvyCliPath(context: vscode.ExtensionContext): string {
+    const config = vscode.workspace.getConfiguration('topsy-turvy');
+    const configuredPath = config.get<string>('cliPath');
+    const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
+    const binaryName = process.platform === 'win32'
+        ? 'BWHazel.TopsyTurvy.Cli.exe'
+        : 'BWHazel.TopsyTurvy.Cli';
+
+    const defaultPath = context.asAbsolutePath(
+        path.join(
+            '..', '..', '..', 'interpreter',
+            'BWHazel.TopsyTurvy.Cli',
+            'bin', buildConfiguration, 'net10.0',
+            binaryName
+        )
+    );
+
+    return configuredPath && configuredPath.length > 0
+        ? configuredPath
+        : defaultPath;
+}
 
 export function activate(context: vscode.ExtensionContext): void {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
-    const configuredPath = config.get<string>('serverPath');
+    const configuredServerPath = config.get<string>('serverPath');
     const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
 
-    const defaultPath = context.asAbsolutePath(
+    const defaultServerPath = context.asAbsolutePath(
         path.join(
             '..', '..', '..', 'interpreter',
             'BWHazel.TopsyTurvy.LanguageServer',
@@ -24,9 +47,9 @@ export function activate(context: vscode.ExtensionContext): void {
         )
     );
 
-    const serverPath = configuredPath && configuredPath.length > 0
-        ? configuredPath
-        : defaultPath;
+    const serverPath = configuredServerPath && configuredServerPath.length > 0
+        ? configuredServerPath
+        : defaultServerPath;
 
     if (!fs.existsSync(serverPath)) {
         vscode.window.showWarningMessage(
@@ -74,6 +97,66 @@ export function activate(context: vscode.ExtensionContext): void {
                 );
             }
         )
+    );
+
+    context.subscriptions.push(
+        vscode.tasks.onDidEndTaskProcess((e) => {
+            if (e.execution === runTaskExecution) {
+                runTaskExecution = undefined;
+                void vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', false);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.runFile', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            await editor.document.save();
+            const filePath = editor.document.uri.fsPath;
+
+            const cliPath = resolveTopsyTurvyCliPath(context);
+            if (!fs.existsSync(cliPath)) {
+                vscode.window.showWarningMessage(
+                    `Topsy Turvy: CLI not found at "${cliPath}". ` +
+                    `Please build the project or set topsy-turvy.cliPath in settings.`
+                );
+
+                return;
+            }
+
+            const task = new vscode.Task(
+                { type: 'topsy-turvy-run' },
+                vscode.TaskScope.Global,
+                'Run Topsy Turvy File',
+                'Topsy Turvy',
+                new vscode.ProcessExecution(cliPath, ['perform', filePath])
+            );
+            task.presentationOptions = {
+                reveal: vscode.TaskRevealKind.Always,
+                focus: false,
+                panel: vscode.TaskPanelKind.Shared,
+                showReuseMessage: false,
+                clear: true,
+            };
+
+            runTaskExecution = await vscode.tasks.executeTask(task);
+            await vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', true);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.stopFile', () => {
+            if (runTaskExecution) {
+                runTaskExecution.terminate();
+                runTaskExecution = undefined;
+                void vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', false);
+            }
+        })
     );
 }
 

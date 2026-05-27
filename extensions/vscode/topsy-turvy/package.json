@@ -3,6 +3,7 @@
   "displayName": "Topsy Turvy",
   "description": "Language support for Topsy Turvy (.topsy) files, including syntax highlighting and LSP diagnostics.",
   "version": "0.0.1",
+  "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.120.0"
   },
@@ -19,7 +20,11 @@
         "id": "topsy-turvy",
         "aliases": ["Topsy Turvy", "topsy-turvy"],
         "extensions": [".topsy"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/topsy-turvy-file-icon.svg",
+          "dark": "./images/topsy-turvy-file-icon.svg"
+        }
       }
     ],
     "grammars": [
@@ -41,9 +46,68 @@
           "type": "string",
           "default": "Debug",
           "enum": ["Debug", "Release"],
-          "description": "Build configuration used when locating the language server binary (Debug or Release). Ignored when topsy-turvy.serverPath is set."
+          "description": "Build configuration used when locating the language server and CLI binaries (Debug or Release). Ignored when the respective path override is set."
+        },
+        "topsy-turvy.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
         }
       }
+    },
+    "commands": [
+      {
+        "command": "topsy-turvy.runFile",
+        "title": "Perform Topsy Turvy File",
+        "icon": "$(play)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.stopFile",
+        "title": "Interrupt Topsy Turvy File",
+        "icon": "$(debug-stop)",
+        "category": "Topsy Turvy"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "topsy-turvy.runFile",
+        "key": "F5",
+        "when": "editorLangId == topsy-turvy && !topsyTurvyRunning"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "topsy-turvy.runFile",
+          "when": "editorLangId == topsy-turvy && !topsyTurvyRunning",
+          "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.stopFile",
+          "when": "topsyTurvyRunning",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "topsy-turvy.runFile",
+          "when": "resourceExtname == .topsy && !topsyTurvyRunning",
+          "group": "1_run@1"
+        },
+        {
+          "command": "topsy-turvy.stopFile",
+          "when": "resourceExtname == .topsy && topsyTurvyRunning",
+          "group": "1_run@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "topsy-turvy.runFile",
+          "when": "resourceExtname == .topsy && !topsyTurvyRunning",
+          "group": "1_run@1"
+        }
+      ]
     },
     "semanticTokenScopes": [
       {

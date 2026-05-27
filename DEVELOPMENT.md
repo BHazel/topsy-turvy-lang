@@ -1,10 +1,10 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-27
+* **Last Updated:** 2026-05-27 (session 2)
 * **Current Specification Version:** 0.2.0
 * **Interpreter Status:** Complete (Phase 4)
-* **LSP & VS Code Extension:** Core LSP Features + Rename + prepareRename + Document Symbols + References + Signature Help + Folding Ranges + Document Formatting + CodeLens Complete (Phase 5)
+* **LSP & VS Code Extension:** Core LSP Features + Rename + prepareRename + Document Symbols + References + Signature Help + Folding Ranges + Document Formatting + CodeLens + Icons + Run/Stop Commands Complete (Phase 5)
 * **Keyword Guards / Error Messages / LSP Path:** Complete (Phase 5)
 * **CLI:** Basic Run Command ("perform") Complete (Phase 6)
 * **Grammar Source of Truth:** `SPEC.md` — read this file for all grammar questions.
@@ -36,7 +36,9 @@
 | `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/PerformCommandBuilder.cs` | Builds `perform` command. Option `--tiptoe` suppresses Spectre branding and errors to `Console.Error`. Success shows G&S panel; failure shows "Crushed Again!" (syntax) or "A Hideous Curse!" (runtime) panel. |
 | `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit test suite (17/17 passing). |
 | `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp-based LSP server. Handlers: `TextDocumentSyncHandler`, `HoverHandler`, `DefinitionHandler`, `CompletionHandler`, `SemanticTokensHandler`, `RenameHandler`, `PrepareRenameHandler`, `DocumentSymbolHandler`, `ReferencesHandler`, `SignatureHelpHandler`, `FoldingRangeHandler`, `DocumentFormattingHandler`, `CodeLensHandler`. |
-| `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting (Phase 5, in progress). |
+| `extensions/vscode/topsy-turvy/` | VS Code extension providing LSP client + syntax highlighting + run/stop commands + icons (Phase 5, complete). |
+| `extensions/vscode/topsy-turvy/images/icon.svg` | Extension panel icon: 128×128 SVG with purple rounded-rect background, upright lavender T (left) and inverted gold T (right), musical staff decoration. |
+| `extensions/vscode/topsy-turvy/images/topsy-turvy-file-icon.svg` | File explorer icon: 16×16 SVG with purple circle and gold "T" letterform, contributed via `languages[].icon`. |
 
 ---
 
@@ -298,6 +300,14 @@ See §3 Known Gaps for remaining squiggle accuracy issues.
 18. **LSP path fix** (`extension.ts`, `package.json`): New VS Code setting `topsy-turvy.buildConfiguration` (enum `Debug`/`Release`, default `Debug`) replaces the hard-coded `'Debug'` string in the default server binary path. Added `fs.existsSync` check: if the binary is not found, a `showWarningMessage` shows the path and instructs the user to build or configure `topsy-turvy.serverPath`; `activate` returns early instead of crashing with `ENOENT`.
 
 19. **Runtime error messages** (`Interpreter.cs`): `ApplyArithmetic` now takes `operatorName` parameter — errors read `"SUM OF requires numeric operands..."`, `"DIFFERENCE OF..."`, `"PRODUCT OF..."`. Division-by-zero messages now name the operator: `"Division by zero in QUOTIENT OF."` / `"...in REMAINDER OF."`. `EvaluateBinaryOp` (`PreAdamite`/`LowerDegree`) now has explicit `IsNumeric` guards with operator-named messages. Unhandled-curse message → `"Unhandled exception (A HIDEOUS CURSE ON): {value}"`.
+
+**Fixes applied in session 2026-05-27 (session 2):**
+
+30. **Extension panel icon** (`images/icon.svg`): New 128×128 SVG icon contributed via `"icon": "images/icon.svg"` at the top level of `package.json`. Design: deep purple (`#3B1F5E`) rounded-rect background, five subtle musical staff lines, upright lavender "T" (left, `#E8D9F8`) and gold inverted "T" (right, `#D4A017`, rotated 180° about its own centre). Together the pair spells "TT" in topsy-turvy style.
+
+31. **Explorer file icon** (`images/topsy-turvy-file-icon.svg`): New 16×16 SVG icon contributed via `languages[].icon` in `package.json` (VS Code 1.79+ API). Design: deep purple circle with a bold gold "T" letterform (crossbar + stem as two rectangles), readable at 16px. Same SVG used for both `light` and `dark` variants. Active icon themes that define their own override for `.topsy` will take precedence.
+
+32. **Run/stop commands** (`extension.ts`, `package.json`): New commands `topsy-turvy.runFile` and `topsy-turvy.stopFile`, contributed with `$(play)` / `$(debug-stop)` Codicon icons. Editor title bar shows play button when a `.topsy` file is active and nothing is running; stop button replaces it while running (tracked via `topsyTurvyRunning` VS Code context variable). Right-click context menus in editor and Explorer expose "Run Topsy Turvy File". Keyboard shortcut: F5 (when `editorLangId == topsy-turvy && !topsyTurvyRunning`). Run command: saves document, checks binary exists via `fs.existsSync`, creates or reuses "Topsy Turvy" named terminal (`vscode.window.terminals.includes` liveness check), runs `"<cliPath>" perform "<filePath>"` (full G&S branding; no `--tiptoe`). Stop command: sends `\x03` (Ctrl+C). `onDidCloseTerminal` listener clears context when the terminal closes. New setting `topsy-turvy.cliPath` (mirrors `serverPath`) for overriding the default CLI binary path. Default path: `interpreter/BWHazel.TopsyTurvy.Cli/bin/{buildConfiguration}/net10.0/BWHazel.TopsyTurvy.Cli[.exe on Windows]`. `resolveCLIPath()` helper function in `extension.ts` mirrors the existing server path resolution pattern. `buildConfiguration` setting description updated to mention "and CLI binaries".
 
 **Fixes applied in session 2026-05-27:**
 
