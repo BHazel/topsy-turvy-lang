@@ -162,11 +162,15 @@
         },
         {
           "name": "keyword.control.loop.topsy",
-          "match": "(?i)\\bASCENDING\\s+TO\\b"
+          "match": "(?i)\\bASCENDING\\b"
         },
         {
           "name": "keyword.control.loop.topsy",
-          "match": "(?i)\\bDESCENDING\\s+TO\\b"
+          "match": "(?i)\\bDESCENDING\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
+          "match": "(?i)\\bUNTIL\\b"
         },
         {
           "name": "keyword.control.loop.topsy",
@@ -194,15 +198,19 @@
         },
         {
           "name": "keyword.control.exception.topsy",
-          "match": "(?i)\\bSHOULD\\s+A\\s+CURSE\\s+BEFALL\\s+YOU\\b"
+          "match": "(?i)\\bWITH\\s+THE\\s+GREATEST\\s+RESPECT,"
         },
         {
           "name": "keyword.control.exception.topsy",
-          "match": "(?i)\\bTHOUGH\\s+CURSED,\\s+CONTINUE\\b"
+          "match": "(?i)\\bWITH\\s+GRATITUDE\\b"
         },
         {
           "name": "keyword.control.exception.topsy",
-          "match": "(?i)\\bFREE\\s+FROM\\s+ALL\\s+CURSES\\."
+          "match": "(?i)\\bMODIFIED\\s+RAPTURE\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "(?i)\\bTHAT\\s+CONCLUDES\\s+THE\\s+MATTER\\."
         }
       ]
     },
@@ -310,19 +318,7 @@
         },
         {
           "name": "keyword.operator.topsy",
-          "match": "(?i)\\bMORE\\s+THAN\\b"
-        },
-        {
-          "name": "keyword.operator.topsy",
-          "match": "(?i)\\bFEWER\\s+THAN\\b"
-        },
-        {
-          "name": "keyword.operator.topsy",
-          "match": "(?i)\\bAT\\s+LEAST\\b"
-        },
-        {
-          "name": "keyword.operator.topsy",
-          "match": "(?i)\\bAT\\s+MOST\\b"
+          "match": "(?i)\\bLOWER\\s+DEGREE\\b"
         },
         {
           "name": "keyword.operator.topsy",
@@ -334,7 +330,15 @@
         },
         {
           "name": "keyword.operator.topsy",
-          "match": "(?i)\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|ALIKE|UNALIKE)\\b"
+          "match": "(?i)\\bBOTH\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bEITHER\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|ALIKE|UNLIKE|PRE-ADAMITE)\\b"
         },
         {
           "name": "keyword.operator.topsy",

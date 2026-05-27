@@ -35,7 +35,13 @@
         "topsy-turvy.serverPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Topsy Turvy language server executable. Leave empty to use the default Debug build path."
+          "description": "Absolute path to the Topsy Turvy language server executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
+        },
+        "topsy-turvy.buildConfiguration": {
+          "type": "string",
+          "default": "Debug",
+          "enum": ["Debug", "Release"],
+          "description": "Build configuration used when locating the language server binary (Debug or Release). Ignored when topsy-turvy.serverPath is set."
         }
       }
     },

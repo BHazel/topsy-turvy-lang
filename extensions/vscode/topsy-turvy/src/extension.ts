@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -12,17 +13,28 @@ let client: LanguageClient;
 export function activate(context: vscode.ExtensionContext): void {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
     const configuredPath = config.get<string>('serverPath');
+    const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
+
+    const defaultPath = context.asAbsolutePath(
+        path.join(
+            '..', '..', '..', 'interpreter',
+            'BWHazel.TopsyTurvy.LanguageServer',
+            'bin', buildConfiguration, 'net10.0',
+            'BWHazel.TopsyTurvy.LanguageServer'
+        )
+    );
 
     const serverPath = configuredPath && configuredPath.length > 0
         ? configuredPath
-        : context.asAbsolutePath(
-            path.join(
-                '..', '..', '..', 'interpreter',
-                'BWHazel.TopsyTurvy.LanguageServer',
-                'bin', 'Debug', 'net10.0',
-                'BWHazel.TopsyTurvy.LanguageServer'
-            )
+        : defaultPath;
+
+    if (!fs.existsSync(serverPath)) {
+        vscode.window.showWarningMessage(
+            `Topsy Turvy: language server not found at "${serverPath}". ` +
+            `Build the project or set topsy-turvy.serverPath in settings.`
         );
+        return;
+    }
 
     const serverOptions: ServerOptions = {
         command: serverPath,
