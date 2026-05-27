@@ -22,6 +22,9 @@
             "problemMatcher": "$esbuild-watch",
             "isBackground": true,
             "label": "npm: watch:esbuild",
+            "options": {
+                "cwd": "${workspaceFolder}/extensions/vscode/topsy-turvy"
+            },
             "presentation": {
                 "group": "watch",
                 "reveal": "never"
@@ -34,6 +37,9 @@
             "problemMatcher": "$tsc-watch",
             "isBackground": true,
             "label": "npm: watch:tsc",
+            "options": {
+                "cwd": "${workspaceFolder}/extensions/vscode/topsy-turvy"
+            },
             "presentation": {
                 "group": "watch",
                 "reveal": "never"
@@ -44,6 +50,9 @@
 			"script": "watch-tests",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/extensions/vscode/topsy-turvy"
+			},
 			"presentation": {
 				"reveal": "never",
 				"group": "watchers"

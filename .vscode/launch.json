@@ -6,10 +6,10 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode/topsy-turvy"
 			],
 			"outFiles": [
-				"${workspaceFolder}/dist/**/*.js"
+				"${workspaceFolder}/extensions/vscode/topsy-turvy/dist/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		}
