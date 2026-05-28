@@ -1,13 +1,15 @@
-using System;
 using System.CommandLine;
-using Spectre.Console;
 using BWHazel.TopsyTurvy.Cli;
 using BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
 string rootDescription = $"{TopsyTurvyBranding.Title}\n\nTopsy Turvy - A Gilbert & Sullivan Programming Language";
-RootCommand rootCommand = new RootCommand(rootDescription)
+RootCommand rootCommand = new(rootDescription)
 {
-    PerformCommandBuilder.Build()
+    PedigreeCommandBuilder.Build(),
+    CommissionCommandBuilder.Build(),
+    RehearseCommandBuilder.Build(),
+    PerformCommandBuilder.Build(),
+    SorcererCommandBuilder.Build()
 };
 
 return await rootCommand.Parse(args).InvokeAsync();
