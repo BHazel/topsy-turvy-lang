@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 
@@ -16,6 +17,8 @@ public sealed class Interpreter
 {
     private readonly ITopsyTurvyIO io;
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
+    private CancellationToken cancellationToken;
+    private DateTime executionTimeout = DateTime.MinValue;
 
     /// <summary>
     /// Initialises a new instance of the <see cref="Interpreter"/> class with the specified I/O handler.
@@ -30,12 +33,27 @@ public sealed class Interpreter
     /// Executes a parsed programme and returns a collection of runtime diagnostics.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// An empty collection with no errors indicates successful execution.
+    /// </para>
+    /// <para>
+    /// Pass a <see cref="CancellationToken"/> from a <see cref="CancellationTokenSource"/>
+    /// with a timeout to guard against infinite loops.  The maximum duration is checked in
+    /// addition to the cancellation token to allow timeouts to work in single-threaded
+    /// environments such as Blazor WebAssembly.
+    /// </para>
     /// </remarks>
     /// <param name="program">The root node of the parsed programme.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel execution.</param>
+    /// <param name="timeout">A maximum wall-clock duration for execution, after which execution will be cancelled.</param>
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
-    public DiagnosticCollection Execute(ProgramNode program)
+    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null)
     {
+        this.cancellationToken = cancellationToken;
+        this.executionTimeout = timeout.HasValue
+            ? DateTime.UtcNow + timeout.Value
+            : DateTime.MinValue;
+        
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
@@ -53,6 +71,10 @@ public sealed class Interpreter
                 $"Unhandled exception (A HIDEOUS CURSE ON): {ex.ThrowValue}",
                 DiagnosticSeverity.Error,
                 program.Span));
+        }
+        catch (OperationCanceledException)
+        {
+            diagnostics.Add(new("Execution timed out.", DiagnosticSeverity.Error, program.Span));
         }
 
         return diagnostics;
@@ -326,6 +348,19 @@ public sealed class Interpreter
     }
 
     /// <summary>
+    /// Checks if the execution timeout has been reached or if cancellation has been requested.
+    /// </summary>
+    /// <exception cref="OperationCanceledException">Thrown when execution should be cancelled.</exception>
+    private void CheckCancellation()
+    {
+        this.cancellationToken.ThrowIfCancellationRequested();
+        if (this.executionTimeout != DateTime.MinValue && DateTime.UtcNow > this.executionTimeout)
+        {
+            throw new OperationCanceledException(this.cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// Executes an infinite loop.
     /// </summary>
     /// <param name="loopBody">The body of the loop.</param>
@@ -334,6 +369,7 @@ public sealed class Interpreter
     {
         while (true)
         {
+            this.CheckCancellation();
             try
             {
                 this.ExecuteStatements(loopBody, environment);
@@ -360,6 +396,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
+            this.CheckCancellation();
             try
             {
                 this.ExecuteStatements(node.Body, environment);
@@ -388,6 +425,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
+            this.CheckCancellation();
             try
             {
                 this.ExecuteStatements(node.Body, environment);
@@ -414,6 +452,7 @@ public sealed class Interpreter
     {
         while (this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
+            this.CheckCancellation();
             try
             {
                 this.ExecuteStatements(node.Body, environment);

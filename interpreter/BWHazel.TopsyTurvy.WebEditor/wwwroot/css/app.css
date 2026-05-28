@@ -1,0 +1,157 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/**
+ * The Monaco Editor container.
+ * @remarks Must fill its parent pane, which is sized by CSS Grid to fill
+ *          all remaining space below the toolbar.
+ */
+.topsy-turvy-monaco {
+    height: 100%;
+}
+
+/**
+ * The root of the Editor page.
+ * @remarks Fills MudMainContent: 100vh minus 48px AppBar.
+ */
+.editor-root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/**
+ * The overflow of the editor toolbar.
+ * @remarks On narrow screens, the toolbar becomes scrollable horizontally.
+ *          Scrollbars are hidden for a cleaner look, but users can still
+ *          scroll using touch or mouse wheel.
+ */
+.editor-toolbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+    .editor-toolbar::-webkit-scrollbar {
+        display: none;
+    }
+
+/**
+ * Prevent shrinking of toolbar items on narrow screens.
+ * @remarks Prevent controls from shrinking so the toolbar scrolls rather
+ *          than compressing items into each other on narrow screens.
+ *          MudSpacer is unaffected in practice.
+ */
+.editor-toolbar > * {
+    flex-shrink: 0;
+}
+
+/**
+ * Panes container.
+ * @remarks CSS Grid so heights always fill the remaining space
+ *          regardless of toolbar height, without any calc() magic.
+ */
+.panes-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 4px;
+    padding: 4px;
+}
+
+/**
+ * Stack the two panes vertically on mobile devices.
+ */
+@media (max-width: 959px) {
+    .panes-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+    }
+}
+
+.editor-pane {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.output-pane {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    min-height: 0;
+    overflow: hidden;
+    gap: 4px;
+}
+
+/* Grid row 1: terminal fills all remaining space; overflow clipped hard */
+/**
+    * The terminal wrapper.
+    * @remarks Fills all remaining space in the output pane,
+    *          with overflow hidden to prevent scrollbars.
+    */
+.terminal-wrapper {
+    overflow: hidden;
+    min-height: 0;
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.loading-progress {
+    position: absolute;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    inset: 20vh 0 auto 0;
+    margin: 0 auto;
+}
+
+    .loading-progress circle {
+        fill: none;
+        stroke: #e0e0e0;
+        stroke-width: 0.6rem;
+        transform-origin: 50% 50%;
+        transform: rotate(-90deg);
+    }
+
+        .loading-progress circle:last-child {
+            stroke: #1b6ec2;
+            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+            transition: stroke-dasharray 0.05s ease-in-out;
+        }
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+}
+
+    .loading-progress-text:after {
+        content: var(--blazor-load-percentage-text, "Loading");
+    }

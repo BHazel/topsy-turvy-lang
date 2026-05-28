@@ -1,0 +1,44 @@
+@inherits LayoutComponentBase
+
+@code {
+    private bool isDarkMode = true;
+    private Action? toggleDarkModeAction;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.toggleDarkModeAction = this.ToggleDarkMode;
+    }
+
+    /// <summary>
+    /// Toggles between light and dark mode.
+    /// </summary>
+    private void ToggleDarkMode()
+    {
+        this.isDarkMode = !this.isDarkMode;
+        this.InvokeAsync(this.StateHasChanged);
+    }
+}
+
+<MudThemeProvider @bind-IsDarkMode="isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingValue Value="isDarkMode" Name="IsDarkMode">
+    <CascadingValue IsFixed="true"
+                    Value="toggleDarkModeAction"
+                    Name="ToggleDarkMode">
+    <MudLayout>
+        <MudAppBar Dense="true"
+                   Fixed="true"
+                   Color="Color.Dark"
+                   Elevation="1">
+            <MudText Typo="Typo.h6">Topsy Turvy <em>Web Editor</em></MudText>
+        </MudAppBar>
+        <MudMainContent Style="height: 100vh; padding-top: 48px; box-sizing: border-box; overflow: hidden;">
+            @this.Body
+        </MudMainContent>
+    </MudLayout>
+    </CascadingValue>
+</CascadingValue>

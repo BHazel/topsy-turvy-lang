@@ -1,0 +1,337 @@
+@page "/"
+
+@inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
+
+<div class="editor-root">
+    <MudPaper Elevation="1" Square="true" Class="flex-shrink-0">
+        <MudToolBar Dense="true" Class="editor-toolbar">
+            <MudButton Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.InsertDriveFile"
+                       OnClick="ConfirmNewAsync">@(this.areGsLabelsEnabled ? "Commission" : "New")</MudButton>
+            <MudButton Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.FolderOpen"
+                       OnClick="OpenFileAsync">@(this.areGsLabelsEnabled ? "Recall" : "Open")</MudButton>
+            <MudButton Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.Save"
+                       OnClick="SaveFileAsync">@(this.areGsLabelsEnabled ? "Pen" : "Save")</MudButton>
+            <MudSpacer />
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       Disabled="isRunning"
+                       OnClick="RunProgramAsync">@(this.areGsLabelsEnabled ? "Perform" : "Run")</MudButton>
+            <MudSpacer />
+            <MudTooltip Text="@(IsDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode")">
+                <MudIconButton Icon="@(IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
+                               OnClick="OnToggleDarkMode" />
+            </MudTooltip>
+            <MudTooltip Text="Clear Terminal Output">
+                <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
+                               Color="Color.Error"
+                               OnClick="ConfirmClearAsync" />
+            </MudTooltip>
+            <MudTooltip Text="Download Terminal Output">
+                <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
+                               OnClick="DownloadTerminalAsync" />
+            </MudTooltip>
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+            <MudSwitch T="bool"
+                       @bind-Value="areGsLabelsEnabled"
+                       Label="G&amp;S Labels"
+                       Color="Color.Primary"
+                       Class="mr-1" />
+        </MudToolBar>
+    </MudPaper>
+
+    <div class="panes-container">
+        <div class="editor-pane">
+            <StandaloneCodeEditor @ref="monacoEditor"
+                                  Id="topsy-turvy-editor"
+                                  CssClass="topsy-turvy-monaco"
+                                  ConstructionOptions="GetEditorOptions"
+                                  OnDidChangeModelContent="OnContentChangedAsync" />
+        </div>
+        <div class="output-pane">
+            <div class="terminal-wrapper">
+                <Xterm @ref="terminal" Options="terminalOptions" />
+            </div>
+            <MudTextField T="string"
+                          @bind-Value="stdinText"
+                          Label="Standard Input"
+                          HelperText="One value per line"
+                          Lines="2"
+                          Variant="Variant.Outlined"
+                          Class="ma-2" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "IsDarkMode")]
+    private bool IsDarkMode { get; set; } = true;
+
+    [CascadingParameter(Name = "ToggleDarkMode")]
+    private Action? ToggleDarkMode { get; set; }
+
+    private StandaloneCodeEditor? monacoEditor;
+    private Xterm? terminal;
+    private bool editorReady = false;
+    private string stdinText = string.Empty;
+    private bool isRunning = false;
+    private string lastRunOutput = string.Empty;
+    private bool previousIsDarkMode = true;
+    private bool areGsLabelsEnabled = true;
+    private CancellationTokenSource? cancellationTokenSource;
+
+    private readonly TerminalOptions terminalOptions = new()
+    {
+        CursorBlink = false,
+        ConvertEOL = true,
+        Theme = new Theme
+        {
+            Background = "#1e1e1e",
+            Foreground = "#d4d4d4",
+        },
+    };
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.applyLanguageToEditor", "topsy-turvy-editor");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
+            this.editorReady = true;
+            this.previousIsDarkMode = IsDarkMode;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.editorReady && this.IsDarkMode != this.previousIsDarkMode)
+        {
+            previousIsDarkMode = this.IsDarkMode;
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "vs-dark" : "vs");
+        }
+    }
+
+    /// <summary>
+    /// Gets the options for the Monaco editor.
+    /// </summary>
+    /// <param name="editor">The Monaco editor.</param>
+    /// <returns>Options for the Monaco editor.</returns>
+    private StandaloneEditorConstructionOptions GetEditorOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions()
+        {
+            Language = "topsy-turvy",
+            Theme = this.IsDarkMode
+                ? "vs-dark"
+                : "vs",
+            AutomaticLayout = true,
+            Value = string.Empty,
+        };
+    }
+
+    /// <summary>
+    /// Toggles between light and dark mode.
+    /// </summary>
+    private void OnToggleDarkMode() => this.ToggleDarkMode?.Invoke();
+
+    /// <summary>
+    /// Handles content changes in the editor.
+    /// </summary>
+    /// <param name="e">The event data for the content change.</param>
+    /// <remarks>
+    /// Includes a pause to avoid excessive parsing.
+    /// </remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnContentChangedAsync(ModelContentChangedEvent e)
+    {
+        this.cancellationTokenSource?.Cancel();
+        this.cancellationTokenSource = new CancellationTokenSource();
+        CancellationToken token = this.cancellationTokenSource.Token;
+
+        try
+        {
+            await Task.Delay(400, token);
+            string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+            await this.UpdateDiagnosticsAsync(source);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Updates the diagnostics in the editor based on the provided source code.
+    /// </summary>
+    /// <param name="source">The source code to analyze.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task UpdateDiagnosticsAsync(string source)
+    {
+        TopsyTurvyParser parser = new();
+        ParseResult result = parser.TryParse(source);
+
+        IEnumerable<object> markers = result.Diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Select(diagnostic => (object)new
+            {
+                startLineNumber = diagnostic.Span.Start.Line,
+                startColumn = diagnostic.Span.Start.Column,
+                endLineNumber = diagnostic.Span.End.Line,
+                endColumn = diagnostic.Span.End.Column,
+                message = diagnostic.Message,
+                severity = 8,
+            });
+
+        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
+    }
+
+    /// <summary>
+    /// Runs the program currently in the editor, using the text from the standard input field as input.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task RunProgramAsync()
+    {
+        if (this.isRunning)
+        {
+            return;
+        }
+
+        isRunning = true;
+        try
+        {
+            await this.RunProgramCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            await this.JSRuntime.InvokeVoidAsync("console.error", "RunError: " + ex.GetType().Name + ": " + ex.Message);
+        }
+        finally
+        {
+            this.isRunning = false;
+        }
+    }
+
+    /// <summary>
+    /// Core logic for running a program.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task RunProgramCoreAsync()
+    {
+        await this.terminal!.Clear();
+        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+        IEnumerable<string> stdinLines = this.stdinText.Split('\n');
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        if (!parseResult.Success)
+        {
+            foreach (Diagnostic diagnostic in parseResult.Diagnostics
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            {
+                await terminal!.WriteLine($"\x1b[31mSyntax error (line {diagnostic.Span.Start.Line}): {diagnostic.Message}\x1b[0m");
+            }
+
+            return;
+        }
+
+        BufferedWebIO io = new(stdinLines);
+
+        using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
+        Interpreter interpreter = new(io);
+        DiagnosticCollection runtimeDiagnostics = interpreter.Execute(parseResult.Program!, cancellationTokenSource.Token, TimeSpan.FromSeconds(10));
+
+        foreach (string line in io.OutputLines)
+        {
+            await this.terminal!.WriteLine(line);
+        }
+
+        this.lastRunOutput = string.Join('\n', io.OutputLines);
+        if (runtimeDiagnostics.HasErrors)
+        {
+            foreach (Diagnostic diagnostic in runtimeDiagnostics.Diagnostics
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            {
+                await this.terminal!.WriteLine($"\x1b[31mRuntime error: {diagnostic.Message}\x1b[0m");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asks the user to confirm creating a new program, and if confirmed, clears the editor.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task ConfirmNewAsync()
+    {
+        bool? isNewConfirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Create New Programme",
+            "Are you sure you want to start afresh?  This will clear the editor and is irreversible.",
+            yesText: "Create",
+            cancelText: "Cancel");
+
+        if (isNewConfirmed == true)
+        {
+            await this.monacoEditor!.SetValue(string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Opens a file picker dialog, and if the user selects a file, loads its content into the editor.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OpenFileAsync()
+    {
+        string? content = await this.JSRuntime.InvokeAsync<string?>("topsyTurvy.openFile");
+        if (content is not null)
+        {
+            await this.monacoEditor!.SetValue(content);
+        }
+    }
+
+    /// <summary>
+    /// Saves the current content of the editor to a file by triggering a download in the browser.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task SaveFileAsync()
+    {
+        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.downloadText", "programme.topsy", source);
+    }
+
+    /// <summary>
+    /// Asks the user to confirm clearing the terminal output, and if confirmed, clears the terminal.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task ConfirmClearAsync()
+    {
+        bool? isClearConfirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Clear Terminal Output",
+            "Are you sure you want to clear the terminal output?",
+            yesText: "Clear",
+            cancelText: "Cancel");
+
+        if (isClearConfirmed == true)
+        {
+            await this.terminal!.Clear();
+            this.lastRunOutput = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Triggers a download of the terminal output as a text file, if there is any output to download.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task DownloadTerminalAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(this.lastRunOutput))
+        {
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.downloadText", "output.txt", this.lastRunOutput);
+        }
+    }
+}
