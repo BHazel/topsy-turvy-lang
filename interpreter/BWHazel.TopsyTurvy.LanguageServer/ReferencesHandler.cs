@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -133,6 +134,61 @@ public class ReferencesHandler : ReferencesHandlerBase
                             new Position(lineIndex, foundAt),
                             new Position(lineIndex, endChar))
                     });
+                }
+            }
+
+            foreach ((DocumentUri otherUri, DocumentState otherState) in
+                this.documentStateManager.AllDocuments())
+            {
+                if (otherUri.ToString() == request.TextDocument.Uri.ToString())
+                {
+                    continue;
+                }
+
+                string otherSource = otherState.Source;
+                if (string.IsNullOrEmpty(otherSource))
+                {
+                    continue;
+                }
+
+                string[] otherLines = otherSource.Split('\n');
+                int[] otherOffsets = BuildLineOffsets(otherLines);
+                List<(int Start, int End)> otherSkip = FindSkipRanges(otherSource);
+                for (int lineIndex = 0; lineIndex < otherLines.Length; lineIndex++)
+                {
+                    string lineText = otherLines[lineIndex];
+                    int searchFrom = 0;
+                    int foundAt;
+
+                    while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+                    {
+                        searchFrom = foundAt + 1;
+
+                        if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
+                        {
+                            continue;
+                        }
+
+                        int endChar = foundAt + word.Length;
+                        if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
+                        {
+                            continue;
+                        }
+
+                        int absoluteOffset = otherOffsets[lineIndex] + foundAt;
+                        if (IsInSkipRange(absoluteOffset, otherSkip))
+                        {
+                            continue;
+                        }
+
+                        locations.Add(new Location
+                        {
+                            Uri = otherUri,
+                            Range = new LspRange(
+                                new Position(lineIndex, foundAt),
+                                new Position(lineIndex, endChar))
+                        });
+                    }
                 }
             }
 

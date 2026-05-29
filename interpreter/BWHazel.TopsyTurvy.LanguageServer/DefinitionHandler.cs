@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -59,9 +60,13 @@ public class DefinitionHandler : DefinitionHandlerBase
                 return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks());
             }
 
-            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info)
-                || info is null
-                || info.DefinitionLine == 0)
+            DocumentUri definitionUri = request.TextDocument.Uri;
+            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
+            {
+                (definitionUri, info) = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+            }
+
+            if (info is null || info.DefinitionLine == 0)
             {
                 return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks());
             }
@@ -72,7 +77,7 @@ public class DefinitionHandler : DefinitionHandlerBase
 
             LocationOrLocationLink location = new(new Location
             {
-                Uri   = request.TextDocument.Uri,
+                Uri   = definitionUri,
                 Range = new LspRange(
                     new Position(startLine, startChar),
                     new Position(startLine, endChar))
@@ -84,5 +89,33 @@ public class DefinitionHandler : DefinitionHandlerBase
         {
             return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks());
         }
+    }
+
+    /// <summary>
+    /// Searches all open documents other than the current one for a symbol with the given name.
+    /// </summary>
+    /// <param name="currentUri">The URI of the requesting document which is excluded.</param>
+    /// <param name="name">The symbol name to find.</param>
+    /// <returns>
+    /// The URI of the document containing the symbol and its <see cref="SymbolInfo"/>,
+    /// or the current URI and <c>null</c> if not found.
+    /// </returns>
+    private (DocumentUri Uri, SymbolInfo? Info) FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
+            {
+                return (otherUri, info);
+            }
+        }
+
+        return (currentUri, null);
     }
 }

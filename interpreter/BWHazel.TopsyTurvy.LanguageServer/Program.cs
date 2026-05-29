@@ -17,6 +17,7 @@ var server = await LanguageServer.From(options =>
         .WithHandler<RenameHandler>()
         .WithHandler<PrepareRenameHandler>()
         .WithHandler<DocumentSymbolHandler>()
+        .WithHandler<WorkspaceSymbolHandler>()
         .WithHandler<ReferencesHandler>()
         .WithHandler<SignatureHelpHandler>()
         .WithHandler<FoldingRangeHandler>()

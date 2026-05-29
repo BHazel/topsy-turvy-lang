@@ -63,6 +63,10 @@ A new session must know these before touching the relevant code.
 
 **Blazor WASM timeout**: `CancellationTokenSource(TimeSpan)` relies on a timer callback that cannot fire while `Interpreter.Execute()` is blocking the single WASM thread. Pass `maxDuration: TimeSpan.FromSeconds(10)` to `Execute()` instead — this stores a `DateTime` deadline checked by `CheckCancellation()` inside every loop body via `DateTime.UtcNow`, which works synchronously without requiring a thread yield.
 
+**`PRAY ADMIT` path resolution**: `ExecuteImport` resolves relative import paths against the directory of the *importing* file, not the process CWD. `Interpreter.Execute()` accepts an optional `sourceFilePath` parameter; when supplied, it computes `sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(sourceFilePath))` which is then used in `ExecuteImport`. `ProgramRunner.Run` passes `filePath` to `Execute`. When executing from a string without a backing file (e.g. Blazor WASM), `sourceFilePath` is `null` and the raw path from the AST is used unchanged. `TopsyTurvySyntaxException` thrown by parsing an imported file is caught inside `ExecuteImport` and re-thrown as `TopsyTurvyRuntimeException` so it is handled by the normal error pipeline.
+
+**Cross-document LSP awareness**: `DocumentStateManager.AllDocuments()` returns a snapshot of all open documents. Every handler that needs cross-file visibility calls this method — do not add new per-document-only lookups for symbols. The established pattern is: attempt lookup in the current document's `SymbolTable` first; on failure, iterate `AllDocuments()` skipping the current URI and search each other document's table. For `DefinitionHandler`, the URI returned by this fallback must be used as the `Location.Uri` in the response (not `request.TextDocument.Uri`). For semantic tokens, hover, and completion, only `Function` kind symbols are pulled from other documents (variables and parameters are not importable). `WorkspaceSymbolHandler` and `ReferencesHandler` always aggregate across all open documents unconditionally.
+
 **Multi-word keyword completion**: `CompletionHandler` uses server-side phrase filtering, `FilterText = lastWord`, `InsertText = keyword[insertOffset..]`, `isIncomplete = true`, and a space trigger character to keep the list live as the user types through multi-word phrases.
 
 **Web editor — terminal fit private API**: `fitTerminal` reads `term._core._renderService.dimensions.css.cell.height` to obtain the exact rendered cell height. This is an internal xterm.js property with no public equivalent and may break on xterm version upgrades. The fallback chain is: DOM measurement of `.xterm-rows > div`, then `ceil(fontSize * lineHeight)`. If the terminal stops filling its pane after an XtermBlazor upgrade, check this path first.
@@ -94,6 +98,7 @@ A new session must know these before touching the relevant code.
 | `FoldingRangeHandler` | Stack-based fold regions for all block constructs and comments. |
 | `DocumentFormattingHandler` | Normalises keyword casing (74 keywords) and applies 2-space libretto indentation. |
 | `CodeLensHandler` | Inline reference-count annotations above declarations; links to Find All References. |
+| `WorkspaceSymbolHandler` | Handles `workspace/symbol` requests; searches all open documents by query string. |
 
 ### CLI Commands (`interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/`)
 
@@ -123,7 +128,6 @@ A new session must know these before touching the relevant code.
 |---|---|
 | Inlay Hints (`textDocument/inlayHint`) | Handler not yet written; `SymbolInfo.TypeDisplayName` already carries the data. |
 | Call Hierarchy | Requires a call-graph not currently built by `SymbolTable`. |
-| Workspace Symbols | `DocumentStateManager` is single-document. Deferred until `PRAY ADMIT` imports are in use. |
 
 ---
 
@@ -133,4 +137,3 @@ A new session must know these before touching the relevant code.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline.
 3. **LSP server packaging**: the default binary path only works from the dev repo layout and cannot be distributed as a `.vsix`. Proposed: add `dotnet publish` to the extension build script outputting to `extensions/vscode/topsy-turvy/server/`; update the default path in `extension.ts`; use `--no-self-contained` as the starting point.
 4. **LSP squiggle accuracy** (deferred — see §4).
-5. **`PRAY ADMIT` multi-file import** — integration testing.

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using BWHazel.TopsyTurvy.Parser;
@@ -55,6 +56,23 @@ public class DocumentStateManager
         {
             this.states.TryGetValue(uri.ToString(), out DocumentState? state);
             return state;
+        }
+    }
+
+    /// <summary>
+    /// Returns a snapshot of all currently tracked documents and their state.
+    /// </summary>
+    /// <returns>
+    /// A list of <see cref="DocumentUri"/> and <see cref="DocumentState"/> pairs for every
+    /// document currently open in the language server.
+    /// </returns>
+    public IReadOnlyList<(DocumentUri Uri, DocumentState State)> AllDocuments()
+    {
+        lock (this.lockObject)
+        {
+            return this.states
+                .Select(state => (DocumentUri.From(state.Key), state.Value))
+                .ToList();
         }
     }
 

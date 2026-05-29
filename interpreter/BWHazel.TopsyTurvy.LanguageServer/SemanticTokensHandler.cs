@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -82,7 +83,10 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
             List<(int Start, int End)> commentRanges = FindSkipRanges(source);
             List<(int Line, int Char, int Length, string TokenType)> tokens = [];
 
-            foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
+            IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
+                .Concat(this.GetImportedFunctionSymbols(identifier.TextDocument.Uri));
+
+            foreach (SymbolInfo symbol in allSymbols)
             {
                 if (symbol.Name.Contains(' '))
                 {
@@ -139,6 +143,32 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Returns function symbols declared in all open documents other than the given document.
+    /// </summary>
+    /// <param name="currentUri">The URI of the document being tokenised which is excluded.</param>
+    /// <returns>Function <see cref="SymbolInfo"/> records from every other open document.</returns>
+    private IEnumerable<SymbolInfo> GetImportedFunctionSymbols(DocumentUri currentUri)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in
+            this.documentStateManager.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
+            {
+                if (symbol.Kind == SymbolKind.Function)
+                {
+                    yield return symbol;
+                }
+            }
+        }
     }
 
     /// <summary>

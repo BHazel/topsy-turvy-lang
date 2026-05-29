@@ -92,6 +92,25 @@ public class CodeLensHandler : CodeLensHandlerBase
 
                 int refCount = CountReferences(lines, lineOffsets, skipRanges, symbol.Name, lspLine);
 
+                foreach ((_, DocumentState otherState) in this.documentStateManager.AllDocuments())
+                {
+                    if (object.ReferenceEquals(otherState, state))
+                    {
+                        continue;
+                    }
+
+                    string otherSource = otherState.Source;
+                    if (string.IsNullOrEmpty(otherSource))
+                    {
+                        continue;
+                    }
+
+                    string[] otherLines = otherSource.Split('\n');
+                    int[] otherOffsets = BuildLineOffsets(otherLines);
+                    List<(int Start, int End)> otherSkip = FindSkipRanges(otherSource);
+                    refCount += CountReferences(otherLines, otherOffsets, otherSkip, symbol.Name, -1);
+                }
+
                 string title = refCount == 1 ? "1 reference" : $"{refCount} references";
 
                 lenses.Add(new CodeLens

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -154,8 +155,10 @@ public class CompletionHandler : CompletionHandlerBase
             List<CompletionItem> items = [];
             if (state?.SymbolTable is not null)
             {
-                IEnumerable<CompletionItem> symbolItems = state.SymbolTable
-                    .AllSymbols()
+                IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
+                    .Concat(this.GetImportedFunctionSymbols(request.TextDocument.Uri));
+
+                IEnumerable<CompletionItem> symbolItems = allSymbols
                     .Where(symbol => lastWord.Length == 0
                         || symbol.Name.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase))
                     .Select(BuildSymbolItem);
@@ -182,6 +185,31 @@ public class CompletionHandler : CompletionHandlerBase
     public override Task<CompletionItem> Handle(
         CompletionItem request, CancellationToken cancellationToken) =>
         Task.FromResult(request);
+
+    /// <summary>
+    /// Returns function symbols declared in all open documents other than the given document.
+    /// </summary>
+    /// <param name="currentUri">The URI of the document requesting completion, which is excluded.</param>
+    /// <returns>Function <see cref="SymbolInfo"/> records from every other open document.</returns>
+    private IEnumerable<SymbolInfo> GetImportedFunctionSymbols(DocumentUri currentUri)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
+            {
+                if (symbol.Kind == SymbolKind.Function)
+                {
+                    yield return symbol;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Builds a completion item from a symbol.
