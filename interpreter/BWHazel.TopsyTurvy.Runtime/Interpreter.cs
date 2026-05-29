@@ -19,6 +19,7 @@ public sealed class Interpreter
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
+    private string? sourceDirectory;
 
     /// <summary>
     /// Initialises a new instance of the <see cref="Interpreter"/> class with the specified I/O handler.
@@ -42,17 +43,24 @@ public sealed class Interpreter
     /// addition to the cancellation token to allow timeouts to work in single-threaded
     /// environments such as Blazor WebAssembly.
     /// </para>
+    /// <para>
+    /// Pass <c>null</c> as a source file path when executing from a string without a backing file.
+    /// </para>
     /// </remarks>
     /// <param name="program">The root node of the parsed programme.</param>
     /// <param name="cancellationToken">A token that can be used to cancel execution.</param>
     /// <param name="timeout">A maximum wall-clock duration for execution, after which execution will be cancelled.</param>
+    /// <param name="sourceFilePath">The absolute or relative path of the source file being executed, used to resolve relative import paths.</param>
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
-    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null)
+    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null, string? sourceFilePath = null)
     {
         this.cancellationToken = cancellationToken;
         this.executionTimeout = timeout.HasValue
             ? DateTime.UtcNow + timeout.Value
             : DateTime.MinValue;
+        this.sourceDirectory = sourceFilePath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(sourceFilePath))
+            : null;
         
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
@@ -494,18 +502,32 @@ public sealed class Interpreter
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the import cannot be read.</exception>
     private void ExecuteImport(ImportNode importNode)
     {
+        string resolvedPath = this.sourceDirectory is not null && !Path.IsPathRooted(importNode.FilePath)
+            ? Path.GetFullPath(Path.Combine(this.sourceDirectory, importNode.FilePath))
+            : importNode.FilePath;
+
         string sourceToImport;
         try
         {
-            sourceToImport = File.ReadAllText(importNode.FilePath);
+            sourceToImport = File.ReadAllText(resolvedPath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            throw new TopsyTurvyRuntimeException($"Cannot read import '{importNode.FilePath}': {ex.Message}", importNode.Span);
+            throw new TopsyTurvyRuntimeException($"Cannot read import '{resolvedPath}': {ex.Message}", importNode.Span);
         }
 
         TopsyTurvyParser parser = new();
-        ProgramNode imported = parser.Parse(sourceToImport);
+        ProgramNode imported;
+        try
+        {
+            imported = parser.Parse(sourceToImport);
+        }
+        catch (TopsyTurvySyntaxException ex)
+        {
+            string errors = string.Join("; ", ex.Errors);
+            throw new TopsyTurvyRuntimeException($"Syntax errors in import '{resolvedPath}': {errors}", importNode.Span);
+        }
+
         foreach (Statement statement in imported.Statements)
         {
             if (statement is FunctionDefinitionNode functionDefinition)

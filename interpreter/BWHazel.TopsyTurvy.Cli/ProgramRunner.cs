@@ -76,7 +76,7 @@ public class ProgramRunner
         }
 
         Interpreter interpreter = new(io);
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
+        DiagnosticCollection diagnostics = interpreter.Execute(program, sourceFilePath: filePath);
 
         if (diagnostics.HasErrors)
         {
