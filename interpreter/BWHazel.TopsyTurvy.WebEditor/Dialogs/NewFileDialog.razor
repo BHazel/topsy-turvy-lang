@@ -1,0 +1,54 @@
+<MudDialog>
+    <DialogContent>
+        <form @onsubmit="this.Submit" @onsubmit:preventDefault="true">
+            <MudTextField T="string"
+                          @bind-Value="this.fileName"
+                          Label="File Name"
+                          Adornment="Adornment.End"
+                          AdornmentText=".topsy"
+                          Immediate="true"
+                          AutoFocus="true" />
+        </form>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!this.IsValid)"
+                   OnClick="this.Submit">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string fileName = string.Empty;
+
+    private bool IsValid =>
+        !string.IsNullOrWhiteSpace(this.fileName) &&
+        !this.fileName.Contains('/') &&
+        !this.fileName.Contains('\\');
+
+    /// <summary>
+    /// Submits the form to create a new file.
+    /// </summary>
+    private void Submit()
+    {
+        if (!this.IsValid)
+        {
+            return;
+        }
+
+        string name = this.fileName.EndsWith(".topsy", StringComparison.OrdinalIgnoreCase)
+            ? this.fileName
+            : this.fileName + ".topsy";
+
+        this.MudDialog.Close(DialogResult.Ok(name));
+    }
+
+    /// <summary>
+    /// Cancels and closes the dialog.
+    /// </summary>
+    private void Cancel() => this.MudDialog.Cancel();
+}

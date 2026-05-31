@@ -26,6 +26,63 @@ html, body {
 }
 
 /**
+ * The row containing the Add File button and the tab bar.
+ * @remarks Places the Add File button and tabb bar onto the same row.
+ *          Horizontal scrolling of the tab bar is managed by the MudBlazor
+ *          tabs component itself.
+ */
+.tab-bar-row {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/**
+ * The tab bar.
+ * @remarks Setting `flex: 1` and `min-width: 0` allows the tab bar to fill the
+ *          remaining horizontal space and prevents a chlid component from
+ *          overflowing its container.
+ */
+.tab-bar-tabs {
+    flex: 1;
+    min-width: 0;
+}
+
+    /**
+     * Truncates long filenames to be replaces with an ellipsis.
+     */
+    .tab-bar-tabs .tab-filename {
+        display: inline-block;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+/**
+ * The tab close button override.
+ * @remarks Overrides the default tab close button make it
+ *         compact within the tab.
+ */
+.tab-close-btn {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: unset !important;
+    padding: 0 !important;
+    margin-left: 4px;
+}
+
+/**
+ * The Add File button.
+ * @remarks Prevents shrinking of the button when tabs are wide.
+ */
+.tab-add-btn {
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+/**
  * The overflow of the editor toolbar.
  * @remarks On narrow screens, the toolbar becomes scrollable horizontally.
  *          Scrollbars are hidden for a cleaner look, but users can still

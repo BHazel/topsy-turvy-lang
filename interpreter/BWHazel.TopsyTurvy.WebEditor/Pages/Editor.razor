@@ -45,6 +45,36 @@
         </MudToolBar>
     </MudPaper>
 
+    <div class="tab-bar-row">
+        <MudTooltip Text="New File">
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                           Size="Size.Small"
+                           Class="tab-add-btn"
+                           OnClick="NewFileAsync" />
+        </MudTooltip>
+        <MudTabs ActivePanelIndex="@this.ActiveTabIndex"
+                 ActivePanelIndexChanged="OnTabIndexChangedAsync"
+                 AlwaysShowScrollButtons="true"
+                 Color="Color.Default"
+                 Rounded="true"
+                 Class="flex-1 min-width-0 tab-bar-tabs">
+            @foreach (VirtualFile file in this.files)
+            {
+                <MudTabPanel Tag="@file.Name" PanelClass="d-none">
+                    <TabContent>
+                        <div class="d-flex align-center">
+                            <span class="tab-filename">@file.Name</span>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                          Size="Size.Small"
+                                          Class="tab-close-btn"
+                                          OnClick="@(() => this.CloseFileAsync(file.Name))" />
+                        </div>
+                    </TabContent>
+                </MudTabPanel>
+            }
+        </MudTabs>
+    </div>
+
     <div class="panes-container">
         <div class="editor-pane">
             <StandaloneCodeEditor @ref="monacoEditor"
@@ -69,6 +99,8 @@
 </div>
 
 @code {
+    private const string DefaultFileName = "programme.topsy";
+
     [CascadingParameter(Name = "IsDarkMode")]
     private bool IsDarkMode { get; set; } = true;
 
@@ -85,6 +117,9 @@
     private bool areGsLabelsEnabled = true;
     private CancellationTokenSource? cancellationTokenSource;
 
+    private List<VirtualFile> files = [new(DefaultFileName)];
+    private string activeFileName = DefaultFileName;
+
     private readonly TerminalOptions terminalOptions = new()
     {
         CursorBlink = false,
@@ -95,6 +130,11 @@
             Foreground = "#d4d4d4",
         },
     };
+
+    /// <summary>
+    /// Gets the index of the currently active tab based on the active file name.
+    /// </summary>
+    private int ActiveTabIndex => Math.Max(0, this.files.FindIndex(file => file.Name == this.activeFileName));
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -132,6 +172,7 @@
                 ? "vs-dark"
                 : "vs",
             AutomaticLayout = true,
+            AutoIndent = "full",
             Value = string.Empty,
         };
     }
@@ -140,6 +181,23 @@
     /// Toggles between light and dark mode.
     /// </summary>
     private void OnToggleDarkMode() => this.ToggleDarkMode?.Invoke();
+
+    /// <summary>
+    /// Handles a tab index change from the tab bar.
+    /// </summary>
+    /// <param name="index">The new zero-based active tab index.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnTabIndexChangedAsync(int index)
+    {
+        if (index >= 0 && index < this.files.Count)
+        {
+            string name = this.files[index].Name;
+            if (name != this.activeFileName)
+            {
+                await this.SwitchFileAsync(name);
+            }
+        }
+    }
 
     /// <summary>
     /// Handles content changes in the editor.
@@ -224,7 +282,10 @@
     private async Task RunProgramCoreAsync()
     {
         await this.terminal!.Clear();
-        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+        await this.SyncActiveFileContentAsync();
+
+        Dictionary<string, string> currentFileContents = this.files.ToDictionary(file => file.Name, file => file.Content);
+        string source = currentFileContents[this.activeFileName];
         IEnumerable<string> stdinLines = this.stdinText.Split('\n');
 
         TopsyTurvyParser parser = new();
@@ -245,7 +306,12 @@
 
         using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
         Interpreter interpreter = new(io);
-        DiagnosticCollection runtimeDiagnostics = interpreter.Execute(parseResult.Program!, cancellationTokenSource.Token, TimeSpan.FromSeconds(10));
+        Func<string, string?> fileResolver = name => currentFileContents.GetValueOrDefault(name);
+        DiagnosticCollection runtimeDiagnostics = interpreter.Execute(
+            parseResult.Program!,
+            cancellationTokenSource.Token,
+            TimeSpan.FromSeconds(10),
+            fileResolver: fileResolver);
 
         foreach (string line in io.OutputLines)
         {
@@ -264,44 +330,96 @@
     }
 
     /// <summary>
-    /// Asks the user to confirm creating a new program, and if confirmed, clears the editor.
+    /// Asks the user to confirm creating a new program, and if confirmed, resets the editor to a single blank file.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task ConfirmNewAsync()
     {
         bool? isNewConfirmed = await this.DialogService.ShowMessageBoxAsync(
             "Create New Programme",
-            "Are you sure you want to start afresh?  This will clear the editor and is irreversible.",
+            "Are you sure you want to start afresh?  This will close all files and is irreversible.",
             yesText: "Create",
             cancelText: "Cancel");
 
         if (isNewConfirmed == true)
         {
+            this.files.Clear();
+            VirtualFile newFile = new(DefaultFileName);
+            this.files.Add(newFile);
+            this.activeFileName = newFile.Name;
             await this.monacoEditor!.SetValue(string.Empty);
+            this.StateHasChanged();
         }
     }
 
     /// <summary>
-    /// Opens a file picker dialog, and if the user selects a file, loads its content into the editor.
+    /// Opens a file picker dialog and if the user selects a file loads it into a new tab.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task OpenFileAsync()
     {
-        string? content = await this.JSRuntime.InvokeAsync<string?>("topsyTurvy.openFile");
-        if (content is not null)
+        JsonElement? result = await this.JSRuntime.InvokeAsync<JsonElement?>("topsyTurvy.openFile");
+        if (result is null || result.Value.ValueKind == JsonValueKind.Null)
         {
-            await this.monacoEditor!.SetValue(content);
+            return;
         }
+
+        string name = result.Value.GetProperty("name").GetString()!;
+        string content = result.Value.GetProperty("content").GetString()!;
+
+        if (this.files.Any(file => file.Name == name))
+        {
+            bool? replace = await this.DialogService.ShowMessageBoxAsync(
+                "File Already Open",
+                $"'{name}' is already open.  Replace its content?",
+                yesText: "Replace",
+                cancelText: "Cancel");
+
+            if (replace != true)
+            {
+                return;
+            }
+
+            VirtualFile existingFile = this.files.First(file => file.Name == name);
+            existingFile.Content = content;
+            if (this.activeFileName == name)
+            {
+                await this.monacoEditor!.SetValue(content);
+            }
+            else
+            {
+                await this.SwitchFileAsync(name);
+            }
+
+            return;
+        }
+
+        this.files.Add(new(name, content));
+        await this.SwitchFileAsync(name);
+        this.StateHasChanged();
     }
 
     /// <summary>
-    /// Saves the current content of the editor to a file by triggering a download in the browser.
+    /// Saves all open files as a ZIP archive and triggers a browser download.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task SaveFileAsync()
     {
-        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
-        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.downloadText", "programme.topsy", source);
+        await this.SyncActiveFileContentAsync();
+
+        using MemoryStream memoryStream = new();
+        using (ZipArchive zipArchive = new(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (VirtualFile file in this.files)
+            {
+                ZipArchiveEntry entry = zipArchive.CreateEntry(file.Name);
+                using StreamWriter writer = new(entry.Open());
+                writer.Write(file.Content);
+            }
+        }
+
+        string streamBase64 = Convert.ToBase64String(memoryStream.ToArray());
+        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.downloadZip", "programme.zip", streamBase64);
     }
 
     /// <summary>
@@ -332,6 +450,103 @@
         if (!string.IsNullOrWhiteSpace(this.lastRunOutput))
         {
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.downloadText", "output.txt", this.lastRunOutput);
+        }
+    }
+
+    /// <summary>
+    /// Opens the new file dialog and if confirmed adds the file as a new tab.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task NewFileAsync()
+    {
+        IDialogReference dialog = await this.DialogService.ShowAsync<NewFileDialog>("Create New File");
+        DialogResult? result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: string newName })
+        {
+            if (this.files.Any(file => file.Name == newName))
+            {
+                await this.DialogService.ShowMessageBoxAsync(
+                    "File Already Exists",
+                    $"A file named '{newName}' is already open.",
+                    yesText: "OK");
+
+                return;
+            }
+
+            this.files.Add(new(newName));
+            await this.SwitchFileAsync(newName);
+            this.StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Switches the active tab to the file with the given name saving the current file content first.
+    /// </summary>
+    /// <param name="name">The filename to switch to.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task SwitchFileAsync(string name)
+    {
+        await this.SyncActiveFileContentAsync();
+        this.activeFileName = name;
+        VirtualFile newFile = this.files.First(file => file.Name == name);
+        await this.monacoEditor!.SetValue(newFile.Content);
+        this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Confirms with the user then closes the tab for the given file.
+    /// </summary>
+    /// <param name="name">The filename of the tab to close.</param>
+    /// <remarks>
+    /// If the file was the last tab open, a fresh file is created automatically.
+    /// </remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task CloseFileAsync(string name)
+    {
+        bool? isConfirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Close File",
+            $"Close '{name}'?  Unsaved changes will be lost.",
+            yesText: "Close",
+            cancelText: "Cancel");
+
+        if (isConfirmed != true)
+        {
+            return;
+        }
+
+        bool wasActive = this.activeFileName == name;
+        int index = this.files.FindIndex(file => file.Name == name);
+        this.files.RemoveAt(index);
+
+        if (this.files.Count == 0)
+        {
+            VirtualFile replacement = new(DefaultFileName);
+            this.files.Add(replacement);
+            this.activeFileName = replacement.Name;
+            await this.monacoEditor!.SetValue(string.Empty);
+        }
+        else if (wasActive)
+        {
+            int newIndex = Math.Min(index, this.files.Count - 1);
+            this.activeFileName = this.files[newIndex].Name;
+            await this.monacoEditor!.SetValue(this.files[newIndex].Content);
+        }
+
+        this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Reads the current editor content and stores it in the active <see cref="VirtualFile"/>.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task SyncActiveFileContentAsync()
+    {
+        VirtualFile? activeFile = this.files.Find(file => file.Name == this.activeFileName);
+        if (activeFile is not null)
+        {
+            activeFile.Content = await this.JSRuntime.InvokeAsync<string>(
+                "blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
         }
     }
 }

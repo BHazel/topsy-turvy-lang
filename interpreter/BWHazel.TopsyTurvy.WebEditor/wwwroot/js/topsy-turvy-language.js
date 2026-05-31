@@ -9,6 +9,178 @@ window.topsyTurvy = {
             extensions: ['.topsy']
         });
 
+        const keywords = [
+            ["HARK!",                               "program header"],
+            ["or,",                                 "program subtitle"],
+            ["FINALE.",                             "program end"],
+            ["PRINCIPALS",                          "global declarations block"],
+            ["THE CURTAIN RISES.",                  "end of declarations"],
+            ["PRAY WELCOME",                        "variable declaration"],
+            ["AS A",                                "type annotation"],
+            ["BEING",                               "initial value"],
+            ["IS APPOINTED",                        "assignment"],
+            ["IS HENCEFORTH A",                     "in-place cast"],
+            ["AS IT WERE",                          "expression cast"],
+            ["BEHOLD",                              "print"],
+            ["WITHOUT CEREMONY",                    "print (no newline)"],
+            ["PRAY TELL",                           "input"],
+            ["ASIDE:",                              "line comment"],
+            ["(ASIDE, AT SOME LENGTH:",             "block comment (open)"],
+            ["END OF ASIDE.)",                      "block comment (close)"],
+            ["SHOULD IT TRANSPIRE THAT",            "if condition"],
+            ["QUITE SO.",                           "then branch"],
+            ["OR, IF NOT,",                         "else-if"],
+            ["OTHERWISE,",                          "else branch"],
+            ["SO MUCH FOR THAT.",                   "end if"],
+            ["IN WHICH CAPACITY?",                  "switch"],
+            ["WHEN ACTING AS",                      "case label"],
+            ["FAILING ALL OF THE ABOVE,",           "default case"],
+            ["NOTHING COULD BE MORE SATISFACTORY.", "end switch"],
+            ["BY A LEGAL FICTION",                  "loop"],
+            ["ASCENDING",                           "increment loop variable"],
+            ["DESCENDING",                          "decrement loop variable"],
+            ["UNTIL",                               "loop exit condition"],
+            ["WHILST",                              "loop while condition"],
+            ["THE TERM EXPIRES.",                   "end loop"],
+            ["ONCE MORE.",                          "continue"],
+            ["THAT WILL DO.",                       "break (loop or switch)"],
+            ["IT IS MY DUTY TO PERFORM",            "function definition"],
+            ["UNDER THE TERMS OF",                  "function parameters"],
+            ["UNDER NO OBLIGATION",                 "no-parameter function"],
+            ["AND SO I FIND",                       "return with value"],
+            ["MY DUTY IS DISCHARGED.",              "end function"],
+            ["MY DUTY IS PREMATURELY DISCHARGED.",  "return (no value)"],
+            ["SUMMON",                              "function call"],
+            ["WITH",                                "function call arguments"],
+            ["IF YOU PLEASE.",                      "end expression list"],
+            ["A HIDEOUS CURSE ON",                  "throw"],
+            ["WITH THE GREATEST RESPECT,",          "try block"],
+            ["WITH GRATITUDE",                      "success handler"],
+            ["MODIFIED RAPTURE",                    "exception handler"],
+            ["THAT CONCLUDES THE MATTER.",          "end try/catch"],
+            ["PRAY ADMIT",                          "import"],
+            ["SUM OF",                              "addition"],
+            ["DIFFERENCE OF",                       "subtraction"],
+            ["PRODUCT OF",                          "multiplication"],
+            ["QUOTIENT OF",                         "division"],
+            ["REMAINDER OF",                        "modulo"],
+            ["LARGER OF",                           "maximum"],
+            ["SMALLER OF",                          "minimum"],
+            ["WOVEN OF",                            "string concatenation"],
+            ["BOTH",                                "logical AND"],
+            ["EITHER",                              "logical OR"],
+            ["HARDLY EVER",                         "logical NOT"],
+            ["ALIKE",                               "equality (==)"],
+            ["UNLIKE",                              "inequality (!=)"],
+            ["PRE-ADAMITE",                         "greater than (>)"],
+            ["LOWER DEGREE",                        "less than (<)"],
+            ["ALL OF",                              "all-true (variadic AND)"],
+            ["ANY OF",                              "any-true (variadic OR)"],
+            ["VERITY",                              "boolean true"],
+            ["NAY",                                 "boolean false"],
+            ["NAUGHT",                              "null"],
+            ["JUST SO",                             "implicit accumulator"],
+            ["PEER",                                "integer type"],
+            ["FATHOM",                              "float type"],
+            ["YARN",                                "string type"],
+            ["DECREE",                              "boolean type"],
+        ];
+
+        monaco.languages.registerCompletionItemProvider('topsy-turvy', {
+            triggerCharacters: [' '],
+            provideCompletionItems(model, position) {
+                const lineText = model.getLineContent(position.lineNumber);
+                const leadingSpaces = lineText.match(/^\s*/)[0].length;
+                const linePrefix = lineText.substring(leadingSpaces, position.column - 1);
+                const upperCaseLinePrefix = linePrefix.toUpperCase();
+
+                if (!upperCaseLinePrefix) {
+                    return {
+                        suggestions: []
+                    };
+                }
+
+                const suggestions = keywords
+                    .filter(([keyword]) =>
+                        keyword.toUpperCase().startsWith(upperCaseLinePrefix) &&
+                        keyword.toUpperCase() !== upperCaseLinePrefix)
+                    .map(([keyword, description]) => ({
+                        label: keyword,
+                        kind: monaco.languages.CompletionItemKind.Keyword,
+                        detail: description,
+                        insertText: keyword,
+                        filterText: keyword,
+                        range: {
+                            startLineNumber: position.lineNumber,
+                            endLineNumber: position.lineNumber,
+                            startColumn: leadingSpaces + 1,
+                            endColumn: position.column,
+                        },
+                    }));
+
+                return {
+                    suggestions
+                };
+            },
+        });
+
+        monaco.languages.setLanguageConfiguration('topsy-turvy', {
+            comments: {
+                lineComment: 'ASIDE:',
+            },
+            autoClosingPairs: [
+                {
+                    open: '"',
+                    close: '"',
+                    notIn: ['string']
+                },
+            ],
+            surroundingPairs: [
+                {
+                    open: '"',
+                    close: '"'
+                },
+            ],
+            indentationRules: {
+                increaseIndentPattern: new RegExp(
+                    '^\\s*(' +
+                    'HARK!|' +
+                    'PRINCIPALS|' +
+                    'SHOULD IT TRANSPIRE THAT|' +
+                    'QUITE SO\\.|' +
+                    'OR, IF NOT,|' +
+                    'OTHERWISE,|' +
+                    'WHEN ACTING AS |' +
+                    'FAILING ALL OF THE ABOVE,|' +
+                    'BY A LEGAL FICTION |' +
+                    'IT IS MY DUTY TO PERFORM |' +
+                    'WITH THE GREATEST RESPECT,|' +
+                    'WITH GRATITUDE|' +
+                    'MODIFIED RAPTURE|' +
+                    'IN WHICH CAPACITY\\?' +
+                    ')',
+                    'i'
+                ),
+                decreaseIndentPattern: new RegExp(
+                    '^\\s*(' +
+                    'THE CURTAIN RISES\\.|' +
+                    'SO MUCH FOR THAT\\.|' +
+                    'MY DUTY IS DISCHARGED\\.|' +
+                    'MY DUTY IS PREMATURELY DISCHARGED\\.|' +
+                    'THE TERM EXPIRES\\.|' +
+                    'NOTHING COULD BE MORE SATISFACTORY\\.|' +
+                    'THAT CONCLUDES THE MATTER\\.|' +
+                    'OR, IF NOT,|' +
+                    'OTHERWISE,|' +
+                    'FINALE\\.|' +
+                    'WITH GRATITUDE|' +
+                    'MODIFIED RAPTURE' +
+                    ')',
+                    'i'
+                ),
+            },
+        });
+
         monaco.languages.setMonarchTokensProvider('topsy-turvy', {
             ignoreCase: true,
             defaultToken: '',
@@ -145,161 +317,5 @@ window.topsyTurvy = {
                 ],
             },
         });
-    },
-
-    /**
-     * Opens a native file picker filtered to `.topsy` files.
-     * @description Resolves `null` if the user cancels the picker or closes the file dialog without selecting a file.
-     * @returns {Promise<string | null>} The file contents, or `null` if cancelled.
-     */
-    openFile() {
-        const input = Object.assign(document.createElement('input'), {
-            type: 'file',
-            accept: '.topsy',
-        });
-
-        return new Promise((resolve) => {
-            let isResolved = false;
-
-            input.addEventListener('change', async () => {
-                isResolved = true;
-                const file = input.files?.[0];
-                resolve(file
-                    ? await file.text()
-                    : null
-                );
-            });
-
-            window.addEventListener('focus', function onFocus() {
-                window.removeEventListener('focus', onFocus);
-                setTimeout(() => {
-                    if (!isResolved) {
-                        resolve(null);
-                    }
-                }, 300);
-            });
-
-            input.click();
-        });
-    },
-
-    /**
-     * Triggers a browser download of a plain-text file.
-     * @param {string} filename Suggested file name for the download.
-     * @param {string} content Text content to write into the file.
-     */
-    downloadText(filename, content) {
-        const url = URL.createObjectURL(
-            new Blob([content], {
-                type: 'text/plain;charset=utf-8'
-            })
-        );
-
-        const aElement = Object.assign(document.createElement('a'), {
-            href: url,
-            download: filename
-        });
-
-        document.body.appendChild(aElement);
-        aElement.click();
-        document.body.removeChild(aElement);
-        URL.revokeObjectURL(url);
-    },
-
-    /**
-     * Registers the Topsy Turvy language (if not already done) and sets it
-     * as the active language on the given Monaco editor instance.
-     * @description Called once from the Blazor `OnAfterRenderAsync` on first render.
-     * @param {string} editorId The `BlazorMonaco` editor element ID.
-     */
-    applyLanguageToEditor(editorId) {
-        this.registerLanguage();
-        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
-        if (!editorHolder) {
-            return;
-        }
-
-        const model = editorHolder.editor.getModel();
-        if (!model) {
-            return;
-        }
-
-        monaco.editor.setModelLanguage(model, 'topsy-turvy');
-    },
-
-    /**
-     * Pushes parse-error diagnostics to Monaco as red squiggle markers.
-     * @param {string} editorId The BlazorMonaco editor element ID.
-     * @param {object[]} markers Monaco marker descriptors from the Blazor parser.
-     */
-    setModelMarkers(editorId, markers) {
-        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
-        if (!editorHolder) {
-            return;
-        }
-
-        const model = editorHolder.editor.getModel();
-        if (!model) {
-            return;
-        }
-
-        monaco.editor.setModelMarkers(model, 'topsy-turvy', markers);
-    },
-
-    /**
-     * Attaches a `ResizeObserver` to the `terminal-wrapper` CSS class so that
-     * {@link fitTerminal} is called automatically whenever the pane resizes.
-     * @description This is idempotent so repeated calls are ignored.
-     */
-    setupTerminalFit() {
-        const wrapper = document.querySelector('.terminal-wrapper');
-        if (!wrapper || this._terminalResizeObserver) {
-            return;
-        }
-
-        this._terminalResizeObserver = new ResizeObserver(() => this.fitTerminal());
-        this._terminalResizeObserver.observe(wrapper);
-    },
-
-    /**
-     * Resizes the xterm terminal row count to fill the height of the
-     * `terminal-wrapper` CSS class.
-     * @description Cell height is read from the xterm internal render
-     *              service with DOM measurement and font-size estimation as
-     *              fallbacks.
-     *              Prefer the precise cell height from the xterm internal
-     *              render service.  Fall back to DOM measurement, then to a
-     *              font-size estimate.
-     */
-    fitTerminal() {
-        const entries = [...XtermBlazor._terminals.entries()];
-        if (!entries.length) {
-            return;
-        }
-
-        const term = entries[0][1].terminal;
-
-        const wrapper = document.querySelector('.terminal-wrapper');
-        if (!wrapper?.clientHeight) {
-            return;
-        }
-        
-        let rowHeight;
-        try {
-            rowHeight = term._core._renderService.dimensions.css.cell.height;
-        } catch {
-            const rowElelement = wrapper.querySelector('.xterm-rows > div');
-            rowHeight = rowElelement?.getBoundingClientRect().height
-                ?? Math.ceil((term.options?.fontSize ?? 15) * (term.options?.lineHeight ?? 1.2));
-        }
-
-        if (!rowHeight) {
-            return;
-        }
-
-        const newRows = Math.max(1, Math.floor(wrapper.clientHeight / rowHeight));
-        if (newRows !== term.rows) {
-            term.resize(term.cols, newRows);
-        }
     },
 };

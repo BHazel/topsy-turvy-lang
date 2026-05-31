@@ -20,6 +20,7 @@ public sealed class Interpreter
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
     private string? sourceDirectory;
+    private Func<string, string?>? fileResolver;
 
     /// <summary>
     /// Initialises a new instance of the <see cref="Interpreter"/> class with the specified I/O handler.
@@ -51,8 +52,12 @@ public sealed class Interpreter
     /// <param name="cancellationToken">A token that can be used to cancel execution.</param>
     /// <param name="timeout">A maximum wall-clock duration for execution, after which execution will be cancelled.</param>
     /// <param name="sourceFilePath">The absolute or relative path of the source file being executed, used to resolve relative import paths.</param>
+    /// <param name="fileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to use the real file system.</param>
+    /// <remarks>
+    ///  When the <paramref name="fileResolver"/> parameter is supplied, the real file system is not accessed for imports.
+    /// This is intended for virtual file systems such as a WebAssembly environments.
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
-    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null, string? sourceFilePath = null)
+    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null, string? sourceFilePath = null, Func<string, string?>? fileResolver = null)
     {
         this.cancellationToken = cancellationToken;
         this.executionTimeout = timeout.HasValue
@@ -61,6 +66,7 @@ public sealed class Interpreter
         this.sourceDirectory = sourceFilePath is not null
             ? Path.GetDirectoryName(Path.GetFullPath(sourceFilePath))
             : null;
+        this.fileResolver = fileResolver;
         
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
@@ -502,18 +508,26 @@ public sealed class Interpreter
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the import cannot be read.</exception>
     private void ExecuteImport(ImportNode importNode)
     {
-        string resolvedPath = this.sourceDirectory is not null && !Path.IsPathRooted(importNode.FilePath)
-            ? Path.GetFullPath(Path.Combine(this.sourceDirectory, importNode.FilePath))
-            : importNode.FilePath;
-
         string sourceToImport;
-        try
+        if (this.fileResolver is not null)
         {
-            sourceToImport = File.ReadAllText(resolvedPath);
+            sourceToImport = this.fileResolver(importNode.FilePath)
+                ?? throw new TopsyTurvyRuntimeException($"Cannot resolve import '{importNode.FilePath}'.", importNode.Span);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        else
         {
-            throw new TopsyTurvyRuntimeException($"Cannot read import '{resolvedPath}': {ex.Message}", importNode.Span);
+            string resolvedPath = this.sourceDirectory is not null && !Path.IsPathRooted(importNode.FilePath)
+                ? Path.GetFullPath(Path.Combine(this.sourceDirectory, importNode.FilePath))
+                : importNode.FilePath;
+
+            try
+            {
+                sourceToImport = File.ReadAllText(resolvedPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new TopsyTurvyRuntimeException($"Cannot read import '{resolvedPath}': {ex.Message}", importNode.Span);
+            }
         }
 
         TopsyTurvyParser parser = new();
@@ -525,7 +539,7 @@ public sealed class Interpreter
         catch (TopsyTurvySyntaxException ex)
         {
             string errors = string.Join("; ", ex.Errors);
-            throw new TopsyTurvyRuntimeException($"Syntax errors in import '{resolvedPath}': {errors}", importNode.Span);
+            throw new TopsyTurvyRuntimeException($"Syntax errors in import '{importNode.FilePath}': {errors}", importNode.Span);
         }
 
         foreach (Statement statement in imported.Statements)
