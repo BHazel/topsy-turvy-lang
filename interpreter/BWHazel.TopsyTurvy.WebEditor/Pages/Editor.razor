@@ -1,5 +1,7 @@
 @page "/"
 
+@implements IDisposable
+
 @inject IJSRuntime JSRuntime
 @inject IDialogService DialogService
 
@@ -109,6 +111,9 @@
     private string lastRunOutput = string.Empty;
     private bool previousIsDarkMode = true;
     private bool areGsLabelsEnabled = true;
+    private DotNetObjectReference<Editor>? dotNetRef;
+    private readonly Dictionary<string, SymbolTable> symbolTables = new();
+    private readonly Dictionary<string, string> parsedSources = new();
     private CancellationTokenSource? cancellationTokenSource;
 
     private List<VirtualFile> files = [new(DefaultFileName)];
@@ -130,12 +135,26 @@
     /// </summary>
     private int ActiveTabIndex => Math.Max(0, this.files.FindIndex(file => file.Name == this.activeFileName));
 
+    /// <summary>
+    /// Gets the symbol table for the currently active file, or <c>null</c> if not yet parsed.
+    /// </summary>
+    private SymbolTable? ActiveSymbolTable => this.symbolTables.GetValueOrDefault(this.activeFileName);
+
+    /// <summary>
+    /// Gets the last-parsed source text for the currently active file.
+    /// </summary>
+    private string ActiveParsedSource => this.parsedSources.GetValueOrDefault(this.activeFileName, string.Empty);
+
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            this.dotNetRef = DotNetObjectReference.Create(this);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.applyLanguageToEditor", "topsy-turvy-editor");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
             this.editorReady = true;
             this.previousIsDarkMode = IsDarkMode;
@@ -228,6 +247,12 @@
         TopsyTurvyParser parser = new();
         ParseResult result = parser.TryParse(source);
 
+        if (result.Program is not null)
+        {
+            this.symbolTables[this.activeFileName] = SymbolTable.Build(result.Program, source);
+            this.parsedSources[this.activeFileName] = source;
+        }
+
         IEnumerable<object> markers = result.Diagnostics
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .Select(diagnostic => (object)new
@@ -241,6 +266,162 @@
             });
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
+    }
+
+    /// <summary>
+    /// Returns Markdown hover text for the symbol at the given 0-indexed line and column, or <c>null</c> if none.
+    /// </summary>
+    /// <param name="line">The 0-indexed line number.</param>
+    /// <param name="column">The 0-indexed column number.</param>
+    /// <returns>A Markdown string, or <c>null</c> if there is no recognised symbol at the position.</returns>
+    [JSInvokable]
+    public string? GetHoverMarkdown(int line, int column)
+    {
+        string? word = SymbolTable.ExtractWordAt(this.ActiveParsedSource, line, column);
+        if (word is null)
+        {
+            return null;
+        }
+
+        if (this.ActiveSymbolTable?.TryGetSymbol(word, out SymbolInfo? info) == true && info is not null)
+        {
+            return HoverMarkdownBuilder.Build(info);
+        }
+
+        foreach ((string fileName, SymbolTable otherTable) in this.symbolTables)
+        {
+            if (fileName == this.activeFileName)
+            {
+                continue;
+            }
+
+            if (otherTable.TryGetSymbol(word, out SymbolInfo? otherInfo) && otherInfo is not null)
+            {
+                return HoverMarkdownBuilder.Build(otherInfo);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Returns completion items for all named symbols in the current symbol table.
+    /// </summary>
+    /// <remarks>
+    /// <c>JUST SO</c> is excluded as its name contains a space and cannot be inserted as a normal identifier completion.
+    /// </remarks>
+    /// <returns>
+    /// A list of objects with name and symbol kind.
+    /// </returns>
+    [JSInvokable]
+    public IReadOnlyList<object> GetSymbolCompletions()
+    {
+        if (this.symbolTables.Count == 0)
+        {
+            return [];
+        }
+
+        return this.symbolTables.Values
+            .SelectMany(table => table.AllSymbols())
+            .GroupBy(info => info.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Where(info => !info.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase))
+            .Select(info => (object)new
+            {
+                name = info.Name,
+                kind = info.Kind.ToString().ToLowerInvariant(),
+                detail = info.Kind switch
+                {
+                    SymbolKind.Variable  => info.TypeDisplayName ?? string.Empty,
+                    SymbolKind.Function  => $"({string.Join(", ", info.Parameters ?? Array.Empty<string>())})",
+                    _                    => string.Empty
+                }
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns the 1-indexed line and column of the definition for the symbol under the given 0-indexed cursor position,
+    /// or <c>null</c> if no definition position is available.
+    /// </summary>
+    /// <param name="line">The 0-indexed line number.</param>
+    /// <param name="column">The 0-indexed column number.</param>
+    /// <remarks>
+    /// Row and column are 1-indexed to match the Monaco coordinate system.
+    /// </remarsks>
+    /// <returns>
+    /// An object with line and colum or <c>null</c> if no recognised symbol
+    /// with a known definition is at the position.
+    /// </returns>
+    [JSInvokable]
+    public object? GetDefinitionLocation(int line, int column)
+    {
+        string? word = SymbolTable.ExtractWordAt(this.ActiveParsedSource, line, column);
+        if (word is null)
+        {
+            return null;
+        }
+
+        if (this.ActiveSymbolTable?.TryGetSymbol(word, out SymbolInfo? info) == true
+            && info is not null && info.DefinitionLine != 0)
+        {
+            return new
+            {
+                line = info.DefinitionLine,
+                column = info.DefinitionColumn,
+                fileName = (string?)null
+            };
+        }
+
+        foreach ((string otherFileName, SymbolTable otherTable) in this.symbolTables)
+        {
+            if (otherFileName == this.activeFileName)
+            {
+                continue;
+            }
+
+            if (otherTable.TryGetSymbol(word, out SymbolInfo? otherInfo)
+                && otherInfo is not null && otherInfo.DefinitionLine != 0)
+            {
+                return new
+                {
+                    line = otherInfo.DefinitionLine,
+                    column = otherInfo.DefinitionColumn,
+                    fileName = otherFileName
+                };
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Switches the active file to the given file name and loads its content into the Monaco editor.
+    /// </summary>
+    /// <remarks>
+    /// Called by the JS definition provider when a symbol definition lives in a different open file.
+    /// </remarks>
+    /// <param name="fileName">The name of the file to switch to.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    [JSInvokable]
+    public async Task SwitchToFileForDefinitionAsync(string fileName)
+    {
+        if (this.activeFileName == fileName || !this.files.Any(file => file.Name == fileName))
+        {
+            return;
+        }
+
+        await this.SyncActiveFileContentAsync();
+        this.activeFileName = fileName;
+        VirtualFile targetFile = this.files.First(file => file.Name == fileName);
+        await this.monacoEditor!.SetValue(targetFile.Content);
+        this.StateHasChanged();
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.dotNetRef?.Dispose();
     }
 
     /// <summary>
@@ -338,6 +519,8 @@
         if (isNewConfirmed == true)
         {
             this.files.Clear();
+            this.symbolTables.Clear();
+            this.parsedSources.Clear();
             VirtualFile newFile = new(DefaultFileName);
             this.files.Add(newFile);
             this.activeFileName = newFile.Name;
@@ -404,6 +587,7 @@
         }
 
         this.files.Add(new(name, content));
+        this.BuildSymbolTableForFile(name, content);
         await this.SwitchFileAsync(name);
     }
 
@@ -526,6 +710,8 @@
         bool wasActive = this.activeFileName == name;
         int index = this.files.FindIndex(file => file.Name == name);
         this.files.RemoveAt(index);
+        this.symbolTables.Remove(name);
+        this.parsedSources.Remove(name);
 
         if (this.files.Count == 0)
         {
@@ -542,6 +728,23 @@
         }
 
         this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Parses a source and, if successful, stores the resulting
+    /// <see cref="SymbolTable"/> and source text in the per-file dictionaries.
+    /// </summary>
+    /// <param name="fileName">The file name to key the results under.</param>
+    /// <param name="source">The source text to parse.</param>
+    private void BuildSymbolTableForFile(string fileName, string source)
+    {
+        TopsyTurvyParser parser = new();
+        ParseResult result = parser.TryParse(source);
+        if (result.Program is not null)
+        {
+            this.symbolTables[fileName] = SymbolTable.Build(result.Program, source);
+            this.parsedSources[fileName] = source;
+        }
     }
 
     /// <summary>

@@ -83,6 +83,123 @@ Object.assign(window.topsyTurvy, {
     },
 
     /**
+     * Registers a Monaco hover provider for Topsy Turvy.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.  It calls
+     *              back into Blazor to retrieve symbol Markdown for the word under the cursor.
+     *              Monaco positions are 1-indexed; the C# bridge expects 0-indexed.
+     * @param {DotNetObjectReference} dotNetRef Blazor interop reference to the Editor component.
+     */
+    registerHoverProvider(dotNetRef) {
+        monaco.languages.registerHoverProvider('topsy-turvy', {
+            async provideHover(model, position) {
+                const markdown = await dotNetRef.invokeMethodAsync(
+                    'GetHoverMarkdown',
+                    position.lineNumber - 1,
+                    position.column - 1
+                );
+
+                if (!markdown) {
+                    return null;
+                }
+
+                return {
+                    contents: [
+                        {
+                            value: markdown,
+                            isTrusted: true
+                        }
+                    ]
+                };
+            }
+        });
+    },
+
+    /**
+     * Registers a Monaco completion provider for Topsy Turvy.
+     * @description Runs alongside the keyword provider already registered and
+     *              Monaco merges both result sets.  Supplies
+     *              symbol names from the current symbol table.
+     * @param {DotNetObjectReference} dotNetRef Blazor interop reference to the Editor component.
+     */
+    registerSymbolCompletionProvider(dotNetRef) {
+        monaco.languages.registerCompletionItemProvider('topsy-turvy', {
+            async provideCompletionItems(model, position) {
+                const symbols = await dotNetRef.invokeMethodAsync('GetSymbolCompletions');
+                if (!symbols?.length) {
+                    return {
+                        suggestions: []
+                    };
+                }
+
+                const word = model.getWordUntilPosition(position);
+                const range = {
+                    startLineNumber: position.lineNumber,
+                    endLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endColumn: position.column,
+                };
+
+                const kindMap = {
+                    variable:  monaco.languages.CompletionItemKind.Variable,
+                    function:  monaco.languages.CompletionItemKind.Function,
+                    parameter: monaco.languages.CompletionItemKind.Variable,
+                };
+
+                const suggestions = symbols.map(sym => ({
+                    label: sym.name,
+                    kind: kindMap[sym.kind] ?? monaco.languages.CompletionItemKind.Variable,
+                    detail: sym.detail,
+                    insertText: sym.name,
+                    filterText: sym.name,
+                    range,
+                }));
+
+                return {
+                    suggestions
+                };
+            }
+        });
+    },
+
+    /**
+     * Registers a Monaco definition provider for Topsy Turvy.
+     * @description Uses the 1-indexed line/column returned by the C# bridge directly
+     *              as Monaco range coordinates (both are 1-indexed).  Jumps to the
+     *              declaration of the symbol under the cursor within the current file.
+     * @param {DotNetObjectReference} dotNetRef Blazor interop reference to the Editor component.
+     */
+    registerDefinitionProvider(dotNetRef) {
+        monaco.languages.registerDefinitionProvider('topsy-turvy', {
+            async provideDefinition(model, position) {
+                const location = await dotNetRef.invokeMethodAsync(
+                    'GetDefinitionLocation',
+                    position.lineNumber - 1,
+                    position.column - 1
+                );
+
+                if (!location) {
+                    return null;
+                }
+
+                if (location.fileName) {
+                    await dotNetRef.invokeMethodAsync('SwitchToFileForDefinitionAsync', location.fileName);
+                    await new Promise(r => setTimeout(r, 50));
+                }
+
+                return {
+                    uri: model.uri,
+                    range: {
+                        startLineNumber: location.line,
+                        startColumn: location.column,
+                        endLineNumber: location.line,
+                        endColumn: location.column,
+                    }
+                };
+            }
+        });
+    },
+
+    /**
      * Attaches a `ResizeObserver` to the `terminal-wrapper` CSS class so that
      * {@link fitTerminal} is called automatically whenever the pane resizes.
      * @description This is idempotent so repeated calls are ignored.
