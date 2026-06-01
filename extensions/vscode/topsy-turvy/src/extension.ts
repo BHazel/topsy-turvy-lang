@@ -15,22 +15,23 @@ function resolveTopsyTurvyCliPath(context: vscode.ExtensionContext): string {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
     const configuredPath = config.get<string>('cliPath');
     const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
-    const binaryName = process.platform === 'win32'
-        ? 'operetta.exe'
-        : 'operetta';
+    const binaryName = process.platform === 'win32' ? 'operetta.exe' : 'operetta';
 
     const defaultPath = context.asAbsolutePath(
         path.join(
-            '..', '..', '..', 'interpreter',
+            '..',
+            '..',
+            '..',
+            'interpreter',
             'BWHazel.TopsyTurvy.Cli',
-            'bin', buildConfiguration, 'net10.0',
-            binaryName
-        )
+            'bin',
+            buildConfiguration,
+            'net10.0',
+            binaryName,
+        ),
     );
 
-    return configuredPath && configuredPath.length > 0
-        ? configuredPath
-        : defaultPath;
+    return configuredPath && configuredPath.length > 0 ? configuredPath : defaultPath;
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -40,21 +41,27 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const defaultServerPath = context.asAbsolutePath(
         path.join(
-            '..', '..', '..', 'interpreter',
+            '..',
+            '..',
+            '..',
+            'interpreter',
             'BWHazel.TopsyTurvy.LanguageServer',
-            'bin', buildConfiguration, 'net10.0',
-            'BWHazel.TopsyTurvy.LanguageServer'
-        )
+            'bin',
+            buildConfiguration,
+            'net10.0',
+            'BWHazel.TopsyTurvy.LanguageServer',
+        ),
     );
 
-    const serverPath = configuredServerPath && configuredServerPath.length > 0
-        ? configuredServerPath
-        : defaultServerPath;
+    const serverPath =
+        configuredServerPath && configuredServerPath.length > 0
+            ? configuredServerPath
+            : defaultServerPath;
 
     if (!fs.existsSync(serverPath)) {
         vscode.window.showWarningMessage(
             `Topsy Turvy: language server not found at "${serverPath}". ` +
-            `Build the project or set topsy-turvy.serverPath in settings.`
+                `Build the project or set topsy-turvy.serverPath in settings.`,
         );
         return;
     }
@@ -65,10 +72,12 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{
-            scheme: 'file',
-            language: 'topsy-turvy'
-        }],
+        documentSelector: [
+            {
+                scheme: 'file',
+                language: 'topsy-turvy',
+            },
+        ],
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.topsy'),
         },
@@ -78,7 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
         'topsy-turvy',
         'Topsy Turvy Language Server',
         serverOptions,
-        clientOptions
+        clientOptions,
     );
 
     client.start();
@@ -90,13 +99,9 @@ export function activate(context: vscode.ExtensionContext): void {
             async (uriString: string, line: number, character: number) => {
                 const uri = vscode.Uri.parse(uriString);
                 const position = new vscode.Position(line, character);
-                await vscode.commands.executeCommand(
-                    'editor.action.findReferences',
-                    uri,
-                    position
-                );
-            }
-        )
+                await vscode.commands.executeCommand('editor.action.findReferences', uri, position);
+            },
+        ),
     );
 
     context.subscriptions.push(
@@ -105,7 +110,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 runTaskExecution = undefined;
                 void vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', false);
             }
-        })
+        }),
     );
 
     context.subscriptions.push(
@@ -123,7 +128,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (!fs.existsSync(cliPath)) {
                 vscode.window.showWarningMessage(
                     `Topsy Turvy: CLI not found at "${cliPath}". ` +
-                    `Please build the project or set topsy-turvy.cliPath in settings.`
+                        `Please build the project or set topsy-turvy.cliPath in settings.`,
                 );
 
                 return;
@@ -134,7 +139,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 vscode.TaskScope.Global,
                 'Run Topsy Turvy File',
                 'Topsy Turvy',
-                new vscode.ProcessExecution(cliPath, ['perform', filePath])
+                new vscode.ProcessExecution(cliPath, ['perform', filePath]),
             );
             task.presentationOptions = {
                 reveal: vscode.TaskRevealKind.Always,
@@ -146,7 +151,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
             runTaskExecution = await vscode.tasks.executeTask(task);
             await vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', true);
-        })
+        }),
     );
 
     context.subscriptions.push(
@@ -156,7 +161,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 runTaskExecution = undefined;
                 void vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', false);
             }
-        })
+        }),
     );
 }
 

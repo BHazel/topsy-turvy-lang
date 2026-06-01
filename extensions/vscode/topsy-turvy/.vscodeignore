@@ -5,6 +5,8 @@ node_modules/**
 src/**
 .gitignore
 .yarnrc
+.prettierrc
+.prettierignore
 esbuild.js
 vsc-extension-quickstart.md
 **/tsconfig.json
