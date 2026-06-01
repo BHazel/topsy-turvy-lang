@@ -89,9 +89,9 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
     /// <returns>The LSP symbol kind.</returns>
     private static LspSymbolKind MapSymbolKind(TopsyTurvySymbolKind kind) => kind switch
     {
-        TopsyTurvySymbolKind.Function  => LspSymbolKind.Function,
+        TopsyTurvySymbolKind.Function => LspSymbolKind.Function,
         TopsyTurvySymbolKind.Parameter => LspSymbolKind.TypeParameter,
-        _                      => LspSymbolKind.Variable
+        _ => LspSymbolKind.Variable
     };
 
     /// <summary>

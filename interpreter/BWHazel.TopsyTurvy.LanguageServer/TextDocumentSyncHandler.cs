@@ -107,17 +107,17 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
                         new Position(diagnostic.Span.End.Line - 1, diagnostic.Span.End.Column - 1)),
                     Severity = diagnostic.Severity switch
                     {
-                        AstDiagnosticSeverity.Error   => DiagnosticSeverity.Error,
+                        AstDiagnosticSeverity.Error => DiagnosticSeverity.Error,
                         AstDiagnosticSeverity.Warning => DiagnosticSeverity.Warning,
-                        _                             => DiagnosticSeverity.Information
+                        _ => DiagnosticSeverity.Information
                     },
                     Message = diagnostic.Message,
-                    Source  = LanguageId
+                    Source = LanguageId
                 }).ToList();
 
             this.languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
             {
-                Uri         = uri,
+                Uri = uri,
                 Diagnostics = new Container<Diagnostic>(lspDiagnostics)
             });
         }
@@ -125,7 +125,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
         {
             this.languageServer.Window.ShowMessage(new ShowMessageParams
             {
-                Type    = MessageType.Error,
+                Type = MessageType.Error,
                 Message = $"Topsy Turvy LSP error: {ex.Message}"
             });
         }

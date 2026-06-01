@@ -38,8 +38,8 @@ public class CompletionHandler : CompletionHandlerBase
         CompletionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector  = TextDocumentSelector.ForLanguage(LanguageId),
-            ResolveProvider   = false,
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            ResolveProvider = false,
             TriggerCharacters = new Container<string>(" ")
         };
 
@@ -62,13 +62,13 @@ public class CompletionHandler : CompletionHandlerBase
                 source,
                 request.Position.Line,
                 request.Position.Character);
-            
+
             bool isKeywordContext = phrase.Length == 0
                 || KeywordData.Keywords.Any(k => k.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase));
             int insertOffset = isKeywordContext
                 ? phrase.Length - lastWord.Length
                 : 0;
-            
+
             string keywordFilterText = isKeywordContext
                 ? lastWord
                 : string.Empty;
@@ -140,16 +140,16 @@ public class CompletionHandler : CompletionHandlerBase
     private static CompletionItem BuildSymbolItem(SymbolInfo symbol) =>
         new()
         {
-            Label  = symbol.Name,
-            Kind   = symbol.Kind == TopsyTurvySymbolKind.Function
+            Label = symbol.Name,
+            Kind = symbol.Kind == TopsyTurvySymbolKind.Function
                 ? CompletionItemKind.Function
                 : CompletionItemKind.Variable,
             Detail = symbol.Kind switch
             {
-                TopsyTurvySymbolKind.Variable  => symbol.TypeDisplayName,
-                TopsyTurvySymbolKind.Function  => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
+                TopsyTurvySymbolKind.Variable => symbol.TypeDisplayName,
+                TopsyTurvySymbolKind.Function => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
                 TopsyTurvySymbolKind.Parameter => "parameter",
-                _                    => null
+                _ => null
             }
         };
 
@@ -164,9 +164,9 @@ public class CompletionHandler : CompletionHandlerBase
         (string Keyword, string Detail) entry, string filterText, int insertOffset) =>
         new()
         {
-            Label      = entry.Keyword,
-            Kind       = CompletionItemKind.Keyword,
-            Detail     = entry.Detail,
+            Label = entry.Keyword,
+            Kind = CompletionItemKind.Keyword,
+            Detail = entry.Detail,
             FilterText = filterText.Length > 0 ? filterText : entry.Keyword,
             InsertText = entry.Keyword[insertOffset..]
         };

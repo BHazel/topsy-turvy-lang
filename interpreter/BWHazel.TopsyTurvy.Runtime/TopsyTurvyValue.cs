@@ -19,7 +19,7 @@ public sealed class TopsyTurvyValue
     /// <param name="type">The Topsy Turvy type of the value.</param>
     private TopsyTurvyValue(object? raw, LiteralType type)
     {
-        this.RawValue  = raw;
+        this.RawValue = raw;
         this.TopsyTurvyType = type;
     }
 
@@ -74,11 +74,11 @@ public sealed class TopsyTurvyValue
     public bool IsTruthy() => TopsyTurvyType switch
     {
         LiteralType.Integer => (int)RawValue! != 0,
-        LiteralType.Float   => (double)RawValue! != 0.0,
-        LiteralType.String  => !string.IsNullOrEmpty((string)RawValue!),
+        LiteralType.Float => (double)RawValue! != 0.0,
+        LiteralType.String => !string.IsNullOrEmpty((string)RawValue!),
         LiteralType.Boolean => (bool)RawValue!,
-        LiteralType.Null    => false,
-        _                   => true
+        LiteralType.Null => false,
+        _ => true
     };
 
     /// <summary>
@@ -98,10 +98,10 @@ public sealed class TopsyTurvyValue
         {
             LiteralType.Integer => TopsyTurvyType switch
             {
-                LiteralType.Float   => Integer((int)(double)RawValue!),
+                LiteralType.Float => Integer((int)(double)RawValue!),
                 LiteralType.Boolean => Integer((bool)RawValue! ? 1 : 0),
-                LiteralType.Null    => Integer(0),
-                LiteralType.String  =>
+                LiteralType.Null => Integer(0),
+                LiteralType.String =>
                     int.TryParse((string)RawValue!, NumberStyles.Integer, CultureInfo.InvariantCulture, out int i)
                         ? Integer(i)
                         : throw new TopsyTurvyRuntimeException($"Cannot cast '{RawValue}' to PEER."),
@@ -111,17 +111,17 @@ public sealed class TopsyTurvyValue
             {
                 LiteralType.Integer => Float((double)(int)RawValue!),
                 LiteralType.Boolean => Float((bool)RawValue! ? 1.0 : 0.0),
-                LiteralType.Null    => Float(0.0),
-                LiteralType.String  =>
+                LiteralType.Null => Float(0.0),
+                LiteralType.String =>
                     double.TryParse((string)RawValue!, NumberStyles.Float, CultureInfo.InvariantCulture, out double f)
                         ? Float(f)
                         : throw new TopsyTurvyRuntimeException($"Cannot cast '{RawValue}' to FATHOM."),
                 _ => this
             },
-            LiteralType.String  => String(ToString()),
+            LiteralType.String => String(ToString()),
             LiteralType.Boolean => Boolean(IsTruthy()),
-            LiteralType.Null    => Null(),
-            _                   => this
+            LiteralType.Null => Null(),
+            _ => this
         };
     }
 
@@ -136,7 +136,7 @@ public sealed class TopsyTurvyValue
     public override string ToString() => TopsyTurvyType switch
     {
         LiteralType.Boolean => (bool)RawValue! ? "VERITY" : "NAY",
-        LiteralType.Null    => "NAUGHT",
-        _                   => RawValue?.ToString() ?? "NAUGHT"
+        LiteralType.Null => "NAUGHT",
+        _ => RawValue?.ToString() ?? "NAUGHT"
     };
 }

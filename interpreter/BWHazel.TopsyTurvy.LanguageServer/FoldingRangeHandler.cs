@@ -98,8 +98,8 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
                             ranges.Add(new FoldingRange
                             {
                                 StartLine = startLine,
-                                EndLine   = endLine,
-                                Kind      = kind
+                                EndLine = endLine,
+                                Kind = kind
                             });
                         }
                     }

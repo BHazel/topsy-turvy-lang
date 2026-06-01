@@ -24,21 +24,21 @@ public static class Lexer
     /// Parses a double-quoted string literal.
     /// </summary>
     public static readonly TextParser<string> StringLiteral =
-        (from open    in Character.EqualTo('"')
-        from content in
-            (
-                from escape in Character.EqualTo('~')
-                from code   in
-                    Character.EqualTo('n').Select(_ => "\n")
-                        .Or(Character.EqualTo('t').Select(_ => "\t"))
-                        .Or(Character.EqualTo('"').Select(_ => "\""))
-                        .Or(Character.EqualTo('~').Select(_ => "~"))
-                select code
-            )
-            .Or(Character.Except('"').Select(c => c.ToString()))
-            .Many()
-        from close in Character.EqualTo('"')
-        select string.Concat(content)).Named("string literal");
+        (from open in Character.EqualTo('"')
+         from content in
+             (
+                 from escape in Character.EqualTo('~')
+                 from code in
+                     Character.EqualTo('n').Select(_ => "\n")
+                         .Or(Character.EqualTo('t').Select(_ => "\t"))
+                         .Or(Character.EqualTo('"').Select(_ => "\""))
+                         .Or(Character.EqualTo('~').Select(_ => "~"))
+                 select code
+             )
+             .Or(Character.Except('"').Select(c => c.ToString()))
+             .Many()
+         from close in Character.EqualTo('"')
+         select string.Concat(content)).Named("string literal");
 
     /// <summary>
     /// Parses a floating-point numeric literal.
@@ -47,8 +47,8 @@ public static class Lexer
     /// Requires a decimal point to disambiguate from integers.
     /// </remarks>
     public static readonly TextParser<double> FloatLiteral =
-        (from intPart  in Numerics.IntegerInt32
-         from _dot     in Character.EqualTo('.')
+        (from intPart in Numerics.IntegerInt32
+         from _dot in Character.EqualTo('.')
          from fracPart in Character.Digit.AtLeastOnce()
          select double.Parse(
              $"{intPart}.{new string(fracPart)}",
@@ -78,23 +78,23 @@ public static class Lexer
     /// </summary>
     public static readonly TextParser<string> Identifier =
         (from first in Character.Letter
-        from rest  in Character.Matching(
-                           c => char.IsLetterOrDigit(c) || c == '-' || c == '_',
-                           "letter, digit, hyphen or underscore")
-                          .Many()
-        select first + new string(rest))
+         from rest in Character.Matching(
+                            c => char.IsLetterOrDigit(c) || c == '-' || c == '_',
+                            "letter, digit, hyphen or underscore")
+                           .Many()
+         select first + new string(rest))
         .Where(
-            name => !name.Equals("HARK",       System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("FINALE",     System.StringComparison.OrdinalIgnoreCase)
+            name => !name.Equals("HARK", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("FINALE", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("PRINCIPALS", System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("BEHOLD",     System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NAUGHT",     System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("VERITY",     System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NAY",         System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("SO",          System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("QUITE",       System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("WHEN",        System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NOTHING",     System.StringComparison.OrdinalIgnoreCase),
+                  && !name.Equals("BEHOLD", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("NAUGHT", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("VERITY", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("NAY", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("SO", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("QUITE", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("WHEN", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("NOTHING", System.StringComparison.OrdinalIgnoreCase),
             "identifier (not a reserved keyword)")
         .Named("identifier");
 

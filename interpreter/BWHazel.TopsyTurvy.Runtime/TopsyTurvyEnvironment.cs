@@ -16,7 +16,7 @@ public sealed class TopsyTurvyEnvironment
     /// <param name="enclosing">The optional enclosing environment.</param>
     private TopsyTurvyEnvironment(TopsyTurvyEnvironment? enclosing)
     {
-        this.JustSo  = TopsyTurvyValue.Null();
+        this.JustSo = TopsyTurvyValue.Null();
         this.enclosingEnvironment = enclosing;
     }
 

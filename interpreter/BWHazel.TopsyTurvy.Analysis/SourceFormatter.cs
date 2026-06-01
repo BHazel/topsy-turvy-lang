@@ -291,7 +291,7 @@ public static class SourceFormatter
         }
 
         string normalisedLine = NormaliseKeywords(trimmed);
-        string indentedLine   = ApplyIndentation(normalisedLine, trimmed, depth);
+        string indentedLine = ApplyIndentation(normalisedLine, trimmed, depth);
 
         output.Append(indentedLine);
         if (appendNewline)

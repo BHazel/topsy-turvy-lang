@@ -70,7 +70,7 @@ public class SourceFormatterTests
     {
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
-        
+
         Assert.Equal(expected, SourceFormatter.FormatSource(input));
     }
 
@@ -208,7 +208,7 @@ public class SourceFormatterTests
     public void FormatSource_WithMultiLineBlockComment_AllLinesWrittenVerbatim()
     {
         string source = "HARK! \"Test\"\n(ASIDE, AT SOME LENGTH:\n  behold this\n  should it transpire\nEND OF ASIDE.)\nFINALE.";
-        
+
         Assert.Equal(source, SourceFormatter.FormatSource(source));
     }
 }

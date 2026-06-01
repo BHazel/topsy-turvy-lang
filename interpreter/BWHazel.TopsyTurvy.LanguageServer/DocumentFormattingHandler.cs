@@ -70,7 +70,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
             TextEdit edit = new()
             {
-                Range   = fullDocumentRange,
+                Range = fullDocumentRange,
                 NewText = formatted
             };
 

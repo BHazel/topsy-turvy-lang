@@ -38,7 +38,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
         SignatureHelpCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector  = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
             TriggerCharacters = new Container<string>(" ")
         };
 
@@ -120,7 +120,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
                 Signatures = new Container<SignatureInformation>(
                     new SignatureInformation
                     {
-                        Label      = label,
+                        Label = label,
                         Parameters = new Container<ParameterInformation>(paramInfos)
                     }),
                 ActiveSignature = 0,

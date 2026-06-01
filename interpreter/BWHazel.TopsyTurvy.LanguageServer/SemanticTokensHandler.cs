@@ -27,7 +27,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
     private static readonly SemanticTokensLegend Legend = new()
     {
-        TokenTypes  = new Container<SemanticTokenType>("variable", "parameter", "function"),
+        TokenTypes = new Container<SemanticTokenType>("variable", "parameter", "function"),
         TokenModifiers = new Container<SemanticTokenModifier>()
     };
 
@@ -46,9 +46,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
-            Legend           = Legend,
-            Full             = true,
-            Range            = false
+            Legend = Legend,
+            Full = true,
+            Range = false
         };
 
     /// <inheritdoc/>
@@ -88,9 +88,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
                 string tokenType = symbol.Kind switch
                 {
-                    TopsyTurvySymbolKind.Function  => "function",
+                    TopsyTurvySymbolKind.Function => "function",
                     TopsyTurvySymbolKind.Parameter => "parameter",
-                    _                    => "variable"
+                    _ => "variable"
                 };
 
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)

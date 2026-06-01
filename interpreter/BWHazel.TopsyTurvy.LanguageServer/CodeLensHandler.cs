@@ -43,7 +43,7 @@ public class CodeLensHandler : CodeLensHandlerBase
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
-            ResolveProvider  = false
+            ResolveProvider = false
         };
 
     /// <inheritdoc/>
@@ -107,13 +107,13 @@ public class CodeLensHandler : CodeLensHandlerBase
 
                 lenses.Add(new CodeLens
                 {
-                    Range   = new LspRange(
+                    Range = new LspRange(
                         new Position(lspLine, lspChar),
                         new Position(lspLine, lspChar + symbol.Name.Length)),
                     Command = new Command
                     {
-                        Title     = title,
-                        Name      = "topsy-turvy.showReferences",
+                        Title = title,
+                        Name = "topsy-turvy.showReferences",
                         Arguments = new JArray(
                             JValue.CreateString(request.TextDocument.Uri.ToString()),
                             new JValue(lspLine),

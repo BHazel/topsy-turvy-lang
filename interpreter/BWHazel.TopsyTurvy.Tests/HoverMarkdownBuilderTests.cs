@@ -92,7 +92,7 @@ public class HoverMarkdownBuilderTests
         };
 
         string result = HoverMarkdownBuilder.Build(info);
-        
+
         Assert.Equal("**(function)** `greet`()", result);
     }
 
@@ -126,7 +126,7 @@ public class HoverMarkdownBuilderTests
         };
 
         string result = HoverMarkdownBuilder.Build(info);
-        
+
         Assert.Equal("**(parameter)** `name`", result);
     }
 }

@@ -51,19 +51,19 @@ public class TopsyTurvyParser
     /// Top-level parser for a complete Topsy Turvy program.
     /// </summary>
     private static readonly TextParser<ProgramNode> ProgramParser =
-        from start     in Lexer.Keyword("HARK!")
-        from title     in Ws(Lexer.StringLiteral.Named("program title"))
+        from start in Lexer.Keyword("HARK!")
+        from title in Ws(Lexer.StringLiteral.Named("program title"))
         from subtleOpt in Ws(Lexer.Keyword("or,").IgnoreThen(Ws(Lexer.StringLiteral)))
                            .Try().OptionalOrDefault(null!)
-        from body      in Ws(StatementParser.Statement).Try().Many()
-        from end       in Ws(Lexer.Keyword("FINALE.").Named("FINALE. (program end)"))
+        from body in Ws(StatementParser.Statement).Try().Many()
+        from end in Ws(Lexer.Keyword("FINALE.").Named("FINALE. (program end)"))
         select new ProgramNode
-            {
-                Title      = title,
-                Subtitle   = subtleOpt,
-                Statements = body.ToList(),
-                Span       = PlaceholderSpan
-            };
+        {
+            Title = title,
+            Subtitle = subtleOpt,
+            Statements = body.ToList(),
+            Span = PlaceholderSpan
+        };
 
     /// <summary>
     /// Parses the supplied Topsy Turvy source text into a <see cref="ProgramNode"/>.
@@ -166,9 +166,9 @@ public class TopsyTurvyParser
     {
         string pattern = kind switch
         {
-            "function"  => $@"(?i)\bIT\s+IS\s+MY\s+DUTY\s+TO\s+PERFORM\s+({Regex.Escape(name)})\b",
+            "function" => $@"(?i)\bIT\s+IS\s+MY\s+DUTY\s+TO\s+PERFORM\s+({Regex.Escape(name)})\b",
             "parameter" => $@"(?i)\bUNDER\s+THE\s+TERMS\s+OF\b.*\b({Regex.Escape(name)})\b",
-            _           => $@"(?i)\bPRAY\s+WELCOME\s+({Regex.Escape(name)})\b",
+            _ => $@"(?i)\bPRAY\s+WELCOME\s+({Regex.Escape(name)})\b",
         };
 
         for (int lineIndex = 0; lineIndex < sourceLines.Length; lineIndex++)
@@ -279,7 +279,7 @@ public class TopsyTurvyParser
                 string snippet = lineContent.Length > 40
                     ? lineContent.Substring(0, 40) + "..."
                     : lineContent;
-                
+
                 message = snippet.Length > 0
                     ? $"Unexpected: {snippet}"
                     : "Syntax error";

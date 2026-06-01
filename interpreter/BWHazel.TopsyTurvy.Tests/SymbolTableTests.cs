@@ -51,9 +51,9 @@ public class SymbolTableTests
     /// Tests that the <see cref="SymbolTable.Build"/> method sets the correct type display name for variable declarations.
     /// </summary>
     [Theory]
-    [InlineData("PEER",   "PEER")]
+    [InlineData("PEER", "PEER")]
     [InlineData("FATHOM", "FATHOM")]
-    [InlineData("YARN",   "YARN")]
+    [InlineData("YARN", "YARN")]
     [InlineData("DECREE", "DECREE")]
     [InlineData("NAUGHT", "NAUGHT")]
     public void Build_WithVariableDeclaration_SetsTypeDisplayName(string typeKeyword, string expectedDisplay)

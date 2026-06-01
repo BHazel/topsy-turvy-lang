@@ -74,11 +74,11 @@ public class DefinitionHandler : DefinitionHandlerBase
 
             int startLine = info.DefinitionLine - 1;
             int startChar = info.DefinitionColumn - 1;
-            int endChar   = startChar + word.Length;
+            int endChar = startChar + word.Length;
 
             LocationOrLocationLink location = new(new Location
             {
-                Uri   = definitionUri,
+                Uri = definitionUri,
                 Range = new LspRange(
                     new Position(startLine, startChar),
                     new Position(startLine, endChar))

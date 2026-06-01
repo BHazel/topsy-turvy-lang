@@ -306,10 +306,10 @@ public class SymbolTable
     private static string LiteralTypeToDisplayName(LiteralType type) => type switch
     {
         LiteralType.Integer => "PEER",
-        LiteralType.Float   => "FATHOM",
-        LiteralType.String  => "YARN",
+        LiteralType.Float => "FATHOM",
+        LiteralType.String => "YARN",
         LiteralType.Boolean => "DECREE",
-        LiteralType.Null    => "NAUGHT",
-        _                   => "unknown"
+        LiteralType.Null => "NAUGHT",
+        _ => "unknown"
     };
 }
