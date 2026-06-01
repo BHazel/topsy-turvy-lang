@@ -1,0 +1,56 @@
+<MudDialog>
+    <DialogContent>
+        <div class="open-files-drop-zone">
+            <InputFile OnChange="this.OnFilesSelected" multiple accept=".topsy" class="open-files-input" />
+            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload"
+                     Size="Size.Large"
+                     Color="Color.Primary" />
+            <MudText Typo="Typo.body1">Drop .topsy files here</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">or click to browse</MudText>
+        </div>
+        
+        @if (this.selectedFiles.Count > 0)
+        {
+            <div class="open-files-list">
+                @foreach (IBrowserFile file in this.selectedFiles)
+                {
+                    <div class="open-files-list-item">
+                        <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">@file.Name</MudText>
+                    </div>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(this.selectedFiles.Count == 0)"
+                   OnClick="this.Submit">Open</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private IReadOnlyList<IBrowserFile> selectedFiles = [];
+
+    /// <summary>
+    /// Updates the selected files list when the user picks or drops files.
+    /// </summary>
+    /// <param name="e">The file change event arguments.</param>
+    private void OnFilesSelected(InputFileChangeEventArgs e) =>
+        this.selectedFiles = e.GetMultipleFiles(maximumFileCount: 100);
+
+    /// <summary>
+    /// Submits the dialog with the selected files.
+    /// </summary>
+    private void Submit() => this.MudDialog.Close(DialogResult.Ok(this.selectedFiles));
+
+    /// <summary>
+    /// Cancels and closes the dialog.
+    /// </summary>
+    private void Cancel() => this.MudDialog.Cancel();
+}

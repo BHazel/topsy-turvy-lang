@@ -1,7 +1,7 @@
 # DEVELOPMENT.md
 ## Topsy Turvy Language — Technical Reference for Coding Agents
 
-* **Last Updated:** 2026-05-29 (session 2)
+* **Last Updated:** 2026-06-01
 * **Specification Version:** 0.2.0 — `SPEC.md` is the grammar source of truth
 * **File Extension:** `.topsy`
 * **Baseline:** `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` — 0 errors. `dotnet test` — 17/17.
@@ -36,15 +36,17 @@
 | `interpreter/BWHazel.TopsyTurvy.Cli/ProgramRunner.cs` | `Run`, `Check`, `ParseFile` — all delegate to private `TryReadSource`. `ParseFile` returns `(ProgramExecutionResult, ParseResult?)`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/PanelHelper.cs` | All Spectre.Console panel construction. `WriteDefault`, `WriteSuccess`, `WriteUserError`, `WriteSyntaxErrors`, `WriteRuntimeErrors`, `WriteVersionInfo`, `ReportErrors`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/NodeJsonConverter.cs` | `JsonConverter<Node>` with `CanConvert` override for polymorphic AST serialisation with `$type` discriminators. |
-| `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/` | One builder per command — see §3. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/FileManager.cs` | Shared file-creation utilities. `BuildFileContent(title, subtitle?)` builds scaffold source text. `Utf8NoBom` is the shared `UTF8Encoding` instance used by all file-writing commands. `DefaultProgrammeTitle` (`"Programme"`) is the single source of truth for the default title used in both `--title` option descriptions and null-coalescing in command handlers. |
+| `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/` | One builder per command — see §3. All scaffold file content goes through `FileManager.BuildFileContent`; no duplication between command builders. |
 | `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp LSP server — see §3. |
 | `extensions/vscode/topsy-turvy/` | VS Code extension: LSP client, TextMate grammar, run/stop commands, panel and file icons. |
-| `interpreter/BWHazel.TopsyTurvy.WebEditor/` | Blazor WASM standalone web editor. `MudToolBar` + `MudSpacer` toolbar with G&S-themed button labels toggle (`areGsLabelsEnabled`). `MudTabs` tab bar with per-file Monaco models and close/add buttons. BlazorMonaco editor with Monarch tokenizer and inline diagnostics. XtermBlazor output terminal sized dynamically via `ResizeObserver`. Pre-supplied stdin textarea. 10-second execution timeout. ZIP export of all open files. |
+| `interpreter/BWHazel.TopsyTurvy.WebEditor/` | Blazor WASM standalone web editor. `MudToolBar` + `MudSpacer` toolbar: left group — New Project/Mount (`CreateNewFolder`), New File/Commission (`InsertDriveFile`), Open/Recall (`FolderOpen`), Save/Pen (`Save`); centre — Run/Perform; right group — Clear Output, Download Output, divider, Light Mode/Dark Mode toggle, G&S Labels switch. All buttons are labelled `MudButton` with `StartIcon`. G&S-themed label toggle (`areGsLabelsEnabled`). `MudTabs` tab bar (no embedded add button — New File is in the toolbar). BlazorMonaco editor with Monarch tokenizer and inline diagnostics. XtermBlazor output terminal sized dynamically via `ResizeObserver`. Pre-supplied stdin textarea. 10-second execution timeout. ZIP export of all open files. Multi-file open via `OpenFilesDialog` (drag-and-drop + browse). |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/IO/BufferedWebIO.cs` | `ITopsyTurvyIO` implementation for Blazor WASM. Stdin from a pre-populated `Queue<string>`; output lines collected in a `List<string>` (`OutputLines`) for post-execution rendering and download. |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/IO/VirtualFile.cs` | Record tracking a filename in the in-memory virtual file system. Monaco editor models are the source of truth for content; `VirtualFile` is the file registry used for tab management and ZIP export. |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/Dialogs/NewFileDialog.razor` | `MudDialog` with a text field for entering a new file name. `.topsy` is appended automatically if omitted. |
+| `interpreter/BWHazel.TopsyTurvy.WebEditor/Dialogs/OpenFilesDialog.razor` | `MudDialog` for opening multiple `.topsy` files. Drop zone uses a transparent `InputFile` overlay (`open-files-input`) on a styled div (`open-files-drop-zone`) — supports both click-to-browse and drag-and-drop. Returns `IReadOnlyList<IBrowserFile>` via `DialogResult`. |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/wwwroot/js/topsy-turvy-language.js` | Monaco Monarch tokenizer registration, keyword completion provider, and language configuration (auto-closing quotes, auto-indent/de-indent rules, comment toggling). Defines `window.topsyTurvy` with `registerLanguage()`. Extended by `web-editor.js`. |
-| `interpreter/BWHazel.TopsyTurvy.WebEditor/wwwroot/js/web-editor.js` | All Monaco/xterm JS interop except `registerLanguage`. Extends `window.topsyTurvy` via `Object.assign`. Functions: `applyLanguageToEditor` (sets language on existing model, sets `autoIndent: 'full'`), `setModelMarkers` (takes editor ID), `openFile` (returns `{name, content}`), `downloadText`, `downloadZip`, `setupTerminalFit`, `fitTerminal`. |
+| `interpreter/BWHazel.TopsyTurvy.WebEditor/wwwroot/js/web-editor.js` | All Monaco/xterm JS interop except `registerLanguage`. Extends `window.topsyTurvy` via `Object.assign`. Functions: `applyLanguageToEditor` (sets language on existing model, sets `autoIndent: 'full'`), `setModelMarkers` (takes editor ID), `downloadText`, `downloadZip`, `setupTerminalFit`, `fitTerminal`. File opening is handled by `OpenFilesDialog.razor` via Blazor's `InputFile` — no JS required. |
 
 ---
 
@@ -80,7 +82,7 @@ A new session must know these before touching the relevant code.
 
 **Web editor — output download**: `Editor.razor` stores the last run's output in `lastRunOutput` (a `string` field, `string.Join('\n', io.OutputLines)`). `DownloadTerminalAsync` uses this field directly rather than reading the xterm terminal buffer. `lastRunOutput` is reset to `string.Empty` when the terminal is cleared via `ConfirmClearAsync`.
 
-**Web editor — open file replace**: `OpenFileAsync` handles the case where the opened file shares a name with an already-open tab. When the file being replaced is the active tab, `SwitchFileAsync` must not be called — it would re-sync the old Monaco content back over `VirtualFile.Content`, undoing the replacement. Instead, call `monacoEditor.SetValue(content)` directly. `SwitchFileAsync` is only safe to call when the replaced file is not the active tab.
+**Web editor — open file replace**: `OpenSingleFileAsync` handles the case where the opened file shares a name with an already-open tab. When the file being replaced is the active tab, `SwitchFileAsync` must not be called — it would re-sync the old Monaco content back over `VirtualFile.Content`, undoing the replacement. Instead, call `monacoEditor.SetValue(content)` directly. `SwitchFileAsync` is only safe to call when the replaced file is not the active tab.
 
 **Web editor — MudTabs API (MudBlazor 9.x)**: `ScrollButtons` was renamed to `AlwaysShowScrollButtons` on `MudTabs`. `PanelClass` belongs on `MudTabPanel`, not `MudTabs`. Using the old names produces MUD0002 analyzer warnings.
 
@@ -116,7 +118,8 @@ A new session must know these before touching the relevant code.
 | Command | Alias(es) | Options | Notes |
 |---|---|---|---|
 | `perform <file>` | `stage`, `run` | `--tiptoe` | Runs a `.topsy` file. |
-| `commission <file>` | `new` | `--title` (required), `--or`, `--tiptoe` | Scaffolds a Hello World `.topsy` file. UTF-8, no BOM. |
+| `mount <project>` | `init` | `--title`, `--or`, `--hollow`, `--tiptoe` | Creates a project directory. Without `--hollow`, also scaffolds `<project>/<project>.topsy`. `--title` defaults to `"Programme"`. |
+| `commission <file>` | `new` | `--title`, `--or`, `--tiptoe` | Scaffolds a Hello World `.topsy` file. UTF-8, no BOM. `--title` defaults to `"Programme"`. Both commands delegate content to `FileManager.BuildFileContent`. |
 | `rehearse <file>` | `check` | `--tiptoe` | Syntax-checks without executing via `ProgramRunner.Check`. |
 | `sorcerer promptbook <file>` | `dev ast` | `--abridged`, `--chromatic`, `--tiptoe` | Prints AST as JSON. `NodeJsonConverter` handles polymorphic serialisation. |
 | `pedigree` | `info` | `--tiptoe` | Shows CLI version, commit SHA, and language spec version. |

@@ -1,7 +1,6 @@
 using System;
 using System.CommandLine;
 using System.IO;
-using System.Text;
 
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
@@ -24,10 +23,9 @@ public static class CommissionCommandBuilder
             Description = "The Topsy Turvy file to create."
         };
 
-        Option<string> titleOption = new("--title")
+        Option<string?> titleOption = new("--title")
         {
-            Description = "The title of the programme.",
-            Required = true,
+            Description = $"The title of the programme.  Defaults to \"{FileManager.DefaultProgrammeTitle}\"."
         };
 
         titleOption.Aliases.Add("-t");
@@ -50,7 +48,7 @@ public static class CommissionCommandBuilder
         commissionCommand.SetAction(parseResult =>
             HandleCommission(
                 parseResult.GetValue(fileArgument) ?? string.Empty,
-                parseResult.GetValue(titleOption) ?? string.Empty,
+                parseResult.GetValue(titleOption) ?? FileManager.DefaultProgrammeTitle,
                 parseResult.GetValue(orOption),
                 parseResult.GetValue(tiptoeOption)));
 
@@ -97,10 +95,10 @@ public static class CommissionCommandBuilder
             return 1;
         }
 
-        string fileContent = BuildFileContent(title, subtitle);
+        string fileContent = FileManager.BuildFileContent(title, subtitle);
         try
         {
-            File.WriteAllText(filename, fileContent, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.WriteAllText(filename, fileContent, FileManager.Utf8NoBom);
         }
         catch (IOException ex)
         {
@@ -123,29 +121,5 @@ public static class CommissionCommandBuilder
         }
 
         return 0;
-    }
-
-    /// <summary>
-    /// Builds the content of the new Topsy Turvy source file.
-    /// </summary>
-    /// <param name="title">The programme title.</param>
-    /// <param name="subtitle">The optional programme subtitle.</param>
-    /// <returns>The file content.</returns>
-    private static string BuildFileContent(string title, string? subtitle)
-    {
-        StringBuilder fileContentBuilder = new();
-        fileContentBuilder.AppendLine($"HARK! \"{title}\"");
-
-        if (subtitle is not null)
-        {
-            fileContentBuilder.AppendLine($"  or, \"{subtitle}\"");
-        }
-
-        fileContentBuilder.AppendLine();
-        fileContentBuilder.AppendLine("BEHOLD \"Hello, World!\"");
-        fileContentBuilder.AppendLine();
-        fileContentBuilder.Append("FINALE.");
-
-        return fileContentBuilder.ToString();
     }
 }

@@ -6,6 +6,7 @@ string rootDescription = $"{TopsyTurvyBranding.Title}\n\nTopsy Turvy - A Gilbert
 RootCommand rootCommand = new(rootDescription)
 {
     PedigreeCommandBuilder.Build(),
+    MountCommandBuilder.Build(),
     CommissionCommandBuilder.Build(),
     RehearseCommandBuilder.Build(),
     PerformCommandBuilder.Build(),

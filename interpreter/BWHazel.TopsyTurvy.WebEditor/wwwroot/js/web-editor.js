@@ -1,42 +1,5 @@
 Object.assign(window.topsyTurvy, {
     /**
-     * Opens a native file picker filtered to `.topsy` files.
-     * @description Resolves `null` if the user cancels the picker.
-     * @returns {Promise<{name: string, content: string} | null>} The file name and contents, or `null` if cancelled.
-     */
-    openFile() {
-        const input = Object.assign(document.createElement('input'), {
-            type: 'file',
-            accept: '.topsy',
-        });
-
-        return new Promise((resolve) => {
-            let isResolved = false;
-
-            input.addEventListener('change', async () => {
-                isResolved = true;
-                const file = input.files?.[0];
-                if (file) {
-                    resolve({ name: file.name, content: await file.text() });
-                } else {
-                    resolve(null);
-                }
-            });
-
-            window.addEventListener('focus', function onFocus() {
-                window.removeEventListener('focus', onFocus);
-                setTimeout(() => {
-                    if (!isResolved) {
-                        resolve(null);
-                    }
-                }, 300);
-            });
-
-            input.click();
-        });
-    },
-
-    /**
      * Triggers a browser download of a plain-text file.
      * @param {string} filename Suggested file name for the download.
      * @param {string} content Text content to write into the file.

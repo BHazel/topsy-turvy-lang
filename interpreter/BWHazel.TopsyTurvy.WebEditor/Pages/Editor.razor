@@ -7,36 +7,36 @@
     <MudPaper Elevation="1" Square="true" Class="flex-shrink-0">
         <MudToolBar Dense="true" Class="editor-toolbar">
             <MudButton Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.CreateNewFolder"
+                       OnClick="this.ConfirmNewAsync">@(this.areGsLabelsEnabled ? "Mount" : "New Project")</MudButton>
+            <MudButton Size="Size.Small"
                        StartIcon="@Icons.Material.Outlined.InsertDriveFile"
-                       OnClick="ConfirmNewAsync">@(this.areGsLabelsEnabled ? "Commission" : "New")</MudButton>
+                       OnClick="this.NewFileAsync">@(this.areGsLabelsEnabled ? "Commission" : "New File")</MudButton>
             <MudButton Size="Size.Small"
                        StartIcon="@Icons.Material.Outlined.FolderOpen"
-                       OnClick="OpenFileAsync">@(this.areGsLabelsEnabled ? "Recall" : "Open")</MudButton>
+                       OnClick="this.OpenFileAsync">@(this.areGsLabelsEnabled ? "Recall" : "Open")</MudButton>
             <MudButton Size="Size.Small"
                        StartIcon="@Icons.Material.Outlined.Save"
-                       OnClick="SaveFileAsync">@(this.areGsLabelsEnabled ? "Pen" : "Save")</MudButton>
+                       OnClick="this.SaveFileAsync">@(this.areGsLabelsEnabled ? "Pen" : "Save")</MudButton>
             <MudSpacer />
             <MudButton Color="Color.Primary"
                        Variant="Variant.Filled"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.PlayArrow"
                        Disabled="isRunning"
-                       OnClick="RunProgramAsync">@(this.areGsLabelsEnabled ? "Perform" : "Run")</MudButton>
+                       OnClick="this.RunProgramAsync">@(this.areGsLabelsEnabled ? "Perform" : "Run")</MudButton>
             <MudSpacer />
-            <MudTooltip Text="@(IsDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode")">
-                <MudIconButton Icon="@(IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
-                               OnClick="OnToggleDarkMode" />
-            </MudTooltip>
-            <MudTooltip Text="Clear Terminal Output">
-                <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline"
-                               Color="Color.Error"
-                               OnClick="ConfirmClearAsync" />
-            </MudTooltip>
-            <MudTooltip Text="Download Terminal Output">
-                <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
-                               OnClick="DownloadTerminalAsync" />
-            </MudTooltip>
+            <MudButton Size="Size.Small"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Outlined.DeleteOutline"
+                       OnClick="this.ConfirmClearAsync">Clear Output</MudButton>
+            <MudButton Size="Size.Small"
+                       StartIcon="@Icons.Material.Outlined.FileDownload"
+                       OnClick="this.DownloadTerminalAsync">Download Output</MudButton>
             <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+            <MudButton Size="Size.Small"
+                       StartIcon="@(IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
+                       OnClick="this.OnToggleDarkMode">@(IsDarkMode ? "Light Mode" : "Dark Mode")</MudButton>
             <MudSwitch T="bool"
                        @bind-Value="areGsLabelsEnabled"
                        Label="G&amp;S Labels"
@@ -46,14 +46,8 @@
     </MudPaper>
 
     <div class="tab-bar-row">
-        <MudTooltip Text="New File">
-            <MudIconButton Icon="@Icons.Material.Filled.Add"
-                           Size="Size.Small"
-                           Class="tab-add-btn"
-                           OnClick="NewFileAsync" />
-        </MudTooltip>
         <MudTabs ActivePanelIndex="@this.ActiveTabIndex"
-                 ActivePanelIndexChanged="OnTabIndexChangedAsync"
+                 ActivePanelIndexChanged="this.OnTabIndexChangedAsync"
                  AlwaysShowScrollButtons="true"
                  Color="Color.Default"
                  Rounded="true"
@@ -353,20 +347,35 @@
     }
 
     /// <summary>
-    /// Opens a file picker dialog and if the user selects a file loads it into a new tab.
+    /// Opens the file picker dialog and loads any selected files as new tabs.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task OpenFileAsync()
     {
-        JsonElement? result = await this.JSRuntime.InvokeAsync<JsonElement?>("topsyTurvy.openFile");
-        if (result is null || result.Value.ValueKind == JsonValueKind.Null)
+        IDialogReference dialog = await this.DialogService.ShowAsync<OpenFilesDialog>("Open Files");
+        DialogResult? result = await dialog.Result;
+
+        if (result is { Canceled: false } && result.Data is IReadOnlyList<IBrowserFile> selectedFiles)
         {
-            return;
+            foreach (IBrowserFile browserFile in selectedFiles)
+            {
+                using StreamReader reader = new(browserFile.OpenReadStream(maxAllowedSize: 1_048_576));
+                string content = await reader.ReadToEndAsync();
+                await this.OpenSingleFileAsync(browserFile.Name, content);
+            }
+
+            this.StateHasChanged();
         }
+    }
 
-        string name = result.Value.GetProperty("name").GetString()!;
-        string content = result.Value.GetProperty("content").GetString()!;
-
+    /// <summary>
+    /// Opens a single file into a new or existing tab, prompting the user if the file is already open.
+    /// </summary>
+    /// <param name="name">The file name.</param>
+    /// <param name="content">The file content.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OpenSingleFileAsync(string name, string content)
+    {
         if (this.files.Any(file => file.Name == name))
         {
             bool? replace = await this.DialogService.ShowMessageBoxAsync(
@@ -396,7 +405,6 @@
 
         this.files.Add(new(name, content));
         await this.SwitchFileAsync(name);
-        this.StateHasChanged();
     }
 
     /// <summary>
