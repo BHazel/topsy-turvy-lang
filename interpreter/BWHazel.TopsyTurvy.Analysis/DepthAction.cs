@@ -1,4 +1,4 @@
-namespace BWHazel.TopsyTurvy.LanguageServer;
+namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
 /// Represents the depth adjustment applied to a line during formatting.

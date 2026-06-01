@@ -16,8 +16,8 @@ function resolveTopsyTurvyCliPath(context: vscode.ExtensionContext): string {
     const configuredPath = config.get<string>('cliPath');
     const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
     const binaryName = process.platform === 'win32'
-        ? 'BWHazel.TopsyTurvy.Cli.exe'
-        : 'BWHazel.TopsyTurvy.Cli';
+        ? 'operetta.exe'
+        : 'operetta';
 
     const defaultPath = context.asAbsolutePath(
         path.join(

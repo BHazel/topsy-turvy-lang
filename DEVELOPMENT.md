@@ -4,13 +4,14 @@
 * **Last Updated:** 2026-06-01
 * **Specification Version:** 0.2.0 — `SPEC.md` is the grammar source of truth
 * **File Extension:** `.topsy`
-* **Baseline:** `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` — 0 errors. `dotnet test` — 17/17.
+* **Baseline:** `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` — 0 errors. `dotnet test` — 117/117.
 
 | Component | Status |
 |---|---|
 | AST (`BWHazel.TopsyTurvy.Ast`) | Complete |
 | Parser (`BWHazel.TopsyTurvy.Parser`) | Complete |
 | Runtime (`BWHazel.TopsyTurvy.Runtime`) | Complete |
+| Analysis (`BWHazel.TopsyTurvy.Analysis`) | Complete |
 | Integration — all 4 examples pass | Complete |
 | LSP server + VS Code extension | Complete |
 | CLI (`operetta`) | Complete |
@@ -28,9 +29,10 @@
 | `examples/` | `hello_world.topsy`, `fizzbuzz.topsy`, `fibonacci.topsy`, `pirates_calculator.topsy` — all execute correctly. |
 | `interpreter/BWHazel.TopsyTurvy.slnx` | Solution file. |
 | `interpreter/BWHazel.TopsyTurvy.Ast/` | AST node types. All inherit from `Node` (`required SourceSpan Span`). `Diagnostic`, `DiagnosticCollection`, `SourceSpan`, `SourceLocation`. |
+| `interpreter/BWHazel.TopsyTurvy.Analysis/` | Shared analysis library. `SymbolTable`, `SymbolInfo`, `SymbolKind`, `DocumentState`, `DepthAction` — moved from LanguageServer. `SourceFormatter` — keyword normalisation + libretto indentation. `SourceAnalyser` — `FindSkipRanges`, `BuildLineOffsets`, `IsInSkipRange`, `IsIdentifierChar`, `CountOccurrences`. `KeywordData` — 74-entry keyword list. `HoverMarkdownBuilder` — Markdown hover strings. References: Ast, Parser. Referenced by: LanguageServer, Cli, WebEditor. |
 | `interpreter/BWHazel.TopsyTurvy.Parser/` | Superpower parser. Entry: `TopsyTurvyParser`. Pre-processors: `CommentsPreProcessor`, `VictorianFlourishPreProcessor`. `SourceMap`/`SourceMapping` for offset tracking. `TryParse` returns `ParseResult(ProgramNode?, IReadOnlyList<Diagnostic>)`. |
 | `interpreter/BWHazel.TopsyTurvy.Runtime/` | Tree-walking interpreter. Entry: `Interpreter`. Key types: `TopsyTurvyValue`, `TopsyTurvyEnvironment`, `ITopsyTurvyIO`/`ConsoleIO`. Signal exceptions: `BreakSignalException`, `ReturnSignalException`, `ContinueSignal`, `TopsyTurvyThrowException`. `Execute(program, cancellationToken, maxDuration?)` — pass `maxDuration` for Blazor WASM timeout (see §2). |
-| `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit suite — 17/17 passing. |
+| `interpreter/BWHazel.TopsyTurvy.Tests/` | xUnit suite — 117/117 passing. `Nullable: enable`, `ImplicitUsings: disable` (xUnit's `Xunit` namespace is brought in via `<Using Include="Xunit" />`; all other usings are explicit). References: Analysis, Parser, Runtime. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/` | CLI project. Binary: `operetta`. Version: `0.1.0`. Dependencies: `Spectre.Console 0.55.2`, `Spectre.Console.Json 0.55.2`, `System.CommandLine 2.0.8`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/ProgramExecutionResult.cs` | Discriminated result: `Success()`, `Failure(msg)`, `SyntaxError(errors)`, `RuntimeError(diagnostics)`. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/ProgramRunner.cs` | `Run`, `Check`, `ParseFile` — all delegate to private `TryReadSource`. `ParseFile` returns `(ProgramExecutionResult, ParseResult?)`. |
@@ -39,7 +41,7 @@
 | `interpreter/BWHazel.TopsyTurvy.Cli/FileManager.cs` | Shared file-creation utilities. `BuildFileContent(title, subtitle?)` builds scaffold source text. `Utf8NoBom` is the shared `UTF8Encoding` instance used by all file-writing commands. `DefaultProgrammeTitle` (`"Programme"`) is the single source of truth for the default title used in both `--title` option descriptions and null-coalescing in command handlers. |
 | `interpreter/BWHazel.TopsyTurvy.Cli/CommandBuilders/` | One builder per command — see §3. All scaffold file content goes through `FileManager.BuildFileContent`; no duplication between command builders. |
 | `interpreter/BWHazel.TopsyTurvy.LanguageServer/` | OmniSharp LSP server — see §3. |
-| `extensions/vscode/topsy-turvy/` | VS Code extension: LSP client, TextMate grammar, run/stop commands, panel and file icons. |
+| `extensions/vscode/topsy-turvy/` | VS Code extension: LSP client, TextMate grammar, run/stop commands, panel and file icons. Two configurable paths in `extension.ts`: `topsy-turvy.serverPath` (LSP server, defaults to `BWHazel.TopsyTurvy.LanguageServer/bin/.../BWHazel.TopsyTurvy.LanguageServer`) and `topsy-turvy.cliPath` (CLI for run/stop commands, resolved via `resolveTopsyTurvyCliPath` to `BWHazel.TopsyTurvy.Cli/bin/.../operetta` or `operetta.exe` on Windows). Both paths fall back to their defaults when the setting is empty. |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/` | Blazor WASM standalone web editor. `MudToolBar` + `MudSpacer` toolbar: left group — New Project/Mount (`CreateNewFolder`), New File/Commission (`InsertDriveFile`), Open/Recall (`FolderOpen`), Save/Pen (`Save`); centre — Run/Perform; right group — Clear Output, Download Output, divider, Light Mode/Dark Mode toggle, G&S Labels switch. All buttons are labelled `MudButton` with `StartIcon`. G&S-themed label toggle (`areGsLabelsEnabled`). `MudTabs` tab bar (no embedded add button — New File is in the toolbar). BlazorMonaco editor with Monarch tokenizer and inline diagnostics. XtermBlazor output terminal sized dynamically via `ResizeObserver`. Pre-supplied stdin textarea. 10-second execution timeout. ZIP export of all open files. Multi-file open via `OpenFilesDialog` (drag-and-drop + browse). |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/IO/BufferedWebIO.cs` | `ITopsyTurvyIO` implementation for Blazor WASM. Stdin from a pre-populated `Queue<string>`; output lines collected in a `List<string>` (`OutputLines`) for post-execution rendering and download. |
 | `interpreter/BWHazel.TopsyTurvy.WebEditor/IO/VirtualFile.cs` | Record tracking a filename in the in-memory virtual file system. Monaco editor models are the source of truth for content; `VirtualFile` is the file registry used for tab management and ZIP export. |
@@ -83,6 +85,8 @@ A new session must know these before touching the relevant code.
 **Web editor — output download**: `Editor.razor` stores the last run's output in `lastRunOutput` (a `string` field, `string.Join('\n', io.OutputLines)`). `DownloadTerminalAsync` uses this field directly rather than reading the xterm terminal buffer. `lastRunOutput` is reset to `string.Empty` when the terminal is cleared via `ConfirmClearAsync`.
 
 **Web editor — open file replace**: `OpenSingleFileAsync` handles the case where the opened file shares a name with an already-open tab. When the file being replaced is the active tab, `SwitchFileAsync` must not be called — it would re-sync the old Monaco content back over `VirtualFile.Content`, undoing the replacement. Instead, call `monacoEditor.SetValue(content)` directly. `SwitchFileAsync` is only safe to call when the replaced file is not the active tab.
+
+**Try/catch inline expression**: `WITH THE GREATEST RESPECT, <expression>` requires the expression on the *same line* as the keyword — it is not a block header. Writing the expression on the following line causes the parser to return `null` for the program (parse failure). `WITH GRATITUDE` and `MODIFIED RAPTURE` are mid-block keywords that follow the same pattern as `OTHERWISE,` — they appear as their own lines. This also means the formatter's indentation rules for `WITH THE GREATEST RESPECT,` diverge from valid parser input: the formatter treats it as a block opener (content on subsequent lines) purely for display purposes; the body lines shown indented beneath it in formatted output are the `WITH GRATITUDE` / `MODIFIED RAPTURE` / `THAT CONCLUDES THE MATTER.` continuation lines, not expression bodies.
 
 **Web editor — MudTabs API (MudBlazor 9.x)**: `ScrollButtons` was renamed to `AlwaysShowScrollButtons` on `MudTabs`. `PanelClass` belongs on `MudTabPanel`, not `MudTabs`. Using the old names produces MUD0002 analyzer warnings.
 
@@ -128,9 +132,9 @@ A new session must know these before touching the relevant code.
 
 ## 4. Known Gaps
 
-**Monarch tokenizer keyword duplication**: the keyword list appears in three places: `topsy-turvy-language.js` (Monarch tokenizer + completion provider), `extensions/vscode/topsy-turvy/syntaxes/topsy-turvy.tmLanguage.json` (TextMate grammar), and `CompletionHandler.cs` (LSP). A future `BWHazel.TopsyTurvy.Analysis` shared project would consolidate these.
+**Monarch tokenizer keyword duplication**: the keyword list still appears in two places: `topsy-turvy-language.js` (Monarch tokenizer + completion provider) and `extensions/vscode/topsy-turvy/syntaxes/topsy-turvy.tmLanguage.json` (TextMate grammar). The `CompletionHandler.cs` copy has been removed — it now delegates to `KeywordData.Keywords` in `BWHazel.TopsyTurvy.Analysis`. The JS and TextMate copies cannot consume the C# library and remain separate.
 
-**Web editor hover / symbol completion / go-to-definition (deferred)**: these features require analysis logic (hover text, symbol enumeration, definition line scanning) currently embedded in the LSP handler classes. Implementing them in the web editor without the `BWHazel.TopsyTurvy.Analysis` refactor would duplicate that logic. The architecture is: (1) extract analysis logic into a shared `BWHazel.TopsyTurvy.Analysis` project; (2) add `[JSInvokable]` methods on `Editor.razor` backed by that shared project; (3) register Monaco hover/completion/definition providers in JS that call `DotNetObjectReference.invokeMethodAsync`. None of these features are blocked by PlaceholderSpan — hover and symbol completion only need symbol names and types, and go-to-definition can use the same source-line scanning workaround already in `DefinitionHandler.cs`. Hover was never present in the web editor; it only exists in the VS Code extension via LSP.
+**Web editor hover / symbol completion / go-to-definition (deferred)**: `BWHazel.TopsyTurvy.Analysis` is now referenced by the WebEditor project. The remaining steps are: (1) add `[JSInvokable]` methods on `Editor.razor` backed by `SymbolTable`, `HoverMarkdownBuilder`, `SourceFormatter`; (2) register Monaco hover/completion/definition providers in JS that call `DotNetObjectReference.invokeMethodAsync`. None of these features are blocked by PlaceholderSpan — hover and symbol completion only need symbol names and types, and go-to-definition can use the same source-line scanning workaround already in `DefinitionHandler.cs`. Hover was never present in the web editor; it only exists in the VS Code extension via LSP.
 
 **Web editor interactive stdin (deferred)**: `BufferedWebIO` reads from a pre-supplied `Queue<string>` drawn from a textarea. True line-by-line interactive stdin (prompting after each `PRAY TELL`) requires making `ITopsyTurvyIO` async — straightforward future step with the same interface, a new `InteractiveWebIO` implementation, and an XtermBlazor input handler.
 
@@ -162,4 +166,4 @@ A new session must know these before touching the relevant code.
 2. Run `dotnet build interpreter/BWHazel.TopsyTurvy.slnx` and `dotnet test` to confirm baseline.
 3. **LSP server packaging**: the default binary path only works from the dev repo layout and cannot be distributed as a `.vsix`. Proposed: add `dotnet publish` to the extension build script outputting to `extensions/vscode/topsy-turvy/server/`; update the default path in `extension.ts`; use `--no-self-contained` as the starting point.
 4. **LSP squiggle accuracy** (deferred — see §4).
-5. **`BWHazel.TopsyTurvy.Analysis` refactor**: extract hover, completion, and definition logic from LSP handlers into a shared project. This is the prerequisite for web editor hover/symbol completion/go-to-definition and will also eliminate the keyword triplification (see §4).
+5. **Web editor hover / symbol completion / go-to-definition**: `BWHazel.TopsyTurvy.Analysis` is now available in the WebEditor project. Add `[JSInvokable]` bridge methods and Monaco provider registrations to expose hover, symbol completion, and go-to-definition in the browser editor (see §4).

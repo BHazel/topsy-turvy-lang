@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+
+using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -22,15 +24,6 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 {
     private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
-
-    private static readonly Regex BlockCommentPattern =
-        new(@"\(ASIDE, AT SOME LENGTH:.*?END OF ASIDE\.\)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-    private static readonly Regex StringLiteralPattern =
-        new(@"""(?:[^""\\]|\\.)*""", RegexOptions.Singleline);
-
-    private static readonly Regex LineCommentPattern =
-        new(@"ASIDE:.*", RegexOptions.IgnoreCase);
 
     private static readonly SemanticTokensLegend Legend = new()
     {
@@ -79,8 +72,8 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = BuildLineOffsets(lines);
-            List<(int Start, int End)> commentRanges = FindSkipRanges(source);
+            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
+            List<(int Start, int End)> commentRanges = SourceAnalyser.FindSkipRanges(source);
             List<(int Line, int Char, int Length, string TokenType)> tokens = [];
 
             IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
@@ -95,8 +88,8 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
                 string tokenType = symbol.Kind switch
                 {
-                    SymbolKind.Function  => "function",
-                    SymbolKind.Parameter => "parameter",
+                    TopsyTurvySymbolKind.Function  => "function",
+                    TopsyTurvySymbolKind.Parameter => "parameter",
                     _                    => "variable"
                 };
 
@@ -110,19 +103,19 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
                         symbol.Name, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
                     {
                         searchFrom = foundAt + 1;
-                        if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
+                        if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
                         {
                             continue;
                         }
 
                         int endChar = foundAt + symbol.Name.Length;
-                        if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
+                        if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
                         {
                             continue;
                         }
 
                         int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                        if (IsInSkipRange(absoluteOffset, commentRanges))
+                        if (SourceAnalyser.IsInSkipRange(absoluteOffset, commentRanges))
                         {
                             continue;
                         }
@@ -163,7 +156,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
             foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
             {
-                if (symbol.Kind == SymbolKind.Function)
+                if (symbol.Kind == TopsyTurvySymbolKind.Function)
                 {
                     yield return symbol;
                 }
@@ -171,87 +164,4 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         }
     }
 
-    /// <summary>
-    /// Builds an array of absolute offsets for the start of each line.
-    /// </summary>
-    /// <param name="lines">The lines of the source code.</param>
-    /// <remarks>
-    /// Allows conversion between absolute offsets and line/character positions.
-    /// </remarks>
-    /// <returns>An array of absolute offsets for the start of each line.</returns>
-    private static int[] BuildLineOffsets(string[] lines)
-    {
-        int[] offsets = new int[lines.Length];
-        int current = 0;
-        for (int i = 0; i < lines.Length; i++)
-        {
-            offsets[i] = current;
-            current += lines[i].Length + 1;
-        }
-
-        return offsets;
-    }
-
-    /// <summary>
-    /// Builds a list of source ranges that should be excluded from semantic highlighting.
-    /// </summary>
-    /// <param name="source">The source code to scan.</param>
-    /// <remarks>
-    /// Examples include block comments, string literals, and line comments.
-    /// </remarks>
-    /// <returns>A list of source ranges to exclude from semantic highlighting.</returns>
-    private static List<(int Start, int End)> FindSkipRanges(string source)
-    {
-        List<(int Start, int End)> ranges = [];
-
-        foreach (Match match in BlockCommentPattern.Matches(source))
-        {
-            ranges.Add((match.Index, match.Index + match.Length));
-        }
-
-        foreach (Match match in StringLiteralPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
-            {
-                ranges.Add((match.Index, match.Index + match.Length));
-            }
-        }
-
-        foreach (Match match in LineCommentPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
-            {
-                ranges.Add((match.Index, match.Index + match.Length));
-            }
-        }
-
-        return ranges;
-    }
-
-    /// <summary>
-    /// Determines whether a given absolute offset falls within any of the specified ranges.
-    /// </summary>
-    /// <param name="absoluteOffset">The absolute offset to check.</param>
-    /// <param name="ranges">The list of ranges to check against.</param>
-    /// <returns><c>true</c> if the offset is within any range, otherwise, <c>false</c>.</returns>
-    private static bool IsInSkipRange(int absoluteOffset, List<(int Start, int End)> ranges)
-    {
-        foreach ((int start, int end) in ranges)
-        {
-            if (absoluteOffset >= start && absoluteOffset < end)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Determines whether a character is valid within an identifier.
-    /// </summary>
-    /// <param name="c">The character to check.</param>
-    /// <returns><c>true</c> if the character is valid within an identifier, otherwise, <c>false</c>.</returns>
-    private static bool IsIdentifierChar(char c) =>
-        char.IsLetterOrDigit(c) || c == '-' || c == '_';
 }

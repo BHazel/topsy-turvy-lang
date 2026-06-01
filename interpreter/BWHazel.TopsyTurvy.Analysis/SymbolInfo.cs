@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace BWHazel.TopsyTurvy.LanguageServer;
+namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
 /// Represents a named symbol found in a Topsy Turvy source file.
@@ -34,7 +34,7 @@ public class SymbolInfo
     public IReadOnlyList<string>? Parameters { get; init; }
 
     /// <summary>
-    /// Gets or initialises the 1-indexed line number of the symbol's definition in the original source.
+    /// Gets or initialises the 1-indexed line number of the symbol definition in the original source.
     /// </summary>
     /// <remarks>
     /// Zero indicates the position could not be determined.
@@ -42,7 +42,7 @@ public class SymbolInfo
     public int DefinitionLine { get; init; }
 
     /// <summary>
-    /// Gets or initialises the 1-indexed column number of the symbol's definition in the original source.
+    /// Gets or initialises the 1-indexed column number of the symbol definition in the original source.
     /// </summary>
     /// <remarks>
     /// Zero indicates the position could not be determined.

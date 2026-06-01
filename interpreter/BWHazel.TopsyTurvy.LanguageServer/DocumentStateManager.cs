@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using OmniSharp.Extensions.LanguageServer.Protocol;
+using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Parser;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 

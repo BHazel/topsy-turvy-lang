@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
+using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -21,87 +23,6 @@ public class CompletionHandler : CompletionHandlerBase
 {
     private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
-
-    /// <summary>
-    /// A map of language keywords and descriptions.
-    /// </summary>
-    private static readonly (string Keyword, string Detail)[] Keywords =
-    [
-        ("HARK!",                                    "program header"),
-        ("or,",                                      "program subtitle"),
-        ("FINALE.",                                  "program end"),
-        ("PRINCIPALS",                               "global declarations block"),
-        ("THE CURTAIN RISES.",                       "end of declarations"),
-        ("PRAY WELCOME",                             "variable declaration"),
-        ("AS A",                                     "type annotation"),
-        ("BEING",                                    "initial value"),
-        ("IS APPOINTED",                             "assignment"),
-        ("IS HENCEFORTH A",                          "in-place cast"),
-        ("AS IT WERE",                               "expression cast"),
-        ("BEHOLD",                                   "print"),
-        ("WITHOUT CEREMONY",                         "print (no newline)"),
-        ("PRAY TELL",                                "input"),
-        ("ASIDE:",                                   "line comment"),
-        ("(ASIDE, AT SOME LENGTH:",                  "block comment (open)"),
-        ("END OF ASIDE.)",                           "block comment (close)"),
-        ("SHOULD IT TRANSPIRE THAT",                 "if condition"),
-        ("QUITE SO.",                                "then branch"),
-        ("OR, IF NOT,",                              "else-if"),
-        ("OTHERWISE,",                               "else branch"),
-        ("SO MUCH FOR THAT.",                        "end if"),
-        ("IN WHICH CAPACITY?",                       "switch"),
-        ("WHEN ACTING AS",                           "case label"),
-        ("FAILING ALL OF THE ABOVE,",                "default case"),
-        ("NOTHING COULD BE MORE SATISFACTORY.",      "end switch"),
-        ("BY A LEGAL FICTION",                       "loop"),
-        ("ASCENDING",                                "increment loop variable"),
-        ("DESCENDING",                               "decrement loop variable"),
-        ("UNTIL",                                    "loop exit condition"),
-        ("WHILST",                                   "loop while condition"),
-        ("THE TERM EXPIRES.",                        "end loop"),
-        ("ONCE MORE.",                               "continue"),
-        ("THAT WILL DO.",                            "break (loop or switch)"),
-        ("IT IS MY DUTY TO PERFORM",                 "function definition"),
-        ("UNDER THE TERMS OF",                       "function parameters"),
-        ("UNDER NO OBLIGATION",                      "no-parameter function"),
-        ("AND SO I FIND",                            "return with value"),
-        ("MY DUTY IS DISCHARGED.",                   "end function"),
-        ("MY DUTY IS PREMATURELY DISCHARGED.",       "return (no value)"),
-        ("SUMMON",                                   "function call"),
-        ("WITH",                                     "function call arguments"),
-        ("IF YOU PLEASE.",                           "end expression list"),
-        ("A HIDEOUS CURSE ON",                       "throw"),
-        ("WITH THE GREATEST RESPECT,",               "try block"),
-        ("WITH GRATITUDE",                           "success handler"),
-        ("MODIFIED RAPTURE",                         "exception handler"),
-        ("THAT CONCLUDES THE MATTER.",               "end try/catch"),
-        ("PRAY ADMIT",                               "import"),
-        ("SUM OF",                                   "addition"),
-        ("DIFFERENCE OF",                            "subtraction"),
-        ("PRODUCT OF",                               "multiplication"),
-        ("QUOTIENT OF",                              "division"),
-        ("REMAINDER OF",                             "modulo"),
-        ("LARGER OF",                                "maximum"),
-        ("SMALLER OF",                               "minimum"),
-        ("WOVEN OF",                                 "string concatenation"),
-        ("BOTH",                                     "logical AND"),
-        ("EITHER",                                   "logical OR"),
-        ("HARDLY EVER",                              "logical NOT"),
-        ("ALIKE",                                    "equality (==)"),
-        ("UNLIKE",                                   "inequality (!=)"),
-        ("PRE-ADAMITE",                              "greater than (>)"),
-        ("LOWER DEGREE",                             "less than (<)"),
-        ("ALL OF",                                   "all-true (variadic AND)"),
-        ("ANY OF",                                   "any-true (variadic OR)"),
-        ("VERITY",                                   "boolean true"),
-        ("NAY",                                      "boolean false"),
-        ("NAUGHT",                                   "null"),
-        ("JUST SO",                                  "implicit accumulator"),
-        ("PEER",                                     "integer type"),
-        ("FATHOM",                                   "float type"),
-        ("YARN",                                     "string type"),
-        ("DECREE",                                   "boolean type"),
-    ];
 
     /// <summary>
     /// Initialises a new instance of the <see cref="CompletionHandler"/> class.
@@ -143,7 +64,7 @@ public class CompletionHandler : CompletionHandlerBase
                 request.Position.Character);
             
             bool isKeywordContext = phrase.Length == 0
-                || Keywords.Any(k => k.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase));
+                || KeywordData.Keywords.Any(k => k.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase));
             int insertOffset = isKeywordContext
                 ? phrase.Length - lastWord.Length
                 : 0;
@@ -166,7 +87,7 @@ public class CompletionHandler : CompletionHandlerBase
                 items.AddRange(symbolItems);
             }
 
-            IEnumerable<CompletionItem> keywordItems = Keywords
+            IEnumerable<CompletionItem> keywordItems = KeywordData.Keywords
                 .Where(keyword => !isKeywordContext
                     || phrase.Length == 0
                     || keyword.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase))
@@ -203,7 +124,7 @@ public class CompletionHandler : CompletionHandlerBase
 
             foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
             {
-                if (symbol.Kind == SymbolKind.Function)
+                if (symbol.Kind == TopsyTurvySymbolKind.Function)
                 {
                     yield return symbol;
                 }
@@ -220,14 +141,14 @@ public class CompletionHandler : CompletionHandlerBase
         new()
         {
             Label  = symbol.Name,
-            Kind   = symbol.Kind == SymbolKind.Function
+            Kind   = symbol.Kind == TopsyTurvySymbolKind.Function
                 ? CompletionItemKind.Function
                 : CompletionItemKind.Variable,
             Detail = symbol.Kind switch
             {
-                SymbolKind.Variable  => symbol.TypeDisplayName,
-                SymbolKind.Function  => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
-                SymbolKind.Parameter => "parameter",
+                TopsyTurvySymbolKind.Variable  => symbol.TypeDisplayName,
+                TopsyTurvySymbolKind.Function  => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
+                TopsyTurvySymbolKind.Parameter => "parameter",
                 _                    => null
             }
         };

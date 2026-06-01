@@ -10,9 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Analysis\BWHazel.TopsyTurvy.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
-    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
   </ItemGroup>
 
   <ItemGroup>

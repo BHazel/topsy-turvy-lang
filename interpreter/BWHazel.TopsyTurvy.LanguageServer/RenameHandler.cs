@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -17,23 +17,14 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </summary>
 /// <remarks>
 /// Finds every whole-word, case-insensitive occurrence of the symbol under the cursor
-/// (skipping comments and string literals) and replaces each with the new name supplied
-/// by the editor, returning a <see cref="WorkspaceEdit"/> with one <see cref="TextEdit"/>
-/// per occurrence.
+/// across all open documents (skipping comments and string literals) and replaces each
+/// with the new name supplied by the editor, returning a <see cref="WorkspaceEdit"/>
+/// with one <see cref="TextEdit"/> per occurrence.
 /// </remarks>
 public class RenameHandler : RenameHandlerBase
 {
     private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
-
-    private static readonly Regex BlockCommentPattern =
-        new(@"\(ASIDE, AT SOME LENGTH:.*?END OF ASIDE\.\)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-    private static readonly Regex StringLiteralPattern =
-        new(@"""(?:[^""\\]|\\.)*""", RegexOptions.Singleline);
-
-    private static readonly Regex LineCommentPattern =
-        new(@"ASIDE:.*", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Initialises a new instance of the <see cref="RenameHandler"/> class.
@@ -75,7 +66,11 @@ public class RenameHandler : RenameHandlerBase
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                return Task.FromResult<WorkspaceEdit?>(null);
+                info = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                if (info is null)
+                {
+                    return Task.FromResult<WorkspaceEdit?>(null);
+                }
             }
 
             if (info.Name.Contains(' '))
@@ -83,61 +78,28 @@ public class RenameHandler : RenameHandlerBase
                 return Task.FromResult<WorkspaceEdit?>(null);
             }
 
-            string source = state.Source;
-            string[] lines = source.Split('\n');
-            int[] lineOffsets = BuildLineOffsets(lines);
-            List<(int Start, int End)> skipRanges = FindSkipRanges(source);
-            List<TextEdit> edits = [];
-
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            Dictionary<DocumentUri, IEnumerable<TextEdit>> changes = [];
+            foreach ((DocumentUri documentUri, DocumentState documentState) in this.documentStateManager.AllDocuments())
             {
-                string lineText = lines[lineIndex];
-                int searchFrom = 0;
-                int foundAt;
-
-                while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+                string documentSource = documentState.Source;
+                if (string.IsNullOrEmpty(documentSource))
                 {
-                    searchFrom = foundAt + 1;
+                    continue;
+                }
 
-                    if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
-                    {
-                        continue;
-                    }
-
-                    int endChar = foundAt + word.Length;
-                    if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
-                    {
-                        continue;
-                    }
-
-                    int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                    if (IsInSkipRange(absoluteOffset, skipRanges))
-                    {
-                        continue;
-                    }
-
-                    edits.Add(new TextEdit
-                    {
-                        Range = new LspRange(
-                            new Position(lineIndex, foundAt),
-                            new Position(lineIndex, endChar)),
-                        NewText = request.NewName
-                    });
+                List<TextEdit> edits = CollectEdits(documentSource, word, request.NewName);
+                if (edits.Count > 0)
+                {
+                    changes[documentUri] = edits;
                 }
             }
 
-            if (edits.Count == 0)
+            if (changes.Count == 0)
             {
                 return Task.FromResult<WorkspaceEdit?>(null);
             }
 
-            return Task.FromResult<WorkspaceEdit?>(new WorkspaceEdit
-            {
-                Changes = new Dictionary<DocumentUri, IEnumerable<TextEdit>>
-                {
-                    [request.TextDocument.Uri] = edits
-                }
-            });
+            return Task.FromResult<WorkspaceEdit?>(new WorkspaceEdit { Changes = changes });
         }
         catch (Exception)
         {
@@ -146,82 +108,80 @@ public class RenameHandler : RenameHandlerBase
     }
 
     /// <summary>
-    /// Builds an array of the absolute character offset at which each line begins.
+    /// Searches all open documents other than the current one for a symbol with the given name.
     /// </summary>
-    /// <param name="lines">The source lines.</param>
-    /// <returns>An array of absolute start offsets, one per line.</returns>
-    private static int[] BuildLineOffsets(string[] lines)
+    /// <param name="currentUri">The URI of the document being searched, which is excluded.</param>
+    /// <param name="name">The symbol name to find.</param>
+    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
+    private SymbolInfo? FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
     {
-        int[] offsets = new int[lines.Length];
-        int current = 0;
-        for (int i = 0; i < lines.Length; i++)
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
         {
-            offsets[i] = current;
-            current += lines[i].Length + 1;
-        }
-
-        return offsets;
-    }
-
-    /// <summary>
-    /// Returns source ranges that must not be renamed.
-    /// </summary>
-    /// <param name="source">The full document source text.</param>
-    /// <remarks>
-    /// This includes block comments, string literals, and line comments.
-    /// </remarks>
-    /// <returns>A list of (start, end) absolute offset pairs to skip.</returns>
-    private static List<(int Start, int End)> FindSkipRanges(string source)
-    {
-        List<(int Start, int End)> ranges = [];
-        foreach (Match match in BlockCommentPattern.Matches(source))
-        {
-            ranges.Add((match.Index, match.Index + match.Length));
-        }
-
-        foreach (Match match in StringLiteralPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
             {
-                ranges.Add((match.Index, match.Index + match.Length));
+                continue;
+            }
+
+            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
+            {
+                return info;
             }
         }
 
-        foreach (Match match in LineCommentPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
-            {
-                ranges.Add((match.Index, match.Index + match.Length));
-            }
-        }
-
-        return ranges;
+        return null;
     }
 
     /// <summary>
-    /// Determines whether an absolute character offset falls within any skip range.
+    /// Collects whole-word, case-insensitive rename edits for a symbol across a single document.
     /// </summary>
-    /// <param name="absoluteOffset">The offset to test.</param>
-    /// <param name="ranges">The ranges to test against.</param>
-    /// <returns><c>true</c> if the offset is inside a skip range, otherwise <c>false</c>.</returns>
-    private static bool IsInSkipRange(int absoluteOffset, List<(int Start, int End)> ranges)
+    /// <param name="source">The document source text to scan.</param>
+    /// <param name="word">The symbol name to find.</param>
+    /// <param name="newName">The replacement name.</param>
+    /// <returns>A list of <see cref="TextEdit"/> covering every occurrence.</returns>
+    private static List<TextEdit> CollectEdits(string source, string word, string newName)
     {
-        foreach ((int start, int end) in ranges)
+        string[] lines = source.Split('\n');
+        int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
+        List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
+        List<TextEdit> edits = [];
+
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
-            if (absoluteOffset >= start && absoluteOffset < end)
+            string lineText = lines[lineIndex];
+            int searchFrom = 0;
+            int foundAt;
+
+            while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
             {
-                return true;
+                searchFrom = foundAt + 1;
+                if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
+                {
+                    continue;
+                }
+
+                int endChar = foundAt + word.Length;
+                if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
+                {
+                    continue;
+                }
+
+                int absoluteOffset = lineOffsets[lineIndex] + foundAt;
+                if (SourceAnalyser.IsInSkipRange(absoluteOffset, skipRanges))
+                {
+                    continue;
+                }
+
+                edits.Add(new TextEdit
+                {
+                    Range = new LspRange(
+                        new Position(lineIndex, foundAt),
+                        new Position(lineIndex, endChar)),
+                    NewText = newName
+                });
             }
         }
 
-        return false;
+        return edits;
     }
-
-    /// <summary>
-    /// Determines if a character is valid inside a Topsy Turvy identifier.
-    /// </summary>
-    /// <param name="character">The character to test.</param>
-    /// <returns><c>true</c> if the character is a valid identifier character, otherwise <c>false</c>.</returns>
-    private static bool IsIdentifierChar(char character) =>
-        char.IsLetterOrDigit(character) || character == '-' || character == '_';
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -71,7 +72,7 @@ public class HoverHandler : HoverHandlerBase
                 Contents = new MarkedStringsOrMarkupContent(new MarkupContent
                 {
                     Kind = MarkupKind.Markdown,
-                    Value = BuildHoverMarkdown(info)
+                    Value = HoverMarkdownBuilder.Build(info)
                 })
             });
         }
@@ -106,17 +107,4 @@ public class HoverHandler : HoverHandlerBase
         return null;
     }
 
-    private static string BuildHoverMarkdown(SymbolInfo info) => info.Kind switch
-    {
-        SymbolKind.Variable when info.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase) =>
-            "**implicit variable** `JUST SO` — receives the result of the last expression",
-        SymbolKind.Variable =>
-            $"**(variable)** `{info.Name}` : {info.TypeDisplayName}",
-        SymbolKind.Function =>
-            $"**(function)** `{info.Name}`({string.Join(", ", info.Parameters ?? Array.Empty<string>())})",
-        SymbolKind.Parameter =>
-            $"**(parameter)** `{info.Name}`",
-        _ =>
-            $"`{info.Name}`"
-    };
 }

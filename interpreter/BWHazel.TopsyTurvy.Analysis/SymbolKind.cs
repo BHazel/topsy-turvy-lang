@@ -1,4 +1,4 @@
-namespace BWHazel.TopsyTurvy.LanguageServer;
+namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
 /// Defines the kinds of symbols that can appear in a Topsy Turvy program.

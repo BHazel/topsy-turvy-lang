@@ -1,4 +1,4 @@
-namespace BWHazel.TopsyTurvy.LanguageServer;
+namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
 /// Holds the most recent parsed state for a single open document.

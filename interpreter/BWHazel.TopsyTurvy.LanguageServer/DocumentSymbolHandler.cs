@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -9,6 +10,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
 using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 using LspSymbolKind = OmniSharp.Extensions.LanguageServer.Protocol.Models.SymbolKind;
+using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -85,11 +87,11 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
     /// </summary>
     /// <param name="kind">The Topsy Turvy symbol kind.</param>
     /// <returns>The LSP symbol kind.</returns>
-    private static LspSymbolKind MapSymbolKind(SymbolKind kind) => kind switch
+    private static LspSymbolKind MapSymbolKind(TopsyTurvySymbolKind kind) => kind switch
     {
-        SymbolKind.Function  => LspSymbolKind.Function,
-        SymbolKind.Parameter => LspSymbolKind.TypeParameter,
-        _                    => LspSymbolKind.Variable
+        TopsyTurvySymbolKind.Function  => LspSymbolKind.Function,
+        TopsyTurvySymbolKind.Parameter => LspSymbolKind.TypeParameter,
+        _                      => LspSymbolKind.Variable
     };
 
     /// <summary>

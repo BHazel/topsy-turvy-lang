@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -81,7 +82,7 @@ public class PrepareRenameHandler : PrepareRenameHandlerBase
             string lineText = lines[line].TrimEnd('\r');
             int col = Math.Min(character, lineText.Length - 1);
             int startCol = col;
-            while (startCol > 0 && IsIdentifierChar(lineText[startCol - 1]))
+            while (startCol > 0 && SourceAnalyser.IsIdentifierChar(lineText[startCol - 1]))
             {
                 startCol--;
             }
@@ -103,11 +104,4 @@ public class PrepareRenameHandler : PrepareRenameHandlerBase
         }
     }
 
-    /// <summary>
-    /// Determines if a character is valid inside a Topsy Turvy identifier.
-    /// </summary>
-    /// <param name="character">The character to test.</param>
-    /// <returns><c>true</c> if the character is a valid identifier character, otherwise <c>false</c>.</returns>
-    private static bool IsIdentifierChar(char character) =>
-        char.IsLetterOrDigit(character) || character == '-' || character == '_';
 }

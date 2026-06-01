@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Ast;
 
-namespace BWHazel.TopsyTurvy.LanguageServer;
+namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
 /// Holds all named symbols collected from a successfully parsed Topsy Turvy program.
 /// </summary>
 /// <remarks>
-/// Provides lookup and cursor-position utilities for LSP handlers.
+/// Provides lookup and cursor-position utilities for LSP handlers and analysis consumers.
 /// </remarks>
 public class SymbolTable
 {
@@ -34,18 +34,18 @@ public class SymbolTable
     /// <returns>A populated <see cref="SymbolTable"/>.</returns>
     public static SymbolTable Build(ProgramNode ast, string originalSource)
     {
-        Dictionary<string, SymbolInfo> collected = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, SymbolInfo> collectedSymbols = new(StringComparer.OrdinalIgnoreCase);
         string[] sourceLines = originalSource.Split('\n');
 
-        collected["JUST SO"] = new SymbolInfo
+        collectedSymbols["JUST SO"] = new SymbolInfo
         {
             Name = "JUST SO",
             Kind = SymbolKind.Variable,
             TypeDisplayName = "implicit accumulator"
         };
 
-        CollectFromStatements(ast.Statements, collected, sourceLines);
-        return new SymbolTable(collected);
+        CollectFromStatements(ast.Statements, collectedSymbols, sourceLines);
+        return new SymbolTable(collectedSymbols);
     }
 
     /// <summary>
@@ -132,11 +132,11 @@ public class SymbolTable
     /// Walks the given statement recursively to collect symbol information.
     /// </summary>
     /// <param name="statement">The statement to process.</param>
-    /// <param name="collected">The dictionary to collect symbol information into.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
     private static void CollectFromStatement(
         Statement statement,
-        Dictionary<string, SymbolInfo> collected,
+        Dictionary<string, SymbolInfo> collectedSymbols,
         string[] sourceLines)
     {
         switch (statement)
@@ -144,39 +144,39 @@ public class SymbolTable
             case PrincipalBlockNode principals:
                 foreach (DeclarationNode decl in principals.Declarations)
                 {
-                    AddVariable(decl, collected, sourceLines);
+                    AddVariable(decl, collectedSymbols, sourceLines);
                 }
 
                 break;
             case DeclarationNode declaration:
-                AddVariable(declaration, collected, sourceLines);
+                AddVariable(declaration, collectedSymbols, sourceLines);
                 break;
             case FunctionDefinitionNode function:
-                AddFunction(function, collected, sourceLines);
+                AddFunction(function, collectedSymbols, sourceLines);
                 break;
             case ConditionalNode conditional:
-                CollectFromStatements(conditional.TrueBlock, collected, sourceLines);
+                CollectFromStatements(conditional.TrueBlock, collectedSymbols, sourceLines);
                 foreach (ElseIfBranch elseIf in conditional.ElseIfs)
                 {
-                    CollectFromStatements(elseIf.Block, collected, sourceLines);
+                    CollectFromStatements(elseIf.Block, collectedSymbols, sourceLines);
                 }
 
-                CollectFromStatements(conditional.ElseBlock, collected, sourceLines);
+                CollectFromStatements(conditional.ElseBlock, collectedSymbols, sourceLines);
                 break;
             case LoopNode loop:
-                CollectFromStatements(loop.Body, collected, sourceLines);
+                CollectFromStatements(loop.Body, collectedSymbols, sourceLines);
                 break;
             case SwitchNode switchNode:
                 foreach (SwitchCase switchCase in switchNode.Cases)
                 {
-                    CollectFromStatements(switchCase.Block, collected, sourceLines);
+                    CollectFromStatements(switchCase.Block, collectedSymbols, sourceLines);
                 }
 
-                CollectFromStatements(switchNode.DefaultBlock, collected, sourceLines);
+                CollectFromStatements(switchNode.DefaultBlock, collectedSymbols, sourceLines);
                 break;
             case TryCatchNode tryCatch:
-                CollectFromStatements(tryCatch.SuccessBlock, collected, sourceLines);
-                CollectFromStatements(tryCatch.ExceptionBlock, collected, sourceLines);
+                CollectFromStatements(tryCatch.SuccessBlock, collectedSymbols, sourceLines);
+                CollectFromStatements(tryCatch.ExceptionBlock, collectedSymbols, sourceLines);
                 break;
         }
     }
@@ -185,20 +185,20 @@ public class SymbolTable
     /// Adds a variable to the collected symbol information.
     /// </summary>
     /// <param name="declaration">The declaration node representing the variable.</param>
-    /// <param name="collected">The dictionary to collect symbol information into.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
     private static void AddVariable(
         DeclarationNode declaration,
-        Dictionary<string, SymbolInfo> collected,
+        Dictionary<string, SymbolInfo> collectedSymbols,
         string[] sourceLines)
     {
-        if (collected.ContainsKey(declaration.Name))
+        if (collectedSymbols.ContainsKey(declaration.Name))
         {
             return;
         }
 
         (int line, int column) = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
-        collected[declaration.Name] = new SymbolInfo
+        collectedSymbols[declaration.Name] = new SymbolInfo
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
@@ -212,19 +212,19 @@ public class SymbolTable
     /// Adds a function and its parameters to the collected symbol information.
     /// </summary>
     /// <param name="function">The function definition node representing the function.</param>
-    /// <param name="collected">The dictionary to collect symbol information into.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
     private static void AddFunction(
         FunctionDefinitionNode function,
-        Dictionary<string, SymbolInfo> collected,
+        Dictionary<string, SymbolInfo> collectedSymbols,
         string[] sourceLines)
     {
         (int functionLine, int functionColumn) = FindDefinitionLine(
             sourceLines, "IT IS MY DUTY TO PERFORM", function.Name);
 
-        if (!collected.ContainsKey(function.Name))
+        if (!collectedSymbols.ContainsKey(function.Name))
         {
-            collected[function.Name] = new SymbolInfo
+            collectedSymbols[function.Name] = new SymbolInfo
             {
                 Name = function.Name,
                 Kind = SymbolKind.Function,
@@ -236,9 +236,9 @@ public class SymbolTable
 
         foreach (string parameter in function.Parameters)
         {
-            if (!collected.ContainsKey(parameter))
+            if (!collectedSymbols.ContainsKey(parameter))
             {
-                collected[parameter] = new SymbolInfo
+                collectedSymbols[parameter] = new SymbolInfo
                 {
                     Name = parameter,
                     Kind = SymbolKind.Parameter,
@@ -248,7 +248,7 @@ public class SymbolTable
             }
         }
 
-        CollectFromStatements(function.Body, collected, sourceLines);
+        CollectFromStatements(function.Body, collectedSymbols, sourceLines);
     }
 
     /// <summary>

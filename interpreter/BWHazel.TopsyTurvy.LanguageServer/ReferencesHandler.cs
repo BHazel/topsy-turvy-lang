@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -25,15 +25,6 @@ public class ReferencesHandler : ReferencesHandlerBase
 {
     private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
-
-    private static readonly Regex BlockCommentPattern =
-        new(@"\(ASIDE, AT SOME LENGTH:.*?END OF ASIDE\.\)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-    private static readonly Regex StringLiteralPattern =
-        new(@"""(?:[^""\\]|\\.)*""", RegexOptions.Singleline);
-
-    private static readonly Regex LineCommentPattern =
-        new(@"ASIDE:.*", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Initialises a new instance of the <see cref="ReferencesHandler"/> class.
@@ -76,7 +67,11 @@ public class ReferencesHandler : ReferencesHandlerBase
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                return Task.FromResult<LocationContainer?>(null);
+                info = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                if (info is null)
+                {
+                    return Task.FromResult<LocationContainer?>(null);
+                }
             }
 
             if (info.Name.Contains(' '))
@@ -91,8 +86,8 @@ public class ReferencesHandler : ReferencesHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = BuildLineOffsets(lines);
-            List<(int Start, int End)> skipRanges = FindSkipRanges(source);
+            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
+            List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
             List<Location> locations = [];
 
             for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
@@ -105,19 +100,19 @@ public class ReferencesHandler : ReferencesHandlerBase
                 {
                     searchFrom = foundAt + 1;
 
-                    if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
+                    if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
                     {
                         continue;
                     }
 
                     int endChar = foundAt + word.Length;
-                    if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
+                    if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
                     {
                         continue;
                     }
 
                     int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                    if (IsInSkipRange(absoluteOffset, skipRanges))
+                    if (SourceAnalyser.IsInSkipRange(absoluteOffset, skipRanges))
                     {
                         continue;
                     }
@@ -152,8 +147,8 @@ public class ReferencesHandler : ReferencesHandlerBase
                 }
 
                 string[] otherLines = otherSource.Split('\n');
-                int[] otherOffsets = BuildLineOffsets(otherLines);
-                List<(int Start, int End)> otherSkip = FindSkipRanges(otherSource);
+                int[] otherOffsets = SourceAnalyser.BuildLineOffsets(otherLines);
+                List<(int Start, int End)> otherSkip = SourceAnalyser.FindSkipRanges(otherSource);
                 for (int lineIndex = 0; lineIndex < otherLines.Length; lineIndex++)
                 {
                     string lineText = otherLines[lineIndex];
@@ -164,19 +159,19 @@ public class ReferencesHandler : ReferencesHandlerBase
                     {
                         searchFrom = foundAt + 1;
 
-                        if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
+                        if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
                         {
                             continue;
                         }
 
                         int endChar = foundAt + word.Length;
-                        if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
+                        if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
                         {
                             continue;
                         }
 
                         int absoluteOffset = otherOffsets[lineIndex] + foundAt;
-                        if (IsInSkipRange(absoluteOffset, otherSkip))
+                        if (SourceAnalyser.IsInSkipRange(absoluteOffset, otherSkip))
                         {
                             continue;
                         }
@@ -201,82 +196,27 @@ public class ReferencesHandler : ReferencesHandlerBase
     }
 
     /// <summary>
-    /// Builds an array of the absolute character offset at which each line begins.
+    /// Searches all open documents other than the current one for a symbol with the given name.
     /// </summary>
-    /// <param name="lines">The source lines.</param>
-    /// <returns>An array of absolute start offsets, one per line.</returns>
-    private static int[] BuildLineOffsets(string[] lines)
+    /// <param name="currentUri">The URI of the document being searched, which is excluded.</param>
+    /// <param name="name">The symbol name to find.</param>
+    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
+    private SymbolInfo? FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
     {
-        int[] offsets = new int[lines.Length];
-        int current = 0;
-        for (int i = 0; i < lines.Length; i++)
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
         {
-            offsets[i] = current;
-            current += lines[i].Length + 1;
-        }
-
-        return offsets;
-    }
-
-    /// <summary>
-    /// Returns source ranges that must be excluded from reference scanning.
-    /// </summary>
-    /// <param name="source">The full document source text.</param>
-    /// <remarks>
-    /// This includes block comments, string literals, and line comments.
-    /// </remarks>
-    /// <returns>A list of absolute offset pairs of start and end positions to skip.</returns>
-    private static List<(int Start, int End)> FindSkipRanges(string source)
-    {
-        List<(int Start, int End)> ranges = [];
-        foreach (Match match in BlockCommentPattern.Matches(source))
-        {
-            ranges.Add((match.Index, match.Index + match.Length));
-        }
-
-        foreach (Match match in StringLiteralPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
             {
-                ranges.Add((match.Index, match.Index + match.Length));
+                continue;
+            }
+
+            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
+            {
+                return info;
             }
         }
 
-        foreach (Match match in LineCommentPattern.Matches(source))
-        {
-            if (!IsInSkipRange(match.Index, ranges))
-            {
-                ranges.Add((match.Index, match.Index + match.Length));
-            }
-        }
-
-        return ranges;
+        return null;
     }
-
-    /// <summary>
-    /// Determines whether an absolute character offset falls within any skip range.
-    /// </summary>
-    /// <param name="absoluteOffset">The offset to test.</param>
-    /// <param name="ranges">The ranges to test against.</param>
-    /// <returns><c>true</c> if the offset is inside a skip range, otherwise <c>false</c>.</returns>
-    private static bool IsInSkipRange(int absoluteOffset, List<(int Start, int End)> ranges)
-    {
-        foreach ((int start, int end) in ranges)
-        {
-            if (absoluteOffset >= start && absoluteOffset < end)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Determines if a character is valid inside a Topsy Turvy identifier.
-    /// </summary>
-    /// <param name="character">The character to test.</param>
-    /// <returns><c>true</c> if the character is a valid identifier character, otherwise <c>false</c>.</returns>
-    private static bool IsIdentifierChar(char character) =>
-        char.IsLetterOrDigit(character) || character == '-' || character == '_';
 }

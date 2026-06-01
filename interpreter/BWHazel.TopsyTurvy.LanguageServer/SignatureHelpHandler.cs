@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BWHazel.TopsyTurvy.Analysis;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+
+using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -83,7 +86,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 
             string functionName = tokens[0];
             if (!state.SymbolTable.TryGetSymbol(functionName, out SymbolInfo? info) || info is null
-                || info.Kind != SymbolKind.Function)
+                || info.Kind != TopsyTurvySymbolKind.Function)
             {
                 return Task.FromResult<SignatureHelp?>(null);
             }
