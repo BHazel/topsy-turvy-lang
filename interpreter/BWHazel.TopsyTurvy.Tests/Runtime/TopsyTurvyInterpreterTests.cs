@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Ast;
-using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
 
 namespace BWHazel.TopsyTurvy.Tests.Runtime;
 
 /// <summary>
-/// Tests for the <see cref="Interpreter"/> class.
+/// Core execution tests for the <see cref="Interpreter"/> class.
 /// </summary>
-public class TopsyTurvyInterpreterTests
+public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 {
-    private readonly TopsyTurvyParser parser = new();
-
     /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method prints the expected greeting for a Hello World program.
     /// </summary>
@@ -29,6 +26,7 @@ public class TopsyTurvyInterpreterTests
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
@@ -54,6 +52,7 @@ public class TopsyTurvyInterpreterTests
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
@@ -77,98 +76,95 @@ public class TopsyTurvyInterpreterTests
             BEHOLD result
             result IS APPOINTED SUM OF result AND 2
             BEHOLD result
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal(2, output.Count);
-        Assert.Equal("42", output[0]);
-        Assert.Equal("44", output[1]);
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes an inline conditional expression.
-    /// </summary>
-    [Fact]
-    public void Execute_WithInlineConditional_ExecutesCorrectBranch()
-    {
-        string source = """
-            HARK! "Conditional"
-            PRINCIPALS
-              PRAY WELCOME x AS A PEER BEING 5
-              PRAY WELCOME result AS A YARN
-            THE CURTAIN RISES.
-            SHOULD IT TRANSPIRE THAT PRE-ADAMITE x AND 3
-              QUITE SO.
-                result IS APPOINTED "big"
-              OTHERWISE,
-                result IS APPOINTED "small"
-            SO MUCH FOR THAT.
+            result IS APPOINTED QUOTIENT OF result AND 2
+            BEHOLD result
+            result IS APPOINTED DIFFERENCE OF result AND 2
             BEHOLD result
             FINALE.
             """;
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
-        Assert.Equal("big", output[0]);
+        Assert.Equal(4, output.Count);
+        Assert.Equal("42", output[0]);
+        Assert.Equal("44", output[1]);
+        Assert.Equal("22", output[2]);
+        Assert.Equal("20", output[3]);
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes a WHILST loop.
+    /// Tests that the <see cref="Interpreter.Execute"/> method reads a value from the input stream into the target variable.
     /// </summary>
     [Fact]
-    public void Execute_WithWhilstLoop_IteratesCorrectly()
+    public void Execute_WithInputStatement_AssignsReadLineToVariable()
     {
         string source = """
-            HARK! "Whilst Loop"
+            HARK! "Input"
             PRINCIPALS
-              PRAY WELCOME idx AS A PEER BEING 1
-              PRAY WELCOME total AS A PEER BEING 0
+              PRAY WELCOME name AS A YARN
             THE CURTAIN RISES.
-            BY A LEGAL FICTION WHILST LOWER DEGREE idx AND 4
-              total IS APPOINTED SUM OF total AND idx
-              idx IS APPOINTED SUM OF idx AND 1
-            THE TERM EXPIRES.
-            BEHOLD total
+            PRAY TELL name
+            BEHOLD name
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter("Ko-Ko");
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        Assert.False(diagnostics.HasErrors);
+        Assert.Equal("Ko-Ko", output[0]);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method casts a variable in-place and updates its stored value.
+    /// </summary>
+    [Fact]
+    public void Execute_WithInPlaceCast_ConvertsVariableType()
+    {
+        string source = """
+            HARK! "In-Place Cast"
+            PRINCIPALS
+              PRAY WELCOME n AS A PEER BEING 42
+            THE CURTAIN RISES.
+            n IS HENCEFORTH A YARN
+            BEHOLD n
             FINALE.
             """;
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
-        Assert.Equal("6", output[0]);
+        Assert.Equal("42", output[0]);
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes an ascending loop.
+    /// Tests that the <see cref="Interpreter.Execute"/> method stores the cast result in the JUST SO register.
     /// </summary>
     [Fact]
-    public void Execute_WithAscendingLoop_CountsCorrectly()
+    public void Execute_WithExpressionCast_StoresResultInJustSo()
     {
         string source = """
-            HARK! "Ascending Loop"
+            HARK! "Expression Cast"
             PRINCIPALS
-              PRAY WELCOME idx AS A PEER BEING 0
-              PRAY WELCOME count AS A PEER BEING 0
+              PRAY WELCOME n AS A PEER BEING 5
             THE CURTAIN RISES.
-            BY A LEGAL FICTION ASCENDING idx UNTIL ALIKE idx AND 5
-              count IS APPOINTED SUM OF count AND 1
-            THE TERM EXPIRES.
-            BEHOLD count
+            AS IT WERE n AS A YARN
+            BEHOLD JUST SO
             FINALE.
             """;
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
@@ -176,108 +172,50 @@ public class TopsyTurvyInterpreterTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes a recursive function.
+    /// Tests that the <see cref="Interpreter.Execute"/> method interpolates a variable reference inside a printed string.
     /// </summary>
     [Fact]
-    public void Execute_WithRecursiveFunction_ReturnsCorrectValue()
+    public void Execute_WithStringInterpolation_ReplacesPlaceholderWithVariableValue()
     {
         string source = """
-            HARK! "Fibonacci"
+            HARK! "String Interpolation"
             PRINCIPALS
-              PRAY WELCOME result AS A PEER BEING 0
+              PRAY WELCOME name AS A YARN BEING "World"
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM fib UNDER THE TERMS OF n
-              SHOULD IT TRANSPIRE THAT LOWER DEGREE n AND 2
-                QUITE SO.
-                  AND SO I FIND 1
-              SO MUCH FOR THAT.
-              AND SO I FIND SUM OF SUMMON fib WITH DIFFERENCE OF n AND 1 IF YOU PLEASE. AND SUMMON fib WITH DIFFERENCE OF n AND 2 IF YOU PLEASE.
-            MY DUTY IS DISCHARGED.
-            result IS APPOINTED SUMMON fib WITH 6 IF YOU PLEASE.
-            BEHOLD result
+            BEHOLD "Hello, {name}!"
             FINALE.
             """;
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
-        Assert.Equal("13", output[0]);
+        Assert.Equal("Hello, World!", output[0]);
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes a switch statement and breaks after a matching case.
+    /// Tests that the <see cref="Interpreter.Execute"/> method stores the result of an expression statement in JUST SO.
     /// </summary>
     [Fact]
-    public void Execute_WithSwitch_MatchesCaseAndBreaks()
+    public void Execute_WithExpressionStatement_StoresResultInJustSo()
     {
         string source = """
-            HARK! "Switch"
+            HARK! "Expression Statement"
             PRINCIPALS
-              PRAY WELCOME x AS A PEER BEING 2
-              PRAY WELCOME result AS A YARN BEING "none"
             THE CURTAIN RISES.
-            IN WHICH CAPACITY? x
-              WHEN ACTING AS 1
-                result IS APPOINTED "one"
-                THAT WILL DO.
-              WHEN ACTING AS 2
-                result IS APPOINTED "two"
-                THAT WILL DO.
-              WHEN ACTING AS 3
-                result IS APPOINTED "three"
-                THAT WILL DO.
-            NOTHING COULD BE MORE SATISFACTORY.
-            BEHOLD result
+            SUM OF 3 AND 4
+            BEHOLD JUST SO
             FINALE.
             """;
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+        
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         Assert.False(diagnostics.HasErrors);
-        Assert.Equal("two", output[0]);
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method correctly executes a try-catch block and handles exceptions.
-    /// </summary>
-    [Fact]
-    public void Execute_WithCaughtException_ExecutesExceptionBlock()
-    {
-        string source = """
-            HARK! "Exception"
-            PRINCIPALS
-              PRAY WELCOME result AS A YARN BEING "none"
-            THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM risky UNDER NO OBLIGATION
-              A HIDEOUS CURSE ON "catastrophe"
-            MY DUTY IS DISCHARGED.
-            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
-              WITH GRATITUDE
-                result IS APPOINTED "success"
-              MODIFIED RAPTURE
-                result IS APPOINTED JUST SO
-            THAT CONCLUDES THE MATTER.
-            BEHOLD result
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("catastrophe", output[0]);
-    }
-
-    private (Interpreter Interpreter, List<string> Output) CreateInterpreter(params string[] inputLines)
-    {
-        List<string> output = [];
-        Queue<string> input = new(inputLines);
-        TestIO io = new(output, input);
-        return (new(io), output);
+        Assert.Equal("7", output[0]);
     }
 }
