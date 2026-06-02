@@ -1,6 +1,6 @@
 using BWHazel.TopsyTurvy.Analysis;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
 /// <summary>
 /// Tests for the <see cref="SourceFormatter"/> class.
@@ -39,7 +39,7 @@ public class SourceFormatterTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents delarations inside a PRINCIPALS block by one level.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents declarations inside a PRINCIPALS block by one level.
     /// </summary>
     [Fact]
     public void FormatSource_WithPrincipalsBlock_IndentsDeclarations()
@@ -63,7 +63,7 @@ public class SourceFormatterTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents a conditional <c>true</c> block by one level and double-indents its body.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents a conditional true block by one level and double-indents its body.
     /// </summary>
     [Fact]
     public void FormatSource_WithIfBlock_IndentsCorrectly()
@@ -75,7 +75,7 @@ public class SourceFormatterTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method decreases a <c>false</c> block depth (mid-block keyword) by one level then increases it again.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method decreases a false block depth (mid-block keyword) by one level then increases it again.
     /// </summary>
     [Fact]
     public void FormatSource_WithElseBlock_IndentsOtherwiseMidBlock()

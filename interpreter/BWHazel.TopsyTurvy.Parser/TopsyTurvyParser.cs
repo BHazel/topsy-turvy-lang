@@ -227,7 +227,7 @@ public class TopsyTurvyParser
             }
 
             int errorOffset = startOffset;
-            string[] errorExpectations = result.Expectations;
+            string[] errorExpectations = result.Expectations ?? [];
             if (startOffset < processedText.Length)
             {
                 Result<Statement> innerResult = StatementParser.Statement.TryParse(processedText.Substring(startOffset));
@@ -240,7 +240,7 @@ public class TopsyTurvyParser
                     }
 
                     errorOffset = innerAbsolute;
-                    errorExpectations = innerResult.Expectations;
+                    errorExpectations = innerResult.Expectations ?? [];
                 }
             }
 

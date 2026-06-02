@@ -1,6 +1,6 @@
 using BWHazel.TopsyTurvy.Analysis;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
 /// <summary>
 /// Tests for the <see cref="HoverMarkdownBuilder"/> class.

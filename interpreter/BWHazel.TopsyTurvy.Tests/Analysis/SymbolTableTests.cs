@@ -4,7 +4,7 @@ using System.Linq;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Parser;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
 /// <summary>
 /// Tests for the <see cref="SymbolTable"/> class.

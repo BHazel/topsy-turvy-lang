@@ -2,9 +2,8 @@ using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
-using Xunit;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Runtime;
 
 /// <summary>
 /// Tests for the <see cref="Interpreter"/> class.
@@ -274,11 +273,6 @@ public class TopsyTurvyInterpreterTests
         Assert.Equal("catastrophe", output[0]);
     }
 
-    /// <summary>
-    /// Creates an <see cref="Interpreter"/> instance and associated output.
-    /// </summary>
-    /// <param name="inputLines">The input lines to provide to the interpreter.</param>
-    /// <returns>A tuple containing the <see cref="Interpreter"/> instance and the list of output lines.</returns>
     private (Interpreter Interpreter, List<string> Output) CreateInterpreter(params string[] inputLines)
     {
         List<string> output = [];

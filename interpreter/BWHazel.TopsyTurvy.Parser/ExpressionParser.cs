@@ -72,7 +72,7 @@ public static class ExpressionParser
         Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("AND"))
             .IgnoreThen(Lexer.WhitespaceRequired)
-            .IgnoreThen(Parse.Ref(() => Expression)).Try()
+            .IgnoreThen(Parse.Ref(() => Expression!)).Try()
         .Many();
 
     /// <summary>
@@ -80,13 +80,13 @@ public static class ExpressionParser
     /// </summary>
     public static readonly TextParser<Expression> PrefixExpression =
         from op in OperatorToken.Try()
-        from first in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression))
+        from first in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression!))
         from rest in IsVariadic(op)
             ? AndExpression
             : Lexer.WhitespaceRequired
                    .IgnoreThen(Lexer.Keyword("AND"))
                    .IgnoreThen(Lexer.WhitespaceRequired)
-                   .IgnoreThen(Parse.Ref(() => Expression)).Try()
+                   .IgnoreThen(Parse.Ref(() => Expression!)).Try()
                .Select(e => new Expression[] { e })
                .OptionalOrDefault(System.Array.Empty<Expression>())
         from _closer in IsVariadic(op)
@@ -110,12 +110,12 @@ public static class ExpressionParser
              Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("NOTHING")).Try()
                  .Select(_ => new List<Expression>())
              .Or(
-                 from first in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression))
+                 from first in Lexer.WhitespaceRequired.IgnoreThen(Parse.Ref(() => Expression!))
                  from rest in (
                      Lexer.WhitespaceRequired
                          .IgnoreThen(Lexer.Keyword("AND"))
                          .IgnoreThen(Lexer.WhitespaceRequired)
-                         .IgnoreThen(Parse.Ref(() => Expression)).Try()
+                         .IgnoreThen(Parse.Ref(() => Expression!)).Try()
                  ).Many()
                  select new List<Expression>(rest.Length + 1) { first }.Concat(rest).ToList()
              )

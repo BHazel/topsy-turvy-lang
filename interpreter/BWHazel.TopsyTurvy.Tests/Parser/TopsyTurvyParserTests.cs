@@ -1,11 +1,10 @@
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
-using Xunit;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Parser;
 
 /// <summary>
-/// Tests for <see cref="TopsyTurvyParser"/> class.
+/// High-level integration tests for <see cref="TopsyTurvyParser"/>.
 /// </summary>
 public class TopsyTurvyParserTests
 {
@@ -14,8 +13,6 @@ public class TopsyTurvyParserTests
     /// <summary>
     /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method correctly parses a minimal program.
     /// </summary>
-    /// <param name="source">The source code of the program to parse.</param>
-    /// <param name="expectedTitle">The expected title of the parsed program.</param>
     [Theory]
     [InlineData("HARK! \"Hello\" FINALE.", "Hello")]
     public void Parse_WithMinimalProgram_ReturnsTitle(string source, string expectedTitle)
@@ -128,5 +125,48 @@ public class TopsyTurvyParserTests
         Assert.Single(result.Diagnostics);
         Assert.True(result.Diagnostics[0].Span.Start.Line >= 1,
             $"Line must be >= 1, got {result.Diagnostics[0].Span.Start.Line}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> with a reserved word used as a variable name returns a non-null program with a diagnostic.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithReservedWordAsVariableName_ReturnsNonNullProgramWithDiagnostic()
+    {
+        string source = "HARK! \"T\" PRAY WELCOME BOTH AS A PEER FINALE.";
+        ParseResult result = this.parser.TryParse(source);
+
+        Assert.NotNull(result.Program);
+        Assert.NotEmpty(result.Diagnostics);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.Parse"/> with a reserved word used as a variable name throws a <see cref="TopsyTurvySyntaxException"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_WithReservedWordAsVariableName_ThrowsSyntaxException()
+    {
+        string source = "HARK! \"T\" PRAY WELCOME BOTH AS A PEER FINALE.";
+        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.Parse"/> with a reserved word used as a function name throws a <see cref="TopsyTurvySyntaxException"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_WithReservedWordAsFunctionName_ThrowsSyntaxException()
+    {
+        string source = "HARK! \"T\" IT IS MY DUTY TO PERFORM DUTY UNDER NO OBLIGATION MY DUTY IS DISCHARGED. FINALE.";
+        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.Parse"/> with a reserved word used as a parameter name throws a <see cref="TopsyTurvySyntaxException"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_WithReservedWordAsParameterName_ThrowsSyntaxException()
+    {
+        string source = "HARK! \"T\" IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF ALL MY DUTY IS DISCHARGED. FINALE.";
+        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
     }
 }

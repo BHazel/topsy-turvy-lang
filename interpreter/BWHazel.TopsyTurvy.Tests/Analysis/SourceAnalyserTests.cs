@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Analysis;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
 /// <summary>
 /// Tests for <see cref="SourceAnalyser"/>.
@@ -251,7 +251,7 @@ public class SourceAnalyserTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceAnalyser.CountOccurrences"/> method includes all lines when given an exlusion index of -1.
+    /// Tests that the <see cref="SourceAnalyser.CountOccurrences"/> method includes all lines when given an exclusion index of -1.
     /// </summary>
     [Fact]
     public void CountOccurrences_WithExcludeMinusOne_CountsAllLines()

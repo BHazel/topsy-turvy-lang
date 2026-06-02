@@ -120,16 +120,16 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<(IReadOnlyList<Statement> TrueBlock, IReadOnlyList<ElseIfBranch> ElseIfs, IReadOnlyList<Statement> ElseBlock)> ConditionalBody =
         from _trueMark in Ws(Lexer.Keyword("QUITE SO.").Named("QUITE SO. (then-block)"))
-        from trueBr in Ws(Parse.Ref(() => Statement)).Try().Many()
+        from trueBr in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from elseIfs in (
             from _ in Ws(Lexer.Keyword("OR, IF NOT,"))
             from cond in Ws(ExpressionParser.Expression).Try().OptionalOrDefault(null!)
-            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
+            from block in Ws(Parse.Ref(() => Statement!)).Try().Many()
             select new ElseIfBranch(cond, block.ToList())
         ).Try().Many()
         from elseBr in (
             from _ in Ws(Lexer.Keyword("OTHERWISE,"))
-            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
+            from block in Ws(Parse.Ref(() => Statement!)).Try().Many()
             select (IReadOnlyList<Statement>)block.ToList()
         ).Try().OptionalOrDefault(null!)
         select (
@@ -167,12 +167,12 @@ public static class StatementParser
                 .Or(Lexer.FloatLiteral.Select(v => (object?)v))
                 .Or(Lexer.IntegerLiteral.Select(v => (object?)v))
                 .Or(Lexer.StringLiteral.Select(v => (object?)v)))
-            from body in Ws(Parse.Ref(() => Statement)).Try().Many()
+            from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
             select new SwitchCase(lit, body.ToList())
         ).Try().Many()
         from def in (
             from _ in Ws(Lexer.Keyword("FAILING ALL OF THE ABOVE,"))
-            from block in Ws(Parse.Ref(() => Statement)).Try().Many()
+            from block in Ws(Parse.Ref(() => Statement!)).Try().Many()
             select (IReadOnlyList<Statement>)block.ToList()
         ).Try().OptionalOrDefault(null!)
         select (
@@ -237,7 +237,7 @@ public static class StatementParser
         from label in Ws(Lexer.Keyword("KNOWN AS").IgnoreThen(Ws(Lexer.Identifier)))
                          .Try().OptionalOrDefault(null!)
         from loopDef in LoopTypeParser
-        from body in Ws(Parse.Ref(() => Statement)).Try().Many()
+        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from _end in Ws(Lexer.Keyword("THE TERM EXPIRES.").Named("THE TERM EXPIRES. (end of loop)"))
         select (Statement)new LoopNode
         {
@@ -256,9 +256,9 @@ public static class StatementParser
         from _op in Lexer.Keyword("WITH THE GREATEST RESPECT,")
         from op in Ws(ExpressionParser.Expression)
         from _wg in Ws(Lexer.Keyword("WITH GRATITUDE"))
-        from succ in Ws(Parse.Ref(() => Statement)).Try().Many()
+        from succ in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from _mr in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
-        from ex in Ws(Parse.Ref(() => Statement)).Try().Many()
+        from ex in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from _end in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER.").Named("THAT CONCLUDES THE MATTER. (end of try/catch)"))
         select (Statement)new TryCatchNode
         {
@@ -308,7 +308,7 @@ public static class StatementParser
         from _ in Lexer.Keyword("IT IS MY DUTY TO PERFORM")
         from name in Ws(Lexer.Identifier)
         from terms in ParameterList
-        from body in Ws(Parse.Ref(() => Statement)).Try().Many()
+        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from _end in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED.").Named("MY DUTY IS DISCHARGED. (end of function)"))
         select (Statement)new FunctionDefinitionNode
         {
