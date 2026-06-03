@@ -59,8 +59,8 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
             List<SymbolInformationOrDocumentSymbol> items = [];
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
             {
-                LspSymbolKind lspKind = MapSymbolKind(symbol.Kind);
-                Location location = BuildLocation(request.TextDocument.Uri, symbol);
+                LspSymbolKind lspKind = LspUtilities.MapSymbolKind(symbol.Kind);
+                Location location = LspUtilities.BuildLocation(request.TextDocument.Uri, symbol);
 
                 SymbolInformation symbolInformation = new()
                 {
@@ -82,49 +82,4 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
         }
     }
 
-    /// <summary>
-    /// Maps a Topsy Turvy <see cref="SymbolKind"/> to the corresponding LSP <see cref="LspSymbolKind"/>.
-    /// </summary>
-    /// <param name="kind">The Topsy Turvy symbol kind.</param>
-    /// <returns>The LSP symbol kind.</returns>
-    private static LspSymbolKind MapSymbolKind(TopsyTurvySymbolKind kind) => kind switch
-    {
-        TopsyTurvySymbolKind.Function => LspSymbolKind.Function,
-        TopsyTurvySymbolKind.Parameter => LspSymbolKind.TypeParameter,
-        _ => LspSymbolKind.Variable
-    };
-
-    /// <summary>
-    /// Builds an LSP <see cref="Location"/> for the given symbol.
-    /// </summary>
-    /// <param name="uri">The document URI.</param>
-    /// <param name="symbol">The symbol whose definition location is required.</param>
-    /// <returns>
-    /// A <see cref="Location"/> covering the symbol name token on its definition line,
-    /// or a zero-point location when the definition position is not known.
-    /// </returns>
-    private static Location BuildLocation(DocumentUri uri, SymbolInfo symbol)
-    {
-        LspRange range;
-
-        if (symbol.DefinitionLine != 0)
-        {
-            int startLine = symbol.DefinitionLine - 1;
-            int startChar = symbol.DefinitionColumn - 1;
-            int endChar = startChar + symbol.Name.Length;
-            range = new LspRange(
-                new Position(startLine, startChar),
-                new Position(startLine, endChar));
-        }
-        else
-        {
-            range = new LspRange(new Position(0, 0), new Position(0, 0));
-        }
-
-        return new Location
-        {
-            Uri = uri,
-            Range = range
-        };
-    }
 }

@@ -86,19 +86,19 @@ public class SymbolTable
             return null;
         }
 
-        if (!IsIdentifierChar(lineText[column]))
+        if (!SourceAnalyser.IsIdentifierChar(lineText[column]))
         {
             return null;
         }
 
         int start = column;
-        while (start > 0 && IsIdentifierChar(lineText[start - 1]))
+        while (start > 0 && SourceAnalyser.IsIdentifierChar(lineText[start - 1]))
         {
             start--;
         }
 
         int end = column;
-        while (end < lineText.Length - 1 && IsIdentifierChar(lineText[end + 1]))
+        while (end < lineText.Length - 1 && SourceAnalyser.IsIdentifierChar(lineText[end + 1]))
         {
             end++;
         }
@@ -277,9 +277,9 @@ public class SymbolTable
                 continue;
             }
 
-            bool leadingOk = nameIndex == 0 || !IsIdentifierChar(line[nameIndex - 1]);
+            bool leadingOk = nameIndex == 0 || !SourceAnalyser.IsIdentifierChar(line[nameIndex - 1]);
             bool trailingOk = nameIndex + name.Length >= line.Length
-                || !IsIdentifierChar(line[nameIndex + name.Length]);
+                || !SourceAnalyser.IsIdentifierChar(line[nameIndex + name.Length]);
 
             if (leadingOk && trailingOk)
             {
@@ -290,13 +290,6 @@ public class SymbolTable
         return (0, 0);
     }
 
-    /// <summary>
-    /// Determines if a character is a valid identifier character.
-    /// </summary>
-    /// <param name="character">The character to check.</param>
-    /// <returns><c>true</c> if the character is a valid identifier character; otherwise, <c>false</c>.</returns>
-    private static bool IsIdentifierChar(char character) =>
-        char.IsLetterOrDigit(character) || character == '-' || character == '_';
 
     /// <summary>
     /// Converts a <see cref="LiteralType"/> to a user-friendly display name.

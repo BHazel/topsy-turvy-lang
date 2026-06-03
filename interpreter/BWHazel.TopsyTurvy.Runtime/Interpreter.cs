@@ -375,26 +375,38 @@ public sealed class Interpreter
     }
 
     /// <summary>
+    /// Checks for cancellation, then executes the loop body statements.
+    /// </summary>
+    /// <param name="body">The loop body statements to execute.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns><c>true</c> if execution should continue to the next iteration, <c>false</c> if a break was requested.</returns>
+    private bool ExecuteLoopBody(IReadOnlyList<Statement> body, TopsyTurvyEnvironment environment)
+    {
+        this.CheckCancellation();
+        try
+        {
+            this.ExecuteStatements(body, environment);
+        }
+        catch (ContinueSignalException)
+        {
+        }
+        catch (BreakSignalException)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Executes an infinite loop.
     /// </summary>
     /// <param name="loopBody">The body of the loop.</param>
     /// <param name="environment">The environment.</param>
     private void ExecuteInfiniteLoop(IReadOnlyList<Statement> loopBody, TopsyTurvyEnvironment environment)
     {
-        while (true)
+        while (this.ExecuteLoopBody(loopBody, environment))
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(loopBody, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
-            {
-                break;
-            }
         }
     }
 
@@ -410,15 +422,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }
@@ -439,15 +443,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }
@@ -466,15 +462,7 @@ public sealed class Interpreter
     {
         while (this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }

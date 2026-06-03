@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.LanguageServer;
@@ -19,6 +20,18 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         BEHOLD greeting
         FINALE.
         """;
+    
+    private readonly string functionSource = """
+        HARK! "Test"
+        IT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION
+          BEHOLD "hello"
+        MY DUTY IS DISCHARGED.
+        THE CURTAIN RISES.
+        SUMMON greet WITH NOTHING IF YOU PLEASE.
+        FINALE.
+        """;
+
+    private readonly DocumentUri otherUri = DocumentUri.From("file:///other.topsy");
 
     /// <summary>
     /// Tests that the <see cref="DocumentStateManager.Get"/> method returns null for an unknown URI.
@@ -178,6 +191,118 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         IReadOnlyList<(DocumentUri, DocumentState)> result = manager.AllDocuments();
 
         Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/> returns null when no other documents are open.
+    /// </summary>
+    [Fact]
+    public void FindSymbolInOtherDocuments_WithNoOtherDocuments_ReturnsNull()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+
+        SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
+
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/> finds a symbol declared in a different open document.
+    /// </summary>
+    [Fact]
+    public void FindSymbolInOtherDocuments_WithSymbolInOtherDocument_ReturnsSymbolInfo()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, this.source, this.parser.TryParse(this.source));
+
+        SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
+
+        Assert.NotNull(result);
+        Assert.Equal("greeting", result.Name, ignoreCase: true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/> excludes the current document from the search.
+    /// </summary>
+    [Fact]
+    public void FindSymbolInOtherDocuments_WithSymbolOnlyInCurrentDocument_ReturnsNull()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+
+        SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
+
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.FindSymbolWithUriInOtherDocuments"/> returns the current URI and null info when no symbol is found.
+    /// </summary>
+    [Fact]
+    public void FindSymbolWithUriInOtherDocuments_WithNoMatch_ReturnsCurrentUriAndNullInfo()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+
+        (DocumentUri uri, SymbolInfo? info) = manager.FindSymbolWithUriInOtherDocuments("nonexistent", this.testUri);
+
+        Assert.Equal(this.testUri.ToString(), uri.ToString());
+        Assert.Null(info);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.FindSymbolWithUriInOtherDocuments"/> returns the correct URI and symbol info when the symbol is found in another document.
+    /// </summary>
+    [Fact]
+    public void FindSymbolWithUriInOtherDocuments_WithSymbolInOtherDocument_ReturnsOtherUriAndInfo()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, this.source, this.parser.TryParse(this.source));
+
+        (DocumentUri uri, SymbolInfo? info) = manager.FindSymbolWithUriInOtherDocuments("greeting", this.testUri);
+
+        Assert.Equal(this.otherUri.ToString(), uri.ToString());
+        Assert.NotNull(info);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportedFunctionSymbols"/> returns an empty sequence when no other documents are open.
+    /// </summary>
+    [Fact]
+    public void GetImportedFunctionSymbols_WithNoOtherDocuments_ReturnsEmpty()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.functionSource);
+
+        IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportedFunctionSymbols"/> returns function symbols from other open documents.
+    /// </summary>
+    [Fact]
+    public void GetImportedFunctionSymbols_WithFunctionInOtherDocument_ReturnsFunctionSymbol()
+    {
+        string otherSource = "HARK! \"Other\"\nPRINCIPALS\nTHE CURTAIN RISES.\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\n  BEHOLD \"hello\"\nMY DUTY IS DISCHARGED.\nFINALE.\n";
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, otherSource, this.parser.TryParse(otherSource));
+
+        IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
+
+        Assert.Contains(result, symbol => symbol.Name.Equals("greet", StringComparison.OrdinalIgnoreCase) && symbol.Kind == SymbolKind.Function);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportedFunctionSymbols"/> excludes non-function symbols from other documents.
+    /// </summary>
+    [Fact]
+    public void GetImportedFunctionSymbols_WithVariableInOtherDocument_DoesNotReturnVariable()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, this.source, this.parser.TryParse(this.source));
+
+        IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
+
+        Assert.DoesNotContain(result, s => s.Name.Equals("greeting", System.StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

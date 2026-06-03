@@ -68,8 +68,6 @@ public class CodeLensHandler : CodeLensHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
-            List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
             List<CodeLens> lenses = [];
 
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
@@ -82,7 +80,7 @@ public class CodeLensHandler : CodeLensHandlerBase
                 int lspLine = symbol.DefinitionLine - 1;
                 int lspChar = symbol.DefinitionColumn - 1;
 
-                int refCount = SourceAnalyser.CountOccurrences(lines, lineOffsets, skipRanges, symbol.Name, lspLine);
+                int refCount = SourceAnalyser.CountOccurrences(lines, symbol.Name, lspLine);
 
                 foreach ((_, DocumentState otherState) in this.documentStateManager.AllDocuments())
                 {
@@ -98,9 +96,7 @@ public class CodeLensHandler : CodeLensHandlerBase
                     }
 
                     string[] otherLines = otherSource.Split('\n');
-                    int[] otherOffsets = SourceAnalyser.BuildLineOffsets(otherLines);
-                    List<(int Start, int End)> otherSkip = SourceAnalyser.FindSkipRanges(otherSource);
-                    refCount += SourceAnalyser.CountOccurrences(otherLines, otherOffsets, otherSkip, symbol.Name, -1);
+                    refCount += SourceAnalyser.CountOccurrences(otherLines, symbol.Name, -1);
                 }
 
                 string title = refCount == 1 ? "1 reference" : $"{refCount} references";

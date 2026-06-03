@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using BWHazel.TopsyTurvy.Analysis;
 
 namespace BWHazel.TopsyTurvy.Tests.Analysis;
@@ -326,6 +327,113 @@ public class SourceAnalyserTests
         Assert.Equal(0, CountInSource(source, "greet"));
     }
 
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> returns the correct line and character position for a single match.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithSingleMatch_ReturnsCorrectPosition()
+    {
+        string[] lines = ["BEHOLD greet"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        (int Line, int Character) = Assert.Single(result);
+        Assert.Equal(0, Line);
+        Assert.Equal(7, Character);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> returns matches across multiple lines.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithMatchesOnMultipleLines_ReturnsAllPositions()
+    {
+        string[] lines = ["greet alpha", "SUMMON greet WITH NOTHING IF YOU PLEASE.", "greet"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Equal(3, Enumerable.Count(result));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> does not return partial word matches.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithPartialWordMatch_NotReturned()
+    {
+        string[] lines = ["greeting greet"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Single(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> is case-insensitive.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithDifferentCasings_MatchesAll()
+    {
+        string[] lines = ["greet Greet GREET"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Equal(3, Enumerable.Count(result));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> does not return occurrences inside string literals.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithOccurrenceInsideStringLiteral_NotReturned()
+    {
+        string[] lines = [@"BEHOLD ""greet world"""];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> does not return occurrences inside line comments.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithOccurrenceInsideLineComment_NotReturned()
+    {
+        string[] lines = [@"BEHOLD ""hello"" ASIDE: greet"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> does not return occurrences inside block comments spanning multiple lines.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithOccurrenceInsideBlockComment_NotReturned()
+    {
+        string[] lines = ["(ASIDE, AT SOME LENGTH: greet greet END OF ASIDE.)"];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SourceAnalyser.FindWordOccurrences"/> returns an empty sequence when no matches exist.
+    /// </summary>
+    [Fact]
+    public void FindWordOccurrences_WithNoMatches_ReturnsEmpty()
+    {
+        string[] lines = [@"BEHOLD ""hello"""];
+
+        IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
+
+        Assert.Empty(result);
+    }
+
     /// <summary>
     /// Helper method to count occurrences of a word in a source string, excluding occurrences on a specified line index.
     /// </summary>
@@ -339,8 +447,6 @@ public class SourceAnalyserTests
     private static int CountInSource(string source, string word, int excludeLineIndex = -1)
     {
         string[] lines = source.Split('\n');
-        int[] offsets = SourceAnalyser.BuildLineOffsets(lines);
-        List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
-        return SourceAnalyser.CountOccurrences(lines, offsets, skipRanges, word, excludeLineIndex);
+        return SourceAnalyser.CountOccurrences(lines, word, excludeLineIndex);
     }
 }

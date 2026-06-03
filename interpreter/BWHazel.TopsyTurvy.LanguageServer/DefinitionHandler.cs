@@ -64,7 +64,7 @@ public class DefinitionHandler : DefinitionHandlerBase
             DocumentUri definitionUri = request.TextDocument.Uri;
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                (definitionUri, info) = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                (definitionUri, info) = this.documentStateManager.FindSymbolWithUriInOtherDocuments(word, request.TextDocument.Uri);
             }
 
             if (info is null || info.DefinitionLine == 0)
@@ -92,31 +92,4 @@ public class DefinitionHandler : DefinitionHandlerBase
         }
     }
 
-    /// <summary>
-    /// Searches all open documents other than the current one for a symbol with the given name.
-    /// </summary>
-    /// <param name="currentUri">The URI of the requesting document which is excluded.</param>
-    /// <param name="name">The symbol name to find.</param>
-    /// <returns>
-    /// The URI of the document containing the symbol and its <see cref="SymbolInfo"/>,
-    /// or the current URI and <c>null</c> if not found.
-    /// </returns>
-    private (DocumentUri Uri, SymbolInfo? Info) FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
-            {
-                return (otherUri, info);
-            }
-        }
-
-        return (currentUri, null);
-    }
 }

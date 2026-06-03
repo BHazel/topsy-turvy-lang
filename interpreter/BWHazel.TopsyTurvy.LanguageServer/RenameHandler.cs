@@ -66,7 +66,7 @@ public class RenameHandler : RenameHandlerBase
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                info = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                info = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
                 if (info is null)
                 {
                     return Task.FromResult<WorkspaceEdit?>(null);
@@ -108,31 +108,6 @@ public class RenameHandler : RenameHandlerBase
     }
 
     /// <summary>
-    /// Searches all open documents other than the current one for a symbol with the given name.
-    /// </summary>
-    /// <param name="currentUri">The URI of the document being searched, which is excluded.</param>
-    /// <param name="name">The symbol name to find.</param>
-    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
-    private SymbolInfo? FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
-            {
-                return info;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// Collects whole-word, case-insensitive rename edits for a symbol across a single document.
     /// </summary>
     /// <param name="source">The document source text to scan.</param>
@@ -142,44 +117,18 @@ public class RenameHandler : RenameHandlerBase
     private static List<TextEdit> CollectEdits(string source, string word, string newName)
     {
         string[] lines = source.Split('\n');
-        int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
-        List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
         List<TextEdit> edits = [];
 
-        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        foreach ((int lineIndex, int foundAt) in SourceAnalyser.FindWordOccurrences(lines, word))
         {
-            string lineText = lines[lineIndex];
-            int searchFrom = 0;
-            int foundAt;
-
-            while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+            int endChar = foundAt + word.Length;
+            edits.Add(new TextEdit
             {
-                searchFrom = foundAt + 1;
-                if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
-                {
-                    continue;
-                }
-
-                int endChar = foundAt + word.Length;
-                if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
-                {
-                    continue;
-                }
-
-                int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                if (SourceAnalyser.IsInSkipRange(absoluteOffset, skipRanges))
-                {
-                    continue;
-                }
-
-                edits.Add(new TextEdit
-                {
-                    Range = new LspRange(
-                        new Position(lineIndex, foundAt),
-                        new Position(lineIndex, endChar)),
-                    NewText = newName
-                });
-            }
+                Range = new LspRange(
+                    new Position(lineIndex, foundAt),
+                    new Position(lineIndex, endChar)),
+                NewText = newName
+            });
         }
 
         return edits;

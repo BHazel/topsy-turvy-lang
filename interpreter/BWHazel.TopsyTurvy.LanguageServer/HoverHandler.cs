@@ -60,7 +60,7 @@ public class HoverHandler : HoverHandlerBase
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                info = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                info = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
                 if (info is null)
                 {
                     return Task.FromResult<Hover?>(null);
@@ -80,31 +80,6 @@ public class HoverHandler : HoverHandlerBase
         {
             return Task.FromResult<Hover?>(null);
         }
-    }
-
-    /// <summary>
-    /// Searches all open documents other than the current one for a symbol with the given name.
-    /// </summary>
-    /// <param name="currentUri">The URI of the document being hovered, which is excluded.</param>
-    /// <param name="name">The symbol name to find.</param>
-    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
-    private SymbolInfo? FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
-            {
-                return info;
-            }
-        }
-
-        return null;
     }
 
 }
