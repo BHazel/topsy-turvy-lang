@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     LanguageClient,
@@ -8,55 +7,28 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 
+import { resolveCliPath, resolveServerPath } from './paths.js';
+
 let client: LanguageClient;
 let runTaskExecution: vscode.TaskExecution | undefined;
 
-function resolveTopsyTurvyCliPath(context: vscode.ExtensionContext): string {
+function resolveConfiguredCliPath(context: vscode.ExtensionContext): string {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
     const configuredPath = config.get<string>('cliPath');
-    const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
-    const binaryName = process.platform === 'win32' ? 'operetta.exe' : 'operetta';
-
-    const defaultPath = context.asAbsolutePath(
-        path.join(
-            '..',
-            '..',
-            '..',
-            'interpreter',
-            'BWHazel.TopsyTurvy.Cli',
-            'bin',
-            buildConfiguration,
-            'net10.0',
-            binaryName,
-        ),
-    );
-
-    return configuredPath && configuredPath.length > 0 ? configuredPath : defaultPath;
+    const buildConfiguration = config.get<string>('buildConfiguration') ?? 'Debug';
+    return resolveCliPath(configuredPath, buildConfiguration, context.extensionPath);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
     const configuredServerPath = config.get<string>('serverPath');
-    const buildConfiguration = config.get<string>('buildConfiguration') || 'Debug';
+    const buildConfiguration = config.get<string>('buildConfiguration') ?? 'Debug';
 
-    const defaultServerPath = context.asAbsolutePath(
-        path.join(
-            '..',
-            '..',
-            '..',
-            'interpreter',
-            'BWHazel.TopsyTurvy.LanguageServer',
-            'bin',
-            buildConfiguration,
-            'net10.0',
-            'BWHazel.TopsyTurvy.LanguageServer',
-        ),
+    const serverPath = resolveServerPath(
+        configuredServerPath,
+        buildConfiguration,
+        context.extensionPath,
     );
-
-    const serverPath =
-        configuredServerPath && configuredServerPath.length > 0
-            ? configuredServerPath
-            : defaultServerPath;
 
     if (!fs.existsSync(serverPath)) {
         vscode.window.showWarningMessage(
@@ -124,7 +96,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await editor.document.save();
             const filePath = editor.document.uri.fsPath;
 
-            const cliPath = resolveTopsyTurvyCliPath(context);
+            const cliPath = resolveConfiguredCliPath(context);
             if (!fs.existsSync(cliPath)) {
                 vscode.window.showWarningMessage(
                     `Topsy Turvy: CLI not found at "${cliPath}". ` +

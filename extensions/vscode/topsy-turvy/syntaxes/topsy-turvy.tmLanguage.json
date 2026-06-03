@@ -90,7 +90,7 @@
         },
         {
           "name": "keyword.control.program.topsy",
-          "match": "(?i)\\bor,"
+          "match": "(?i)\\bor,(?!\\s+IF\\s+NOT,)"
         }
       ]
     },

@@ -1,6 +1,5 @@
 using System;
 using System.CommandLine;
-using System.IO;
 
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
@@ -80,36 +79,16 @@ public static class CommissionCommandBuilder
             return 1;
         }
 
-        if (File.Exists(filename))
+        (bool success, string? errorMessage) = FileManager.TryCreateProgrammeFile(filename, title, subtitle);
+        if (!success)
         {
-            string message = $"File already exists: '{filename}'.";
             if (tiptoe)
             {
-                Console.Error.WriteLine(message);
+                Console.Error.WriteLine(errorMessage);
             }
             else
             {
-                PanelHelper.WriteUserError(message);
-            }
-
-            return 1;
-        }
-
-        string fileContent = FileManager.BuildFileContent(title, subtitle);
-        try
-        {
-            File.WriteAllText(filename, fileContent, FileManager.Utf8NoBom);
-        }
-        catch (IOException ex)
-        {
-            string message = $"Could not create file '{filename}': {ex.Message}";
-            if (tiptoe)
-            {
-                Console.Error.WriteLine(message);
-            }
-            else
-            {
-                PanelHelper.WriteRuntimeErrors(message);
+                PanelHelper.WriteUserError(errorMessage!);
             }
 
             return 1;

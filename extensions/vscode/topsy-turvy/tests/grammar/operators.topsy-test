@@ -1,0 +1,83 @@
+// SYNTAX TEST "source.topsy"
+
+// ── Cast operators ────────────────────────────────────────────────────────────
+
+AS IT WERE
+//^ keyword.operator.cast.topsy
+
+IS HENCEFORTH A PEER
+//^ keyword.operator.cast.topsy
+
+// ── Arithmetic operators ──────────────────────────────────────────────────────
+
+SUM OF 1 AND 2
+//^ keyword.operator.topsy
+
+DIFFERENCE OF 5 AND 3
+//^ keyword.operator.topsy
+
+PRODUCT OF 2 AND 4
+//^ keyword.operator.topsy
+
+QUOTIENT OF 10 AND 3
+//^ keyword.operator.topsy
+
+REMAINDER OF 10 AND 3
+//^ keyword.operator.topsy
+
+LARGER OF 3 AND 7
+//^ keyword.operator.topsy
+
+SMALLER OF 3 AND 7
+//^ keyword.operator.topsy
+
+// ── Comparison operators ──────────────────────────────────────────────────────
+
+ALIKE
+//^ keyword.operator.topsy
+
+UNLIKE
+//^ keyword.operator.topsy
+
+PRE-ADAMITE
+//^ keyword.operator.topsy
+
+LOWER DEGREE
+//^ keyword.operator.topsy
+
+// ── Logical operators ─────────────────────────────────────────────────────────
+
+ALL OF
+//^ keyword.operator.topsy
+
+ANY OF
+//^ keyword.operator.topsy
+
+BOTH
+//^ keyword.operator.topsy
+
+EITHER
+//^ keyword.operator.topsy
+
+// ── String concatenation ──────────────────────────────────────────────────────
+
+WOVEN OF
+//^ keyword.operator.topsy
+
+// ── Negation ─────────────────────────────────────────────────────────────────
+
+HARDLY EVER
+//^ keyword.operator.topsy
+
+// ── Function call argument separators ────────────────────────────────────────
+
+WITH NOTHING
+//^ keyword.operator.topsy
+
+WITH
+//^ keyword.operator.topsy
+
+// ── User-defined identifiers ──────────────────────────────────────────────────
+
+myVariable
+//^ variable.other.topsy
