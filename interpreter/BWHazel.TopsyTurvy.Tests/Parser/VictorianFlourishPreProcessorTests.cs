@@ -19,9 +19,9 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.Contains("HARK!", result.Text);
-        Assert.Contains("BEHOLD", result.Text);
-        Assert.Contains("FINALE.", result.Text);
+        result.Text.ShouldContain("HARK!");
+        result.Text.ShouldContain("BEHOLD");
+        result.Text.ShouldContain("FINALE.");
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.Contains("BEHOLD\"hello\"", result.Text);
+        result.Text.ShouldContain("BEHOLD\"hello\"");
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new SourceMap());
 
-        Assert.DoesNotContain("~", result.Text);
+        result.Text.ShouldNotContain("~");
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.Contains("WOVENOF\"a\" AND \"b\" IF YOU PLEASE.", result.Text);
+        result.Text.ShouldContain("WOVENOF\"a\" AND \"b\" IF YOU PLEASE.");
     }
 
     /// <summary>
@@ -73,8 +73,8 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.Contains("BEH~OLD", result.Text);
-        Assert.Contains("FINALE.", result.Text);
+        result.Text.ShouldContain("BEH~OLD");
+        result.Text.ShouldContain("FINALE.");
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public class VictorianFlourishPreProcessorTests
         this.processor.Process(input, map);
 
         (int line, int column) = map.GetOriginalLocation(0);
-        Assert.Equal(1, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(1);
+        column.ShouldBe(1);
     }
 }

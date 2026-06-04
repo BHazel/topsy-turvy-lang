@@ -31,8 +31,8 @@ public class DefinitionHandlerTests : LanguageServerTestBase
 
         LocationOrLocationLinks? result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -46,8 +46,8 @@ public class DefinitionHandlerTests : LanguageServerTestBase
 
         LocationOrLocationLinks? result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -61,8 +61,8 @@ public class DefinitionHandlerTests : LanguageServerTestBase
 
         LocationOrLocationLinks? result = await handler.Handle(this.MakeRequest(line: 4, character: 7), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -77,8 +77,8 @@ public class DefinitionHandlerTests : LanguageServerTestBase
 
         LocationOrLocationLinks? result = await handler.Handle(this.MakeRequest(line: 2, character: 8), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -106,8 +106,8 @@ public class DefinitionHandlerTests : LanguageServerTestBase
 
         LocationOrLocationLinks? result = await handler.Handle(this.MakeRequest(line: 3, character: 8), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
     }
 
     /// <summary>

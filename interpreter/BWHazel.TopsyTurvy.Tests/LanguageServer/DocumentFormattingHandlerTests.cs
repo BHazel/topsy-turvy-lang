@@ -22,7 +22,7 @@ public class DocumentFormattingHandlerTests : LanguageServerTestBase
 
         TextEditContainer? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -45,8 +45,8 @@ public class DocumentFormattingHandlerTests : LanguageServerTestBase
 
         TextEditContainer? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.ShouldNotBeNull();
+        result.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -61,10 +61,10 @@ public class DocumentFormattingHandlerTests : LanguageServerTestBase
 
         TextEditContainer? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.ShouldNotBeNull();
         TextEdit edit = result.First();
-        Assert.Equal(0, edit.Range.Start.Line);
-        Assert.Equal(0, edit.Range.Start.Character);
+        edit.Range.Start.Line.ShouldBe(0);
+        edit.Range.Start.Character.ShouldBe(0);
     }
 
     /// <summary>
@@ -79,10 +79,10 @@ public class DocumentFormattingHandlerTests : LanguageServerTestBase
 
         TextEditContainer? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.ShouldNotBeNull();
         TextEdit edit = result.First();
-        Assert.Contains("HARK!", edit.NewText);
-        Assert.Contains("FINALE.", edit.NewText);
+        edit.NewText.ShouldContain("HARK!");
+        edit.NewText.ShouldContain("FINALE.");
     }
 
     /// <summary>

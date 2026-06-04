@@ -18,7 +18,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute(input);
 
-        Assert.Equal(input, result.Text);
+        result.Text.ShouldBe(input);
     }
 
     /// <summary>
@@ -32,8 +32,8 @@ public class PreProcessorPipelineTests
         PreProcessResult result = pipeline.Execute("any input");
 
         (int line, int column) = result.SourceMap.GetOriginalLocation(0);
-        Assert.Equal(1, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(1);
+        column.ShouldBe(1);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("hello");
 
-        Assert.Equal(">>hello", result.Text);
+        result.Text.ShouldBe(">>hello");
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("X");
 
-        Assert.Equal("BAX", result.Text);
+        result.Text.ShouldBe("BAX");
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("X");
 
-        Assert.Equal("ABX", result.Text);
+        result.Text.ShouldBe("ABX");
     }
 
     /// <summary>
@@ -94,8 +94,8 @@ public class PreProcessorPipelineTests
 
         (int line1, _) = result.SourceMap.GetOriginalLocation(0);
         (int line2, _) = result.SourceMap.GetOriginalLocation(5);
-        Assert.Equal(1, line1);
-        Assert.Equal(2, line2);
+        line1.ShouldBe(1);
+        line2.ShouldBe(2);
     }
 
     /// <summary>
@@ -112,6 +112,6 @@ public class PreProcessorPipelineTests
 
         pipeline.Execute("input");
 
-        Assert.Same(first.CapturedMap, second.CapturedMap);
+        second.CapturedMap.ShouldBeSameAs(first.CapturedMap);
     }
 }

@@ -33,7 +33,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
 
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
 
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: 0, character: 5), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
         int afterClose = lines[summonLine].Length;
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: summonLine, character: afterClose), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -105,9 +105,9 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
 
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: summonLine, character: cursorChar), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Signatures);
-        Assert.Equal("add", result.Signatures.First().Label.Split('(')[0]);
+        result.ShouldNotBeNull();
+        result.Signatures.ShouldNotBeEmpty();
+        result.Signatures.First().Label.Split('(')[0].ShouldBe("add");
     }
 
     /// <summary>
@@ -137,8 +137,8 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
 
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: summonLine, character: cursorChar), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(1, result.ActiveParameter);
+        result.ShouldNotBeNull();
+        result.ActiveParameter.ShouldBe(1);
     }
 
     /// <summary>
@@ -152,7 +152,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
 
         SignatureHelp? result = await handler.Handle(this.MakeRequest(line: 999, character: 0), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>

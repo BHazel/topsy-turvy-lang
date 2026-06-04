@@ -22,7 +22,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Equal("**(variable)** `myVar` : PEER", result);
+        result.ShouldBe("**(variable)** `myVar` : PEER");
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Equal("**implicit variable** `JUST SO` — receives the result of the last expression", result);
+        result.ShouldBe("**implicit variable** `JUST SO` — receives the result of the last expression");
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Contains("implicit variable", result);
+        result.ShouldContain("implicit variable");
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Equal("**(function)** `greet`(salutation, recipient)", result);
+        result.ShouldBe("**(function)** `greet`(salutation, recipient)");
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Equal("**(function)** `greet`()", result);
+        result.ShouldBe("**(function)** `greet`()");
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public class HoverMarkdownBuilderTests
         };
 
         string result = HoverMarkdownBuilder.Build(info);
-        Assert.Equal("**(function)** `greet`()", result);
+        result.ShouldBe("**(function)** `greet`()");
     }
 
     /// <summary>
@@ -127,6 +127,6 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        Assert.Equal("**(parameter)** `name`", result);
+        result.ShouldBe("**(parameter)** `name`");
     }
 }

@@ -38,7 +38,7 @@ public class EditorDiagnosticsTests(WebEditorAppFixture fixture)
         
         int count = await this.page.EvaluateAsync<int>("() => monaco.editor.getModelMarkers({}).length");
 
-        Assert.True(count > 0);
+        (count > 0).ShouldBeTrue();
     }
 
     /// <summary>
@@ -59,6 +59,6 @@ public class EditorDiagnosticsTests(WebEditorAppFixture fixture)
         
         int count = await this.page.EvaluateAsync<int>("() => monaco.editor.getModelMarkers({}).length");
 
-        Assert.Equal(0, count);
+        count.ShouldBe(0);
     }
 }

@@ -33,7 +33,7 @@ public sealed class RehearseCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("rehearse nonexistent.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class RehearseCommandTests(CliFixture fixture)
     {
         (int _, string _, string stderr) = await this.RunAsync("rehearse nonexistent.topsy --tiptoe");
 
-        Assert.Contains("File not found", stderr);
+        stderr.ShouldContain("File not found");
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public sealed class RehearseCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("rehearse prog.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public sealed class RehearseCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("rehearse prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public sealed class RehearseCommandTests(CliFixture fixture)
 
         (int _, string _, string stderr) = await this.RunAsync("rehearse prog.topsy --tiptoe");
 
-        Assert.Empty(stderr);
+        stderr.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -96,6 +96,6 @@ public sealed class RehearseCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("check prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
     }
 }

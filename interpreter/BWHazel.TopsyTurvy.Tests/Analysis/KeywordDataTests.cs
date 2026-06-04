@@ -13,7 +13,7 @@ public class KeywordDataTests
     [Fact]
     public void Keywords_AllEntriesHaveNonEmptyKeyword()
     {
-        Assert.All(KeywordData.Keywords, entry => Assert.False(string.IsNullOrWhiteSpace(entry.Keyword)));
+        KeywordData.Keywords.ShouldAllBe(entry => !string.IsNullOrWhiteSpace(entry.Keyword));
     }
 
     /// <summary>
@@ -22,6 +22,6 @@ public class KeywordDataTests
     [Fact]
     public void Keywords_AllEntriesHaveNonEmptyDetail()
     {
-        Assert.All(KeywordData.Keywords, entry => Assert.False(string.IsNullOrWhiteSpace(entry.Detail)));
+        KeywordData.Keywords.ShouldAllBe(entry => !string.IsNullOrWhiteSpace(entry.Detail));
     }
 }

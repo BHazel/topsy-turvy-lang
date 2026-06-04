@@ -42,7 +42,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("perform nonexistent.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
     {
         (int _, string _, string stderr) = await this.RunAsync("perform nonexistent.topsy --tiptoe");
 
-        Assert.Contains("File not found", stderr);
+        stderr.ShouldContain("File not found");
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("perform prog.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("perform prog.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("perform prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("perform prog.topsy --tiptoe");
 
-        Assert.Contains("OK", stdout);
+        stdout.ShouldContain("OK");
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int _, string _, string stderr) = await this.RunAsync("perform prog.topsy --tiptoe");
 
-        Assert.Empty(stderr);
+        stderr.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -131,8 +131,8 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int exitCode, string stdout, string _) = await this.RunAsync("run prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
-        Assert.Contains("OK", stdout);
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("OK");
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public sealed class PerformCommandTests(CliFixture fixture)
 
         (int exitCode, string stdout, string _) = await this.RunAsync("stage prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
-        Assert.Contains("OK", stdout);
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("OK");
     }
 }

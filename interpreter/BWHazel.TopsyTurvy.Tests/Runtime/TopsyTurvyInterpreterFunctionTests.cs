@@ -37,8 +37,8 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("13", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("13");
     }
 
     /// <summary>
@@ -67,8 +67,8 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAUGHT", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAUGHT");
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 
     /// <summary>
@@ -153,8 +153,8 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program, fileResolver: name => fileSystem.GetValueOrDefault(name));
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("Hello, World!", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("Hello, World!");
     }
 
     /// <summary>
@@ -176,7 +176,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program, fileResolver: _ => null);
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 
     /// <summary>
@@ -200,6 +200,6 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
             program,
             fileResolver: _ => "THIS IS NOT VALID TOPSY TURVY SYNTAX AT ALL");
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 }

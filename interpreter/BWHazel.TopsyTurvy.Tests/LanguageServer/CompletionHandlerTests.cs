@@ -35,9 +35,9 @@ public class CompletionHandlerTests : LanguageServerTestBase
 
         CompletionList result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Items);
-        Assert.Contains(result.Items, item => item.Kind == CompletionItemKind.Keyword);
+        result.ShouldNotBeNull();
+        result.Items.ShouldNotBeEmpty();
+        result.Items.ShouldContain(item => item.Kind == CompletionItemKind.Keyword);
     }
 
     /// <summary>
@@ -51,8 +51,8 @@ public class CompletionHandlerTests : LanguageServerTestBase
 
         CompletionList result = await handler.Handle(this.MakeRequest(line: 7, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Contains(result.Items, item => item.Label == "myVar");
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "myVar");
     }
 
     /// <summary>
@@ -66,8 +66,8 @@ public class CompletionHandlerTests : LanguageServerTestBase
 
         CompletionList result = await handler.Handle(this.MakeRequest(line: 7, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Contains(result.Items, item => item.Label == "myFunc" && item.Kind == CompletionItemKind.Function);
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "myFunc" && item.Kind == CompletionItemKind.Function);
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public class CompletionHandlerTests : LanguageServerTestBase
 
         CompletionList result = await handler.Handle(this.MakeRequest(line: 2, character: 4), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Contains(result.Items, item => item.Label.StartsWith("BEHOLD", StringComparison.OrdinalIgnoreCase));
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label.StartsWith("BEHOLD", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -111,8 +111,8 @@ public class CompletionHandlerTests : LanguageServerTestBase
 
         CompletionList result = await handler.Handle(this.MakeRequest(line: 3, character: 0), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Contains(result.Items, item => item.Label == "sharedFunc");
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "sharedFunc");
     }
 
     /// <summary>

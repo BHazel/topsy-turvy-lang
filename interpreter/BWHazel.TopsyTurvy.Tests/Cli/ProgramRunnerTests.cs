@@ -29,8 +29,8 @@ public class ProgramRunnerTests : CliTestBase
     {
         ProgramExecutionResult result = ProgramRunner.Check(FilePath, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.ErrorMessage);
+        result.IsSuccess.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -43,8 +43,8 @@ public class ProgramRunnerTests : CliTestBase
 
         ProgramExecutionResult result = ProgramRunner.Check(FilePath, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.SyntaxErrors);
+        result.IsSuccess.ShouldBeFalse();
+        result.SyntaxErrors.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class ProgramRunnerTests : CliTestBase
 
         ProgramExecutionResult result = ProgramRunner.Check(FilePath, this.fileSystem);
 
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.ShouldBeTrue();
     }
 
     /// <summary>
@@ -68,8 +68,8 @@ public class ProgramRunnerTests : CliTestBase
     {
         (ProgramExecutionResult result, _) = ProgramRunner.ParseFile(FilePath, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.ErrorMessage);
+        result.IsSuccess.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public class ProgramRunnerTests : CliTestBase
 
         (ProgramExecutionResult result, _) = ProgramRunner.ParseFile(FilePath, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.SyntaxErrors);
+        result.IsSuccess.ShouldBeFalse();
+        result.SyntaxErrors.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -96,8 +96,8 @@ public class ProgramRunnerTests : CliTestBase
 
         (ProgramExecutionResult result, var parseData) = ProgramRunner.ParseFile(FilePath, this.fileSystem);
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(parseData);
+        result.IsSuccess.ShouldBeTrue();
+        parseData.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -112,8 +112,8 @@ public class ProgramRunnerTests : CliTestBase
 
         ProgramExecutionResult result = ProgramRunner.Run(FilePath, io, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.ErrorMessage);
+        result.IsSuccess.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -129,8 +129,8 @@ public class ProgramRunnerTests : CliTestBase
 
         ProgramExecutionResult result = ProgramRunner.Run(FilePath, io, this.fileSystem);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.SyntaxErrors);
+        result.IsSuccess.ShouldBeFalse();
+        result.SyntaxErrors.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public class ProgramRunnerTests : CliTestBase
 
         ProgramExecutionResult result = ProgramRunner.Run(FilePath, io, this.fileSystem);
 
-        Assert.True(result.IsSuccess);
-        Assert.Contains("OK", output);
+        result.IsSuccess.ShouldBeTrue();
+        output.ShouldContain("OK");
     }
 }

@@ -29,9 +29,9 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Single(output);
-        Assert.Equal("Hello, World!", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("Hello, World!");
     }
 
     /// <summary>
@@ -55,8 +55,8 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("Hello, World!", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("Hello, World!");
     }
 
     /// <summary>
@@ -88,12 +88,12 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal(4, output.Count);
-        Assert.Equal("42", output[0]);
-        Assert.Equal("44", output[1]);
-        Assert.Equal("22", output[2]);
-        Assert.Equal("20", output[3]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.Count.ShouldBe(4);
+        output[0].ShouldBe("42");
+        output[1].ShouldBe("44");
+        output[2].ShouldBe("22");
+        output[3].ShouldBe("20");
     }
 
     /// <summary>
@@ -117,8 +117,8 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("Ko-Ko", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("Ko-Ko");
     }
 
     /// <summary>
@@ -142,8 +142,8 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("42", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("42");
     }
 
     /// <summary>
@@ -167,8 +167,8 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("5", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("5");
     }
 
     /// <summary>
@@ -191,8 +191,8 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("Hello, World!", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("Hello, World!");
     }
 
     /// <summary>
@@ -215,7 +215,7 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
         
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("7", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("7");
     }
 }

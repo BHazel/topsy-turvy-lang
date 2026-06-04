@@ -17,7 +17,7 @@ public class ProgramExecutionResultTests
     {
         ProgramExecutionResult result = ProgramExecutionResult.Success();
 
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.ShouldBeTrue();
     }
 
     /// <summary>
@@ -28,8 +28,8 @@ public class ProgramExecutionResultTests
     {
         ProgramExecutionResult result = ProgramExecutionResult.Failure("Something went wrong.");
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Something went wrong.", result.ErrorMessage);
+        result.IsSuccess.ShouldBeFalse();
+        result.ErrorMessage.ShouldBe("Something went wrong.");
     }
 
     /// <summary>
@@ -42,8 +42,8 @@ public class ProgramExecutionResultTests
 
         ProgramExecutionResult result = ProgramExecutionResult.SyntaxError(errors);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotEmpty(result.SyntaxErrors!);
+        result.IsSuccess.ShouldBeFalse();
+        result.SyntaxErrors!.ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class ProgramExecutionResultTests
 
         ProgramExecutionResult result = ProgramExecutionResult.RuntimeError([diagnostic]);
 
-        Assert.False(result.IsSuccess);
-        Assert.NotEmpty(result.RuntimeDiagnostics!);
+        result.IsSuccess.ShouldBeFalse();
+        result.RuntimeDiagnostics!.ShouldNotBeEmpty();
     }
 }

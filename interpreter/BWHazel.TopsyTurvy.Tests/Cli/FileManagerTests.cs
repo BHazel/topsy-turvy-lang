@@ -21,7 +21,7 @@ public class FileManagerTests : CliTestBase
     {
         string content = FileManager.BuildFileContent(TestTitle, subtitle: null);
 
-        Assert.Contains(TestTitle, content);
+        content.ShouldContain(TestTitle);
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public class FileManagerTests : CliTestBase
     {
         string content = FileManager.BuildFileContent(TestTitle, subtitle: null);
 
-        Assert.DoesNotContain("or,", content);
+        content.ShouldNotContain("or,");
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class FileManagerTests : CliTestBase
     {
         string content = FileManager.BuildFileContent(TestTitle, TestSubtitle);
 
-        Assert.Contains("or,", content);
+        content.ShouldContain("or,");
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ public class FileManagerTests : CliTestBase
     {
         string content = FileManager.BuildFileContent(TestTitle, TestSubtitle);
 
-        Assert.Contains($"  or, \"{TestSubtitle}\"", content);
+        content.ShouldContain($"  or, \"{TestSubtitle}\"");
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public class FileManagerTests : CliTestBase
     {
         (bool success, string? _) = FileManager.TryReadSource(TestFilePath, out _, this.fileSystem);
 
-        Assert.False(success);
+        success.ShouldBeFalse();
     }
 
     /// <summary>
@@ -80,8 +80,8 @@ public class FileManagerTests : CliTestBase
 
         (bool success, string? _) = FileManager.TryReadSource(TestFilePath, out string source, this.fileSystem);
 
-        Assert.True(success);
-        Assert.Contains("HARK!", source);
+        success.ShouldBeTrue();
+        source.ShouldContain("HARK!");
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class FileManagerTests : CliTestBase
 
         (bool success, string? _) = FileManager.TryCreateProgrammeFile(TestFilePath, TestTitle, subtitle: null, this.fileSystem);
 
-        Assert.False(success);
+        success.ShouldBeFalse();
     }
 
     /// <summary>
@@ -112,7 +112,7 @@ public class FileManagerTests : CliTestBase
         FileManager.TryCreateProgrammeFile(TestFilePath, TestTitle, subtitle: null, this.fileSystem);
 
         string remainingContent = this.fileSystem.File.ReadAllText(TestFilePath);
-        Assert.Equal(originalContent, remainingContent);
+        remainingContent.ShouldBe(originalContent);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public class FileManagerTests : CliTestBase
     {
         (bool success, string? _) = FileManager.TryCreateProgrammeFile(TestFilePath, TestTitle, subtitle: null, this.fileSystem);
 
-        Assert.True(success);
+        success.ShouldBeTrue();
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public class FileManagerTests : CliTestBase
 
         string content = this.fileSystem.File.ReadAllText(TestFilePath);
 
-        Assert.StartsWith($"HARK! \"{TestTitle}\"", content);
+        content.ShouldStartWith($"HARK! \"{TestTitle}\"");
     }
 
     /// <summary>
@@ -150,7 +150,7 @@ public class FileManagerTests : CliTestBase
 
         (bool success, string? _) = FileManager.TryMountProject(TestDirectoryPath, TestTitle, subtitle: null, hollow: false, this.fileSystem);
 
-        Assert.False(success);
+        success.ShouldBeFalse();
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public class FileManagerTests : CliTestBase
     {
         (bool success, string? _) = FileManager.TryMountProject(TestDirectoryPath, TestTitle, subtitle: null, hollow: false, this.fileSystem);
 
-        Assert.True(success);
+        success.ShouldBeTrue();
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ public class FileManagerTests : CliTestBase
     {
         FileManager.TryMountProject(TestDirectoryPath, TestTitle, subtitle: null, hollow: false, this.fileSystem);
 
-        Assert.True(this.fileSystem.Directory.Exists(TestDirectoryPath));
+        this.fileSystem.Directory.Exists(TestDirectoryPath).ShouldBeTrue();
     }
 
     /// <summary>
@@ -186,6 +186,6 @@ public class FileManagerTests : CliTestBase
         bool topsyFileExists = this.fileSystem.File.Exists(
             this.fileSystem.Path.Combine(TestDirectoryPath, "myproject.topsy"));
 
-        Assert.True(topsyFileExists);
+        topsyFileExists.ShouldBeTrue();
     }
 }

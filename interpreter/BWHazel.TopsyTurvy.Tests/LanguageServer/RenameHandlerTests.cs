@@ -32,7 +32,7 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 0, character: 0, newName: "newName"), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 0, character: 0, newName: "newName"), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -60,10 +60,10 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 4, character: 1, newName: "tally"), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Changes);
-        Assert.True(result.Changes.ContainsKey(this.testUri));
-        Assert.True(result.Changes[this.testUri].Count() > 1);
+        result.ShouldNotBeNull();
+        result.Changes.ShouldNotBeNull();
+        result.Changes.ContainsKey(this.testUri).ShouldBeTrue();
+        (result.Changes[this.testUri].Count() > 1).ShouldBeTrue();
     }
 
     /// <summary>
@@ -77,11 +77,11 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 4, character: 1, newName: "tally"), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Changes);
+        result.ShouldNotBeNull();
+        result.Changes.ShouldNotBeNull();
         foreach (TextEdit edit in result.Changes[this.testUri])
         {
-            Assert.Equal("tally", edit.NewText);
+            edit.NewText.ShouldBe("tally");
         }
     }
 
@@ -97,7 +97,7 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 2, character: 7, newName: "newName"), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -120,11 +120,11 @@ public class RenameHandlerTests : LanguageServerTestBase
 
         WorkspaceEdit? result = await handler.Handle(this.MakeRequest(line: 4, character: 7, newName: "renamed"), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Changes);
+        result.ShouldNotBeNull();
+        result.Changes.ShouldNotBeNull();
         foreach (TextEdit edit in result.Changes[this.testUri])
         {
-            Assert.DoesNotContain("value is here", edit.NewText);
+            edit.NewText.ShouldNotContain("value is here");
         }
     }
 

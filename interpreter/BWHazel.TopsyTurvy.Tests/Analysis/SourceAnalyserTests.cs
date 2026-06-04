@@ -18,7 +18,7 @@ public class SourceAnalyserTests
     [InlineData('m')]
     public void IsIdentifierChar_WithLetter_ReturnsTrue(char character)
     {
-        Assert.True(SourceAnalyser.IsIdentifierChar(character));
+        SourceAnalyser.IsIdentifierChar(character).ShouldBeTrue();
     }
 
     /// <summary>
@@ -30,7 +30,7 @@ public class SourceAnalyserTests
     [InlineData('9')]
     public void IsIdentifierChar_WithDigit_ReturnsTrue(char character)
     {
-        Assert.True(SourceAnalyser.IsIdentifierChar(character));
+        SourceAnalyser.IsIdentifierChar(character).ShouldBeTrue();
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public class SourceAnalyserTests
     [Fact]
     public void IsIdentifierChar_WithHyphen_ReturnsTrue()
     {
-        Assert.True(SourceAnalyser.IsIdentifierChar('-'));
+        SourceAnalyser.IsIdentifierChar('-').ShouldBeTrue();
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public class SourceAnalyserTests
     [Fact]
     public void IsIdentifierChar_WithUnderscore_ReturnsTrue()
     {
-        Assert.True(SourceAnalyser.IsIdentifierChar('_'));
+        SourceAnalyser.IsIdentifierChar('_').ShouldBeTrue();
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public class SourceAnalyserTests
     [InlineData('"')]
     public void IsIdentifierChar_WithPunctuationCharacter_ReturnsFalse(char character)
     {
-        Assert.False(SourceAnalyser.IsIdentifierChar(character));
+        SourceAnalyser.IsIdentifierChar(character).ShouldBeFalse();
     }
 
     /// <summary>
@@ -73,8 +73,8 @@ public class SourceAnalyserTests
     {
         int[] offsets = SourceAnalyser.BuildLineOffsets(["hello"]);
 
-        Assert.Single(offsets);
-        Assert.Equal(0, offsets[0]);
+        offsets.ShouldHaveSingleItem();
+        offsets[0].ShouldBe(0);
     }
 
     /// <summary>
@@ -85,10 +85,10 @@ public class SourceAnalyserTests
     {
         int[] offsets = SourceAnalyser.BuildLineOffsets(["hello", "world", "foo"]);
 
-        Assert.Equal(3, offsets.Length);
-        Assert.Equal(0, offsets[0]);
-        Assert.Equal(6, offsets[1]);
-        Assert.Equal(12, offsets[2]);
+        offsets.Length.ShouldBe(3);
+        offsets[0].ShouldBe(0);
+        offsets[1].ShouldBe(6);
+        offsets[2].ShouldBe(12);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public class SourceAnalyserTests
     public void BuildLineOffsets_WithEmptyArray_ReturnsEmptyArray()
     {
         int[] offsets = SourceAnalyser.BuildLineOffsets([]);
-        Assert.Empty(offsets);
+        offsets.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class SourceAnalyserTests
     public void FindSkipRanges_WithPlainSource_ReturnsEmptySkipRanges()
     {
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges("BEHOLD x");
-        Assert.Empty(skipRanges);
+        skipRanges.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -119,9 +119,9 @@ public class SourceAnalyserTests
     {
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges("BEHOLD \"hello\"");
 
-        Assert.Single(skipRanges);
-        Assert.Equal(7, skipRanges[0].Start);
-        Assert.Equal(14, skipRanges[0].End);
+        skipRanges.ShouldHaveSingleItem();
+        skipRanges[0].Start.ShouldBe(7);
+        skipRanges[0].End.ShouldBe(14);
     }
 
     /// <summary>
@@ -133,9 +133,9 @@ public class SourceAnalyserTests
         string source = "BEHOLD x ASIDE: comment";
 
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
-        Assert.Single(skipRanges);
-        Assert.Equal(9, skipRanges[0].Start);
-        Assert.Equal(source.Length, skipRanges[0].End);
+        skipRanges.ShouldHaveSingleItem();
+        skipRanges[0].Start.ShouldBe(9);
+        skipRanges[0].End.ShouldBe(source.Length);
     }
 
     /// <summary>
@@ -147,9 +147,9 @@ public class SourceAnalyserTests
         string source = "(ASIDE, AT SOME LENGTH: text END OF ASIDE.)";
 
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
-        Assert.Single(skipRanges);
-        Assert.Equal(0, skipRanges[0].Start);
-        Assert.Equal(source.Length, skipRanges[0].End);
+        skipRanges.ShouldHaveSingleItem();
+        skipRanges[0].Start.ShouldBe(0);
+        skipRanges[0].End.ShouldBe(source.Length);
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public class SourceAnalyserTests
         string source = "(ASIDE, AT SOME LENGTH: \"quoted\" END OF ASIDE.)";
 
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
-        Assert.Single(skipRanges);
+        skipRanges.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -173,8 +173,8 @@ public class SourceAnalyserTests
         string source = "BEHOLD \"ASIDE: not a comment\"";
 
         List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
-        Assert.Single(skipRanges);
-        Assert.Equal(7, skipRanges[0].Start);
+        skipRanges.ShouldHaveSingleItem();
+        skipRanges[0].Start.ShouldBe(7);
     }
 
     /// <summary>
@@ -185,7 +185,7 @@ public class SourceAnalyserTests
     {
         List<(int Start, int End)> skipRanges = [(5, 15)];
 
-        Assert.True(SourceAnalyser.IsInSkipRange(10, skipRanges));
+        SourceAnalyser.IsInSkipRange(10, skipRanges).ShouldBeTrue();
     }
 
     /// <summary>
@@ -196,7 +196,7 @@ public class SourceAnalyserTests
     {
         List<(int Start, int End)> skipRanges = [(5, 15)];
 
-        Assert.True(SourceAnalyser.IsInSkipRange(5, skipRanges));
+        SourceAnalyser.IsInSkipRange(5, skipRanges).ShouldBeTrue();
     }
 
     /// <summary>
@@ -207,7 +207,7 @@ public class SourceAnalyserTests
     {
         List<(int Start, int End)> skipRanges = [(5, 15)];
 
-        Assert.False(SourceAnalyser.IsInSkipRange(15, skipRanges));
+        SourceAnalyser.IsInSkipRange(15, skipRanges).ShouldBeFalse();
     }
 
     /// <summary>
@@ -218,7 +218,7 @@ public class SourceAnalyserTests
     {
         List<(int Start, int End)> skipRanges = [(5, 15)];
 
-        Assert.False(SourceAnalyser.IsInSkipRange(4, skipRanges));
+        SourceAnalyser.IsInSkipRange(4, skipRanges).ShouldBeFalse();
     }
 
     /// <summary>
@@ -227,7 +227,7 @@ public class SourceAnalyserTests
     [Fact]
     public void IsInSkipRange_WithEmptyRangeList_ReturnsFalse()
     {
-        Assert.False(SourceAnalyser.IsInSkipRange(0, []));
+        SourceAnalyser.IsInSkipRange(0, []).ShouldBeFalse();
     }
 
     /// <summary>
@@ -237,7 +237,7 @@ public class SourceAnalyserTests
     public void CountOccurrences_WithMultipleMatches_ReturnsCorrectCount()
     {
         string source = "greet alpha\nSUMMON greet WITH NOTHING IF YOU PLEASE.\ngreet";
-        Assert.Equal(3, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(3);
     }
 
     /// <summary>
@@ -248,7 +248,7 @@ public class SourceAnalyserTests
     {
         string source = "greet greet\nSUMMON greet WITH NOTHING IF YOU PLEASE.\ngreet";
 
-        Assert.Equal(2, CountInSource(source, "greet", excludeLineIndex: 0));
+        CountInSource(source, "greet", excludeLineIndex: 0).ShouldBe(2);
     }
 
     /// <summary>
@@ -259,7 +259,7 @@ public class SourceAnalyserTests
     {
         string source = "greet\ngreet\ngreet";
 
-        Assert.Equal(3, CountInSource(source, "greet", excludeLineIndex: -1));
+        CountInSource(source, "greet", excludeLineIndex: -1).ShouldBe(3);
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public class SourceAnalyserTests
     {
         string source = "greeting greet";
 
-        Assert.Equal(1, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(1);
     }
 
     /// <summary>
@@ -280,7 +280,7 @@ public class SourceAnalyserTests
     public void CountOccurrences_WithCaseInsensitiveWords_MatchesAllCasings()
     {
         string source = "greet Greet GREET";
-        Assert.Equal(3, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(3);
     }
 
     /// <summary>
@@ -291,7 +291,7 @@ public class SourceAnalyserTests
     {
         string source = "BEHOLD \"greet world\"";
 
-        Assert.Equal(0, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(0);
     }
 
     /// <summary>
@@ -302,7 +302,7 @@ public class SourceAnalyserTests
     {
         string source = "BEHOLD \"hello\" ASIDE: greet";
 
-        Assert.Equal(0, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(0);
     }
 
     /// <summary>
@@ -313,7 +313,7 @@ public class SourceAnalyserTests
     {
         string source = "(ASIDE, AT SOME LENGTH: greet greet END OF ASIDE.)";
 
-        Assert.Equal(0, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(0);
     }
 
     /// <summary>
@@ -324,7 +324,7 @@ public class SourceAnalyserTests
     {
         string source = "BEHOLD \"hello\"";
 
-        Assert.Equal(0, CountInSource(source, "greet"));
+        CountInSource(source, "greet").ShouldBe(0);
     }
 
 
@@ -338,9 +338,9 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        (int Line, int Character) = Assert.Single(result);
-        Assert.Equal(0, Line);
-        Assert.Equal(7, Character);
+        (int Line, int Character) = result.ShouldHaveSingleItem();
+        Line.ShouldBe(0);
+        Character.ShouldBe(7);
     }
 
     /// <summary>
@@ -353,7 +353,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Equal(3, Enumerable.Count(result));
+        Enumerable.Count(result).ShouldBe(3);
     }
 
     /// <summary>
@@ -366,7 +366,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Single(result);
+        result.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -379,7 +379,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Equal(3, Enumerable.Count(result));
+        Enumerable.Count(result).ShouldBe(3);
     }
 
     /// <summary>
@@ -392,7 +392,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -405,7 +405,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -418,7 +418,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -431,7 +431,7 @@ public class SourceAnalyserTests
 
         IEnumerable<(int Line, int Character)> result = SourceAnalyser.FindWordOccurrences(lines, "greet");
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>

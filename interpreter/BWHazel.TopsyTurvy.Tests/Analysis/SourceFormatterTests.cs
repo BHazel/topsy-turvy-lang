@@ -13,7 +13,7 @@ public class SourceFormatterTests
     [Fact]
     public void FormatSource_WithEmptySource_ReturnsEmpty()
     {
-        Assert.Equal(string.Empty, SourceFormatter.FormatSource(string.Empty));
+        SourceFormatter.FormatSource(string.Empty).ShouldBe(string.Empty);
     }
 
     /// <summary>
@@ -24,7 +24,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\n\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nPRINCIPALS\nPRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
         string expected = "HARK! \"Test\"\nPRINCIPALS\n  PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\nBEHOLD \"hello\"\nMY DUTY IS DISCHARGED.\nFINALE.";
         string expected = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\n  BEHOLD \"hello\"\nMY DUTY IS DISCHARGED.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nOTHERWISE,\nBEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\n  OTHERWISE,\n    BEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nOR, IF NOT,\nBEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\n  OR, IF NOT,\n    BEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nIN WHICH CAPACITY?\nWHEN ACTING AS 1\nBEHOLD \"one\"\nNOTHING COULD BE MORE SATISFACTORY.\nFINALE.";
         string expected = "HARK! \"Test\"\nIN WHICH CAPACITY?\n  WHEN ACTING AS 1\n    BEHOLD \"one\"\nNOTHING COULD BE MORE SATISFACTORY.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nBY A LEGAL FICTION\nBEHOLD \"loop\"\nTHE TERM EXPIRES.\nFINALE.";
         string expected = "HARK! \"Test\"\nBY A LEGAL FICTION\n  BEHOLD \"loop\"\nTHE TERM EXPIRES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nWITH THE GREATEST RESPECT,\nBEHOLD \"try\"\nWITH GRATITUDE\nBEHOLD \"success\"\nMODIFIED RAPTURE\nBEHOLD \"error\"\nTHAT CONCLUDES THE MATTER.\nFINALE.";
         string expected = "HARK! \"Test\"\nWITH THE GREATEST RESPECT,\n  BEHOLD \"try\"\nWITH GRATITUDE\n  BEHOLD \"success\"\nMODIFIED RAPTURE\n  BEHOLD \"error\"\nTHAT CONCLUDES THE MATTER.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nPRINCIPALS\n          PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
         string expected = "HARK! \"Test\"\nPRINCIPALS\n  PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public class SourceFormatterTests
     {
         string input = "HARK! \"Title\"\nor, \"Subtitle\"\nFINALE.";
         string expected = "HARK! \"Title\"\n  or, \"Subtitle\"\nFINALE.";
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -166,7 +166,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nbehold \"hello\"\nFINALE.";
         string expected = "HARK! \"Test\"\nBEHOLD \"hello\"\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -178,7 +178,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nsum of 1 AND 2\nFINALE.";
         string expected = "HARK! \"Test\"\nSUM OF 1 AND 2\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public class SourceFormatterTests
     public void FormatSource_WithKeywordInsideStringLiteral_NotNormalised()
     {
         string source = "HARK! \"Test\"\nBEHOLD \"behold this\"\nFINALE.";
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\nBEHOLD \"hello\" ASIDE: behold this\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\n(ASIDE, AT SOME LENGTH: behold this END OF ASIDE.)\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -221,6 +221,6 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\n(ASIDE, AT SOME LENGTH:\n  behold this\n  should it transpire\nEND OF ASIDE.)\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 }

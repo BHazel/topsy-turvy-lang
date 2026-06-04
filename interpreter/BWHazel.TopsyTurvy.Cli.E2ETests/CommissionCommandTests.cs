@@ -23,7 +23,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("commission myfile.txt --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
     {
         (int _, string _, string stderr) = await this.RunAsync("commission myfile.txt --tiptoe");
 
-        Assert.Contains("Only .topsy files are supported", stderr);
+        stderr.ShouldContain("Only .topsy files are supported");
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("commission prog.topsy --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
 
         (int _, string _, string stderr) = await this.RunAsync("commission prog.topsy --tiptoe");
 
-        Assert.Contains("File already exists", stderr);
+        stderr.ShouldContain("File already exists");
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("commission prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
     {
         await this.RunAsync("commission prog.topsy --tiptoe");
 
-        Assert.True(File.Exists(Path.Combine(this.WorkingDirectory, "prog.topsy")));
+        File.Exists(Path.Combine(this.WorkingDirectory, "prog.topsy")).ShouldBeTrue();
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
         await this.RunAsync("commission prog.topsy --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"));
-        Assert.Contains("HARK! \"Programme\"", content);
+        content.ShouldContain("HARK! \"Programme\"");
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
         await this.RunAsync("commission prog.topsy --title \"My Show\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"));
-        Assert.Contains("HARK! \"My Show\"", content);
+        content.ShouldContain("HARK! \"My Show\"");
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
         await this.RunAsync("commission prog.topsy --or \"A Subtitle\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"));
-        Assert.Contains("or, \"A Subtitle\"", content);
+        content.ShouldContain("or, \"A Subtitle\"");
     }
 
     /// <summary>
@@ -130,8 +130,8 @@ public sealed class CommissionCommandTests(CliFixture fixture)
         await this.RunAsync("commission prog.topsy --title \"My Show\" --or \"A Subtitle\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"));
-        Assert.Contains("HARK! \"My Show\"", content);
-        Assert.Contains("or, \"A Subtitle\"", content);
+        content.ShouldContain("HARK! \"My Show\"");
+        content.ShouldContain("or, \"A Subtitle\"");
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public sealed class CommissionCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("new prog.topsy --tiptoe");
 
-        Assert.Equal(0, exitCode);
-        Assert.True(File.Exists(Path.Combine(this.WorkingDirectory, "prog.topsy")));
+        exitCode.ShouldBe(0);
+        File.Exists(Path.Combine(this.WorkingDirectory, "prog.topsy")).ShouldBeTrue();
     }
 }

@@ -18,8 +18,8 @@ public class TopsyTurvyParserStatementTests
     {
         DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A PEER");
 
-        Assert.Equal("x", node.Name);
-        Assert.Null(node.InitialValue);
+        node.Name.ShouldBe("x");
+        node.InitialValue.ShouldBeNull();
     }
 
     /// <summary>
@@ -30,8 +30,8 @@ public class TopsyTurvyParserStatementTests
     {
         DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A PEER BEING 42");
 
-        Assert.Equal("x", node.Name);
-        Assert.NotNull(node.InitialValue);
+        node.Name.ShouldBe("x");
+        node.InitialValue.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public class TopsyTurvyParserStatementTests
     {
         DeclarationNode node = this.ParseFirstStatement<DeclarationNode>($"PRAY WELCOME x AS A {keyword}");
 
-        Assert.Equal(expectedType, node.Type);
+        node.Type.ShouldBe(expectedType);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class TopsyTurvyParserStatementTests
     {
         AssignmentNode node = this.ParseFirstStatement<AssignmentNode>("Ko-Ko IS APPOINTED 99");
 
-        Assert.Equal("Ko-Ko", node.Target);
+        node.Target.ShouldBe("Ko-Ko");
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class TopsyTurvyParserStatementTests
     {
         AssignmentNode node = this.ParseFirstStatement<AssignmentNode>("x IS APPOINTED 99");
 
-        Assert.NotNull(node.Value);
+        node.Value.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public class TopsyTurvyParserStatementTests
     {
         InPlaceCastNode node = this.ParseFirstStatement<InPlaceCastNode>("x IS HENCEFORTH A FATHOM");
 
-        Assert.Equal("x", node.Target);
-        Assert.Equal(LiteralType.Float, node.NewType);
+        node.Target.ShouldBe("x");
+        node.NewType.ShouldBe(LiteralType.Float);
     }
 
     /// <summary>
@@ -94,8 +94,8 @@ public class TopsyTurvyParserStatementTests
     {
         ExpressionCastNode node = this.ParseFirstStatement<ExpressionCastNode>("AS IT WERE x AS A YARN");
 
-        Assert.NotNull(node.Expression);
-        Assert.Equal(LiteralType.String, node.NewType);
+        node.Expression.ShouldNotBeNull();
+        node.NewType.ShouldBe(LiteralType.String);
     }
 
     /// <summary>
@@ -106,8 +106,8 @@ public class TopsyTurvyParserStatementTests
     {
         PrintNode node = this.ParseFirstStatement<PrintNode>("BEHOLD \"hello\"");
 
-        Assert.NotNull(node.Expression);
-        Assert.False(node.SuppressNewline);
+        node.Expression.ShouldNotBeNull();
+        node.SuppressNewline.ShouldBeFalse();
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public class TopsyTurvyParserStatementTests
     public void Parse_Print_WithWithoutCeremony_SuppressNewlineIsTrue()
     {
         PrintNode node = this.ParseFirstStatement<PrintNode>("BEHOLD \"hello\" WITHOUT CEREMONY");
-        Assert.True(node.SuppressNewline);
+        node.SuppressNewline.ShouldBeTrue();
     }
 
     /// <summary>
@@ -127,7 +127,7 @@ public class TopsyTurvyParserStatementTests
     public void Parse_Input_SetsTargetName()
     {
         InputNode node = this.ParseFirstStatement<InputNode>("PRAY TELL answer");
-        Assert.Equal("answer", node.Target);
+        node.Target.ShouldBe("answer");
     }
 
     /// <summary>
@@ -145,10 +145,10 @@ public class TopsyTurvyParserStatementTests
 
         ConditionalNode node = this.ParseFirstStatement<ConditionalNode>(statements);
 
-        Assert.NotNull(node.Condition);
-        Assert.Single(node.TrueBlock);
-        Assert.Empty(node.ElseIfs);
-        Assert.Empty(node.ElseBlock);
+        node.Condition.ShouldNotBeNull();
+        node.TrueBlock.ShouldHaveSingleItem();
+        node.ElseIfs.ShouldBeEmpty();
+        node.ElseBlock.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -168,8 +168,8 @@ public class TopsyTurvyParserStatementTests
 
         ConditionalNode node = this.ParseFirstStatement<ConditionalNode>(statements);
 
-        Assert.Single(node.TrueBlock);
-        Assert.Single(node.ElseBlock);
+        node.TrueBlock.ShouldHaveSingleItem();
+        node.ElseBlock.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -189,8 +189,8 @@ public class TopsyTurvyParserStatementTests
 
         ConditionalNode node = this.ParseFirstStatement<ConditionalNode>(statements);
 
-        Assert.Single(node.ElseIfs);
-        Assert.Single(node.ElseIfs[0].Block);
+        node.ElseIfs.ShouldHaveSingleItem();
+        node.ElseIfs[0].Block.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ public class TopsyTurvyParserStatementTests
 
         SwitchNode node = this.ParseFirstStatement<SwitchNode>(statements);
 
-        Assert.Equal(2, node.Cases.Count);
+        node.Cases.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -230,7 +230,7 @@ public class TopsyTurvyParserStatementTests
 
         SwitchNode node = this.ParseFirstStatement<SwitchNode>(statements);
 
-        Assert.Single(node.DefaultBlock);
+        node.DefaultBlock.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -247,8 +247,8 @@ public class TopsyTurvyParserStatementTests
 
         LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
 
-        Assert.Equal(LoopType.Infinite, node.Type);
-        Assert.Null(node.Label);
+        node.Type.ShouldBe(LoopType.Infinite);
+        node.Label.ShouldBeNull();
     }
 
     /// <summary>
@@ -265,9 +265,9 @@ public class TopsyTurvyParserStatementTests
 
         LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
 
-        Assert.Equal(LoopType.Ascending, node.Type);
-        Assert.Equal("i", node.LoopVariable);
-        Assert.NotNull(node.Condition);
+        node.Type.ShouldBe(LoopType.Ascending);
+        node.LoopVariable.ShouldBe("i");
+        node.Condition.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -284,8 +284,8 @@ public class TopsyTurvyParserStatementTests
 
         LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
 
-        Assert.Equal(LoopType.Descending, node.Type);
-        Assert.Equal("i", node.LoopVariable);
+        node.Type.ShouldBe(LoopType.Descending);
+        node.LoopVariable.ShouldBe("i");
     }
 
     /// <summary>
@@ -302,8 +302,8 @@ public class TopsyTurvyParserStatementTests
 
         LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
 
-        Assert.Equal(LoopType.Whilst, node.Type);
-        Assert.NotNull(node.Condition);
+        node.Type.ShouldBe(LoopType.Whilst);
+        node.Condition.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -320,7 +320,7 @@ public class TopsyTurvyParserStatementTests
 
         LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
 
-        Assert.Equal("mainLoop", node.Label);
+        node.Label.ShouldBe("mainLoop");
     }
 
     /// <summary>
@@ -331,7 +331,7 @@ public class TopsyTurvyParserStatementTests
     {
         ProgramNode program = this.parser.Parse("HARK! \"T\" THAT WILL DO. FINALE.");
 
-        Assert.IsType<BreakNode>(program.Statements[0]);
+        program.Statements[0].ShouldBeOfType<BreakNode>();
     }
 
     /// <summary>
@@ -342,7 +342,7 @@ public class TopsyTurvyParserStatementTests
     {
         ProgramNode program = this.parser.Parse("HARK! \"T\" ONCE MORE. FINALE.");
 
-        Assert.IsType<ContinueNode>(program.Statements[0]);
+        program.Statements[0].ShouldBeOfType<ContinueNode>();
     }
 
     /// <summary>
@@ -358,8 +358,8 @@ public class TopsyTurvyParserStatementTests
 
         FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
 
-        Assert.Equal("greet", node.Name);
-        Assert.Empty(node.Parameters);
+        node.Name.ShouldBe("greet");
+        node.Parameters.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -375,9 +375,9 @@ public class TopsyTurvyParserStatementTests
 
         FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
 
-        Assert.Equal(2, node.Parameters.Count);
-        Assert.Contains("salutation", node.Parameters);
-        Assert.Contains("recipient", node.Parameters);
+        node.Parameters.Count.ShouldBe(2);
+        node.Parameters.ShouldContain("salutation");
+        node.Parameters.ShouldContain("recipient");
     }
 
     /// <summary>
@@ -394,8 +394,8 @@ public class TopsyTurvyParserStatementTests
 
         FunctionDefinitionNode functionNode = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
 
-        ReturnNode returnNode = Assert.IsType<ReturnNode>(Assert.Single(functionNode.Body));
-        Assert.NotNull(returnNode.Value);
+        ReturnNode returnNode = functionNode.Body.ShouldHaveSingleItem().ShouldBeOfType<ReturnNode>();
+        returnNode.Value.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -412,8 +412,8 @@ public class TopsyTurvyParserStatementTests
 
         FunctionDefinitionNode functionNode = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
 
-        ReturnNode returnNode = Assert.IsType<ReturnNode>(Assert.Single(functionNode.Body));
-        Assert.Null(returnNode.Value);
+        ReturnNode returnNode = functionNode.Body.ShouldHaveSingleItem().ShouldBeOfType<ReturnNode>();
+        returnNode.Value.ShouldBeNull();
     }
 
     /// <summary>
@@ -424,7 +424,7 @@ public class TopsyTurvyParserStatementTests
     {
         ThrowNode node = this.ParseFirstStatement<ThrowNode>("A HIDEOUS CURSE ON \"disaster\"");
 
-        Assert.NotNull(node.Value);
+        node.Value.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -444,9 +444,9 @@ public class TopsyTurvyParserStatementTests
 
         TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
 
-        Assert.NotNull(node.Operation);
-        Assert.Single(node.SuccessBlock);
-        Assert.Single(node.ExceptionBlock);
+        node.Operation.ShouldNotBeNull();
+        node.SuccessBlock.ShouldHaveSingleItem();
+        node.ExceptionBlock.ShouldHaveSingleItem();
     }
 
     /// <summary>
@@ -464,9 +464,9 @@ public class TopsyTurvyParserStatementTests
 
         PrincipalBlockNode node = this.ParseFirstStatement<PrincipalBlockNode>(statements);
 
-        Assert.Equal(2, node.Declarations.Count);
-        Assert.Equal("alpha", node.Declarations[0].Name);
-        Assert.Equal("beta", node.Declarations[1].Name);
+        node.Declarations.Count.ShouldBe(2);
+        node.Declarations[0].Name.ShouldBe("alpha");
+        node.Declarations[1].Name.ShouldBe("beta");
     }
 
     /// <summary>
@@ -477,7 +477,7 @@ public class TopsyTurvyParserStatementTests
     {
         ImportNode node = this.ParseFirstStatement<ImportNode>("PRAY ADMIT \"utils.topsy\"");
 
-        Assert.Equal("utils.topsy", node.FilePath);
+        node.FilePath.ShouldBe("utils.topsy");
     }
 
     /// <summary>
@@ -492,7 +492,7 @@ public class TopsyTurvyParserStatementTests
     private T ParseFirstStatement<T>(string statementSource) where T : Statement
     {
         ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
-        Statement statement = Assert.Single(program.Statements);
-        return Assert.IsType<T>(statement);
+        Statement statement = program.Statements.ShouldHaveSingleItem();
+        return statement.ShouldBeOfType<T>();
     }
 }

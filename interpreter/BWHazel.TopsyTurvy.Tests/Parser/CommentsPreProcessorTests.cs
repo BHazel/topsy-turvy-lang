@@ -19,7 +19,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.Equal(input, result.Text);
+        result.Text.ShouldBe(input);
     }
 
     /// <summary>
@@ -32,8 +32,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.DoesNotContain("ASIDE:", result.Text);
-        Assert.DoesNotContain("this is a comment", result.Text);
+        result.Text.ShouldNotContain("ASIDE:");
+        result.Text.ShouldNotContain("this is a comment");
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.StartsWith("BEHOLD x", result.Text);
+        result.Text.ShouldStartWith("BEHOLD x");
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
         
-        Assert.DoesNotContain("some text", result.Text);
+        result.Text.ShouldNotContain("some text");
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public class CommentsPreProcessorTests
             }
         }
 
-        Assert.Equal(3, newLineCount);
+        newLineCount.ShouldBe(3);
     }
 
     /// <summary>
@@ -94,8 +94,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.DoesNotContain("first comment", result.Text);
-        Assert.DoesNotContain("second comment", result.Text);
+        result.Text.ShouldNotContain("first comment");
+        result.Text.ShouldNotContain("second comment");
     }
 
     /// <summary>
@@ -108,8 +108,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        Assert.DoesNotContain("(ASIDE, AT SOME LENGTH: ignored END OF ASIDE.)", result.Text);
-        Assert.Contains("BEHOLD", result.Text);
-        Assert.Contains("x", result.Text);
+        result.Text.ShouldNotContain("(ASIDE, AT SOME LENGTH: ignored END OF ASIDE.)");
+        result.Text.ShouldContain("BEHOLD");
+        result.Text.ShouldContain("x");
     }
 }

@@ -36,8 +36,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("big", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("big");
     }
 
     /// <summary>
@@ -67,8 +67,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("equal", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("equal");
     }
 
     /// <summary>
@@ -100,8 +100,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("two", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("two");
     }
 
     /// <summary>
@@ -129,8 +129,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("6", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("6");
     }
 
     /// <summary>
@@ -157,8 +157,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("5", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("5");
     }
 
     /// <summary>
@@ -185,8 +185,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("6", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("6");
     }
 
     /// <summary>
@@ -216,8 +216,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("3", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("3");
     }
 
     /// <summary>
@@ -248,8 +248,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("4", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("4");
     }
 
     /// <summary>
@@ -284,8 +284,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("two", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("two");
     }
 
     /// <summary>
@@ -316,8 +316,8 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("other", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("other");
     }
 
     /// <summary>
@@ -350,7 +350,7 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
         
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("abc", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("abc");
     }
 }

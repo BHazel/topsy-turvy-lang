@@ -21,7 +21,7 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
 
-        Assert.True(table.TryGetSymbol("JUST SO", out _));
+        table.TryGetSymbol("JUST SO", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.");
 
-        Assert.True(table.TryGetSymbol("myVar", out _));
+        table.TryGetSymbol("myVar", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.");
         table.TryGetSymbol("myVar", out SymbolInfo? info);
 
-        Assert.Equal(SymbolKind.Variable, info!.Kind);
+        info!.Kind.ShouldBe(SymbolKind.Variable);
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("x", out SymbolInfo? info);
 
-        Assert.Equal(expectedDisplay, info!.TypeDisplayName);
+        info!.TypeDisplayName.ShouldBe(expectedDisplay);
     }
 
     /// <summary>
@@ -75,8 +75,8 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.");
         table.TryGetSymbol("myVar", out SymbolInfo? info);
 
-        Assert.True(info!.DefinitionLine > 0);
-        Assert.True(info.DefinitionColumn > 0);
+        (info!.DefinitionLine > 0).ShouldBeTrue();
+        (info.DefinitionColumn > 0).ShouldBeTrue();
     }
 
     /// <summary>
@@ -88,8 +88,8 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.");
         table.TryGetSymbol("myVar", out SymbolInfo? info);
 
-        Assert.Equal(2, info!.DefinitionLine);
-        Assert.Equal(14, info.DefinitionColumn);
+        info!.DefinitionLine.ShouldBe(2);
+        info.DefinitionColumn.ShouldBe(14);
     }
 
     /// <summary>
@@ -109,8 +109,8 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("alpha", out _));
-        Assert.True(table.TryGetSymbol("beta", out _));
+        table.TryGetSymbol("alpha", out _).ShouldBeTrue();
+        table.TryGetSymbol("beta", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("greet", out _));
+        table.TryGetSymbol("greet", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
-        Assert.Equal(SymbolKind.Function, info!.Kind);
+        info!.Kind.ShouldBe(SymbolKind.Function);
     }
 
     /// <summary>
@@ -166,10 +166,10 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
-        Assert.NotNull(info!.Parameters);
-        Assert.Equal(2, info.Parameters!.Count);
-        Assert.Contains("salutation", info.Parameters);
-        Assert.Contains("recipient", info.Parameters);
+        info!.Parameters.ShouldNotBeNull();
+        info.Parameters!.Count.ShouldBe(2);
+        info.Parameters.ShouldContain("salutation");
+        info.Parameters.ShouldContain("recipient");
     }
 
     /// <summary>
@@ -183,8 +183,8 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
-        Assert.Equal(2, info!.DefinitionLine);
-        Assert.Equal(26, info.DefinitionColumn);
+        info!.DefinitionLine.ShouldBe(2);
+        info.DefinitionColumn.ShouldBe(26);
     }
 
     /// <summary>
@@ -202,8 +202,8 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("salutation", out _));
-        Assert.True(table.TryGetSymbol("recipient", out _));
+        table.TryGetSymbol("salutation", out _).ShouldBeTrue();
+        table.TryGetSymbol("recipient", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("name", out SymbolInfo? info);
 
-        Assert.Equal(SymbolKind.Parameter, info!.Kind);
+        info!.Kind.ShouldBe(SymbolKind.Parameter);
     }
 
     /// <summary>
@@ -242,7 +242,7 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("inner", out _));
+        table.TryGetSymbol("inner", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("elseVar", out _));
+        table.TryGetSymbol("elseVar", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -284,7 +284,7 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        Assert.True(table.TryGetSymbol("counter", out _));
+        table.TryGetSymbol("counter", out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -297,8 +297,8 @@ public class SymbolTableTests
 
         bool found = table.TryGetSymbol("x", out SymbolInfo? info);
 
-        Assert.True(found);
-        Assert.NotNull(info);
+        found.ShouldBeTrue();
+        info.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -311,7 +311,7 @@ public class SymbolTableTests
 
         bool found = table.TryGetSymbol("doesNotExist", out _);
 
-        Assert.False(found);
+        found.ShouldBeFalse();
     }
 
     /// <summary>
@@ -326,7 +326,7 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.");
 
-        Assert.True(table.TryGetSymbol(symbolName, out _));
+        table.TryGetSymbol(symbolName, out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -340,7 +340,7 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
 
-        Assert.True(table.TryGetSymbol(symbolName, out _));
+        table.TryGetSymbol(symbolName, out _).ShouldBeTrue();
     }
 
     /// <summary>
@@ -351,7 +351,7 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
 
-        Assert.Contains(table.AllSymbols(), symbol => symbol.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase));
+        table.AllSymbols().ShouldContain(symbol => symbol.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -371,9 +371,9 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         List<string> names = [.. table.AllSymbols().Select(symbol => symbol.Name)];
 
-        Assert.Contains("alpha", names);
-        Assert.Contains("greet", names);
-        Assert.Contains("JUST SO", names);
+        names.ShouldContain("alpha");
+        names.ShouldContain("greet");
+        names.ShouldContain("JUST SO");
     }
 
     /// <summary>
@@ -384,7 +384,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet world", 0, 0);
 
-        Assert.Equal("greet", word);
+        word.ShouldBe("greet");
     }
 
     /// <summary>
@@ -395,7 +395,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet world", 0, 3);
 
-        Assert.Equal("greet", word);
+        word.ShouldBe("greet");
     }
 
     /// <summary>
@@ -406,7 +406,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("Ko-Ko sings", 0, 2);
 
-        Assert.Equal("Ko-Ko", word);
+        word.ShouldBe("Ko-Ko");
     }
 
     /// <summary>
@@ -417,7 +417,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet world", 0, 5);
 
-        Assert.Null(word);
+        word.ShouldBeNull();
     }
 
     /// <summary>
@@ -428,7 +428,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("42 greet", 0, 0);
 
-        Assert.Null(word);
+        word.ShouldBeNull();
     }
 
     /// <summary>
@@ -439,7 +439,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet", -1, 0);
 
-        Assert.Null(word);
+        word.ShouldBeNull();
     }
 
     /// <summary>
@@ -450,7 +450,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet", 99, 0);
 
-        Assert.Null(word);
+        word.ShouldBeNull();
     }
 
     /// <summary>
@@ -461,7 +461,7 @@ public class SymbolTableTests
     {
         string? word = SymbolTable.ExtractWordAt("greet", 0, 99);
 
-        Assert.Null(word);
+        word.ShouldBeNull();
     }
 
     /// <summary>

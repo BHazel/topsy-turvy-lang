@@ -30,8 +30,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("7", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("7");
     }
 
     /// <summary>
@@ -55,8 +55,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("3", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("3");
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 
     /// <summary>
@@ -103,8 +103,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("1", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("1");
     }
 
     /// <summary>
@@ -127,7 +127,7 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.True(diagnostics.HasErrors);
+        diagnostics.HasErrors.ShouldBeTrue();
     }
 
     /// <summary>
@@ -151,8 +151,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("7", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("7");
     }
 
     /// <summary>
@@ -176,8 +176,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("3", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("3");
     }
 
     /// <summary>
@@ -201,8 +201,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -226,8 +226,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 
     /// <summary>
@@ -251,8 +251,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -276,8 +276,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal(0.25.ToString(), output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe(0.25.ToString());
     }
 
     /// <summary>
@@ -301,8 +301,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal(1.5.ToString(), output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe(1.5.ToString());
     }
 
     /// <summary>
@@ -326,8 +326,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 
     /// <summary>
@@ -351,8 +351,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 
     /// <summary>
@@ -376,8 +376,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -401,8 +401,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -426,8 +426,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 
     /// <summary>
@@ -451,8 +451,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 
     /// <summary>
@@ -476,8 +476,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -501,8 +501,8 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("VERITY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -526,7 +526,7 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
         
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
-        Assert.False(diagnostics.HasErrors);
-        Assert.Equal("NAY", output[0]);
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("NAY");
     }
 }

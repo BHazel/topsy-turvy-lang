@@ -43,7 +43,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         DocumentState? result = manager.Get(this.testUri);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         manager.Update(this.testUri, this.source, result);
 
-        Assert.NotNull(manager.Get(this.testUri));
+        manager.Get(this.testUri).ShouldNotBeNull();
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         manager.Update(this.testUri, this.source, result);
 
-        Assert.Equal(this.source, manager.Get(this.testUri)!.Source);
+        manager.Get(this.testUri)!.Source.ShouldBe(this.source);
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         manager.Update(this.testUri, this.source, result);
 
-        Assert.NotNull(manager.Get(this.testUri)!.SymbolTable);
+        manager.Get(this.testUri)!.SymbolTable.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         ParseResult badResult = new(null, []);
         manager.Update(this.testUri, "NOT VALID", badResult);
 
-        Assert.Same(lastGoodTable, manager.Get(this.testUri)!.SymbolTable);
+        manager.Get(this.testUri)!.SymbolTable.ShouldBeSameAs(lastGoodTable);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         ParseResult badResult = new(null, []);
         manager.Update(this.testUri, "NEW SOURCE", badResult);
 
-        Assert.Equal("NEW SOURCE", manager.Get(this.testUri)!.Source);
+        manager.Get(this.testUri)!.Source.ShouldBe("NEW SOURCE");
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         manager.Remove(this.testUri);
 
-        Assert.Null(manager.Get(this.testUri));
+        manager.Get(this.testUri).ShouldBeNull();
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         manager.Remove(DocumentUri.From("file:///does-not-exist.topsy"));
 
-        Assert.Empty(manager.AllDocuments());
+        manager.AllDocuments().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -158,7 +158,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         IReadOnlyList<(DocumentUri, DocumentState)> result = manager.AllDocuments();
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         manager.Update(uri1, this.source, result);
         manager.Update(uri2, this.source, result);
 
-        Assert.Equal(2, manager.AllDocuments().Count);
+        manager.AllDocuments().Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         IReadOnlyList<(DocumentUri, DocumentState)> result = manager.AllDocuments();
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -217,8 +217,8 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
 
-        Assert.NotNull(result);
-        Assert.Equal("greeting", result.Name, ignoreCase: true);
+        result.ShouldNotBeNull();
+        string.Equals(result.Name, "greeting", StringComparison.OrdinalIgnoreCase).ShouldBeTrue();
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         SymbolInfo? result = manager.FindSymbolInOtherDocuments("greeting", this.testUri);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -244,8 +244,8 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         (DocumentUri uri, SymbolInfo? info) = manager.FindSymbolWithUriInOtherDocuments("nonexistent", this.testUri);
 
-        Assert.Equal(this.testUri.ToString(), uri.ToString());
-        Assert.Null(info);
+        uri.ToString().ShouldBe(this.testUri.ToString());
+        info.ShouldBeNull();
     }
 
     /// <summary>
@@ -259,8 +259,8 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         (DocumentUri uri, SymbolInfo? info) = manager.FindSymbolWithUriInOtherDocuments("greeting", this.testUri);
 
-        Assert.Equal(this.otherUri.ToString(), uri.ToString());
-        Assert.NotNull(info);
+        uri.ToString().ShouldBe(this.otherUri.ToString());
+        info.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -273,7 +273,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -288,7 +288,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
 
-        Assert.Contains(result, symbol => symbol.Name.Equals("greet", StringComparison.OrdinalIgnoreCase) && symbol.Kind == SymbolKind.Function);
+        result.ShouldContain(symbol => symbol.Name.Equals("greet", StringComparison.OrdinalIgnoreCase) && symbol.Kind == SymbolKind.Function);
     }
 
     /// <summary>
@@ -302,7 +302,7 @@ public class DocumentStateManagerTests : LanguageServerTestBase
 
         IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
 
-        Assert.DoesNotContain(result, s => s.Name.Equals("greeting", System.StringComparison.OrdinalIgnoreCase));
+        result.ShouldNotContain(s => s.Name.Equals("greeting", System.StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

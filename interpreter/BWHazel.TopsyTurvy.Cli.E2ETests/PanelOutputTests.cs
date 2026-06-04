@@ -45,8 +45,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
     {
         (int _, string stdout, string _) = await this.RunAsync("commission my-topsy-turvy-programme.topsy");
 
-        Assert.Contains("Commissioned!", stdout);
-        Assert.Contains("my-topsy-turvy-programme.topsy", stdout);
+        stdout.ShouldContain("Commissioned!");
+        stdout.ShouldContain("my-topsy-turvy-programme.topsy");
     }
 
     /// <summary>
@@ -57,8 +57,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
     {
         (int _, string stdout, string _) = await this.RunAsync("commission myfile.txt");
 
-        Assert.Contains("Why, Damme!", stdout);
-        Assert.Contains("Only .topsy", stdout);
+        stdout.ShouldContain("Why, Damme!");
+        stdout.ShouldContain("Only .topsy");
     }
 
     /// <summary>
@@ -71,8 +71,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("commission prog.topsy");
 
-        Assert.Contains("Why, Damme!", stdout);
-        Assert.Contains("File already exists", stdout);
+        stdout.ShouldContain("Why, Damme!");
+        stdout.ShouldContain("File already exists");
     }
 
     /// <summary>
@@ -83,8 +83,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
     {
         (int _, string stdout, string _) = await this.RunAsync("mount myproject");
 
-        Assert.Contains("Mounted!", stdout);
-        Assert.Contains("myproject/", stdout);
+        stdout.ShouldContain("Mounted!");
+        stdout.ShouldContain("myproject/");
     }
 
     /// <summary>
@@ -97,8 +97,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("mount myproject");
 
-        Assert.Contains("Why, Damme!", stdout);
-        Assert.Contains("Directory already exists", stdout);
+        stdout.ShouldContain("Why, Damme!");
+        stdout.ShouldContain("Directory already exists");
     }
 
     /// <summary>
@@ -111,8 +111,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("rehearse my-topsy-turvy-programme.topsy");
 
-        Assert.Contains("Now Rehearsing...", stdout);
-        Assert.Contains("my-topsy-turvy-programme.topsy", stdout);
+        stdout.ShouldContain("Now Rehearsing...");
+        stdout.ShouldContain("my-topsy-turvy-programme.topsy");
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("rehearse prog.topsy");
 
-        Assert.Contains("Rehearsal Over!", stdout);
+        stdout.ShouldContain("Rehearsal Over!");
     }
 
     /// <summary>
@@ -138,8 +138,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("rehearse prog.topsy");
 
-        Assert.Contains("Crushed Again!", stdout);
-        Assert.Contains("Syntax Error", stdout);
+        stdout.ShouldContain("Crushed Again!");
+        stdout.ShouldContain("Syntax Error");
     }
 
     /// <summary>
@@ -150,8 +150,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
     {
         (int _, string stdout, string _) = await this.RunAsync("rehearse nonexistent.topsy");
 
-        Assert.Contains("Why, Damme!", stdout);
-        Assert.Contains("File not found", stdout);
+        stdout.ShouldContain("Why, Damme!");
+        stdout.ShouldContain("File not found");
     }
 
     /// <summary>
@@ -164,8 +164,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("perform my-topsy-turvy-programme.topsy");
 
-        Assert.Contains("Now Performing...", stdout);
-        Assert.Contains("my-topsy-turvy-programme.topsy", stdout);
+        stdout.ShouldContain("Now Performing...");
+        stdout.ShouldContain("my-topsy-turvy-programme.topsy");
     }
 
     /// <summary>
@@ -178,7 +178,7 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("perform prog.topsy");
 
-        Assert.Contains("Performance Over!", stdout);
+        stdout.ShouldContain("Performance Over!");
     }
 
     /// <summary>
@@ -191,8 +191,8 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("perform prog.topsy");
 
-        Assert.Contains("Crushed Again!", stdout);
-        Assert.Contains("Syntax Error", stdout);
+        stdout.ShouldContain("Crushed Again!");
+        stdout.ShouldContain("Syntax Error");
     }
 
     /// <summary>
@@ -205,7 +205,7 @@ public sealed class PanelOutputTests(CliFixture fixture) : CliTestBase(fixture)
 
         (int _, string stdout, string _) = await this.RunAsync("perform prog.topsy");
 
-        Assert.Contains("A Hideous Curse!", stdout);
-        Assert.Contains("Runtime Error", stdout);
+        stdout.ShouldContain("A Hideous Curse!");
+        stdout.ShouldContain("Runtime Error");
     }
 }

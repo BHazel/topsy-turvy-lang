@@ -33,8 +33,8 @@ public class WorkspaceSymbolHandlerTests : LanguageServerTestBase
 
         Container<WorkspaceSymbol>? result = await handler.Handle(this.MakeRequest(string.Empty), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -48,8 +48,8 @@ public class WorkspaceSymbolHandlerTests : LanguageServerTestBase
 
         Container<WorkspaceSymbol>? result = await handler.Handle(this.MakeRequest(string.Empty), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -63,8 +63,8 @@ public class WorkspaceSymbolHandlerTests : LanguageServerTestBase
 
         Container<WorkspaceSymbol>? result = await handler.Handle(this.MakeRequest("myVar"), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.All(result, symbol => Assert.Contains("myVar", symbol.Name, System.StringComparison.OrdinalIgnoreCase));
+        result.ShouldNotBeNull();
+        result.ShouldAllBe(symbol => symbol.Name.Contains("myVar", System.StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -78,8 +78,8 @@ public class WorkspaceSymbolHandlerTests : LanguageServerTestBase
 
         Container<WorkspaceSymbol>? result = await handler.Handle(this.MakeRequest("zzz_no_match_zzz"), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -105,8 +105,8 @@ public class WorkspaceSymbolHandlerTests : LanguageServerTestBase
 
         Container<WorkspaceSymbol>? result = await handler.Handle(this.MakeRequest(string.Empty), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Contains(result, symbol => symbol.Name == "otherFunc");
+        result.ShouldNotBeNull();
+        result.ShouldContain(symbol => symbol.Name == "otherFunc");
     }
 
     /// <summary>

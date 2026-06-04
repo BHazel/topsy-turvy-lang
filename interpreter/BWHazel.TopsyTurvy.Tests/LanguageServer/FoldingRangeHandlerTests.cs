@@ -21,7 +21,7 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -44,8 +44,8 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.ShouldNotBeNull();
         bool hasComment = false;
         foreach (FoldingRange range in result)
         {
@@ -80,7 +80,7 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
             }
         }
 
-        Assert.True(hasComment);
+        hasComment.ShouldBeTrue();
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.ShouldNotBeNull();
         bool hasRegion = false;
         foreach (FoldingRange range in result)
         {
@@ -114,7 +114,7 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
             }
         }
 
-        Assert.True(hasRegion);
+        hasRegion.ShouldBeTrue();
     }
 
     /// <summary>
@@ -129,8 +129,8 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -155,8 +155,8 @@ public class FoldingRangeHandlerTests : LanguageServerTestBase
 
         Container<FoldingRange>? result = await handler.Handle(this.MakeRequest(), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
     }
 
     /// <summary>

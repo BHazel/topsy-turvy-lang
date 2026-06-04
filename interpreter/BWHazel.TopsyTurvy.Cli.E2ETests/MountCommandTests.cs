@@ -25,7 +25,7 @@ public sealed class MountCommandTests(CliFixture fixture)
 
         (int exitCode, string _, string _) = await this.RunAsync("mount myproject --tiptoe");
 
-        Assert.Equal(1, exitCode);
+        exitCode.ShouldBe(1);
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class MountCommandTests(CliFixture fixture)
 
         (int _, string _, string stderr) = await this.RunAsync("mount myproject --tiptoe");
 
-        Assert.Contains("Directory already exists", stderr);
+        stderr.ShouldContain("Directory already exists");
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public sealed class MountCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("mount myproject --tiptoe");
 
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class MountCommandTests(CliFixture fixture)
     {
         await this.RunAsync("mount myproject --tiptoe");
 
-        Assert.True(Directory.Exists(Path.Combine(this.WorkingDirectory, "myproject")));
+        Directory.Exists(Path.Combine(this.WorkingDirectory, "myproject")).ShouldBeTrue();
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public sealed class MountCommandTests(CliFixture fixture)
     {
         await this.RunAsync("mount myproject --tiptoe");
 
-        Assert.True(File.Exists(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy")));
+        File.Exists(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy")).ShouldBeTrue();
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ public sealed class MountCommandTests(CliFixture fixture)
     {
         await this.RunAsync("mount myproject --hollow --tiptoe");
 
-        Assert.False(File.Exists(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy")));
+        File.Exists(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy")).ShouldBeFalse();
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public sealed class MountCommandTests(CliFixture fixture)
         await this.RunAsync("mount myproject --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy"));
-        Assert.Contains("HARK! \"Programme\"", content);
+        content.ShouldContain("HARK! \"Programme\"");
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public sealed class MountCommandTests(CliFixture fixture)
         await this.RunAsync("mount myproject --title \"Grand Opera\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy"));
-        Assert.Contains("HARK! \"Grand Opera\"", content);
+        content.ShouldContain("HARK! \"Grand Opera\"");
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public sealed class MountCommandTests(CliFixture fixture)
         await this.RunAsync("mount myproject --or \"A Subtitle\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy"));
-        Assert.Contains("or, \"A Subtitle\"", content);
+        content.ShouldContain("or, \"A Subtitle\"");
     }
 
     /// <summary>
@@ -130,8 +130,8 @@ public sealed class MountCommandTests(CliFixture fixture)
         await this.RunAsync("mount myproject --title \"Grand Opera\" --or \"A Subtitle\" --tiptoe");
 
         string content = File.ReadAllText(Path.Combine(this.WorkingDirectory, "myproject", "myproject.topsy"));
-        Assert.Contains("HARK! \"Grand Opera\"", content);
-        Assert.Contains("or, \"A Subtitle\"", content);
+        content.ShouldContain("HARK! \"Grand Opera\"");
+        content.ShouldContain("or, \"A Subtitle\"");
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public sealed class MountCommandTests(CliFixture fixture)
     {
         (int exitCode, string _, string _) = await this.RunAsync("init myproject --tiptoe");
 
-        Assert.Equal(0, exitCode);
-        Assert.True(Directory.Exists(Path.Combine(this.WorkingDirectory, "myproject")));
+        exitCode.ShouldBe(0);
+        Directory.Exists(Path.Combine(this.WorkingDirectory, "myproject")).ShouldBeTrue();
     }
 }

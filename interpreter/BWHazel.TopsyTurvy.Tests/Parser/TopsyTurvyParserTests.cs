@@ -18,7 +18,7 @@ public class TopsyTurvyParserTests
     public void Parse_WithMinimalProgram_ReturnsTitle(string source, string expectedTitle)
     {
         ProgramNode program = this.parser.Parse(source);
-        Assert.Equal(expectedTitle, program.Title);
+        program.Title.ShouldBe(expectedTitle);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public class TopsyTurvyParserTests
     {
         string source = "HARK! \"Title\" or, \"Subtitle\" FINALE.";
         ProgramNode program = this.parser.Parse(source);
-        Assert.Equal("Subtitle", program.Subtitle);
+        program.Subtitle.ShouldBe("Subtitle");
     }
 
     /// <summary>
@@ -41,11 +41,11 @@ public class TopsyTurvyParserTests
         string source = "HARK! \"Title\" Ko-Ko IS APPOINTED 42 FINALE.";
         ProgramNode program = this.parser.Parse(source);
 
-        Assert.Single(program.Statements);
+        program.Statements.ShouldHaveSingleItem();
         Statement statement = program.Statements[0];
-        Assert.IsType<AssignmentNode>(statement);
+        statement.ShouldBeOfType<AssignmentNode>();
         AssignmentNode assignment = (AssignmentNode)statement;
-        Assert.Equal("Ko-Ko", assignment.Target);
+        assignment.Target.ShouldBe("Ko-Ko");
     }
 
     /// <summary>
@@ -59,8 +59,8 @@ public class TopsyTurvyParserTests
 
         ExpressionStatement statement = (ExpressionStatement)program.Statements[0];
         PrefixExpressionNode expression = (PrefixExpressionNode)statement.Expression;
-        Assert.Equal(Operator.WovenOf, expression.Operator);
-        Assert.Equal(3, expression.Arguments.Count);
+        expression.Operator.ShouldBe(Operator.WovenOf);
+        expression.Arguments.Count.ShouldBe(3);
     }
 
     /// <summary>
@@ -72,9 +72,9 @@ public class TopsyTurvyParserTests
         string source = "HARK! \"Test\" BEHOLD \"hello\" FINALE.";
         ParseResult result = this.parser.TryParse(source);
 
-        Assert.True(result.Success);
-        Assert.NotNull(result.Program);
-        Assert.Empty(result.Diagnostics);
+        result.Success.ShouldBeTrue();
+        result.Program.ShouldNotBeNull();
+        result.Diagnostics.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -86,14 +86,14 @@ public class TopsyTurvyParserTests
         string source = "BEHOLD \"oops\"";
         ParseResult result = this.parser.TryParse(source);
 
-        Assert.False(result.Success);
-        Assert.Null(result.Program);
-        Assert.Single(result.Diagnostics);
+        result.Success.ShouldBeFalse();
+        result.Program.ShouldBeNull();
+        result.Diagnostics.ShouldHaveSingleItem();
 
         Diagnostic diagnostic = result.Diagnostics[0];
-        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
-        Assert.True(diagnostic.Span.Start.Line >= 1, $"Line must be >= 1, got {diagnostic.Span.Start.Line}");
-        Assert.True(diagnostic.Span.Start.Column >= 1, $"Column must be >= 1, got {diagnostic.Span.Start.Column}");
+        diagnostic.Severity.ShouldBe(DiagnosticSeverity.Error);
+        (diagnostic.Span.Start.Line >= 1).ShouldBeTrue($"Line must be >= 1, got {diagnostic.Span.Start.Line}");
+        (diagnostic.Span.Start.Column >= 1).ShouldBeTrue($"Column must be >= 1, got {diagnostic.Span.Start.Column}");
     }
 
     /// <summary>
@@ -104,12 +104,12 @@ public class TopsyTurvyParserTests
     {
         ParseResult result = this.parser.TryParse(string.Empty);
 
-        Assert.False(result.Success);
-        Assert.Single(result.Diagnostics);
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldHaveSingleItem();
 
         Diagnostic diagnostic = result.Diagnostics[0];
-        Assert.True(diagnostic.Span.Start.Line >= 1, $"Line must be >= 1, got {diagnostic.Span.Start.Line}");
-        Assert.True(diagnostic.Span.Start.Column >= 1, $"Column must be >= 1, got {diagnostic.Span.Start.Column}");
+        (diagnostic.Span.Start.Line >= 1).ShouldBeTrue($"Line must be >= 1, got {diagnostic.Span.Start.Line}");
+        (diagnostic.Span.Start.Column >= 1).ShouldBeTrue($"Column must be >= 1, got {diagnostic.Span.Start.Column}");
     }
 
     /// <summary>
@@ -121,10 +121,9 @@ public class TopsyTurvyParserTests
         string source = "HARK! \"Test\"\nBAD TOKEN FINALE.";
         ParseResult result = this.parser.TryParse(source);
 
-        Assert.False(result.Success);
-        Assert.Single(result.Diagnostics);
-        Assert.True(result.Diagnostics[0].Span.Start.Line >= 1,
-            $"Line must be >= 1, got {result.Diagnostics[0].Span.Start.Line}");
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldHaveSingleItem();
+        (result.Diagnostics[0].Span.Start.Line >= 1).ShouldBeTrue($"Line must be >= 1, got {result.Diagnostics[0].Span.Start.Line}");
     }
 
     /// <summary>
@@ -136,8 +135,8 @@ public class TopsyTurvyParserTests
         string source = "HARK! \"T\" PRAY WELCOME BOTH AS A PEER FINALE.";
         ParseResult result = this.parser.TryParse(source);
 
-        Assert.NotNull(result.Program);
-        Assert.NotEmpty(result.Diagnostics);
+        result.Program.ShouldNotBeNull();
+        result.Diagnostics.ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -147,7 +146,7 @@ public class TopsyTurvyParserTests
     public void Parse_WithReservedWordAsVariableName_ThrowsSyntaxException()
     {
         string source = "HARK! \"T\" PRAY WELCOME BOTH AS A PEER FINALE.";
-        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
+        Should.Throw<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
     }
 
     /// <summary>
@@ -157,7 +156,7 @@ public class TopsyTurvyParserTests
     public void Parse_WithReservedWordAsFunctionName_ThrowsSyntaxException()
     {
         string source = "HARK! \"T\" IT IS MY DUTY TO PERFORM DUTY UNDER NO OBLIGATION MY DUTY IS DISCHARGED. FINALE.";
-        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
+        Should.Throw<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
     }
 
     /// <summary>
@@ -167,6 +166,6 @@ public class TopsyTurvyParserTests
     public void Parse_WithReservedWordAsParameterName_ThrowsSyntaxException()
     {
         string source = "HARK! \"T\" IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF ALL MY DUTY IS DISCHARGED. FINALE.";
-        Assert.Throws<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
+        Should.Throw<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
     }
 }

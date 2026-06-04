@@ -16,8 +16,8 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Integer(7);
 
-        Assert.Equal(LiteralType.Integer, value.TopsyTurvyType);
-        Assert.Equal(7, value.RawValue);
+        value.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        value.RawValue.ShouldBe(7);
     }
 
     /// <summary>
@@ -28,8 +28,8 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Float(2.5);
 
-        Assert.Equal(LiteralType.Float, value.TopsyTurvyType);
-        Assert.Equal(2.5, value.RawValue);
+        value.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        value.RawValue.ShouldBe(2.5);
     }
 
     /// <summary>
@@ -40,8 +40,8 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("hello");
 
-        Assert.Equal(LiteralType.String, value.TopsyTurvyType);
-        Assert.Equal("hello", value.RawValue);
+        value.TopsyTurvyType.ShouldBe(LiteralType.String);
+        value.RawValue.ShouldBe("hello");
     }
 
     /// <summary>
@@ -52,8 +52,8 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Boolean(true);
 
-        Assert.Equal(LiteralType.Boolean, value.TopsyTurvyType);
-        Assert.Equal(true, value.RawValue);
+        value.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        value.RawValue.ShouldBe(true);
     }
 
     /// <summary>
@@ -64,8 +64,8 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Null();
 
-        Assert.Equal(LiteralType.Null, value.TopsyTurvyType);
-        Assert.Null(value.RawValue);
+        value.TopsyTurvyType.ShouldBe(LiteralType.Null);
+        value.RawValue.ShouldBeNull();
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.True(result);
+        result.ShouldBeTrue();
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     /// <summary>
@@ -124,7 +124,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.True(result);
+        result.ShouldBeTrue();
     }
 
     /// <summary>
@@ -137,7 +137,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     /// <summary>
@@ -150,7 +150,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.True(result);
+        result.ShouldBeTrue();
     }
 
     /// <summary>
@@ -166,7 +166,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.Equal(rawValue, result);
+        result.ShouldBe(rawValue);
     }
 
     /// <summary>
@@ -179,7 +179,7 @@ public class TopsyTurvyValueTests
 
         bool result = value.IsTruthy();
 
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     /// <summary>
@@ -192,7 +192,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal("VERITY", result);
+        result.ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -205,7 +205,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal("NAY", result);
+        result.ShouldBe("NAY");
     }
 
     /// <summary>
@@ -218,7 +218,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal("NAUGHT", result);
+        result.ShouldBe("NAUGHT");
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal("42", result);
+        result.ShouldBe("42");
     }
 
     /// <summary>
@@ -245,7 +245,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal(rawValue.ToString(), result);
+        result.ShouldBe(rawValue.ToString());
     }
 
     /// <summary>
@@ -258,7 +258,7 @@ public class TopsyTurvyValueTests
 
         string result = value.ToString();
 
-        Assert.Equal("hello world", result);
+        result.ShouldBe("hello world");
     }
 
     /// <summary>
@@ -271,7 +271,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        Assert.Same(value, result);
+        result.ShouldBeSameAs(value);
     }
 
     /// <summary>
@@ -284,8 +284,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        Assert.Equal(LiteralType.Integer, result.TopsyTurvyType);
-        Assert.Equal(3, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.RawValue.ShouldBe(3);
     }
 
     /// <summary>
@@ -302,8 +302,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        Assert.Equal(LiteralType.Integer, result.TopsyTurvyType);
-        Assert.Equal(expectedResult, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.RawValue.ShouldBe(expectedResult);
     }
 
     /// <summary>
@@ -316,8 +316,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        Assert.Equal(LiteralType.Integer, result.TopsyTurvyType);
-        Assert.Equal(0, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.RawValue.ShouldBe(0);
     }
 
     /// <summary>
@@ -330,8 +330,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        Assert.Equal(LiteralType.Integer, result.TopsyTurvyType);
-        Assert.Equal(123, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.RawValue.ShouldBe(123);
     }
 
     /// <summary>
@@ -342,7 +342,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("hello");
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Integer));
+        Should.Throw<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Integer));
     }
 
     /// <summary>
@@ -355,8 +355,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        Assert.Equal(LiteralType.Float, result.TopsyTurvyType);
-        Assert.Equal(5.0, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.RawValue.ShouldBe(5.0);
     }
 
     /// <summary>
@@ -373,8 +373,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        Assert.Equal(LiteralType.Float, result.TopsyTurvyType);
-        Assert.Equal(expectedResult, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.RawValue.ShouldBe(expectedResult);
     }
 
     /// <summary>
@@ -387,8 +387,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        Assert.Equal(LiteralType.Float, result.TopsyTurvyType);
-        Assert.Equal(0.0, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.RawValue.ShouldBe(0.0);
     }
 
     /// <summary>
@@ -401,7 +401,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        Assert.Equal(LiteralType.Float, result.TopsyTurvyType);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
     }
 
     /// <summary>
@@ -412,7 +412,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("hello");
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Float));
+        Should.Throw<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Float));
     }
 
     /// <summary>
@@ -425,8 +425,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.String);
 
-        Assert.Equal(LiteralType.String, result.TopsyTurvyType);
-        Assert.Equal("42", result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.String);
+        result.RawValue.ShouldBe("42");
     }
 
     /// <summary>
@@ -439,7 +439,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.String);
 
-        Assert.Equal("VERITY", result.RawValue);
+        result.RawValue.ShouldBe("VERITY");
     }
 
     /// <summary>
@@ -452,7 +452,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.String);
 
-        Assert.Equal("NAY", result.RawValue);
+        result.RawValue.ShouldBe("NAY");
     }
 
     /// <summary>
@@ -465,7 +465,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.String);
 
-        Assert.Equal("NAUGHT", result.RawValue);
+        result.RawValue.ShouldBe("NAUGHT");
     }
 
     /// <summary>
@@ -478,8 +478,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Boolean);
 
-        Assert.Equal(LiteralType.Boolean, result.TopsyTurvyType);
-        Assert.Equal(true, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        result.RawValue.ShouldBe(true);
     }
 
     /// <summary>
@@ -492,8 +492,8 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Boolean);
 
-        Assert.Equal(LiteralType.Boolean, result.TopsyTurvyType);
-        Assert.Equal(false, result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        result.RawValue.ShouldBe(false);
     }
 
     /// <summary>
@@ -506,7 +506,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Null);
 
-        Assert.Equal(LiteralType.Null, result.TopsyTurvyType);
-        Assert.Null(result.RawValue);
+        result.TopsyTurvyType.ShouldBe(LiteralType.Null);
+        result.RawValue.ShouldBeNull();
     }
 }

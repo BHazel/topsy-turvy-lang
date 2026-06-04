@@ -31,7 +31,7 @@ public class HoverHandlerTests : LanguageServerTestBase
 
         Hover? result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public class HoverHandlerTests : LanguageServerTestBase
 
         Hover? result = await handler.Handle(this.MakeRequest(line: 0, character: 2), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -59,8 +59,8 @@ public class HoverHandlerTests : LanguageServerTestBase
 
         Hover? result = await handler.Handle(this.MakeRequest(line: 4, character: 7), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Contents);
+        result.ShouldNotBeNull();
+        result.Contents.ShouldNotBeNull();
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class HoverHandlerTests : LanguageServerTestBase
 
         Hover? result = await handler.Handle(this.MakeRequest(line: 2, character: 8), CancellationToken.None);
 
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class HoverHandlerTests : LanguageServerTestBase
 
         Hover? result = await handler.Handle(this.MakeRequest(line: 3, character: 8), CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.ShouldNotBeNull();
     }
 
     /// <summary>

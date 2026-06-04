@@ -23,8 +23,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal(string.Empty, result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe(string.Empty);
     }
 
     /// <summary>
@@ -35,8 +35,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"hello\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("hello", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("hello");
     }
 
     /// <summary>
@@ -47,8 +47,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"line1~nline2\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("line1\nline2", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("line1\nline2");
     }
 
     /// <summary>
@@ -59,8 +59,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"col1~tcol2\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("col1\tcol2", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("col1\tcol2");
     }
 
     /// <summary>
@@ -71,8 +71,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"say ~\"hello~\"\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("say \"hello\"", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("say \"hello\"");
     }
 
     /// <summary>
@@ -83,8 +83,8 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"a~~b\""));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("a~b", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("a~b");
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class LexerTests
     {
         var result = Lexer.StringLiteral(new("\"unclosed"));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -106,8 +106,8 @@ public class LexerTests
     {
         var result = Lexer.FloatLiteral(new("3.14"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal(3.14, result.Value, precision: 10);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe(3.14, tolerance: 1e-10);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public class LexerTests
     {
         var result = Lexer.FloatLiteral(new("42"));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -129,7 +129,7 @@ public class LexerTests
     {
         var result = Lexer.FloatLiteral(new("1."));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -142,8 +142,8 @@ public class LexerTests
     {
         var result = Lexer.BooleanLiteral(new(input));
 
-        Assert.True(result.HasValue);
-        Assert.True(result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeTrue();
     }
 
     /// <summary>
@@ -156,8 +156,8 @@ public class LexerTests
     {
         var result = Lexer.BooleanLiteral(new(input));
 
-        Assert.True(result.HasValue);
-        Assert.False(result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeFalse();
     }
 
     /// <summary>
@@ -168,7 +168,7 @@ public class LexerTests
     {
         var result = Lexer.BooleanLiteral(new("TRUE"));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -181,8 +181,8 @@ public class LexerTests
     {
         var result = Lexer.NullLiteral(new(input));
 
-        Assert.True(result.HasValue);
-        Assert.Null(result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeNull();
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public class LexerTests
     {
         var result = Lexer.NullLiteral(new("NULL"));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -204,8 +204,8 @@ public class LexerTests
     {
         var result = Lexer.Identifier(new("greeting"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("greeting", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("greeting");
     }
 
     /// <summary>
@@ -216,8 +216,8 @@ public class LexerTests
     {
         var result = Lexer.Identifier(new("Ko-Ko2"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("Ko-Ko2", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("Ko-Ko2");
     }
 
     /// <summary>
@@ -228,8 +228,8 @@ public class LexerTests
     {
         var result = Lexer.Identifier(new("my_var"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("my_var", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("my_var");
     }
 
     /// <summary>
@@ -263,7 +263,7 @@ public class LexerTests
     {
         var result = Lexer.Identifier(new(keyword));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 
     /// <summary>
@@ -274,8 +274,8 @@ public class LexerTests
     {
         var result = Lexer.Keyword("BEHOLD")(new("BEHOLD"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("BEHOLD", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("BEHOLD");
     }
 
     /// <summary>
@@ -286,8 +286,8 @@ public class LexerTests
     {
         var result = Lexer.Keyword("BEHOLD")(new("behold"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("BEHOLD", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("BEHOLD");
     }
 
     /// <summary>
@@ -298,8 +298,8 @@ public class LexerTests
     {
         var result = Lexer.Keyword("BEHOLD")(new("BeHoLd"));
 
-        Assert.True(result.HasValue);
-        Assert.Equal("BEHOLD", result.Value);
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("BEHOLD");
     }
 
     /// <summary>
@@ -310,6 +310,6 @@ public class LexerTests
     {
         var result = Lexer.Keyword("BEHOLD")(new("FINALE"));
 
-        Assert.False(result.HasValue);
+        result.HasValue.ShouldBeFalse();
     }
 }

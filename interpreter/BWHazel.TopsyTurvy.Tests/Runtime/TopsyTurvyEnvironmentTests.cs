@@ -15,7 +15,7 @@ public class TopsyTurvyEnvironmentTests
     {
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
-        Assert.Equal(TopsyTurvyValue.Null().TopsyTurvyType, environment.JustSo.TopsyTurvyType);
+        environment.JustSo.TopsyTurvyType.ShouldBe(TopsyTurvyValue.Null().TopsyTurvyType);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public class TopsyTurvyEnvironmentTests
 
         environment.JustSo = expectedValue;
 
-        Assert.Same(expectedValue, environment.JustSo);
+        environment.JustSo.ShouldBeSameAs(expectedValue);
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class TopsyTurvyEnvironmentTests
 
         environment.Declare(name: "x", value: value);
 
-        Assert.Same(value, environment.Get("x"));
+        environment.Get("x").ShouldBeSameAs(value);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public class TopsyTurvyEnvironmentTests
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
         environment.Declare(name: "x", value: TopsyTurvyValue.Integer(1));
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => environment.Declare(name: "x", value: TopsyTurvyValue.Integer(2)));
+        Should.Throw<TopsyTurvyRuntimeException>(() => environment.Declare(name: "x", value: TopsyTurvyValue.Integer(2)));
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class TopsyTurvyEnvironmentTests
 
         environment.Assign(name: "x", value: TopsyTurvyValue.Integer(99));
 
-        Assert.Equal(99, environment.Get("x").RawValue);
+        environment.Get("x").RawValue.ShouldBe(99);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public class TopsyTurvyEnvironmentTests
 
         nestedEnvironment.Assign(name: "x", value: TopsyTurvyValue.Integer(99));
 
-        Assert.Equal(99, enclosingEnvironment.Get("x").RawValue);
+        enclosingEnvironment.Get("x").RawValue.ShouldBe(99);
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class TopsyTurvyEnvironmentTests
     {
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => environment.Assign(name: "undeclared", value: TopsyTurvyValue.Integer(1)));
+        Should.Throw<TopsyTurvyRuntimeException>(() => environment.Assign(name: "undeclared", value: TopsyTurvyValue.Integer(1)));
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class TopsyTurvyEnvironmentTests
         globalEnvironment.Declare(name: "x", value: TopsyTurvyValue.Integer(1));
         TopsyTurvyEnvironment functionEnvironment = TopsyTurvyEnvironment.CreateFunctionEnvironment();
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => functionEnvironment.Assign(name: "x", value: TopsyTurvyValue.Integer(99)));
+        Should.Throw<TopsyTurvyRuntimeException>(() => functionEnvironment.Assign(name: "x", value: TopsyTurvyValue.Integer(99)));
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public class TopsyTurvyEnvironmentTests
 
         TopsyTurvyValue result = environment.Get("greeting");
 
-        Assert.Same(value, result);
+        result.ShouldBeSameAs(value);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class TopsyTurvyEnvironmentTests
 
         TopsyTurvyValue result = nestedEnvironment.Get("x");
 
-        Assert.Same(value, result);
+        result.ShouldBeSameAs(value);
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public class TopsyTurvyEnvironmentTests
 
         TopsyTurvyValue result = environment.Get("JUST SO");
 
-        Assert.Same(value, result);
+        result.ShouldBeSameAs(value);
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public class TopsyTurvyEnvironmentTests
     {
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => environment.Get("undeclared"));
+        Should.Throw<TopsyTurvyRuntimeException>(() => environment.Get("undeclared"));
     }
 
     /// <summary>
@@ -178,7 +178,7 @@ public class TopsyTurvyEnvironmentTests
         globalEnvironment.Declare(name: "x", value: TopsyTurvyValue.Integer(1));
         TopsyTurvyEnvironment functionEnvironment = TopsyTurvyEnvironment.CreateFunctionEnvironment();
 
-        Assert.Throws<TopsyTurvyRuntimeException>(() => functionEnvironment.Get("x"));
+        Should.Throw<TopsyTurvyRuntimeException>(() => functionEnvironment.Get("x"));
     }
 
     /// <summary>
@@ -192,8 +192,8 @@ public class TopsyTurvyEnvironmentTests
         TopsyTurvyEnvironment nestedEnvironment = enclosingEnvironment.CreateNested();
         nestedEnvironment.Declare(name: "x", value: TopsyTurvyValue.Integer(99));
 
-        Assert.Equal(99, nestedEnvironment.Get("x").RawValue);
-        Assert.Equal(1, enclosingEnvironment.Get("x").RawValue);
+        nestedEnvironment.Get("x").RawValue.ShouldBe(99);
+        enclosingEnvironment.Get("x").RawValue.ShouldBe(1);
     }
 
     /// <summary>
@@ -206,7 +206,7 @@ public class TopsyTurvyEnvironmentTests
 
         functionEnvironment.Declare(name: "param", value: TopsyTurvyValue.Integer(7));
 
-        Assert.Equal(7, functionEnvironment.Get("param").RawValue);
-        Assert.Throws<TopsyTurvyRuntimeException>(() => functionEnvironment.Get("nonexistent"));
+        functionEnvironment.Get("param").RawValue.ShouldBe(7);
+        Should.Throw<TopsyTurvyRuntimeException>(() => functionEnvironment.Get("nonexistent"));
     }
 }

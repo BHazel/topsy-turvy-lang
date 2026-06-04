@@ -49,7 +49,7 @@ public class EditorExecutionTests(WebEditorAppFixture fixture)
             });
         
         string bodyText = await this.page.EvaluateAsync<string>("() => document.body.innerText");
-        Assert.Contains("Hello, World!", bodyText);
+        bodyText.ShouldContain("Hello, World!");
     }
 
     /// <summary>
@@ -76,6 +76,6 @@ public class EditorExecutionTests(WebEditorAppFixture fixture)
             });
         
         string bodyText = await this.page.EvaluateAsync<string>("() => document.body.innerText");
-        Assert.Contains("Gilbert", bodyText);
+        bodyText.ShouldContain("Gilbert");
     }
 }

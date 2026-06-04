@@ -18,8 +18,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("42");
 
-        Assert.Equal(LiteralType.Integer, node.Type);
-        Assert.Equal(42, node.Value);
+        node.Type.ShouldBe(LiteralType.Integer);
+        node.Value.ShouldBe(42);
     }
 
     /// <summary>
@@ -30,8 +30,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("3.14");
 
-        Assert.Equal(LiteralType.Float, node.Type);
-        Assert.Equal(3.14, (double)node.Value!);
+        node.Type.ShouldBe(LiteralType.Float);
+        ((double)node.Value!).ShouldBe(3.14, tolerance: 1e-10);
     }
 
     /// <summary>
@@ -42,8 +42,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("\"hello\"");
 
-        Assert.Equal(LiteralType.String, node.Type);
-        Assert.Equal("hello", node.Value);
+        node.Type.ShouldBe(LiteralType.String);
+        node.Value.ShouldBe("hello");
     }
 
     /// <summary>
@@ -54,8 +54,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("VERITY");
 
-        Assert.Equal(LiteralType.Boolean, node.Type);
-        Assert.Equal(true, node.Value);
+        node.Type.ShouldBe(LiteralType.Boolean);
+        node.Value.ShouldBe(true);
     }
 
     /// <summary>
@@ -66,8 +66,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("NAY");
 
-        Assert.Equal(LiteralType.Boolean, node.Type);
-        Assert.Equal(false, node.Value);
+        node.Type.ShouldBe(LiteralType.Boolean);
+        node.Value.ShouldBe(false);
     }
 
     /// <summary>
@@ -78,8 +78,8 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("NAUGHT");
 
-        Assert.Equal(LiteralType.Null, node.Type);
-        Assert.Null(node.Value);
+        node.Type.ShouldBe(LiteralType.Null);
+        node.Value.ShouldBeNull();
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("\"line1~nline2\"");
 
-        Assert.Equal("line1\nline2", node.Value);
+        node.Value.ShouldBe("line1\nline2");
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ public class TopsyTurvyParserExpressionTests
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("\"say ~\"hello~\"\"");
 
-        Assert.Equal("say \"hello\"", node.Value);
+        node.Value.ShouldBe("say \"hello\"");
     }
 
     /// <summary>
@@ -111,10 +111,10 @@ public class TopsyTurvyParserExpressionTests
     public void Parse_WithJustSo_ProducesIdentifierNodeNamedJustSo()
     {
         ProgramNode program = this.parser.Parse("HARK! \"T\" JUST SO FINALE.");
-        ExpressionStatement stmt = Assert.IsType<ExpressionStatement>(Assert.Single(program.Statements));
-        IdentifierNode node = Assert.IsType<IdentifierNode>(stmt.Expression);
+        ExpressionStatement statement = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ExpressionStatement>();
+        IdentifierNode node = statement.Expression.ShouldBeOfType<IdentifierNode>();
 
-        Assert.Equal("JUST SO", node.Name);
+        node.Name.ShouldBe("JUST SO");
     }
 
     /// <summary>
@@ -124,10 +124,10 @@ public class TopsyTurvyParserExpressionTests
     public void Parse_WithIdentifier_ProducesIdentifierNodeWithCorrectName()
     {
         ProgramNode program = this.parser.Parse("HARK! \"T\" x IS APPOINTED greeting FINALE.");
-        AssignmentNode assign = Assert.IsType<AssignmentNode>(Assert.Single(program.Statements));
-        IdentifierNode node = Assert.IsType<IdentifierNode>(assign.Value);
+        AssignmentNode assign = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+        IdentifierNode node = assign.Value.ShouldBeOfType<IdentifierNode>();
 
-        Assert.Equal("greeting", node.Name);
+        node.Name.ShouldBe("greeting");
     }
 
     /// <summary>
@@ -155,8 +155,8 @@ public class TopsyTurvyParserExpressionTests
     {
         PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(expressionSource);
 
-        Assert.Equal(expectedOperator, node.Operator);
-        Assert.Equal(2, node.Arguments.Count);
+        node.Operator.ShouldBe(expectedOperator);
+        node.Arguments.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -167,8 +167,8 @@ public class TopsyTurvyParserExpressionTests
     {
         PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>("HARDLY EVER VERITY");
 
-        Assert.Equal(Operator.HardlyEver, node.Operator);
-        Assert.Single(node.Arguments);
+        node.Operator.ShouldBe(Operator.HardlyEver);
+        node.Arguments.ShouldHaveSingleItem();
     }
     
     /// <summary>
@@ -180,8 +180,8 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode node = this.ParseExpressionStatement<PrefixExpressionNode>(
             "WOVEN OF \"a\" AND \"b\" AND \"c\" IF YOU PLEASE.");
 
-        Assert.Equal(Operator.WovenOf, node.Operator);
-        Assert.Equal(3, node.Arguments.Count);
+        node.Operator.ShouldBe(Operator.WovenOf);
+        node.Arguments.Count.ShouldBe(3);
     }
 
     /// <summary>
@@ -193,8 +193,8 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode node = this.ParseExpressionStatement<PrefixExpressionNode>(
             "ALL OF VERITY AND NAY IF YOU PLEASE.");
 
-        Assert.Equal(Operator.AllOf, node.Operator);
-        Assert.Equal(2, node.Arguments.Count);
+        node.Operator.ShouldBe(Operator.AllOf);
+        node.Arguments.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -206,8 +206,8 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode node = this.ParseExpressionStatement<PrefixExpressionNode>(
             "ANY OF VERITY AND NAY IF YOU PLEASE.");
 
-        Assert.Equal(Operator.AnyOf, node.Operator);
-        Assert.Equal(2, node.Arguments.Count);
+        node.Operator.ShouldBe(Operator.AnyOf);
+        node.Arguments.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -219,10 +219,10 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode node = this.ParseExpressionStatement<PrefixExpressionNode>(
             "SUMMON greet WITH NOTHING IF YOU PLEASE.");
 
-        Assert.Equal(Operator.Summon, node.Operator);
-        Assert.Single(node.Arguments);
-        IdentifierNode nameArg = Assert.IsType<IdentifierNode>(node.Arguments[0]);
-        Assert.Equal("greet", nameArg.Name);
+        node.Operator.ShouldBe(Operator.Summon);
+        node.Arguments.ShouldHaveSingleItem();
+        IdentifierNode nameArg = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        nameArg.Name.ShouldBe("greet");
     }
 
     /// <summary>
@@ -234,10 +234,10 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode node = this.ParseExpressionStatement<PrefixExpressionNode>(
             "SUMMON add WITH 3 AND 4 IF YOU PLEASE.");
 
-        Assert.Equal(Operator.Summon, node.Operator);
-        Assert.Equal(3, node.Arguments.Count);
-        IdentifierNode nameArg = Assert.IsType<IdentifierNode>(node.Arguments[0]);
-        Assert.Equal("add", nameArg.Name);
+        node.Operator.ShouldBe(Operator.Summon);
+        node.Arguments.Count.ShouldBe(3);
+        IdentifierNode nameArg = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        nameArg.Name.ShouldBe("add");
     }
 
     /// <summary>
@@ -249,10 +249,10 @@ public class TopsyTurvyParserExpressionTests
         PrefixExpressionNode outerExpression = this.ParsePrintExpression<PrefixExpressionNode>(
             "SUM OF PRODUCT OF 2 AND 3 AND 4");
 
-        Assert.Equal(Operator.Sum, outerExpression.Operator);
-        Assert.Equal(2, outerExpression.Arguments.Count);
-        PrefixExpressionNode innerExpression = Assert.IsType<PrefixExpressionNode>(outerExpression.Arguments[0]);
-        Assert.Equal(Operator.Product, innerExpression.Operator);
+        outerExpression.Operator.ShouldBe(Operator.Sum);
+        outerExpression.Arguments.Count.ShouldBe(2);
+        PrefixExpressionNode innerExpression = outerExpression.Arguments[0].ShouldBeOfType<PrefixExpressionNode>();
+        innerExpression.Operator.ShouldBe(Operator.Product);
     }
     
     /// <summary>
@@ -264,8 +264,8 @@ public class TopsyTurvyParserExpressionTests
     private T ParsePrintExpression<T>(string expressionSource) where T : Expression
     {
         ProgramNode program = this.parser.Parse($"HARK! \"T\" BEHOLD {expressionSource} FINALE.");
-        PrintNode print = Assert.IsType<PrintNode>(Assert.Single(program.Statements));
-        return Assert.IsType<T>(print.Expression);
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        return print.Expression.ShouldBeOfType<T>();
     }
 
     /// <summary>
@@ -277,7 +277,7 @@ public class TopsyTurvyParserExpressionTests
     private T ParseExpressionStatement<T>(string expressionSource) where T : Expression
     {
         ProgramNode program = this.parser.Parse($"HARK! \"T\" {expressionSource} FINALE.");
-        ExpressionStatement stmt = Assert.IsType<ExpressionStatement>(Assert.Single(program.Statements));
-        return Assert.IsType<T>(stmt.Expression);
+        ExpressionStatement stmt = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ExpressionStatement>();
+        return stmt.Expression.ShouldBeOfType<T>();
     }
 }

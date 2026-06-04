@@ -17,8 +17,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
-        Assert.Equal(1, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(1);
+        column.ShouldBe(1);
     }
 
     /// <summary>
@@ -32,8 +32,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
-        Assert.Equal(1, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(1);
+        column.ShouldBe(1);
     }
 
     /// <summary>
@@ -47,8 +47,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
-        Assert.Equal(1, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(1);
+        column.ShouldBe(1);
     }
 
     /// <summary>
@@ -63,8 +63,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(10);
 
-        Assert.Equal(2, line);
-        Assert.Equal(1, column);
+        line.ShouldBe(2);
+        column.ShouldBe(1);
     }
 
     /// <summary>
@@ -79,8 +79,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(5);
 
-        Assert.Equal(1, line);
-        Assert.Equal(6, column);
+        line.ShouldBe(1);
+        column.ShouldBe(6);
     }
 
     /// <summary>
@@ -95,8 +95,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(15);
 
-        Assert.Equal(2, line);
-        Assert.Equal(6, column);
+        line.ShouldBe(2);
+        column.ShouldBe(6);
     }
 
     /// <summary>
@@ -113,8 +113,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(25);
 
-        Assert.Equal(3, line);
-        Assert.Equal(6, column);
+        line.ShouldBe(3);
+        column.ShouldBe(6);
     }
 
     /// <summary>
@@ -128,8 +128,8 @@ public class SourceMapTests
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
-        Assert.Equal(1, line);
-        Assert.Equal(5, column);
+        line.ShouldBe(1);
+        column.ShouldBe(5);
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public class SourceMapTests
         (int line1, _) = map.GetOriginalLocation(0);
         (int line2, _) = map.GetOriginalLocation(5);
 
-        Assert.Equal(1, line1);
-        Assert.Equal(2, line2);
+        line1.ShouldBe(1);
+        line2.ShouldBe(2);
     }
 }
