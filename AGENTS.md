@@ -170,3 +170,7 @@ These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
 * **JS interop — Outbound (C# → JS):** Call JavaScript via `JSRuntime.InvokeAsync`; keep all JS logic in `web-editor.js` (or `topsy-turvy-language.js` for language registration). Do not scatter JS calls across multiple Razor files.
 * **Virtual File System:** `VirtualFile` is the file registry (name, open/close state). The Monaco editor models are the source of truth for file content: always read/write content via `monacoEditor.GetValue`/`monacoEditor.SetValue`, not from `VirtualFile`.
 * **MudBlazor API:** Use current MudBlazor 9.x property names.
+
+## Implementing Language Features
+
+When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
