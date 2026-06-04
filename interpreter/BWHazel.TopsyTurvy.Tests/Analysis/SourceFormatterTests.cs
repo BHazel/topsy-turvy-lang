@@ -87,6 +87,18 @@ public class SourceFormatterTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method treats an Else-If block as a mid-block keyword, decreasing depth before writing it and increasing depth after.
+    /// </summary>
+    [Fact]
+    public void FormatSource_WithElseIfBlock_IndentsOrIfNotAsMidBlock()
+    {
+        string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nOR, IF NOT,\nBEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
+        string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\n  OR, IF NOT,\n    BEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
+
+        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+    }
+
+    /// <summary>
     /// Tests that the <see cref="SourceFormatter.FormatSource"/> method increases depth by 2 for a Switch block and treats its Case keyword as a mid-block keyword.
     /// </summary>
     [Fact]

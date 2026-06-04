@@ -21,7 +21,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class CompletionHandler : CompletionHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -38,7 +37,7 @@ public class CompletionHandler : CompletionHandlerBase
         CompletionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             ResolveProvider = false,
             TriggerCharacters = new Container<string>(" ")
         };

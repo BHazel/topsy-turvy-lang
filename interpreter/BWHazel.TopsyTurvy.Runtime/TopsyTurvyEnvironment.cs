@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Runtime;
 
@@ -92,7 +93,7 @@ public sealed class TopsyTurvyEnvironment
     /// <exception cref="TopsyTurvyRuntimeException">Thrown if <paramref name="name"/> has not been declared in any accessible environment.</exception>
     public TopsyTurvyValue Get(string name)
     {
-        if (name == "JUST SO")
+        if (name == Keywords.SpecialNames.JustSo)
         {
             return this.JustSo;
         }

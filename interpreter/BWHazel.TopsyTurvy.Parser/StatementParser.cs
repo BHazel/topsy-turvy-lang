@@ -20,11 +20,11 @@ public static class StatementParser
     /// Parses a Topsy Turvy type keyword and returns the corresponding <see cref="LiteralType"/> value.
     /// </summary>
     public static readonly TextParser<LiteralType> TypeKeyword =
-        Lexer.Keyword("PEER").Value(LiteralType.Integer)
-        .Or(Lexer.Keyword("FATHOM").Value(LiteralType.Float))
-        .Or(Lexer.Keyword("YARN").Value(LiteralType.String))
-        .Or(Lexer.Keyword("DECREE").Value(LiteralType.Boolean))
-        .Or(Lexer.Keyword("NAUGHT").Value(LiteralType.Null));
+        Lexer.Keyword(Keywords.TypeNames.Peer).Value(LiteralType.Integer)
+        .Or(Lexer.Keyword(Keywords.TypeNames.Fathom).Value(LiteralType.Float))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Yarn).Value(LiteralType.String))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Decree).Value(LiteralType.Boolean))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Naught).Value(LiteralType.Null));
 
     /// <summary>
     /// Parses avariable declaration.

@@ -17,7 +17,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class HoverHandler : HoverHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -34,7 +33,7 @@ public class HoverHandler : HoverHandlerBase
         HoverCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>

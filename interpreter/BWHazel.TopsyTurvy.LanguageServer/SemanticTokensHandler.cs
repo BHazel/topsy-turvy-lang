@@ -22,7 +22,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class SemanticTokensHandler : SemanticTokensHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     private static readonly SemanticTokensLegend Legend = new()
@@ -45,7 +44,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         SemanticTokensCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             Legend = Legend,
             Full = true,
             Range = false

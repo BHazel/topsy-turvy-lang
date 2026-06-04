@@ -19,7 +19,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class DefinitionHandler : DefinitionHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -36,7 +35,7 @@ public class DefinitionHandler : DefinitionHandlerBase
         DefinitionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>

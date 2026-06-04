@@ -13,6 +13,11 @@ public static class FileManager
     private static readonly IFileSystem DefaultFileSystem = new RealFileSystem();
 
     /// <summary>
+    /// The file extension for Topsy Turvy source files.
+    /// </summary>
+    public const string FileExtension = ".topsy";
+
+    /// <summary>
     /// The default title used for commissioned programmes when no title is provided.
     /// </summary>
     internal static readonly string DefaultProgrammeTitle = "Programme";
@@ -127,7 +132,7 @@ public static class FileManager
             if (!hollow)
             {
                 string directoryName = fs.Path.GetFileName(project.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                string filename = fs.Path.Combine(project, $"{directoryName}.topsy");
+                string filename = fs.Path.Combine(project, $"{directoryName}{FileExtension}");
                 string fileContent = BuildFileContent(title, subtitle);
                 fs.File.WriteAllText(filename, fileContent, Utf8NoBom);
             }

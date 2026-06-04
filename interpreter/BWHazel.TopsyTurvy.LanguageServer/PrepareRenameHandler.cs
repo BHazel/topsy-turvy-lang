@@ -21,7 +21,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class PrepareRenameHandler : PrepareRenameHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -38,7 +37,7 @@ public class PrepareRenameHandler : PrepareRenameHandlerBase
         RenameCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             PrepareProvider = true
         };
 

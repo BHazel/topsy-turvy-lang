@@ -25,7 +25,7 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class CodeLensHandler : CodeLensHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
+    private const string ShowReferencesCommandId = "topsy-turvy.showReferences";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -42,7 +42,7 @@ public class CodeLensHandler : CodeLensHandlerBase
         CodeLensCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             ResolveProvider = false
         };
 
@@ -109,7 +109,7 @@ public class CodeLensHandler : CodeLensHandlerBase
                     Command = new Command
                     {
                         Title = title,
-                        Name = "topsy-turvy.showReferences",
+                        Name = ShowReferencesCommandId,
                         Arguments = new JArray(
                             JValue.CreateString(request.TextDocument.Uri.ToString()),
                             new JValue(lspLine),

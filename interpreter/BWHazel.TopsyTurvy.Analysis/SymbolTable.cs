@@ -37,9 +37,9 @@ public class SymbolTable
         Dictionary<string, SymbolInfo> collectedSymbols = new(StringComparer.OrdinalIgnoreCase);
         string[] sourceLines = originalSource.Split('\n');
 
-        collectedSymbols["JUST SO"] = new SymbolInfo
+        collectedSymbols[Keywords.SpecialNames.JustSo] = new SymbolInfo
         {
-            Name = "JUST SO",
+            Name = Keywords.SpecialNames.JustSo,
             Kind = SymbolKind.Variable,
             TypeDisplayName = "implicit accumulator"
         };
@@ -197,14 +197,14 @@ public class SymbolTable
             return;
         }
 
-        (int line, int column) = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
+        SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
         collectedSymbols[declaration.Name] = new SymbolInfo
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
-            DefinitionLine = line,
-            DefinitionColumn = column
+            DefinitionLine = definition.Line,
+            DefinitionColumn = definition.Column
         };
     }
 
@@ -219,7 +219,7 @@ public class SymbolTable
         Dictionary<string, SymbolInfo> collectedSymbols,
         string[] sourceLines)
     {
-        (int functionLine, int functionColumn) = FindDefinitionLine(
+        SourceLocation functionDefinition = FindDefinitionLine(
             sourceLines, "IT IS MY DUTY TO PERFORM", function.Name);
 
         if (!collectedSymbols.ContainsKey(function.Name))
@@ -229,8 +229,8 @@ public class SymbolTable
                 Name = function.Name,
                 Kind = SymbolKind.Function,
                 Parameters = function.Parameters,
-                DefinitionLine = functionLine,
-                DefinitionColumn = functionColumn
+                DefinitionLine = functionDefinition.Line,
+                DefinitionColumn = functionDefinition.Column
             };
         }
 
@@ -242,8 +242,8 @@ public class SymbolTable
                 {
                     Name = parameter,
                     Kind = SymbolKind.Parameter,
-                    DefinitionLine = functionLine,
-                    DefinitionColumn = functionColumn
+                    DefinitionLine = functionDefinition.Line,
+                    DefinitionColumn = functionDefinition.Column
                 };
             }
         }
@@ -252,13 +252,13 @@ public class SymbolTable
     }
 
     /// <summary>
-    /// Finds the line and column of a symbol definition by searching for a keyword followed by the symbol name.
+    /// Finds the location of a symbol definition by searching for a keyword followed by the symbol name.
     /// </summary>
     /// <param name="sourceLines">The source lines to search.</param>
     /// <param name="keyword">The keyword to search for.</param>
     /// <param name="name">The name of the symbol to find.</param>
-    /// <returns>A tuple containing the line and column of the symbol definition.</returns>
-    private static (int Line, int Column) FindDefinitionLine(
+    /// <returns>The 1-indexed location of the symbol definition, or <c>(0, 0)</c> if not found.</returns>
+    private static SourceLocation FindDefinitionLine(
         string[] sourceLines, string keyword, string name)
     {
         for (int i = 0; i < sourceLines.Length; i++)
@@ -283,11 +283,11 @@ public class SymbolTable
 
             if (leadingOk && trailingOk)
             {
-                return (i + 1, nameIndex + 1);
+                return new(i + 1, nameIndex + 1);
             }
         }
 
-        return (0, 0);
+        return new(0, 0);
     }
 
 
@@ -298,11 +298,11 @@ public class SymbolTable
     /// <returns>The user-friendly display name.</returns>
     private static string LiteralTypeToDisplayName(LiteralType type) => type switch
     {
-        LiteralType.Integer => "PEER",
-        LiteralType.Float => "FATHOM",
-        LiteralType.String => "YARN",
-        LiteralType.Boolean => "DECREE",
-        LiteralType.Null => "NAUGHT",
+        LiteralType.Integer => Keywords.TypeNames.Peer,
+        LiteralType.Float => Keywords.TypeNames.Fathom,
+        LiteralType.String => Keywords.TypeNames.Yarn,
+        LiteralType.Boolean => Keywords.TypeNames.Decree,
+        LiteralType.Null => Keywords.TypeNames.Naught,
         _ => "unknown"
     };
 }

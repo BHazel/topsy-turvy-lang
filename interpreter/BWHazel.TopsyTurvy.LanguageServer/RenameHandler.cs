@@ -23,7 +23,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class RenameHandler : RenameHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -40,7 +39,7 @@ public class RenameHandler : RenameHandlerBase
         RenameCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>

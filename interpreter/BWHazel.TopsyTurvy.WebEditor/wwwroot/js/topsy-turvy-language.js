@@ -144,7 +144,6 @@ window.topsyTurvy = {
             indentationRules: {
                 increaseIndentPattern: new RegExp(
                     '^\\s*(' +
-                    'HARK!|' +
                     'PRINCIPALS|' +
                     'SHOULD IT TRANSPIRE THAT|' +
                     'QUITE SO\\.|' +
@@ -172,12 +171,18 @@ window.topsyTurvy = {
                     'THAT CONCLUDES THE MATTER\\.|' +
                     'OR, IF NOT,|' +
                     'OTHERWISE,|' +
-                    'FINALE\\.|' +
                     'WITH GRATITUDE|' +
                     'MODIFIED RAPTURE' +
                     ')',
                     'i'
                 ),
+            },
+            foldingRules: {
+                offSide: false,
+                markers: {
+                    start: /^\s*(HARK!|PRINCIPALS|IT IS MY DUTY TO PERFORM|BY A LEGAL FICTION|SHOULD IT TRANSPIRE THAT|IN WHICH CAPACITY\?|WITH THE GREATEST RESPECT,|\(ASIDE, AT SOME LENGTH:)/i,
+                    end: /^\s*(FINALE\.|THE CURTAIN RISES\.|MY DUTY IS (PREMATURELY )?DISCHARGED\.|THE TERM EXPIRES\.|SO MUCH FOR THAT\.|NOTHING COULD BE MORE SATISFACTORY\.|THAT CONCLUDES THE MATTER\.|END OF ASIDE\.\))/i,
+                },
             },
         });
 
