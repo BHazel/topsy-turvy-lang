@@ -64,18 +64,7 @@ suite('Extension Integration', function () {
     test('Extension_OnActivation_HasCorrectConfigurationDefaults', () => {
         const config = vscode.workspace.getConfiguration('topsy-turvy');
 
-        assert.strictEqual(
-            config.get<string>('buildConfiguration'),
-            'Debug',
-            'buildConfiguration default should be Debug',
-        );
-
         assert.strictEqual(config.get<string>('cliPath'), '', 'cliPath default should be empty');
-        assert.strictEqual(
-            config.get<string>('serverPath'),
-            '',
-            'serverPath default should be empty',
-        );
     });
 
     test('Extension_WhenTopsyFileOpened_AssignsCorrectLanguageId', async () => {

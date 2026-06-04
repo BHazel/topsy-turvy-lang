@@ -42,24 +42,10 @@
     "configuration": {
       "title": "Topsy Turvy",
       "properties": {
-        "topsy-turvy.serverPath": {
-          "type": "string",
-          "default": "",
-          "description": "Absolute path to the Topsy Turvy language server executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
-        },
-        "topsy-turvy.buildConfiguration": {
-          "type": "string",
-          "default": "Debug",
-          "enum": [
-            "Debug",
-            "Release"
-          ],
-          "description": "Build configuration used when locating the language server and CLI binaries (Debug or Release). Ignored when the respective path override is set."
-        },
         "topsy-turvy.cliPath": {
           "type": "string",
           "default": "",
-          "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
+          "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the bundled binary."
         }
       }
     },
@@ -135,7 +121,8 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
+    "vscode:prepublish": "npm run prebuild:dotnet && npm run package",
+    "prebuild:dotnet": "node scripts/publish-cli.mjs",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",

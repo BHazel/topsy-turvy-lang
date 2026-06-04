@@ -7,7 +7,7 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 
-import { resolveCliPath, resolveServerPath } from './paths.js';
+import { resolveCliPath } from './paths.js';
 
 let client: LanguageClient;
 let runTaskExecution: vscode.TaskExecution | undefined;
@@ -15,31 +15,23 @@ let runTaskExecution: vscode.TaskExecution | undefined;
 function resolveConfiguredCliPath(context: vscode.ExtensionContext): string {
     const config = vscode.workspace.getConfiguration('topsy-turvy');
     const configuredPath = config.get<string>('cliPath');
-    const buildConfiguration = config.get<string>('buildConfiguration') ?? 'Debug';
-    return resolveCliPath(configuredPath, buildConfiguration, context.extensionPath);
+    return resolveCliPath(configuredPath, context.extensionPath);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    const config = vscode.workspace.getConfiguration('topsy-turvy');
-    const configuredServerPath = config.get<string>('serverPath');
-    const buildConfiguration = config.get<string>('buildConfiguration') ?? 'Debug';
+    const cliPath = resolveConfiguredCliPath(context);
 
-    const serverPath = resolveServerPath(
-        configuredServerPath,
-        buildConfiguration,
-        context.extensionPath,
-    );
-
-    if (!fs.existsSync(serverPath)) {
+    if (!fs.existsSync(cliPath)) {
         vscode.window.showWarningMessage(
-            `Topsy Turvy: language server not found at "${serverPath}". ` +
-                `Build the project or set topsy-turvy.serverPath in settings.`,
+            `Topsy Turvy: CLI not found at "${cliPath}". ` +
+                `Build the project or set topsy-turvy.cliPath in settings.`,
         );
         return;
     }
 
     const serverOptions: ServerOptions = {
-        command: serverPath,
+        command: cliPath,
+        args: ['sorcerer', 'incantation'],
         transport: TransportKind.stdio,
     };
 
