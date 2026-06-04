@@ -291,7 +291,7 @@ public static class SourceFormatter
         }
 
         string normalisedLine = NormaliseKeywords(trimmed);
-        string indentedLine   = ApplyIndentation(normalisedLine, trimmed, depth);
+        string indentedLine = ApplyIndentation(normalisedLine, trimmed, depth);
 
         output.Append(indentedLine);
         if (appendNewline)
@@ -398,7 +398,7 @@ public static class SourceFormatter
         {
             foreach (Match match in pattern.Matches(trimmedLine))
             {
-                if (IsInSkipRange(match.Index, skipRanges))
+                if (SourceAnalyser.IsInSkipRange(match.Index, skipRanges))
                 {
                     continue;
                 }
@@ -448,31 +448,12 @@ public static class SourceFormatter
         }
 
         Match lineComment = LineCommentPattern.Match(line);
-        if (lineComment.Success && !IsInSkipRange(lineComment.Index, ranges))
+        if (lineComment.Success && !SourceAnalyser.IsInSkipRange(lineComment.Index, ranges))
         {
             ranges.Add((lineComment.Index, line.Length));
         }
 
         return ranges;
-    }
-
-    /// <summary>
-    /// Determines whether an offset falls within any skip range.
-    /// </summary>
-    /// <param name="offset">The character offset to test.</param>
-    /// <param name="ranges">The ranges to test against.</param>
-    /// <returns><c>true</c> if the offset is within a skip range, otherwise <c>false</c>.</returns>
-    private static bool IsInSkipRange(int offset, List<(int Start, int End)> ranges)
-    {
-        foreach ((int start, int end) in ranges)
-        {
-            if (offset >= start && offset < end)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <summary>

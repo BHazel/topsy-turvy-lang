@@ -136,10 +136,41 @@ The following keywords appeared in earlier drafts and versions of the language a
 ### Coding Style
 
 * **File Granularity:** Strictly one type per file.
-* **No Implicit Usings:** The `ImplicitUsings` project setting should be disabled.
-* **Modern C#:** Use the latest C# features.
+* **No Implicit Usings:** The `ImplicitUsings` project setting should be disabled. All `using` directives must be explicit.
+* **Modern C#:** Use the latest C# language features where appropriate (see patterns below).
 * **Explicit Typing:** Prefer explicit types over the `var` keyword.
-* **Naming:** Concise but descriptive variable names with full words preferred.
-* **Instance Members:** When calling instance members prefix them with `this.`.
-* **Exceptions:** Use `TopsyTurvyException` for language-specific errors.
-* **Documentation:** All types and members require XML documentation comments, with the exception of private readonly fields.
+* **Naming:** Concise but descriptive names with full words preferred.  No abbreviations should be used unless the abbreviation is the canonical name, e.g. `io`, `Ast`.
+* **Instance Members:** Always prefix instance member access with `this.`.
+* **Exceptions:** Use `TopsyTurvyException`, or a subclass, for all language-level runtime errors.
+* **Named Arguments:** Use named arguments whenever parameter purpose is not self-evident from position alone, particularly for `bool`, numeric, and `string` parameters, e.g. `preProcessedOffset: 0, originalLine: 1, originalColumn: 1`.
+* **Records:** Use `record` for data-only types with no non-trivial logic.  Prefer positional records where all properties are set at construction.
+* **Primary Constructors:** Use primary constructors when a type simply captures its parameters with no additional initialisation logic.
+* **Collection Expressions:** Use `[]` over `new List<T>()` or `Array.Empty<T>()`.
+* **Target-Typed `new()`:** Use target-typed `new()` where the type is unambiguous from the left-hand side declaration.
+* **Documentation:** All `public`, `internal`, and `private` types and members require XML documentation comments. The sole exemption is `private readonly` fields. `<summary>` must be a single sentence; use `<remarks>` for multi-sentence elaboration or non-obvious constraints.
+
+### Test Project Conventions
+
+These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
+
+* **Test Class Naming:** `{TestedClass}Tests`, one test class per production type, one file per test class.
+* **Test Method Naming:** `{MethodOrProperty}_{Condition}_{ExpectedOutcome}` (e.g. `StringLiteral_WithoutClosingQuote_Fails`).
+* **XML Summary Format:** Every test method summary must follow the pattern `Tests that the <see cref="{Class}.{Member}"/> method/parser/property {action in present tense}.` The `cref` must point to the specific member under test.
+* **Theory Parameters:** All parameters on a `[Theory]` test method must have a corresponding `<param>` tag in the XML documentation.
+* **Arrange / Act / Assert:** Separate each phase with a blank line. Do not put inline `//` comments inside test bodies; if the intent is unclear rewrite the XML summary to be more specific.
+* **Test Stubs and Helpers:** Each stub or helper class lives in its own file, is named with a `Test` prefix, e.g. `TestPrefixingPreProcessor`, and is declared `internal sealed`. Place it in the same subdirectory as the tests that use it.
+* **Superpower Combinators:** Call them directly as delegates using `new TextSpan("input")` from `Superpower.Model`; no direct `PackageReference` to Superpower is required in the test project as it is available transitively via the Parser project reference.
+* **What not to Test:** `Lexer.Whitespace`, `Lexer.WhitespaceRequired`, and `Lexer.IntegerLiteral` are intentionally untested; each is a single-line delegation to a Superpower library primitive with no custom logic.
+
+### Web Editor Conventions
+
+These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
+
+* **JS Interop — Inbound (JS → C#):** Methods invoked from JavaScript must be `public` and marked `[JSInvokable]`.  They are called via `dotNetRef` (`DotNetObjectReference<Editor>`), which is created in `OnAfterRenderAsync` on first render and disposed in `Dispose()`.
+* **JS interop — Outbound (C# → JS):** Call JavaScript via `JSRuntime.InvokeAsync`; keep all JS logic in `web-editor.js` (or `topsy-turvy-language.js` for language registration). Do not scatter JS calls across multiple Razor files.
+* **Virtual File System:** `VirtualFile` is the file registry (name, open/close state). The Monaco editor models are the source of truth for file content: always read/write content via `monacoEditor.GetValue`/`monacoEditor.SetValue`, not from `VirtualFile`.
+* **MudBlazor API:** Use current MudBlazor 9.x property names.
+
+## Implementing Language Features
+
+When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.

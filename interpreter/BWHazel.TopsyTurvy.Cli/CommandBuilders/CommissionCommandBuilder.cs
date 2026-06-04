@@ -1,6 +1,5 @@
 using System;
 using System.CommandLine;
-using System.IO;
 
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
@@ -65,9 +64,9 @@ public static class CommissionCommandBuilder
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
     private static int HandleCommission(string filename, string title, string? subtitle, bool tiptoe)
     {
-        if (!filename.EndsWith(".topsy", StringComparison.OrdinalIgnoreCase))
+        if (!filename.EndsWith(FileManager.FileExtension, StringComparison.OrdinalIgnoreCase))
         {
-            string message = $"Invalid file extension: '{filename}'. Only .topsy files are supported.";
+            string message = $"Invalid file extension: '{filename}'. Only {FileManager.FileExtension} files are supported.";
             if (tiptoe)
             {
                 Console.Error.WriteLine(message);
@@ -80,36 +79,16 @@ public static class CommissionCommandBuilder
             return 1;
         }
 
-        if (File.Exists(filename))
+        (bool success, string? errorMessage) = FileManager.TryCreateProgrammeFile(filename, title, subtitle);
+        if (!success)
         {
-            string message = $"File already exists: '{filename}'.";
             if (tiptoe)
             {
-                Console.Error.WriteLine(message);
+                Console.Error.WriteLine(errorMessage);
             }
             else
             {
-                PanelHelper.WriteUserError(message);
-            }
-
-            return 1;
-        }
-
-        string fileContent = FileManager.BuildFileContent(title, subtitle);
-        try
-        {
-            File.WriteAllText(filename, fileContent, FileManager.Utf8NoBom);
-        }
-        catch (IOException ex)
-        {
-            string message = $"Could not create file '{filename}': {ex.Message}";
-            if (tiptoe)
-            {
-                Console.Error.WriteLine(message);
-            }
-            else
-            {
-                PanelHelper.WriteRuntimeErrors(message);
+                PanelHelper.WriteUserError(errorMessage!);
             }
 
             return 1;

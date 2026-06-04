@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -100,36 +101,30 @@ public static class SourceAnalyser
     public static bool IsIdentifierChar(char character) =>
         char.IsLetterOrDigit(character) || character == '-' || character == '_';
 
+
     /// <summary>
-    /// Counts whole-word, case-insensitive occurrences of <paramref name="symbolName"/> across
-    /// the source lines, excluding a specified line and any occurrences inside skip ranges.
+    /// Yields the line and character offset of every whole-word, case-insensitive match of
+    /// a word across a specified set of lines, excluding occurrences inside comments and
+    /// string literals.
     /// </summary>
-    /// <param name="lines">The source lines.</param>
-    /// <param name="lineOffsets">The absolute character offset at which each line begins.</param>
-    /// <param name="skipRanges">The absolute offset ranges to exclude from scanning.</param>
-    /// <param name="symbolName">The symbol name to count.</param>
-    /// <param name="excludeLineIndex">The 0-indexed line to exclude from the count; pass <c>-1</c> to include all lines.</param>
-    /// <returns>The number of occurrences found outside the excluded line and skip ranges.</returns>
-    public static int CountOccurrences(
-        string[] lines,
-        int[] lineOffsets,
-        List<(int Start, int End)> skipRanges,
-        string symbolName,
-        int excludeLineIndex)
+    /// <param name="lines">The source lines to scan.</param>
+    /// <param name="word">The word to search for.</param>
+    /// <returns>
+    /// A sequence of Line, Character pairs for every whole-word match in document order.
+    /// </returns>
+    public static IEnumerable<(int Line, int Character)> FindWordOccurrences(string[] lines, string word)
     {
-        int count = 0;
+        string joinedLines = string.Join("\n", lines);
+        int[] lineOffsets = BuildLineOffsets(lines);
+        List<(int Start, int End)> skipRanges = FindSkipRanges(joinedLines);
+
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
-            if (lineIndex == excludeLineIndex)
-            {
-                continue;
-            }
-
             string lineText = lines[lineIndex];
             int searchFrom = 0;
             int foundAt;
 
-            while ((foundAt = lineText.IndexOf(symbolName, searchFrom, System.StringComparison.OrdinalIgnoreCase)) >= 0)
+            while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
             {
                 searchFrom = foundAt + 1;
                 if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
@@ -137,7 +132,7 @@ public static class SourceAnalyser
                     continue;
                 }
 
-                int endChar = foundAt + symbolName.Length;
+                int endChar = foundAt + word.Length;
                 if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
                 {
                     continue;
@@ -149,6 +144,32 @@ public static class SourceAnalyser
                     continue;
                 }
 
+                yield return (lineIndex, foundAt);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Counts whole-word, case-insensitive occurrences of <paramref name="symbolName"/> across
+    /// the source lines, excluding a specified line and any occurrences inside strings or comments.
+    /// </summary>
+    /// <param name="lines">The source lines.</param>
+    /// <param name="symbolName">The symbol name to count.</param>
+    /// <param name="excludeLineIndex">The 0-indexed line to exclude from the count; pass <c>-1</c> to include all lines.</param>
+    /// <remarks>
+    /// Skip range detection is handled internally via <see cref="FindWordOccurrences"/>.
+    /// </remarks>
+    /// <returns>The number of occurrences found outside the excluded line and skip ranges.</returns>
+    public static int CountOccurrences(
+        string[] lines,
+        string symbolName,
+        int excludeLineIndex)
+    {
+        int count = 0;
+        foreach ((int lineIndex, int _) in FindWordOccurrences(lines, symbolName))
+        {
+            if (lineIndex != excludeLineIndex)
+            {
                 count++;
             }
         }

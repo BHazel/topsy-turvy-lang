@@ -23,7 +23,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class ReferencesHandler : ReferencesHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -40,7 +39,7 @@ public class ReferencesHandler : ReferencesHandlerBase
         ReferenceCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>
@@ -67,7 +66,7 @@ public class ReferencesHandler : ReferencesHandlerBase
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                info = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                info = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
                 if (info is null)
                 {
                     return Task.FromResult<LocationContainer?>(null);
@@ -86,50 +85,23 @@ public class ReferencesHandler : ReferencesHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
-            List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
             List<Location> locations = [];
 
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            foreach ((int lineIndex, int foundAt) in SourceAnalyser.FindWordOccurrences(lines, word))
             {
-                string lineText = lines[lineIndex];
-                int searchFrom = 0;
-                int foundAt;
-
-                while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+                if (!includeDeclaration && lineIndex == definitionLineIndex)
                 {
-                    searchFrom = foundAt + 1;
-
-                    if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
-                    {
-                        continue;
-                    }
-
-                    int endChar = foundAt + word.Length;
-                    if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
-                    {
-                        continue;
-                    }
-
-                    int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                    if (SourceAnalyser.IsInSkipRange(absoluteOffset, skipRanges))
-                    {
-                        continue;
-                    }
-
-                    if (!includeDeclaration && lineIndex == definitionLineIndex)
-                    {
-                        continue;
-                    }
-
-                    locations.Add(new Location
-                    {
-                        Uri = request.TextDocument.Uri,
-                        Range = new LspRange(
-                            new Position(lineIndex, foundAt),
-                            new Position(lineIndex, endChar))
-                    });
+                    continue;
                 }
+
+                int endChar = foundAt + word.Length;
+                locations.Add(new Location
+                {
+                    Uri = request.TextDocument.Uri,
+                    Range = new LspRange(
+                        new Position(lineIndex, foundAt),
+                        new Position(lineIndex, endChar))
+                });
             }
 
             foreach ((DocumentUri otherUri, DocumentState otherState) in
@@ -147,43 +119,16 @@ public class ReferencesHandler : ReferencesHandlerBase
                 }
 
                 string[] otherLines = otherSource.Split('\n');
-                int[] otherOffsets = SourceAnalyser.BuildLineOffsets(otherLines);
-                List<(int Start, int End)> otherSkip = SourceAnalyser.FindSkipRanges(otherSource);
-                for (int lineIndex = 0; lineIndex < otherLines.Length; lineIndex++)
+                foreach ((int lineIndex, int foundAt) in SourceAnalyser.FindWordOccurrences(otherLines, word))
                 {
-                    string lineText = otherLines[lineIndex];
-                    int searchFrom = 0;
-                    int foundAt;
-
-                    while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+                    int endChar = foundAt + word.Length;
+                    locations.Add(new Location
                     {
-                        searchFrom = foundAt + 1;
-
-                        if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
-                        {
-                            continue;
-                        }
-
-                        int endChar = foundAt + word.Length;
-                        if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
-                        {
-                            continue;
-                        }
-
-                        int absoluteOffset = otherOffsets[lineIndex] + foundAt;
-                        if (SourceAnalyser.IsInSkipRange(absoluteOffset, otherSkip))
-                        {
-                            continue;
-                        }
-
-                        locations.Add(new Location
-                        {
-                            Uri = otherUri,
-                            Range = new LspRange(
-                                new Position(lineIndex, foundAt),
-                                new Position(lineIndex, endChar))
-                        });
-                    }
+                        Uri = otherUri,
+                        Range = new LspRange(
+                            new Position(lineIndex, foundAt),
+                            new Position(lineIndex, endChar))
+                    });
                 }
             }
 
@@ -195,28 +140,4 @@ public class ReferencesHandler : ReferencesHandlerBase
         }
     }
 
-    /// <summary>
-    /// Searches all open documents other than the current one for a symbol with the given name.
-    /// </summary>
-    /// <param name="currentUri">The URI of the document being searched, which is excluded.</param>
-    /// <param name="name">The symbol name to find.</param>
-    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
-    private SymbolInfo? FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
-            {
-                return info;
-            }
-        }
-
-        return null;
-    }
 }

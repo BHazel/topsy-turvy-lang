@@ -21,7 +21,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class CompletionHandler : CompletionHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -38,8 +37,8 @@ public class CompletionHandler : CompletionHandlerBase
         CompletionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector  = TextDocumentSelector.ForLanguage(LanguageId),
-            ResolveProvider   = false,
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
+            ResolveProvider = false,
             TriggerCharacters = new Container<string>(" ")
         };
 
@@ -62,13 +61,13 @@ public class CompletionHandler : CompletionHandlerBase
                 source,
                 request.Position.Line,
                 request.Position.Character);
-            
+
             bool isKeywordContext = phrase.Length == 0
                 || KeywordData.Keywords.Any(k => k.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase));
             int insertOffset = isKeywordContext
                 ? phrase.Length - lastWord.Length
                 : 0;
-            
+
             string keywordFilterText = isKeywordContext
                 ? lastWord
                 : string.Empty;
@@ -77,7 +76,7 @@ public class CompletionHandler : CompletionHandlerBase
             if (state?.SymbolTable is not null)
             {
                 IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
-                    .Concat(this.GetImportedFunctionSymbols(request.TextDocument.Uri));
+                    .Concat(this.documentStateManager.GetImportedFunctionSymbols(request.TextDocument.Uri));
 
                 IEnumerable<CompletionItem> symbolItems = allSymbols
                     .Where(symbol => lastWord.Length == 0
@@ -108,31 +107,6 @@ public class CompletionHandler : CompletionHandlerBase
         Task.FromResult(request);
 
     /// <summary>
-    /// Returns function symbols declared in all open documents other than the given document.
-    /// </summary>
-    /// <param name="currentUri">The URI of the document requesting completion, which is excluded.</param>
-    /// <returns>Function <see cref="SymbolInfo"/> records from every other open document.</returns>
-    private IEnumerable<SymbolInfo> GetImportedFunctionSymbols(DocumentUri currentUri)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
-            {
-                if (symbol.Kind == TopsyTurvySymbolKind.Function)
-                {
-                    yield return symbol;
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Builds a completion item from a symbol.
     /// </summary>
     /// <param name="symbol">The symbol information.</param>
@@ -140,16 +114,16 @@ public class CompletionHandler : CompletionHandlerBase
     private static CompletionItem BuildSymbolItem(SymbolInfo symbol) =>
         new()
         {
-            Label  = symbol.Name,
-            Kind   = symbol.Kind == TopsyTurvySymbolKind.Function
+            Label = symbol.Name,
+            Kind = symbol.Kind == TopsyTurvySymbolKind.Function
                 ? CompletionItemKind.Function
                 : CompletionItemKind.Variable,
             Detail = symbol.Kind switch
             {
-                TopsyTurvySymbolKind.Variable  => symbol.TypeDisplayName,
-                TopsyTurvySymbolKind.Function  => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
+                TopsyTurvySymbolKind.Variable => symbol.TypeDisplayName,
+                TopsyTurvySymbolKind.Function => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
                 TopsyTurvySymbolKind.Parameter => "parameter",
-                _                    => null
+                _ => null
             }
         };
 
@@ -164,9 +138,9 @@ public class CompletionHandler : CompletionHandlerBase
         (string Keyword, string Detail) entry, string filterText, int insertOffset) =>
         new()
         {
-            Label      = entry.Keyword,
-            Kind       = CompletionItemKind.Keyword,
-            Detail     = entry.Detail,
+            Label = entry.Keyword,
+            Kind = CompletionItemKind.Keyword,
+            Detail = entry.Detail,
             FilterText = filterText.Length > 0 ? filterText : entry.Keyword,
             InsertText = entry.Keyword[insertOffset..]
         };

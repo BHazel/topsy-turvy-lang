@@ -10,16 +10,21 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Shouldly" Version="4.*" />
+    <PackageReference Include="Testably.Abstractions.Testing" Version="3.*" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="Shouldly" />
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Analysis\BWHazel.TopsyTurvy.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Cli\BWHazel.TopsyTurvy.Cli.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.LanguageServer\BWHazel.TopsyTurvy.LanguageServer.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
   </ItemGroup>

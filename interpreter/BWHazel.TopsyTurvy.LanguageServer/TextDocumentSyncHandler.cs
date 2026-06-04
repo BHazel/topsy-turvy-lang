@@ -24,7 +24,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </summary>
 public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly ILanguageServerFacade languageServer;
     private readonly DocumentStateManager documentStateManager;
     private readonly TopsyTurvyParser parser = new();
@@ -42,14 +41,14 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 
     /// <inheritdoc/>
     public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) =>
-        new(uri, LanguageId);
+        new(uri, LanguageServerConstants.LanguageId);
 
     /// <inheritdoc/>
     protected override TextDocumentSyncRegistrationOptions CreateRegistrationOptions(
         TextSynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             Change = TextDocumentSyncKind.Full,
             Save = new SaveOptions { IncludeText = true }
         };
@@ -107,17 +106,17 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
                         new Position(diagnostic.Span.End.Line - 1, diagnostic.Span.End.Column - 1)),
                     Severity = diagnostic.Severity switch
                     {
-                        AstDiagnosticSeverity.Error   => DiagnosticSeverity.Error,
+                        AstDiagnosticSeverity.Error => DiagnosticSeverity.Error,
                         AstDiagnosticSeverity.Warning => DiagnosticSeverity.Warning,
-                        _                             => DiagnosticSeverity.Information
+                        _ => DiagnosticSeverity.Information
                     },
                     Message = diagnostic.Message,
-                    Source  = LanguageId
+                    Source = LanguageServerConstants.LanguageId
                 }).ToList();
 
             this.languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
             {
-                Uri         = uri,
+                Uri = uri,
                 Diagnostics = new Container<Diagnostic>(lspDiagnostics)
             });
         }
@@ -125,7 +124,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
         {
             this.languageServer.Window.ShowMessage(new ShowMessageParams
             {
-                Type    = MessageType.Error,
+                Type = MessageType.Error,
                 Message = $"Topsy Turvy LSP error: {ex.Message}"
             });
         }

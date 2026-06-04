@@ -1,0 +1,72 @@
+name: Publish
+on:
+  workflow_dispatch:
+jobs:
+  build-test:
+    uses: ./.github/workflows/build-test.yml
+  publish:
+    name: Publish CLI & VS Code Extension (${{ matrix.rid }})
+    needs: build-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - rid: win-x64
+            vsce_target: win32-x64
+            binary: operetta.exe
+          - rid: linux-x64
+            vsce_target: linux-x64
+            binary: operetta
+          - rid: linux-arm64
+            vsce_target: linux-arm64
+            binary: operetta
+          - rid: osx-x64
+            vsce_target: darwin-x64
+            binary: operetta
+          - rid: osx-arm64
+            vsce_target: darwin-arm64
+            binary: operetta
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: 'interpreter/**/*.csproj'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: 'extensions/vscode/topsy-turvy/package-lock.json'
+      - name: Install NPM Dependencies
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm ci
+      - name: Package VS Code Extension
+        working-directory: extensions/vscode/topsy-turvy
+        env:
+          DOTNET_RID: ${{ matrix.rid }}
+        run: |
+          echo y | npx @vscode/vsce package --target ${{ matrix.vsce_target }}
+      - name: Package CLI
+        run: |
+          tar -czf operetta_${{ matrix.rid }}.tar.gz -C extensions/vscode/topsy-turvy/bin ${{ matrix.binary }}
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: operetta_${{ matrix.rid }}
+          path: operetta_${{ matrix.rid }}.tar.gz
+          retention-days: 7
+      - name: Package VS Code Extension
+        run: |
+          vsix=$(ls extensions/vscode/topsy-turvy/*.vsix)
+          tar -czf vscode-extension_${{ matrix.rid }}.tar.gz -C extensions/vscode/topsy-turvy $(basename "$vsix")
+      - name: Upload VS Code Extension Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vscode-extension_${{ matrix.rid }}
+          path: vscode-extension_${{ matrix.rid }}.tar.gz
+          retention-days: 7

@@ -1,4 +1,4 @@
-using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
@@ -15,10 +15,11 @@ public class ProgramRunner
     /// Checks a Topsy Turvy source file for syntax errors without executing it.
     /// </summary>
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
+    /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
     /// <returns>A result containing the outcome of the syntax check.</returns>
-    public static ProgramExecutionResult Check(string filePath)
+    public static ProgramExecutionResult Check(string filePath, IFileSystem? fileSystem = null)
     {
-        (ProgramExecutionResult result, _) = ParseFile(filePath);
+        (ProgramExecutionResult result, _) = ParseFile(filePath, fileSystem);
         return result;
     }
 
@@ -26,15 +27,17 @@ public class ProgramRunner
     /// Parses a Topsy Turvy source file and returns both the execution result and the raw parse data.
     /// </summary>
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
+    /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
     /// <returns>
     /// A tuple containing the <see cref="ProgramExecutionResult"/> and the <see cref="ParseResult"/>,
     /// or <c>null</c> for the parse data if file loading failed before parsing could be attempted.
     /// </returns>
-    public static (ProgramExecutionResult Result, ParseResult? ParseData) ParseFile(string filePath)
+    public static (ProgramExecutionResult Result, ParseResult? ParseData) ParseFile(string filePath, IFileSystem? fileSystem = null)
     {
-        if (!TryReadSource(filePath, out string source, out ProgramExecutionResult? failure))
+        (bool success, string? errorMessage) = FileManager.TryReadSource(filePath, out string source, fileSystem);
+        if (!success)
         {
-            return (failure!, null);
+            return (ProgramExecutionResult.Failure(errorMessage!), null);
         }
 
         TopsyTurvyParser parser = new();
@@ -55,12 +58,14 @@ public class ProgramRunner
     /// </summary>
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
     /// <param name="io">The IO implementation to use during execution.</param>
+    /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
     /// <returns>A result containing the outcome of the execution.</returns>
-    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io)
+    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io, IFileSystem? fileSystem = null)
     {
-        if (!TryReadSource(filePath, out string source, out ProgramExecutionResult? failure))
+        (bool success, string? errorMessage) = FileManager.TryReadSource(filePath, out string source, fileSystem);
+        if (!success)
         {
-            return failure!;
+            return ProgramExecutionResult.Failure(errorMessage!);
         }
 
         TopsyTurvyParser parser = new();
@@ -84,34 +89,5 @@ public class ProgramRunner
         }
 
         return ProgramExecutionResult.Success();
-    }
-
-    /// <summary>
-    /// Attempts to read the source text of a Topsy Turvy file.
-    /// </summary>
-    /// <param name="filePath">The path to the Topsy Turvy file.</param>
-    /// <param name="source">The file contents when successful, otherwise <see cref="string.Empty"/>.</param>
-    /// <param name="failure">A failure result when reading fails, <c>null</c> on success.</param>
-    /// <returns><c>true</c> if the file was read successfully, otherwise <c>false</c>.</returns>
-    private static bool TryReadSource(string filePath, out string source, out ProgramExecutionResult? failure)
-    {
-        source = string.Empty;
-        if (!File.Exists(filePath))
-        {
-            failure = ProgramExecutionResult.Failure($"File not found: {filePath}");
-            return false;
-        }
-
-        try
-        {
-            source = File.ReadAllText(filePath);
-            failure = null;
-            return true;
-        }
-        catch (IOException ex)
-        {
-            failure = ProgramExecutionResult.Failure($"Could not read '{filePath}': {ex.Message}");
-            return false;
-        }
     }
 }

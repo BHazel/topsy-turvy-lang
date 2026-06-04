@@ -25,7 +25,7 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class CodeLensHandler : CodeLensHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
+    private const string ShowReferencesCommandId = "topsy-turvy.showReferences";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -42,8 +42,8 @@ public class CodeLensHandler : CodeLensHandlerBase
         CodeLensCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
-            ResolveProvider  = false
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
+            ResolveProvider = false
         };
 
     /// <inheritdoc/>
@@ -68,8 +68,6 @@ public class CodeLensHandler : CodeLensHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
-            List<(int Start, int End)> skipRanges = SourceAnalyser.FindSkipRanges(source);
             List<CodeLens> lenses = [];
 
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
@@ -82,7 +80,7 @@ public class CodeLensHandler : CodeLensHandlerBase
                 int lspLine = symbol.DefinitionLine - 1;
                 int lspChar = symbol.DefinitionColumn - 1;
 
-                int refCount = SourceAnalyser.CountOccurrences(lines, lineOffsets, skipRanges, symbol.Name, lspLine);
+                int refCount = SourceAnalyser.CountOccurrences(lines, symbol.Name, lspLine);
 
                 foreach ((_, DocumentState otherState) in this.documentStateManager.AllDocuments())
                 {
@@ -98,22 +96,20 @@ public class CodeLensHandler : CodeLensHandlerBase
                     }
 
                     string[] otherLines = otherSource.Split('\n');
-                    int[] otherOffsets = SourceAnalyser.BuildLineOffsets(otherLines);
-                    List<(int Start, int End)> otherSkip = SourceAnalyser.FindSkipRanges(otherSource);
-                    refCount += SourceAnalyser.CountOccurrences(otherLines, otherOffsets, otherSkip, symbol.Name, -1);
+                    refCount += SourceAnalyser.CountOccurrences(otherLines, symbol.Name, -1);
                 }
 
                 string title = refCount == 1 ? "1 reference" : $"{refCount} references";
 
                 lenses.Add(new CodeLens
                 {
-                    Range   = new LspRange(
+                    Range = new LspRange(
                         new Position(lspLine, lspChar),
                         new Position(lspLine, lspChar + symbol.Name.Length)),
                     Command = new Command
                     {
-                        Title     = title,
-                        Name      = "topsy-turvy.showReferences",
+                        Title = title,
+                        Name = ShowReferencesCommandId,
                         Arguments = new JArray(
                             JValue.CreateString(request.TextDocument.Uri.ToString()),
                             new JValue(lspLine),

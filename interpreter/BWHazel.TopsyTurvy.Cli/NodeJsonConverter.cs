@@ -18,7 +18,7 @@ public class NodeJsonConverter : JsonConverter<Node>
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert) =>
         typeof(Node).IsAssignableFrom(typeToConvert);
-    
+
     /// <inheritdoc />
     public override Node Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

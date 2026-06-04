@@ -24,7 +24,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
 
     private readonly DocumentStateManager documentStateManager;
 
@@ -42,7 +41,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
         DocumentFormattingCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>
@@ -70,7 +69,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
             TextEdit edit = new()
             {
-                Range   = fullDocumentRange,
+                Range = fullDocumentRange,
                 NewText = formatted
             };
 

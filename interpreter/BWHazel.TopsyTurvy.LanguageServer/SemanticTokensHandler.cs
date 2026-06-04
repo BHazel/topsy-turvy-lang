@@ -22,12 +22,11 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class SemanticTokensHandler : SemanticTokensHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     private static readonly SemanticTokensLegend Legend = new()
     {
-        TokenTypes  = new Container<SemanticTokenType>("variable", "parameter", "function"),
+        TokenTypes = new Container<SemanticTokenType>("variable", "parameter", "function"),
         TokenModifiers = new Container<SemanticTokenModifier>()
     };
 
@@ -45,10 +44,10 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         SemanticTokensCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId),
-            Legend           = Legend,
-            Full             = true,
-            Range            = false
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
+            Legend = Legend,
+            Full = true,
+            Range = false
         };
 
     /// <inheritdoc/>
@@ -72,12 +71,10 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            int[] lineOffsets = SourceAnalyser.BuildLineOffsets(lines);
-            List<(int Start, int End)> commentRanges = SourceAnalyser.FindSkipRanges(source);
             List<(int Line, int Char, int Length, string TokenType)> tokens = [];
 
             IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
-                .Concat(this.GetImportedFunctionSymbols(identifier.TextDocument.Uri));
+                .Concat(this.documentStateManager.GetImportedFunctionSymbols(identifier.TextDocument.Uri));
 
             foreach (SymbolInfo symbol in allSymbols)
             {
@@ -88,40 +85,14 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
                 string tokenType = symbol.Kind switch
                 {
-                    TopsyTurvySymbolKind.Function  => "function",
+                    TopsyTurvySymbolKind.Function => "function",
                     TopsyTurvySymbolKind.Parameter => "parameter",
-                    _                    => "variable"
+                    _ => "variable"
                 };
 
-                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                foreach ((int lineIndex, int foundAt) in SourceAnalyser.FindWordOccurrences(lines, symbol.Name))
                 {
-                    string lineText = lines[lineIndex];
-                    int searchFrom = 0;
-                    int foundAt;
-
-                    while ((foundAt = lineText.IndexOf(
-                        symbol.Name, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
-                    {
-                        searchFrom = foundAt + 1;
-                        if (foundAt > 0 && SourceAnalyser.IsIdentifierChar(lineText[foundAt - 1]))
-                        {
-                            continue;
-                        }
-
-                        int endChar = foundAt + symbol.Name.Length;
-                        if (endChar < lineText.Length && SourceAnalyser.IsIdentifierChar(lineText[endChar]))
-                        {
-                            continue;
-                        }
-
-                        int absoluteOffset = lineOffsets[lineIndex] + foundAt;
-                        if (SourceAnalyser.IsInSkipRange(absoluteOffset, commentRanges))
-                        {
-                            continue;
-                        }
-
-                        tokens.Add((lineIndex, foundAt, symbol.Name.Length, tokenType));
-                    }
+                    tokens.Add((lineIndex, foundAt, symbol.Name.Length, tokenType));
                 }
             }
 
@@ -136,32 +107,6 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         }
 
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Returns function symbols declared in all open documents other than the given document.
-    /// </summary>
-    /// <param name="currentUri">The URI of the document being tokenised which is excluded.</param>
-    /// <returns>Function <see cref="SymbolInfo"/> records from every other open document.</returns>
-    private IEnumerable<SymbolInfo> GetImportedFunctionSymbols(DocumentUri currentUri)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in
-            this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
-            {
-                if (symbol.Kind == TopsyTurvySymbolKind.Function)
-                {
-                    yield return symbol;
-                }
-            }
-        }
     }
 
 }

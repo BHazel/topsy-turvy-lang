@@ -1,4 +1,5 @@
 using System;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Analysis;
 
@@ -14,7 +15,7 @@ public static class HoverMarkdownBuilder
     /// <returns>A Markdown string suitable for display in a hover tooltip.</returns>
     public static string Build(SymbolInfo info) => info.Kind switch
     {
-        SymbolKind.Variable when info.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase) =>
+        SymbolKind.Variable when info.Name.Equals(Keywords.SpecialNames.JustSo, StringComparison.OrdinalIgnoreCase) =>
             "**implicit variable** `JUST SO` — receives the result of the last expression",
         SymbolKind.Variable =>
             $"**(variable)** `{info.Name}` : {info.TypeDisplayName}",

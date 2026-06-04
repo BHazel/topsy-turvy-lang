@@ -1,6 +1,5 @@
 using System;
 using System.CommandLine;
-using System.IO;
 
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
@@ -73,43 +72,16 @@ public static class MountCommandBuilder
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
     private static int HandleMount(string project, string title, string? subtitle, bool hollow, bool tiptoe)
     {
-        if (Directory.Exists(project))
+        (bool success, string? errorMessage) = FileManager.TryMountProject(project, title, subtitle, hollow);
+        if (!success)
         {
-            string message = $"Directory already exists: '{project}'.";
             if (tiptoe)
             {
-                Console.Error.WriteLine(message);
+                Console.Error.WriteLine(errorMessage);
             }
             else
             {
-                PanelHelper.WriteUserError(message);
-            }
-
-            return 1;
-        }
-
-        try
-        {
-            Directory.CreateDirectory(project);
-
-            if (!hollow)
-            {
-                string dirName = Path.GetFileName(project.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                string filename = Path.Combine(project, $"{dirName}.topsy");
-                string fileContent = FileManager.BuildFileContent(title, subtitle);
-                File.WriteAllText(filename, fileContent, FileManager.Utf8NoBom);
-            }
-        }
-        catch (IOException ex)
-        {
-            string message = $"Could not create project '{project}': {ex.Message}";
-            if (tiptoe)
-            {
-                Console.Error.WriteLine(message);
-            }
-            else
-            {
-                PanelHelper.WriteRuntimeErrors(message);
+                PanelHelper.WriteUserError(errorMessage!);
             }
 
             return 1;

@@ -17,7 +17,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class FoldingRangeHandler : FoldingRangeHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -64,7 +63,7 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
         FoldingRangeCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>
@@ -98,8 +97,8 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
                             ranges.Add(new FoldingRange
                             {
                                 StartLine = startLine,
-                                EndLine   = endLine,
-                                Kind      = kind
+                                EndLine = endLine,
+                                Kind = kind
                             });
                         }
                     }

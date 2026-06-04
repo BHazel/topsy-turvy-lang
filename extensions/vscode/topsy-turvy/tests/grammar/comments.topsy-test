@@ -1,0 +1,9 @@
+// SYNTAX TEST "source.topsy"
+
+ASIDE: this is a line comment
+//^ comment.line.topsy
+
+(ASIDE, AT SOME LENGTH: block comment starts here
+//^ comment.block.topsy
+END OF ASIDE.)
+//^ comment.block.topsy

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Runtime;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Runtime;
 
 /// <summary>
 /// In-memory implementation of <see cref="ITopsyTurvyIO"/> for testing.

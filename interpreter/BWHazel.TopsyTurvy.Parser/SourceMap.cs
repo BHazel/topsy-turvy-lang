@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Parser;
 
@@ -23,7 +24,7 @@ public class SourceMap
     /// </summary>
     /// <param name="offset">Zero-based character offset in the pre-processed text.</param>
     /// <returns>The 1-indexed line and column in the original source.</returns>
-    public (int Line, int Column) GetOriginalLocation(int offset)
+    public SourceLocation GetOriginalLocation(int offset)
     {
         int low = 0;
         int high = this.mappings.Count - 1;
@@ -43,11 +44,11 @@ public class SourceMap
 
         if (high < 0)
         {
-            return (1, 1);
+            return new(1, 1);
         }
 
         SourceMapping sourceMapping = this.mappings[high];
         int columnOffset = offset - sourceMapping.PreProcessedOffset;
-        return (sourceMapping.OriginalLine, sourceMapping.OriginalColumn + columnOffset);
+        return new(sourceMapping.OriginalLine, sourceMapping.OriginalColumn + columnOffset);
     }
 }

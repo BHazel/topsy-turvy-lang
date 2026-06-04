@@ -88,4 +88,83 @@ public class DocumentStateManager
             this.states.Remove(uri.ToString());
         }
     }
+
+    /// <summary>
+    /// Searches all open documents other than the current one for a symbol with the given name.
+    /// </summary>
+    /// <param name="symbolName">The symbol name to find.</param>
+    /// <param name="currentUri">The URI of the current document, which is excluded from the search.</param>
+    /// <returns>The first matching <see cref="SymbolInfo"/>, or <c>null</c> if not found.</returns>
+    public SymbolInfo? FindSymbolInOtherDocuments(string symbolName, DocumentUri currentUri)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            if (otherState.SymbolTable.TryGetSymbol(symbolName, out SymbolInfo? info) && info is not null)
+            {
+                return info;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Searches all open documents other than the current one for a symbol with the given name
+    /// and returns both the symbol info and the URI of the document where it was found.
+    /// </summary>
+    /// <param name="symbolName">The symbol name to find.</param>
+    /// <param name="currentUri">The URI of the current document, which is excluded from the search.</param>
+    /// <returns>
+    /// The URI of the document containing the symbol and its <see cref="SymbolInfo"/>,
+    /// or the current URI and <c>null</c> if not found.
+    /// </returns>
+    public (DocumentUri Uri, SymbolInfo? Info) FindSymbolWithUriInOtherDocuments(string symbolName, DocumentUri currentUri)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            if (otherState.SymbolTable.TryGetSymbol(symbolName, out SymbolInfo? info) && info is not null)
+            {
+                return (otherUri, info);
+            }
+        }
+
+        return (currentUri, null);
+    }
+
+    /// <summary>
+    /// Returns function symbols declared in all open documents other than the given document.
+    /// </summary>
+    /// <param name="currentUri">The URI of the current document, which is excluded.</param>
+    /// <returns>Function <see cref="SymbolInfo"/> records from every other open document.</returns>
+    public IEnumerable<SymbolInfo> GetImportedFunctionSymbols(DocumentUri currentUri)
+    {
+        string currentKey = currentUri.ToString();
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.AllDocuments())
+        {
+            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
+            {
+                continue;
+            }
+
+            foreach (SymbolInfo symbol in otherState.SymbolTable.AllSymbols())
+            {
+                if (symbol.Kind == SymbolKind.Function)
+                {
+                    yield return symbol;
+                }
+            }
+        }
+    }
 }

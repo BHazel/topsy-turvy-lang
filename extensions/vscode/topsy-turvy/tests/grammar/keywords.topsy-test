@@ -1,0 +1,161 @@
+// SYNTAX TEST "source.topsy"
+
+// ── Program structure ────────────────────────────────────────────────────────
+
+HARK! "Programme"
+//^^^ keyword.control.program.topsy
+
+or, "A Subtitle"
+//^ keyword.control.program.topsy
+
+FINALE.
+//^^^ keyword.control.program.topsy
+
+// ── Sections ─────────────────────────────────────────────────────────────────
+
+PRINCIPALS
+//^ keyword.control.section.topsy
+
+THE CURTAIN RISES.
+//^ keyword.control.section.topsy
+
+// ── Control flow ─────────────────────────────────────────────────────────────
+
+SHOULD IT TRANSPIRE THAT
+//^ keyword.control.topsy
+
+QUITE SO.
+//^ keyword.control.topsy
+
+OR, IF NOT,
+//^ keyword.control.topsy
+
+OTHERWISE,
+//^ keyword.control.topsy
+
+SO MUCH FOR THAT.
+//^ keyword.control.topsy
+
+// ── Switch ───────────────────────────────────────────────────────────────────
+
+IN WHICH CAPACITY?
+//^ keyword.control.switch.topsy
+
+WHEN ACTING AS
+//^ keyword.control.switch.topsy
+
+FAILING ALL OF THE ABOVE,
+//^ keyword.control.switch.topsy
+
+NOTHING COULD BE MORE SATISFACTORY.
+//^ keyword.control.switch.topsy
+
+// ── Loops ─────────────────────────────────────────────────────────────────────
+
+BY A LEGAL FICTION
+//^ keyword.control.loop.topsy
+
+KNOWN AS
+//^ keyword.control.loop.topsy
+
+ASCENDING
+//^ keyword.control.loop.topsy
+
+DESCENDING
+//^ keyword.control.loop.topsy
+
+UNTIL
+//^ keyword.control.loop.topsy
+
+WHILST
+//^ keyword.control.loop.topsy
+
+THE TERM EXPIRES.
+//^ keyword.control.loop.topsy
+
+THAT WILL DO.
+//^ keyword.control.loop.topsy
+
+ONCE MORE.
+//^ keyword.control.loop.topsy
+
+// ── Exception handling ────────────────────────────────────────────────────────
+
+A HIDEOUS CURSE ON
+//^ keyword.control.exception.topsy
+
+WITH THE GREATEST RESPECT,
+//^ keyword.control.exception.topsy
+
+WITH GRATITUDE
+//^ keyword.control.exception.topsy
+
+MODIFIED RAPTURE
+//^ keyword.control.exception.topsy
+
+THAT CONCLUDES THE MATTER.
+//^ keyword.control.exception.topsy
+
+// ── Functions ─────────────────────────────────────────────────────────────────
+
+IT IS MY DUTY TO PERFORM
+//^ keyword.other.function.topsy
+
+UNDER THE TERMS OF
+//^ keyword.other.function.topsy
+
+UNDER NO OBLIGATION
+//^ keyword.other.function.topsy
+
+MY DUTY IS DISCHARGED.
+//^ keyword.other.function.topsy
+
+MY DUTY IS PREMATURELY DISCHARGED.
+//^ keyword.other.function.topsy
+
+AND SO I FIND
+//^ keyword.other.function.topsy
+
+SUMMON
+//^ keyword.other.function.topsy
+
+IF YOU PLEASE.
+//^ keyword.other.function.topsy
+
+// ── Import ────────────────────────────────────────────────────────────────────
+
+PRAY ADMIT
+//^ keyword.control.import.topsy
+
+// ── Declarations ─────────────────────────────────────────────────────────────
+
+PRAY WELCOME myVar AS A PEER BEING 1
+//^ keyword.other.declaration.topsy
+
+AS A PEER
+//^ keyword.other.declaration.topsy
+
+PEER
+//^ storage.type.topsy
+
+BEING 1
+//^ keyword.other.declaration.topsy
+
+// ── Assignment and implicit variable ─────────────────────────────────────────
+
+JUST SO IS APPOINTED 1
+//^ variable.language.topsy
+
+IS APPOINTED 1
+//^ keyword.operator.assignment.topsy
+
+// ── I/O and built-in functions ───────────────────────────────────────────────
+
+BEHOLD "output"
+//^ support.function.topsy
+
+PRAY TELL
+//^ support.function.topsy
+
+WITHOUT CEREMONY
+//^ support.function.topsy

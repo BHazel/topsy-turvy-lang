@@ -12,6 +12,7 @@ AI has been extensively used in the development of Topsy Turvy, in fact, it is a
 
 * **[Claude Code](https://claude.com/product/claude-code):** Coding agent developed by Anthropic used for planning and development.
 * **[Google Gemini](https://gemini.google.com):** Research, assistance and alternative model verification.
+* **[GitHub Copilot](https://github.com/features/copilot):** Inline suggestions while editing code.
 * **[Ollama](https://ollama.com):** Hosting models locally or in Vast.ai.
 * **[OpenCode](https://opencode.ai):** Open source coding agent, and hosted models via Zen, used for planning and development.
 * **[Vast.ai](https://vast.ai):** GPU hosting platform used for remote Ollama hosting.

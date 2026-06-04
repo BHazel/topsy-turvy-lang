@@ -8,7 +8,7 @@ public static class TopsyTurvyBranding
     /// <summary>
     /// The grand ASCII art title for the CLI.
     /// </summary>
-    public static string Title => 
+    public static string Title =>
 @"
   ████████          ██                ██          ████████      
  ██████████         ████████████████████         ██████████     

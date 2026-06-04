@@ -1,8 +1,13 @@
 {
   "name": "topsy-turvy",
+  "publisher": "bwhazel",
   "displayName": "Topsy Turvy",
-  "description": "Language support for Topsy Turvy (.topsy) files, including syntax highlighting and LSP diagnostics.",
-  "version": "0.0.1",
+  "description": "Rich language support for Topsy Turvy (.topsy) files, including syntax highlighting, completions and more.",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhazel/topsy-turvy-lang.git"
+  },
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.120.0"
@@ -18,8 +23,13 @@
     "languages": [
       {
         "id": "topsy-turvy",
-        "aliases": ["Topsy Turvy", "topsy-turvy"],
-        "extensions": [".topsy"],
+        "aliases": [
+          "Topsy Turvy",
+          "topsy-turvy"
+        ],
+        "extensions": [
+          ".topsy"
+        ],
         "configuration": "./language-configuration.json",
         "icon": {
           "light": "./images/topsy-turvy-file-icon.svg",
@@ -37,21 +47,10 @@
     "configuration": {
       "title": "Topsy Turvy",
       "properties": {
-        "topsy-turvy.serverPath": {
-          "type": "string",
-          "default": "",
-          "description": "Absolute path to the Topsy Turvy language server executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
-        },
-        "topsy-turvy.buildConfiguration": {
-          "type": "string",
-          "default": "Debug",
-          "enum": ["Debug", "Release"],
-          "description": "Build configuration used when locating the language server and CLI binaries (Debug or Release). Ignored when the respective path override is set."
-        },
         "topsy-turvy.cliPath": {
           "type": "string",
           "default": "",
-          "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the default path resolved from topsy-turvy.buildConfiguration."
+          "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the bundled binary."
         }
       }
     },
@@ -113,15 +112,22 @@
       {
         "language": "topsy-turvy",
         "scopes": {
-          "variable":  ["variable.other.readwrite"],
-          "parameter": ["variable.parameter"],
-          "function":  ["entity.name.function"]
+          "variable": [
+            "variable.other.readwrite"
+          ],
+          "parameter": [
+            "variable.parameter"
+          ],
+          "function": [
+            "entity.name.function"
+          ]
         }
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
+    "vscode:prepublish": "npm run prebuild:dotnet && npm run package",
+    "prebuild:dotnet": "node scripts/publish-cli.mjs",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
@@ -132,7 +138,13 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
+    "test": "vscode-test",
+    "test:grammar": "vscode-tmgrammar-test -g syntaxes/topsy-turvy.tmLanguage.json 'tests/grammar/*.topsy-test'",
+    "test:unit": "mocha --ui tdd 'out/test/unit/**/*.test.js'",
+    "test:integration": "vscode-test --config .vscode-test.integration.mjs",
+    "test:all": "npm run compile-tests && npm run test:grammar && npm run test:unit && npm run test:integration"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -142,9 +154,12 @@
     "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.3",
+    "eslint-config-prettier": "^10.1.5",
     "npm-run-all": "^4.1.5",
+    "prettier": "^3.5.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vscode-tmgrammar-test": "^0.1.3"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

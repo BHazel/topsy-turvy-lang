@@ -19,7 +19,6 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 public class DefinitionHandler : DefinitionHandlerBase
 {
-    private const string LanguageId = "topsy-turvy";
     private readonly DocumentStateManager documentStateManager;
 
     /// <summary>
@@ -36,7 +35,7 @@ public class DefinitionHandler : DefinitionHandlerBase
         DefinitionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
-            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageId)
+            DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
     /// <inheritdoc/>
@@ -64,7 +63,7 @@ public class DefinitionHandler : DefinitionHandlerBase
             DocumentUri definitionUri = request.TextDocument.Uri;
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
             {
-                (definitionUri, info) = this.FindSymbolInOtherDocuments(request.TextDocument.Uri, word);
+                (definitionUri, info) = this.documentStateManager.FindSymbolWithUriInOtherDocuments(word, request.TextDocument.Uri);
             }
 
             if (info is null || info.DefinitionLine == 0)
@@ -74,11 +73,11 @@ public class DefinitionHandler : DefinitionHandlerBase
 
             int startLine = info.DefinitionLine - 1;
             int startChar = info.DefinitionColumn - 1;
-            int endChar   = startChar + word.Length;
+            int endChar = startChar + word.Length;
 
             LocationOrLocationLink location = new(new Location
             {
-                Uri   = definitionUri,
+                Uri = definitionUri,
                 Range = new LspRange(
                     new Position(startLine, startChar),
                     new Position(startLine, endChar))
@@ -92,31 +91,4 @@ public class DefinitionHandler : DefinitionHandlerBase
         }
     }
 
-    /// <summary>
-    /// Searches all open documents other than the current one for a symbol with the given name.
-    /// </summary>
-    /// <param name="currentUri">The URI of the requesting document which is excluded.</param>
-    /// <param name="name">The symbol name to find.</param>
-    /// <returns>
-    /// The URI of the document containing the symbol and its <see cref="SymbolInfo"/>,
-    /// or the current URI and <c>null</c> if not found.
-    /// </returns>
-    private (DocumentUri Uri, SymbolInfo? Info) FindSymbolInOtherDocuments(DocumentUri currentUri, string name)
-    {
-        string currentKey = currentUri.ToString();
-        foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
-        {
-            if (otherUri.ToString() == currentKey || otherState.SymbolTable is null)
-            {
-                continue;
-            }
-
-            if (otherState.SymbolTable.TryGetSymbol(name, out SymbolInfo? info) && info is not null)
-            {
-                return (otherUri, info);
-            }
-        }
-
-        return (currentUri, null);
-    }
 }

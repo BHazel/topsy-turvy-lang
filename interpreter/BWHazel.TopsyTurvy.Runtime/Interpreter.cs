@@ -67,7 +67,7 @@ public sealed class Interpreter
             ? Path.GetDirectoryName(Path.GetFullPath(sourceFilePath))
             : null;
         this.fileResolver = fileResolver;
-        
+
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
@@ -375,26 +375,38 @@ public sealed class Interpreter
     }
 
     /// <summary>
+    /// Checks for cancellation, then executes the loop body statements.
+    /// </summary>
+    /// <param name="body">The loop body statements to execute.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns><c>true</c> if execution should continue to the next iteration, <c>false</c> if a break was requested.</returns>
+    private bool ExecuteLoopBody(IReadOnlyList<Statement> body, TopsyTurvyEnvironment environment)
+    {
+        this.CheckCancellation();
+        try
+        {
+            this.ExecuteStatements(body, environment);
+        }
+        catch (ContinueSignalException)
+        {
+        }
+        catch (BreakSignalException)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Executes an infinite loop.
     /// </summary>
     /// <param name="loopBody">The body of the loop.</param>
     /// <param name="environment">The environment.</param>
     private void ExecuteInfiniteLoop(IReadOnlyList<Statement> loopBody, TopsyTurvyEnvironment environment)
     {
-        while (true)
+        while (this.ExecuteLoopBody(loopBody, environment))
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(loopBody, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
-            {
-                break;
-            }
         }
     }
 
@@ -410,15 +422,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }
@@ -439,15 +443,7 @@ public sealed class Interpreter
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }
@@ -466,15 +462,7 @@ public sealed class Interpreter
     {
         while (this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
-            this.CheckCancellation();
-            try
-            {
-                this.ExecuteStatements(node.Body, environment);
-            }
-            catch (ContinueSignalException)
-            {
-            }
-            catch (BreakSignalException)
+            if (!this.ExecuteLoopBody(node.Body, environment))
             {
                 return;
             }
@@ -560,10 +548,10 @@ public sealed class Interpreter
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the expression type is unhandled.</exception>
     private TopsyTurvyValue EvaluateExpression(Expression expression, TopsyTurvyEnvironment environment) => expression switch
     {
-        LiteralNode literal          => EvaluateLiteral(literal),
-        IdentifierNode ident         => environment.Get(ident.Name),
-        PrefixExpressionNode prefix  => EvaluatePrefix(prefix, environment),
-        _                            => throw new TopsyTurvyRuntimeException(
+        LiteralNode literal => EvaluateLiteral(literal),
+        IdentifierNode ident => environment.Get(ident.Name),
+        PrefixExpressionNode prefix => EvaluatePrefix(prefix, environment),
+        _ => throw new TopsyTurvyRuntimeException(
                                             $"Unhandled expression type: {expression.GetType().Name}",
                                             expression.Span)
     };
@@ -577,11 +565,11 @@ public sealed class Interpreter
     private static TopsyTurvyValue EvaluateLiteral(LiteralNode node) => node.Type switch
     {
         LiteralType.Integer => TopsyTurvyValue.Integer((int)node.Value!),
-        LiteralType.Float   => TopsyTurvyValue.Float((double)node.Value!),
-        LiteralType.String  => TopsyTurvyValue.String((string)node.Value!),
+        LiteralType.Float => TopsyTurvyValue.Float((double)node.Value!),
+        LiteralType.String => TopsyTurvyValue.String((string)node.Value!),
         LiteralType.Boolean => TopsyTurvyValue.Boolean((bool)node.Value!),
-        LiteralType.Null    => TopsyTurvyValue.Null(),
-        _                   => throw new TopsyTurvyRuntimeException($"Unknown literal type: {node.Type}")
+        LiteralType.Null => TopsyTurvyValue.Null(),
+        _ => throw new TopsyTurvyRuntimeException($"Unknown literal type: {node.Type}")
     };
 
     /// <summary>
@@ -811,11 +799,11 @@ public sealed class Interpreter
         return left.TopsyTurvyType switch
         {
             LiteralType.Integer => (int)left.RawValue! == (int)right.RawValue!,
-            LiteralType.Float   => (double)left.RawValue! == (double)right.RawValue!,
-            LiteralType.String  => string.Equals((string)left.RawValue!, (string)right.RawValue!, StringComparison.Ordinal),
+            LiteralType.Float => (double)left.RawValue! == (double)right.RawValue!,
+            LiteralType.String => string.Equals((string)left.RawValue!, (string)right.RawValue!, StringComparison.Ordinal),
             LiteralType.Boolean => (bool)left.RawValue! == (bool)right.RawValue!,
-            LiteralType.Null    => true,
-            _                   => false
+            LiteralType.Null => true,
+            _ => false
         };
     }
 
@@ -984,11 +972,11 @@ public sealed class Interpreter
 
         return literal switch
         {
-            int i    => value.TopsyTurvyType == LiteralType.Integer && (int)value.RawValue! == i,
-            double d => value.TopsyTurvyType == LiteralType.Float   && (double)value.RawValue! == d,
-            string s => value.TopsyTurvyType == LiteralType.String  && string.Equals((string)value.RawValue!, s, StringComparison.Ordinal),
-            bool b   => value.TopsyTurvyType == LiteralType.Boolean && (bool)value.RawValue! == b,
-            _        => false
+            int i => value.TopsyTurvyType == LiteralType.Integer && (int)value.RawValue! == i,
+            double d => value.TopsyTurvyType == LiteralType.Float && (double)value.RawValue! == d,
+            string s => value.TopsyTurvyType == LiteralType.String && string.Equals((string)value.RawValue!, s, StringComparison.Ordinal),
+            bool b => value.TopsyTurvyType == LiteralType.Boolean && (bool)value.RawValue! == b,
+            _ => false
         };
     }
 
@@ -1031,7 +1019,7 @@ public sealed class Interpreter
     private static double ToDouble(TopsyTurvyValue value) => value.TopsyTurvyType switch
     {
         LiteralType.Integer => (double)(int)value.RawValue!,
-        LiteralType.Float   => (double)value.RawValue!,
-        _                   => throw new InvalidOperationException("Value is not numeric.")
+        LiteralType.Float => (double)value.RawValue!,
+        _ => throw new InvalidOperationException("Value is not numeric.")
     };
 }

@@ -17,6 +17,7 @@ public static class SorcererCommandBuilder
         sorcererCommand.Aliases.Add("dev");
 
         sorcererCommand.Subcommands.Add(PromptbookCommandBuilder.Build());
+        sorcererCommand.Subcommands.Add(IncantationCommandBuilder.Build());
 
         return sorcererCommand;
     }

@@ -52,9 +52,9 @@ public class ProgramExecutionResult
     /// <returns>A <see cref="ProgramExecutionResult"/> representing a failed execution.</returns>
     public static ProgramExecutionResult Failure(string message) =>
         new()
-        { 
-            IsSuccess = false, 
-            ErrorMessage = message 
+        {
+            IsSuccess = false,
+            ErrorMessage = message
         };
 
     /// <summary>
@@ -63,10 +63,10 @@ public class ProgramExecutionResult
     /// <param name="errors">The list of syntax errors.</param>
     /// <returns>A <see cref="ProgramExecutionResult"/> representing a failed execution due to syntax errors.</returns>
     public static ProgramExecutionResult SyntaxError(IEnumerable<string> errors) =>
-        new() 
-        { 
-            IsSuccess = false, 
-            SyntaxErrors = new List<string>(errors).AsReadOnly() 
+        new()
+        {
+            IsSuccess = false,
+            SyntaxErrors = new List<string>(errors).AsReadOnly()
         };
 
     /// <summary>
@@ -75,9 +75,9 @@ public class ProgramExecutionResult
     /// <param name="diagnostics">The list of runtime diagnostics.</param>
     /// <returns>A <see cref="ProgramExecutionResult"/> representing a failed execution due to runtime errors.</returns>
     public static ProgramExecutionResult RuntimeError(IEnumerable<Diagnostic> diagnostics) =>
-        new() 
-        { 
-            IsSuccess = false, 
-            RuntimeDiagnostics = new List<Diagnostic>(diagnostics).AsReadOnly() 
+        new()
+        {
+            IsSuccess = false,
+            RuntimeDiagnostics = new List<Diagnostic>(diagnostics).AsReadOnly()
         };
 }

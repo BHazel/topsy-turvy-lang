@@ -1,6 +1,6 @@
 using BWHazel.TopsyTurvy.Analysis;
 
-namespace BWHazel.TopsyTurvy.Tests;
+namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
 /// <summary>
 /// Tests for the <see cref="SourceFormatter"/> class.
@@ -13,7 +13,7 @@ public class SourceFormatterTests
     [Fact]
     public void FormatSource_WithEmptySource_ReturnsEmpty()
     {
-        Assert.Equal(string.Empty, SourceFormatter.FormatSource(string.Empty));
+        SourceFormatter.FormatSource(string.Empty).ShouldBe(string.Empty);
     }
 
     /// <summary>
@@ -24,7 +24,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -35,11 +35,11 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\n\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents delarations inside a PRINCIPALS block by one level.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents declarations inside a PRINCIPALS block by one level.
     /// </summary>
     [Fact]
     public void FormatSource_WithPrincipalsBlock_IndentsDeclarations()
@@ -47,7 +47,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nPRINCIPALS\nPRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
         string expected = "HARK! \"Test\"\nPRINCIPALS\n  PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -59,23 +59,23 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\nBEHOLD \"hello\"\nMY DUTY IS DISCHARGED.\nFINALE.";
         string expected = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\n  BEHOLD \"hello\"\nMY DUTY IS DISCHARGED.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents a conditional <c>true</c> block by one level and double-indents its body.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method indents a conditional true block by one level and double-indents its body.
     /// </summary>
     [Fact]
     public void FormatSource_WithIfBlock_IndentsCorrectly()
     {
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\nSO MUCH FOR THAT.\nFINALE.";
-        
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
-    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method decreases a <c>false</c> block depth (mid-block keyword) by one level then increases it again.
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method decreases a false block depth (mid-block keyword) by one level then increases it again.
     /// </summary>
     [Fact]
     public void FormatSource_WithElseBlock_IndentsOtherwiseMidBlock()
@@ -83,7 +83,19 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nOTHERWISE,\nBEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
         string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\n  OTHERWISE,\n    BEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SourceFormatter.FormatSource"/> method treats an Else-If block as a mid-block keyword, decreasing depth before writing it and increasing depth after.
+    /// </summary>
+    [Fact]
+    public void FormatSource_WithElseIfBlock_IndentsOrIfNotAsMidBlock()
+    {
+        string input = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nBEHOLD \"yes\"\nOR, IF NOT,\nBEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
+        string expected = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\n  QUITE SO.\n    BEHOLD \"yes\"\n  OR, IF NOT,\n    BEHOLD \"no\"\nSO MUCH FOR THAT.\nFINALE.";
+
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -95,7 +107,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nIN WHICH CAPACITY?\nWHEN ACTING AS 1\nBEHOLD \"one\"\nNOTHING COULD BE MORE SATISFACTORY.\nFINALE.";
         string expected = "HARK! \"Test\"\nIN WHICH CAPACITY?\n  WHEN ACTING AS 1\n    BEHOLD \"one\"\nNOTHING COULD BE MORE SATISFACTORY.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -107,7 +119,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nBY A LEGAL FICTION\nBEHOLD \"loop\"\nTHE TERM EXPIRES.\nFINALE.";
         string expected = "HARK! \"Test\"\nBY A LEGAL FICTION\n  BEHOLD \"loop\"\nTHE TERM EXPIRES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -119,7 +131,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nWITH THE GREATEST RESPECT,\nBEHOLD \"try\"\nWITH GRATITUDE\nBEHOLD \"success\"\nMODIFIED RAPTURE\nBEHOLD \"error\"\nTHAT CONCLUDES THE MATTER.\nFINALE.";
         string expected = "HARK! \"Test\"\nWITH THE GREATEST RESPECT,\n  BEHOLD \"try\"\nWITH GRATITUDE\n  BEHOLD \"success\"\nMODIFIED RAPTURE\n  BEHOLD \"error\"\nTHAT CONCLUDES THE MATTER.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -131,7 +143,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nPRINCIPALS\n          PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
         string expected = "HARK! \"Test\"\nPRINCIPALS\n  PRAY WELCOME x AS A PEER BEING 0\nTHE CURTAIN RISES.\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -142,7 +154,7 @@ public class SourceFormatterTests
     {
         string input = "HARK! \"Title\"\nor, \"Subtitle\"\nFINALE.";
         string expected = "HARK! \"Title\"\n  or, \"Subtitle\"\nFINALE.";
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -154,7 +166,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nbehold \"hello\"\nFINALE.";
         string expected = "HARK! \"Test\"\nBEHOLD \"hello\"\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -166,7 +178,7 @@ public class SourceFormatterTests
         string input = "HARK! \"Test\"\nsum of 1 AND 2\nFINALE.";
         string expected = "HARK! \"Test\"\nSUM OF 1 AND 2\nFINALE.";
 
-        Assert.Equal(expected, SourceFormatter.FormatSource(input));
+        SourceFormatter.FormatSource(input).ShouldBe(expected);
     }
 
     /// <summary>
@@ -176,7 +188,7 @@ public class SourceFormatterTests
     public void FormatSource_WithKeywordInsideStringLiteral_NotNormalised()
     {
         string source = "HARK! \"Test\"\nBEHOLD \"behold this\"\nFINALE.";
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -187,7 +199,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\nBEHOLD \"hello\" ASIDE: behold this\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -198,7 +210,7 @@ public class SourceFormatterTests
     {
         string source = "HARK! \"Test\"\n(ASIDE, AT SOME LENGTH: behold this END OF ASIDE.)\nFINALE.";
 
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 
     /// <summary>
@@ -208,7 +220,7 @@ public class SourceFormatterTests
     public void FormatSource_WithMultiLineBlockComment_AllLinesWrittenVerbatim()
     {
         string source = "HARK! \"Test\"\n(ASIDE, AT SOME LENGTH:\n  behold this\n  should it transpire\nEND OF ASIDE.)\nFINALE.";
-        
-        Assert.Equal(source, SourceFormatter.FormatSource(source));
+
+        SourceFormatter.FormatSource(source).ShouldBe(source);
     }
 }

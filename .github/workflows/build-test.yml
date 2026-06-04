@@ -1,0 +1,86 @@
+name: Build & Test
+on:
+  push:
+  workflow_call:
+jobs:
+  language-toolchain:
+    name: Language Toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: 'interpreter/**/*.csproj'
+      - name: Install PowerShell
+        run: |
+          dotnet tool update -g powershell
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+      - name: Build Solution
+        run: |
+          dotnet build interpreter/BWHazel.TopsyTurvy.slnx --no-incremental      
+      - name: Install Playwright Browsers
+        run: |
+          pwsh interpreter/BWHazel.TopsyTurvy.WebEditor.E2ETests/bin/Debug/net10.0/playwright.ps1 install chromium --with-deps
+      - name: Run Unit Tests
+        run: |
+          dotnet test interpreter/BWHazel.TopsyTurvy.Tests
+      - name: Run CLI E2E Tests
+        run: |
+          dotnet test interpreter/BWHazel.TopsyTurvy.Cli.E2ETests
+      - name: Run Web Editor E2E Tests
+        run: |
+          dotnet test interpreter/BWHazel.TopsyTurvy.WebEditor.E2ETests
+  vscode-extension:
+    name: VS Code Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: 'interpreter/**/*.csproj'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: 'extensions/vscode/topsy-turvy/package-lock.json'
+      - name: Build CLI
+        run: |
+          dotnet build interpreter/BWHazel.TopsyTurvy.Cli
+      - name: Install NPM Dependencies
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm ci
+      - name: Compile VS Code Extension
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm run compile
+      - name: Compile VS Code Extension Tests
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm run compile-tests
+      - name: Run Grammar Tests
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm run test:grammar
+      - name: Run Unit Tests
+        working-directory: extensions/vscode/topsy-turvy
+        run: |
+          npm run test:unit
+      - name: Install VS Code System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxss1 libxtst6
+      - name: Run Integration Tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: npm run test:integration
+          working-directory: extensions/vscode/topsy-turvy

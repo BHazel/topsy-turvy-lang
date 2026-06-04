@@ -1,0 +1,55 @@
+// SYNTAX TEST "source.topsy"
+
+// ── Strings ───────────────────────────────────────────────────────────────────
+
+BEHOLD "hello world"
+//     ^ string.quoted.double.topsy
+
+// ── String escape sequences ───────────────────────────────────────────────────
+
+BEHOLD "~n"
+//      ^ constant.character.escape.topsy
+
+BEHOLD "~t"
+//      ^ constant.character.escape.topsy
+
+BEHOLD "~""
+//      ^ constant.character.escape.topsy
+
+BEHOLD "~~"
+//      ^ constant.character.escape.topsy
+
+// ── Numeric literals ──────────────────────────────────────────────────────────
+
+PRAY WELCOME n AS A PEER BEING 42
+//                              ^^ constant.numeric.integer.topsy
+
+PRAY WELCOME f AS A FATHOM BEING 3.14
+//                                ^ constant.numeric.float.topsy
+
+// ── Boolean literals ──────────────────────────────────────────────────────────
+
+PRAY WELCOME b1 AS A DECREE BEING VERITY
+//                                 ^ constant.language.boolean.topsy
+
+PRAY WELCOME b2 AS A DECREE BEING NAY
+//                                 ^ constant.language.boolean.topsy
+
+// ── Null literal ─────────────────────────────────────────────────────────────
+
+PRAY WELCOME x AS A PEER BEING NAUGHT
+//                              ^ constant.language.null.topsy
+
+// ── Type names ────────────────────────────────────────────────────────────────
+
+PEER
+//^ storage.type.topsy
+
+FATHOM
+//^ storage.type.topsy
+
+YARN
+//^ storage.type.topsy
+
+DECREE
+//^ storage.type.topsy
