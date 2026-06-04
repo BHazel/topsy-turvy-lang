@@ -35,7 +35,7 @@ function resolveRid() {
         : 'linux-x64';
 }
 
-const rid = resolveRid();
+const rid = process.env.DOTNET_RID ?? resolveRid();
 
 console.log(`Cleaning ${outputDirectory}`);
 rmSync(outputDirectory, {

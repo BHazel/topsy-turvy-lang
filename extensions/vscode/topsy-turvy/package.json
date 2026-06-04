@@ -1,8 +1,13 @@
 {
   "name": "topsy-turvy",
+  "publisher": "bwhazel",
   "displayName": "Topsy Turvy",
-  "description": "Language support for Topsy Turvy (.topsy) files, including syntax highlighting and LSP diagnostics.",
-  "version": "0.0.1",
+  "description": "Rich language support for Topsy Turvy (.topsy) files, including syntax highlighting, completions and more.",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhazel/topsy-turvy-lang.git"
+  },
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.120.0"
