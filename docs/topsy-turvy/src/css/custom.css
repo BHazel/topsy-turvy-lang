@@ -1,0 +1,44 @@
+:root {
+  --ifm-color-primary: #9b2335;
+  --ifm-color-primary-dark: #8c1f2f;
+  --ifm-color-primary-darker: #841d2c;
+  --ifm-color-primary-darkest: #6c1724;
+  --ifm-color-primary-light: #aa273b;
+  --ifm-color-primary-lighter: #b22940;
+  --ifm-color-primary-lightest: #c43049;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --tt-gold: #c9a84c;
+  --tt-gold-light: #e8c96e;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #e8a0ab;
+  --ifm-color-primary-dark: #e28898;
+  --ifm-color-primary-darker: #de7c8d;
+  --ifm-color-primary-darkest: #d55571;
+  --ifm-color-primary-light: #eeb8c0;
+  --ifm-color-primary-lighter: #f1c4ca;
+  --ifm-color-primary-lightest: #f8dfe2;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --tt-gold: #e8c96e;
+  --tt-gold-light: #f5e0a0;
+}
+
+.hero__title {
+  font-style: italic;
+}
+
+.hero--primary {
+  --ifm-hero-background-color: #1a0a0d;
+  --ifm-hero-text-color: #f5e9d0;
+}
+
+[data-theme='dark'] .hero--primary {
+  --ifm-hero-background-color: #0e0508;
+}
+
+.navbar__title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
