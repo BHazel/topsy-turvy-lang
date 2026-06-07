@@ -56,6 +56,7 @@ public sealed class Interpreter
     /// <remarks>
     ///  When the <paramref name="fileResolver"/> parameter is supplied, the real file system is not accessed for imports.
     /// This is intended for virtual file systems such as a WebAssembly environments.
+    /// </remarks>
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
     public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null, string? sourceFilePath = null, Func<string, string?>? fileResolver = null)
     {

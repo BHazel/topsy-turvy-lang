@@ -45,7 +45,7 @@ internal static class LspUtilities
     }
 
     /// <summary>
-    /// Maps a Topsy Turvy <see cref="SymbolKind"/> to the corresponding LSP <see cref="LspSymbolKind"/>.
+    /// Maps a Topsy Turvy <see cref="BWHazel.TopsyTurvy.Analysis.SymbolKind"/> to the corresponding LSP <see cref="LspSymbolKind"/>.
     /// </summary>
     /// <param name="kind">The Topsy Turvy symbol kind.</param>
     /// <returns>The LSP symbol kind.</returns>

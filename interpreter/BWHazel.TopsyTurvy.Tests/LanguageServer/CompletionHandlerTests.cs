@@ -25,7 +25,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
         """;
 
     /// <summary>
-    /// Tests that the <see cref="CompletionHandler.Handle"/> method always returns keyword completions even when no document state exists.
+    /// Tests that the <see cref="CompletionHandler"/> method always returns keyword completions even when no document state exists.
     /// </summary>
     [Fact]
     public async Task Handle_WithNoDocumentState_ReturnsKeywords()
@@ -41,7 +41,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="CompletionHandler.Handle"/> method includes declared symbols alongside keywords.
+    /// Tests that the <see cref="CompletionHandler"/> method includes declared symbols alongside keywords.
     /// </summary>
     [Fact]
     public async Task Handle_WithDocumentContainingSymbols_IncludesSymbolsInItems()
@@ -56,7 +56,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="CompletionHandler.Handle"/> method includes function symbols with function completion kind.
+    /// Tests that the <see cref="CompletionHandler"/> method includes function symbols with function completion kind.
     /// </summary>
     [Fact]
     public async Task Handle_WithDocumentContainingFunction_IncludesFunctionItemWithCorrectKind()
@@ -71,7 +71,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="CompletionHandler.Handle"/> method filters keyword items by the phrase typed before the cursor.
+    /// Tests that the <see cref="CompletionHandler"/> method filters keyword items by the phrase typed before the cursor.
     /// </summary>
     [Fact]
     public async Task Handle_WithPartialKeywordTyped_FiltersKeywordListToMatches()
@@ -87,7 +87,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="CompletionHandler.Handle"/> method imports function symbols from other open documents.
+    /// Tests that the <see cref="CompletionHandler"/> method imports function symbols from other open documents.
     /// </summary>
     [Fact]
     public async Task Handle_WithFunctionInOtherDocument_IncludesImportedFunctionItem()

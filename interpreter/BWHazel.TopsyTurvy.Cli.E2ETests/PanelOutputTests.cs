@@ -8,8 +8,8 @@ namespace BWHazel.TopsyTurvy.Cli.E2ETests;
 /// </summary>
 /// <remarks>
 /// Initialises a new instance of the <see cref="PanelOutputTests"/> class.
-/// All assertions target stdout.  Without --tiptoe, the <see cref="PanelHelper"/> class routes all output
-/// through <see cref="Spectre.Console.AnsiConsole.Write"/>, which writes to standard output. When stdout
+/// All assertions target stdout.  Without --tiptoe, the <c>PanelHelper</c> class routes all output
+/// through <c>AnsiConsole.Write</c>, which writes to standard output. When stdout
 /// is redirected, ANSI escape codes are stripped but panel header text and body text remain in the captured
 /// output.
 /// </remarks>

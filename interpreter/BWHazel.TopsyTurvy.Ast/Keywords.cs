@@ -4,8 +4,8 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// Defines Topsy Turvy language keyword strings.
 /// </summary>
 /// <remarks>
-/// These constants are generally used wherever a keyword string is compared, looked up, or passed programmatically,
-/// but not necessarily everywhere.  In some situations string literlas may be used directly for readability.
+/// These constants are provided for convenience and consistency to ensure that the same string literals are used where necessary.
+/// However, they are not necessarily used throughout the entire codebase; this is intended for readability, especially in the Parser.
 /// </remarks>
 public static class Keywords
 {
