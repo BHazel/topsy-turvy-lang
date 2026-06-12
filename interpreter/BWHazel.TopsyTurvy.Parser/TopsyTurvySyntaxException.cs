@@ -6,6 +6,10 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <summary>
 /// Exception raised when the source text contains syntax errors.
 /// </summary>
+/// <remarks>
+/// This exceptions is typically thrown during paring of a Topsy Turvy programme when syntax errors occur, although it should be noted
+/// it is also used on semantic errors.  It is not intended to be used in user code.
+/// </remarks>
 public class TopsyTurvySyntaxException : Exception
 {
     /// <summary>

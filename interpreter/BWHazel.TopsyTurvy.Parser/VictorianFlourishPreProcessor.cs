@@ -6,6 +6,20 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <summary>
 /// Pre-processor that handles the Victorian Flourish (<c>~</c>) line-continuation character.
 /// </summary>
+/// <remarks>
+/// This pre-processor transforms original source text by scanning for lines that end with the <c>~</c> line continuation character,
+/// removes the continuation character and joins the line with its successor.  For example, the input:
+/// <code>
+/// I am the very model~
+/// of a modern major general.
+/// </code>
+/// would be transformed to:
+/// <code>
+/// I am the very model of a modern major general.
+/// </code>
+/// It should be noted that source mappings are always added for the start of each line in the original source, therefore the
+/// <see cref="SourceMapping.OriginalColumn"/> is always 1.
+/// </remarks>
 public class VictorianFlourishPreProcessor : ITopsyTurvyPreProcessor
 {
     /// <summary>

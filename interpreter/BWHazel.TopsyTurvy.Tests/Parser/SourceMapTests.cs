@@ -28,7 +28,7 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetBeforeFirstMapping_ReturnsLineOneColumnOne()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 10, originalLine: 3, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 10, originalLine: 3, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
@@ -43,7 +43,7 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetAtFirstMapping_ReturnsFirstMappingPosition()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
@@ -58,8 +58,8 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetAtSecondMapping_ReturnsSecondMappingPosition()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 10, originalLine: 2, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 10, originalLine: 2, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(10);
 
@@ -74,8 +74,8 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetBetweenMappings_ReturnsEarlierMappingWithColumnOffset()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 10, originalLine: 2, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 10, originalLine: 2, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(5);
 
@@ -90,8 +90,8 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetAfterLastMapping_ReturnsLastMappingWithColumnOffset()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 10, originalLine: 2, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 10, originalLine: 2, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(15);
 
@@ -106,10 +106,10 @@ public class SourceMapTests
     public void GetOriginalLocation_WithManyMappings_SelectsCorrectMapping()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 10, originalLine: 2, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 20, originalLine: 3, originalColumn: 1);
-        sourceMap.AddMapping(preProcessedOffset: 30, originalLine: 4, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 10, originalLine: 2, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 20, originalLine: 3, originalColumn: 1);
+        sourceMap.AddMapping(transformedOffset: 30, originalLine: 4, originalColumn: 1);
 
         (int line, int column) = sourceMap.GetOriginalLocation(25);
 
@@ -124,7 +124,7 @@ public class SourceMapTests
     public void GetOriginalLocation_WithOffsetAtMappingStart_ReturnsBaseColumn()
     {
         SourceMap sourceMap = new();
-        sourceMap.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 5);
+        sourceMap.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 5);
 
         (int line, int column) = sourceMap.GetOriginalLocation(0);
 
@@ -139,8 +139,8 @@ public class SourceMapTests
     public void AddMapping_WhenCalledRepeatedly_AllMappingsAreReflected()
     {
         SourceMap map = new();
-        map.AddMapping(preProcessedOffset: 0, originalLine: 1, originalColumn: 1);
-        map.AddMapping(preProcessedOffset: 5, originalLine: 2, originalColumn: 1);
+        map.AddMapping(transformedOffset: 0, originalLine: 1, originalColumn: 1);
+        map.AddMapping(transformedOffset: 5, originalLine: 2, originalColumn: 1);
 
         (int line1, _) = map.GetOriginalLocation(0);
         (int line2, _) = map.GetOriginalLocation(5);

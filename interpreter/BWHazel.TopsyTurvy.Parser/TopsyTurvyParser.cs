@@ -1,23 +1,131 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Superpower;
 using Superpower.Model;
 using BWHazel.TopsyTurvy.Ast;
+using static BWHazel.TopsyTurvy.Parser.ParserHelpers;
 
 namespace BWHazel.TopsyTurvy.Parser;
 
 /// <summary>
 /// Public entry point for parsing a Topsy Turvy source file into an AST.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The Topsy Turvy Parser is the top and main entry point for the Parser which builds on top of the lexer and expression and
+/// statement parsers to build a single <see cref="ProgramNode"/> AST component.  It comprises a single parser for a programme,
+/// which is made up of parsers from lower levels for statements and expressions.
+/// </para>
+/// <para>
+/// ### Programme Parser
+/// The <c>ProgramParser</c> parser matches on a complete Topsy Turvy programme, returning a <see cref="ProgramNode"/> with the
+/// programme title, optional subtitle and the list of top-level statements that form the programme body:
+/// * It first matches the <c>HARK!</c> keyword that opens every programme.
+/// * It then matches required whitespace followed by a string literal for the programme title.
+/// * It tries to match an optional subtitle, back-tracking if not present:
+///     * It matches required whitespace followed by the <c>or,</c> keyword.
+///     * It then matches required whitespace followed by a string literal for the subtitle.
+///     * If no subtitle is present, a default value of <c>null</c> is used.
+/// * It then matches zero or more statements, each preceded by required whitespace, back-tracking on each attempt that does not match a known statement form.
+/// * Finally, it matches the <c>FINALE.</c> keyword that closes every programme.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// ASIDE: Programme with subtitle.
+/// HARK! "The Mikado"
+///   or, "The Town of Titipu"
+/// 
+/// BEHOLD "The Lord High Executioner!"
+/// 
+/// FINALE.
+/// 
+/// ASIDE: Programme without subtitle.
+/// HARK! "Patience"
+/// 
+/// PRAY WELCOME LovesickMaidens AS A PEER BEING 20
+/// 
+/// FINALE.
+/// </code>
+/// both would return a <see cref="ProgramNode"/> and for each example:
+/// * The first would have the title <c>The Mikado</c>, a subtitle of <c>The Town of Titipu</c> and a single <c>BEHOLD</c> statement.
+/// * The second would have the title <c>Patience</c>, no subtitle and a single declaration statement.
+/// </para>
+/// <para>
+/// ### Parsing Process
+/// 2 methods are available for parsing a programme depending on how the caller wants to handle parsing errors:
+/// * <see cref="Parse"/> is for callers that treat parse failures as fatal, such as an interpreter.
+/// * <see cref="TryParse"/> is for callers that treat parse errors as data that needs to be inspected and acted upon, such as a code editor.
+/// </para>
+/// <para>
+/// #### Parse (see <see cref="Parse"/>)
+/// After running the <see cref="PreProcessorPipeline"/> it performs a complete parse.
+/// * If parsing was successful it returns a <see cref="ProgramNode"/>.
+/// * If parsing failed, or semantic errors are found even after a successful parse, it throws a <see cref="TopsyTurvySyntaxException"/> for:
+///     * Syntax errors, passing the parse result.
+///     * Semantic errors, such as reserved keywords used as variable or function names, passing identified issues.
+/// </para>
+/// <code>
+/// TopsyTurvyParser parser = new();
+/// string sourceCode = File.ReadAllText("programme.topsy");
+/// try
+/// {
+///     ProgramNode program = parser.Parse(sourceCode);
+///     // Process the program...
+/// }
+/// catch (TopsyTurvySyntaxException ex)
+/// {
+///     Console.WriteLine("Syntax error(s) found:");
+///     foreach (string error in ex.Errors)
+///     {
+///         Console.WriteLine(error);
+///     }
+/// }
+/// </code>
+/// <para>
+/// #### TryParse (see <see cref="TryParse"/>)
+/// As with the <see cref="Parse"/> method, after running the <see cref="PreProcessorPipeline"/> it performs a complete parse.
+/// * If parsing and semantic errors check was successful it returns a <see cref="ParseResult"/> with the <see cref="ParseResult.Program"/> property set to the parsed <see cref="ProgramNode"/> and an empty list of diagnostics.
+/// * On a successful parse but a failed semantic check:
+///     * It returns a <see cref="ParseResult"/> with the <see cref="ParseResult.Program"/> property set to the parsed <see cref="ProgramNode"/> and a list of diagnostics describing the semantic errors found.
+/// * On a failed parse:
+///     * It finds the start of the error based on the parse result, which reports the start of the invalid statement, by scanning forward over any whitespace.
+///     * It then re-parses the invalid statement to get more specific error information if possible, again scanning forward over any whitespace to find the actual start of the error.
+///     * It then finds the end of the line on which the error occurs, or the end of the programme if the error is on the last line, to determine the full span of the error.
+///     * It then maps the error span back to the original source text using the source map from the pre-processor.
+///     * It then builds an error message based on the parser errors.
+///         * If the only error is related to a missing closing <c>FINALE.</c> keyword it builds a message that includes a snippet of the unexpected content.
+///         * Otherwise it builds a message based on the parser error messages.
+/// </para>
+/// <code>
+/// TopsyTurvyParser parser = new();
+/// string sourceCode = File.ReadAllText("programme.topsy");
+/// ParseResult result = parser.TryParse(sourceCode);
+/// if (result.Success)
+/// {
+///     ProgramNode program = result.Program;
+///     // Process the program...
+/// }
+/// else
+/// {
+///     Console.WriteLine("Syntax error(s) found:");
+///     foreach (Diagnostic diagnostic in result.Diagnostics)
+///     {
+///         Console.WriteLine(diagnostic.Message);
+///     }
+/// }
+/// </code>
+/// </remarks>
 public class TopsyTurvyParser
 {
-    private static readonly SourceSpan PlaceholderSpan = new(new(0, 0), new(0, 0));
+    private const int DefaultInvalidContentSnippetLength = 40;
 
     /// <summary>
     /// Every individual word that appears in any Topsy Turvy keyword.
     /// </summary>
-    private static readonly HashSet<string> ReservedWords = new(System.StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ReservedWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "A", "ABOVE", "ACTING", "ADMIT", "ALIKE", "ALL", "AND", "ANY", "APPOINTED", "AS", "ASCENDING",
         "BE", "BEING", "BEHOLD", "BOTH", "BY",
@@ -44,23 +152,26 @@ public class TopsyTurvyParser
         "YARN", "YOU",
     };
 
-    private static TextParser<T> Ws<T>(TextParser<T> parser) =>
-        Lexer.WhitespaceRequired.IgnoreThen(parser);
-
     /// <summary>
     /// Top-level parser for a complete Topsy Turvy program.
     /// </summary>
     private static readonly TextParser<ProgramNode> ProgramParser =
-        from start in Lexer.Keyword("HARK!")
-        from title in Ws(Lexer.StringLiteral.Named("program title"))
-        from subtleOpt in Ws(Lexer.Keyword("or,").IgnoreThen(Ws(Lexer.StringLiteral)))
-                           .Try().OptionalOrDefault(null!)
-        from body in Ws(StatementParser.Statement).Try().Many()
-        from end in Ws(Lexer.Keyword("FINALE.").Named("FINALE. (program end)"))
-        select new ProgramNode
+        from harkKeyword in Lexer.Keyword("HARK!")
+        from title in Ws(Lexer.StringLiteral
+            .Named("program title"))
+        from subtitle in Ws(Lexer.Keyword("or,")
+            .IgnoreThen(Ws(Lexer.StringLiteral)))
+            .Try()
+            .OptionalOrDefault(null!)
+        from body in Ws(StatementParser.Statement)
+            .Try()
+            .Many()
+        from closer in Ws(Lexer.Keyword("FINALE.")
+            .Named("FINALE. (program end)"))
+        select new ProgramNode()
         {
             Title = title,
-            Subtitle = subtleOpt,
+            Subtitle = subtitle,
             Statements = body.ToList(),
             Span = PlaceholderSpan
         };
@@ -73,24 +184,160 @@ public class TopsyTurvyParser
     /// <exception cref="TopsyTurvySyntaxException">Thrown when the source text contains syntax errors.</exception>
     public ProgramNode Parse(string source)
     {
+        PreProcessorPipeline preProcessorPipeline = BuildPreProcessorPipeline();
+        PreProcessResult preProcessorResult = preProcessorPipeline.Execute(source);
+
+        Result<ProgramNode> parseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        if (!parseResult.HasValue)
+        {
+            throw new TopsyTurvySyntaxException([parseResult.ToString()]);
+        }
+
+        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(parseResult.Value, source);
+        if (semanticErrors.Count > 0)
+        {
+            throw new TopsyTurvySyntaxException(semanticErrors.Select(diagnostic => diagnostic.Message).ToArray());
+        }
+
+        return parseResult.Value;
+    }
+
+        /// <summary>
+    /// Attempts to parse the supplied Topsy Turvy source text.
+    /// </summary>
+    /// <param name="source">The raw source code to parse.</param>
+    /// <remarks>
+    /// <para>
+    /// Returns a <see cref="ParseResult"/> that carries either the parsed programme or
+    /// a structured diagnostic on failure.  The <see cref="ParseResult.Success"/> property
+    /// is set to <c>true</c> and <see cref="ParseResult.Program"/> populated on success.
+    /// Otherwise a single <see cref="Diagnostic"/> describing the syntax error with its
+    /// source location is set.
+    /// </para>
+    /// <para>
+    /// Additional offset processing is required as Superpower resets to before
+    /// the <see cref="Ws{T}"/> call: the <c>\n</c> at the end of the previous
+    /// statement, not the invalid line.  The processing skips past any whitespace
+    /// to land on the actual first character of invalid content.
+    /// </para>
+    /// </remarks>
+    /// <returns>
+    /// A <see cref="ParseResult"/> with parsing results.
+    /// </returns>
+    public ParseResult TryParse(string source)
+    {
+        PreProcessorPipeline preProcessorPipeline = BuildPreProcessorPipeline();
+        PreProcessResult preProcessorResult = preProcessorPipeline.Execute(source);
+
+        Result<ProgramNode> programmeParseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        if (!programmeParseResult.HasValue)
+        {
+            // Search forward from reported error position, which is the start of the invalid statement, to find
+            // the first non-whitespace character.
+            string processedText = preProcessorResult.TransformedText;
+            int errorSearchStartOffset = programmeParseResult.ErrorPosition.Absolute;
+            while (errorSearchStartOffset < processedText.Length && char.IsWhiteSpace(processedText[errorSearchStartOffset]))
+            {
+                errorSearchStartOffset++;
+            }
+
+            // Re-parse the invalid statement to get more accurate position and message on the specific error within the statement.
+            int errorOffset = errorSearchStartOffset;
+            string[] errorExpectations = programmeParseResult.Expectations ?? [];
+            if (errorSearchStartOffset < processedText.Length)
+            {
+                Result<Statement> errorResult = StatementParser.Statement.TryParse(processedText[errorSearchStartOffset..]);
+                if (!errorResult.HasValue && errorResult.ErrorPosition.Absolute > 0)
+                {
+                    int specificErrorOffset = errorSearchStartOffset + errorResult.ErrorPosition.Absolute;
+                    while (specificErrorOffset < processedText.Length && char.IsWhiteSpace(processedText[specificErrorOffset]))
+                    {
+                        specificErrorOffset++;
+                    }
+
+                    errorOffset = specificErrorOffset;
+                    errorExpectations = errorResult.Expectations ?? [];
+                }
+            }
+
+            // Find span for the error, which is from the first non-whitespace character of the invalid statement to the end of
+            // the line or end of the programme, whichever comes first.
+            int lineEndOffset = errorOffset;
+            while (lineEndOffset < processedText.Length
+                && processedText[lineEndOffset] != '\n'
+                && processedText[lineEndOffset] != '\r')
+            {
+                lineEndOffset++;
+            }
+
+            // Map the error offsets to the original source locations using the source map from the pre-processor.
+            SourceLocation startLocation = preProcessorResult.SourceMap.GetOriginalLocation(errorOffset);
+            SourceLocation endLocation;
+            if (lineEndOffset > errorOffset)
+            {
+                SourceLocation endLocationTemp = preProcessorResult.SourceMap.GetOriginalLocation(lineEndOffset - 1);
+                endLocation = new(endLocationTemp.Line, endLocationTemp.Column + 1);
+            }
+            else
+            {
+                endLocation = new(startLocation.Line, startLocation.Column + 1);
+            }
+
+            SourceSpan span = new(startLocation, endLocation);
+
+            // Check if the parser expected only FINALE. but found unexpected content, and build error
+            // message that includes the unexpected content.
+            bool onlyExpectsFinale =
+                errorExpectations.Length > 0 &&
+                errorExpectations.All(expectation => expectation.Contains("FINALE"));
+            bool atEndOfFile = errorOffset >= processedText.Length;
+
+            string message;
+            if (onlyExpectsFinale && !atEndOfFile)
+            {
+                // Build error message for missing FINALE. error.
+                string invalidLineContent = processedText[errorOffset..lineEndOffset].Trim();
+                string snippet = invalidLineContent.Length > DefaultInvalidContentSnippetLength
+                    ? invalidLineContent[..DefaultInvalidContentSnippetLength] + "..."
+                    : invalidLineContent;
+
+                message = snippet.Length > 0
+                    ? $"Unexpected: {snippet}"
+                    : "Syntax error";
+            }
+            else
+            {
+                // Build generic error message based on parser errors.
+                message = !string.IsNullOrEmpty(programmeParseResult.ErrorMessage)
+                    ? programmeParseResult.ErrorMessage
+                    : errorExpectations.Length > 0
+                        ? $"Expected: {string.Join(", ", errorExpectations)}"
+                        : "Syntax error";
+            }
+
+            Diagnostic diagnostic = new(message, DiagnosticSeverity.Error, span);
+            return new(null, [diagnostic]);
+        }
+
+        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(programmeParseResult.Value, source);
+        if (semanticErrors.Count > 0)
+        {
+            return new(programmeParseResult.Value, semanticErrors);
+        }
+
+        return new(programmeParseResult.Value, []);
+    }
+
+    /// <summary>
+    /// Builds the pre-processor pipeline used to transform the raw source text before parsing.
+    /// </summary>
+    /// <returns>The configured pre-processor pipeline.</returns>
+    private static PreProcessorPipeline BuildPreProcessorPipeline()
+    {
         PreProcessorPipeline pipeline = new();
         pipeline.AddProcessor(new CommentsPreProcessor());
         pipeline.AddProcessor(new VictorianFlourishPreProcessor());
-        PreProcessResult processed = pipeline.Execute(source);
-
-        Result<ProgramNode> result = ProgramParser.TryParse(processed.Text);
-        if (!result.HasValue)
-        {
-            throw new TopsyTurvySyntaxException([result.ToString()]);
-        }
-
-        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(result.Value, source);
-        if (semanticErrors.Count > 0)
-        {
-            throw new TopsyTurvySyntaxException(semanticErrors.Select(d => d.Message).ToArray());
-        }
-
-        return result.Value;
+        return pipeline;
     }
 
     /// <summary>
@@ -139,25 +386,30 @@ public class TopsyTurvyParser
     /// <param name="kind">Either <c>variable</c> or <c>function</c>, used in the error message.</param>
     /// <param name="sourceLines">The original source split into lines, for span recovery.</param>
     /// <param name="diagnostics">The diagnostic list to append to on a violation.</param>
-    private static void CheckDeclarationName(
-        string name,
-        string kind,
-        string[] sourceLines,
-        List<Diagnostic> diagnostics)
+    private static void CheckDeclarationName(string name, string kind, string[] sourceLines, List<Diagnostic> diagnostics)
     {
         if (!ReservedWords.Contains(name))
         {
             return;
         }
 
-        string message = $"'{name}' is a reserved keyword and cannot be used as a {kind} name.";
+        string errorMessage = $"'{name}' is a reserved keyword and cannot be used as a {kind} name.";
         SourceSpan span = FindDeclarationSpan(name, kind, sourceLines);
-        diagnostics.Add(new(message, DiagnosticSeverity.Error, span));
+        diagnostics.Add(new(errorMessage, DiagnosticSeverity.Error, span));
     }
 
     /// <summary>
     /// Scans the source lines for a declaration and returns its span.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is a temporary work-around to determine the span of a declaration until the parser is enhanced to provide
+    /// this information directly.
+    /// </para>
+    /// <para>
+    /// The span is determined using regular expressions to match a specific declaration and type.
+    /// </para>
+    /// </remarks>
     /// <param name="name">The declared name to locate.</param>
     /// <param name="kind">Either <c>variable</c> or <c>function</c>.</param>
     /// <param name="sourceLines">The original source split into lines.</param>
@@ -179,130 +431,10 @@ public class TopsyTurvyParser
                 int line = lineIndex + 1;
                 int startColumn = match.Groups[1].Index + 1;
                 int endColumn = startColumn + name.Length;
-                return new SourceSpan(new SourceLocation(line, startColumn), new SourceLocation(line, endColumn));
+                return new(new(line, startColumn), new(line, endColumn));
             }
         }
 
-        return new(new SourceLocation(1, 1), new SourceLocation(1, 2));
-    }
-
-    /// <summary>
-    /// Attempts to parse the supplied Topsy Turvy source text.
-    /// </summary>
-    /// <param name="source">The raw source code to parse.</param>
-    /// <remarks>
-    /// <para>
-    /// Returns a <see cref="ParseResult"/> that carries either the parsed programme or
-    /// a structured diagnostic on failure.  The <see cref="ParseResult.Success"/> property
-    /// ia set to <c>true</c> and <see cref="ParseResult.Program"/> populated on success.
-    /// Otherwise a single <see cref="Diagnostic"/> describing the syntax error with its
-    /// source location is set.
-    /// </para>
-    /// <para>
-    /// Additional offset processing is required as Superpower resets to before
-    /// the <see cref="Ws{T}"/> call: the <code>\n</code> at the end of the previous
-    /// statement, not the invalid line.  The processing skips past any whitespace
-    /// to land on the actual first character of invalid content.
-    /// </para>
-    /// </remarks>
-    /// <returns>
-    /// A <see cref="ParseResult"/> with parsing results.
-    /// </returns>
-    public ParseResult TryParse(string source)
-    {
-        PreProcessorPipeline pipeline = new();
-        pipeline.AddProcessor(new CommentsPreProcessor());
-        pipeline.AddProcessor(new VictorianFlourishPreProcessor());
-        PreProcessResult processed = pipeline.Execute(source);
-
-        Result<ProgramNode> result = ProgramParser.TryParse(processed.Text);
-        if (!result.HasValue)
-        {
-            string processedText = processed.Text;
-
-            int startOffset = result.ErrorPosition.Absolute;
-            while (startOffset < processedText.Length && char.IsWhiteSpace(processedText[startOffset]))
-            {
-                startOffset++;
-            }
-
-            int errorOffset = startOffset;
-            string[] errorExpectations = result.Expectations ?? [];
-            if (startOffset < processedText.Length)
-            {
-                Result<Statement> innerResult = StatementParser.Statement.TryParse(processedText.Substring(startOffset));
-                if (!innerResult.HasValue && innerResult.ErrorPosition.Absolute > 0)
-                {
-                    int innerAbsolute = startOffset + innerResult.ErrorPosition.Absolute;
-                    while (innerAbsolute < processedText.Length && char.IsWhiteSpace(processedText[innerAbsolute]))
-                    {
-                        innerAbsolute++;
-                    }
-
-                    errorOffset = innerAbsolute;
-                    errorExpectations = innerResult.Expectations ?? [];
-                }
-            }
-
-            int lineEndOffset = errorOffset;
-            while (lineEndOffset < processedText.Length
-                   && processedText[lineEndOffset] != '\n'
-                   && processedText[lineEndOffset] != '\r')
-            {
-                lineEndOffset++;
-            }
-
-            (int startLine, int startColumn) = processed.SourceMap.GetOriginalLocation(errorOffset);
-            SourceLocation startLocation = new(startLine, startColumn);
-
-            SourceLocation endLocation;
-            if (lineEndOffset > errorOffset)
-            {
-                (int endLine, int endColumn) = processed.SourceMap.GetOriginalLocation(lineEndOffset - 1);
-                endLocation = new(endLine, endColumn + 1);
-            }
-            else
-            {
-                endLocation = new(startLine, startColumn + 1);
-            }
-
-            SourceSpan span = new(startLocation, endLocation);
-
-            bool onlyExpectsFinale = errorExpectations.Length > 0
-                && errorExpectations.All(expectation => expectation.Contains("FINALE"));
-            bool atEndOfFile = errorOffset >= processedText.Length;
-
-            string message;
-            if (onlyExpectsFinale && !atEndOfFile)
-            {
-                string lineContent = processedText.Substring(errorOffset, lineEndOffset - errorOffset).Trim();
-                string snippet = lineContent.Length > 40
-                    ? lineContent.Substring(0, 40) + "..."
-                    : lineContent;
-
-                message = snippet.Length > 0
-                    ? $"Unexpected: {snippet}"
-                    : "Syntax error";
-            }
-            else
-            {
-                message = !string.IsNullOrEmpty(result.ErrorMessage)
-                    ? result.ErrorMessage
-                    : errorExpectations.Length > 0
-                        ? $"Expected: {string.Join(", ", errorExpectations)}"
-                        : "Syntax error";
-            }
-
-            Diagnostic diagnostic = new(message, DiagnosticSeverity.Error, span);
-            return new ParseResult(null, [diagnostic]);
-        }
-
-        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(result.Value, source);
-        if (semanticErrors.Count > 0)
-        {
-            return new ParseResult(result.Value, semanticErrors);
-        }
-
-        return new(result.Value, []);
+        return new(new(1, 1), new(1, 2));
     }
 }

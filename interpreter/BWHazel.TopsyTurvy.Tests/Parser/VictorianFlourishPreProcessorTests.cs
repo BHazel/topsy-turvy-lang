@@ -19,9 +19,9 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldContain("HARK!");
-        result.Text.ShouldContain("BEHOLD");
-        result.Text.ShouldContain("FINALE.");
+        result.TransformedText.ShouldContain("HARK!");
+        result.TransformedText.ShouldContain("BEHOLD");
+        result.TransformedText.ShouldContain("FINALE.");
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldContain("BEHOLD\"hello\"");
+        result.TransformedText.ShouldContain("BEHOLD\"hello\"");
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new SourceMap());
 
-        result.Text.ShouldNotContain("~");
+        result.TransformedText.ShouldNotContain("~");
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldContain("WOVENOF\"a\" AND \"b\" IF YOU PLEASE.");
+        result.TransformedText.ShouldContain("WOVENOF\"a\" AND \"b\" IF YOU PLEASE.");
     }
 
     /// <summary>
@@ -73,8 +73,8 @@ public class VictorianFlourishPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldContain("BEH~OLD");
-        result.Text.ShouldContain("FINALE.");
+        result.TransformedText.ShouldContain("BEH~OLD");
+        result.TransformedText.ShouldContain("FINALE.");
     }
 
     /// <summary>
