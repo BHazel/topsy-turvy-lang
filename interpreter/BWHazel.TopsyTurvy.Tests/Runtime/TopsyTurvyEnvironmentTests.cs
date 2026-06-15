@@ -15,7 +15,7 @@ public class TopsyTurvyEnvironmentTests
     {
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
-        environment.JustSo.TopsyTurvyType.ShouldBe(TopsyTurvyValue.Null().TopsyTurvyType);
+        environment.JustSo.LiteralType.ShouldBe(TopsyTurvyValue.Null().LiteralType);
     }
 
     /// <summary>

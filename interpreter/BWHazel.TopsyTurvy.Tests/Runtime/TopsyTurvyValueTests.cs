@@ -16,7 +16,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Integer(7);
 
-        value.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        value.LiteralType.ShouldBe(LiteralType.Integer);
         value.RawValue.ShouldBe(7);
     }
 
@@ -28,7 +28,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Float(2.5);
 
-        value.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        value.LiteralType.ShouldBe(LiteralType.Float);
         value.RawValue.ShouldBe(2.5);
     }
 
@@ -40,7 +40,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("hello");
 
-        value.TopsyTurvyType.ShouldBe(LiteralType.String);
+        value.LiteralType.ShouldBe(LiteralType.String);
         value.RawValue.ShouldBe("hello");
     }
 
@@ -52,7 +52,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Boolean(true);
 
-        value.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        value.LiteralType.ShouldBe(LiteralType.Boolean);
         value.RawValue.ShouldBe(true);
     }
 
@@ -64,7 +64,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Null();
 
-        value.TopsyTurvyType.ShouldBe(LiteralType.Null);
+        value.LiteralType.ShouldBe(LiteralType.Null);
         value.RawValue.ShouldBeNull();
     }
 
@@ -284,7 +284,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.LiteralType.ShouldBe(LiteralType.Integer);
         result.RawValue.ShouldBe(3);
     }
 
@@ -302,7 +302,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.LiteralType.ShouldBe(LiteralType.Integer);
         result.RawValue.ShouldBe(expectedResult);
     }
 
@@ -316,7 +316,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.LiteralType.ShouldBe(LiteralType.Integer);
         result.RawValue.ShouldBe(0);
     }
 
@@ -330,7 +330,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Integer);
+        result.LiteralType.ShouldBe(LiteralType.Integer);
         result.RawValue.ShouldBe(123);
     }
 
@@ -355,7 +355,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Float);
         result.RawValue.ShouldBe(5.0);
     }
 
@@ -373,7 +373,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Float);
         result.RawValue.ShouldBe(expectedResult);
     }
 
@@ -387,7 +387,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Float);
         result.RawValue.ShouldBe(0.0);
     }
 
@@ -401,7 +401,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Float);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Float);
     }
 
     /// <summary>
@@ -425,7 +425,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.String);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.String);
+        result.LiteralType.ShouldBe(LiteralType.String);
         result.RawValue.ShouldBe("42");
     }
 
@@ -478,7 +478,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Boolean);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        result.LiteralType.ShouldBe(LiteralType.Boolean);
         result.RawValue.ShouldBe(true);
     }
 
@@ -492,7 +492,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Boolean);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Boolean);
+        result.LiteralType.ShouldBe(LiteralType.Boolean);
         result.RawValue.ShouldBe(false);
     }
 
@@ -506,7 +506,7 @@ public class TopsyTurvyValueTests
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Null);
 
-        result.TopsyTurvyType.ShouldBe(LiteralType.Null);
+        result.LiteralType.ShouldBe(LiteralType.Null);
         result.RawValue.ShouldBeNull();
     }
 }

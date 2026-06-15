@@ -3,14 +3,17 @@ using System;
 namespace BWHazel.TopsyTurvy.Runtime;
 
 /// <summary>
-/// Provides console-based input and output for Topsy Turvy programs.
+/// Provides console-based input and output for Topsy Turvy programmes.
 /// </summary>
+/// <remarks>
+/// This is a basic wrapper around the <see cref="Console"/> input and output operations.
+/// </remarks>
 public sealed class ConsoleIO : ITopsyTurvyIO
 {
     /// <summary>
     /// Reads a line of text from standard input.
     /// </summary>
-    /// <returns>The line entered by the user, or an empty string for no input.</returns>
+    /// <returns>The line entered by the user, or an empty string if the end of the input stream is reached.</returns>
     public string ReadLine() => Console.ReadLine() ?? string.Empty;
 
     /// <summary>

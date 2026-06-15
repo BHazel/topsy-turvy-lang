@@ -11,11 +11,58 @@ using BWHazel.TopsyTurvy.Parser;
 namespace BWHazel.TopsyTurvy.Runtime;
 
 /// <summary>
-/// Recursive AST-walking interpreter for the Topsy Turvy language.
+/// Recursive AST tree-walking interpreter for the Topsy Turvy language.
 /// </summary>
-public sealed class Interpreter
+/// <param name="io">The I/O handler used for all input and output operations.</param>
+/// <remarks>
+/// <para>
+/// The interpreter is a tree-walking interpreter that executes the AST of a parsed programme directly.  It works by recursively
+/// executing statements in an AST <see cref="ProgramNode"/> sequentially from beginning to end.  For each statement, the interpreter
+/// uses pattern matching to determine which AST node type it is and executes the corresponding logic for that statement type.
+/// Expressions are evaluated recursively in a similar manner when executing a statement.  During execution the interpreter
+/// maintains a global environment, <see cref="TopsyTurvyEnvironment"/>, optionally with nested environments, that stores the
+/// current state of all variables and their values, as well as the <c>JUST SO</c> implicit variable.  The interpreter also
+/// maintains a dictionary of all function definitions encountered during execution.
+/// </para>
+/// <para>
+/// During interpretation at runtime, the interpreter may encounter errors, such as referencing undefined variables, type errors
+/// or division by zero, to name a few.  When an error occurs, the interpreter throws a <see cref="TopsyTurvyRuntimeException"/>
+/// with a descriptive error message and the source span of the error and ends execution; it does not try to recover and continue
+/// after an error occurs.  It should be noted that exceptions are used for control flow within the interpreter, specifically for
+/// the break statement (<c>THAT WILL DO.</c>), continue statement (<c>ONCE MORE.</c>) and the return statement from a function
+/// (<c>AND SO I FIND</c> and <c>MY DUTY IS PREMATURELY DISCHARGED.</c>).  The throw statement (<c>A HIDEOUS CURSE UPON</c>) also
+/// uses an exception, <see cref="TopsyTurvyThrowException"/>, but this is intended to be caught by a try-catch block within the
+/// Topsy Turvy programme and should not be used for control flow in the interpreter itself.
+/// </para>
+/// <para>
+/// The interpreter does not pre-scan the code, therefore, declarations and function definitions must be encountered before they can
+/// be used.
+/// </para>
+/// <para>
+/// The interpreter is initialised using an <see cref="ITopsyTurvyIO"/> implementation that handles all input and output operations.
+/// This allows the interpreter to be used in different environments where input and output may be handled differently.  Once
+/// initialised, a programme can be executed by calling the <see cref="Execute"/> method with a parsed <see cref="ProgramNode"/>.
+/// The execution can be configured with:
+/// * A <see cref="CancellationToken"/> to allow cancellation of the execution.
+/// * An <see cref="InterpreterExecutionOptions"/> object to configure the execution.
+/// </para>
+/// <code>
+/// string sourceText = File.ReadAllText("programme.topsy");
+/// TopsyTurvyParser parser = new();
+/// ProgramNode program = parser.Parse(sourceText);
+///
+/// ConsoleIO io = new();
+/// Interpreter interpreter = new(io);
+/// InterpreterExecutionOptions options = new(
+///     ExecutionTimeout: TimeSpan.FromSeconds(30),
+///     SourceFilePath: "programme.topsy",
+///     SourceFileResolver: null);
+/// DiagnosticCollection diagnostics = interpreter.Execute(program, options: options);
+/// </code>
+/// </remarks>
+public sealed class Interpreter(ITopsyTurvyIO io)
 {
-    private readonly ITopsyTurvyIO io;
+    private readonly ITopsyTurvyIO io = io;
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
@@ -23,51 +70,39 @@ public sealed class Interpreter
     private Func<string, string?>? fileResolver;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="Interpreter"/> class with the specified I/O handler.
-    /// </summary>
-    /// <param name="io">The I/O handler used for all input and output operations.</param>
-    public Interpreter(ITopsyTurvyIO io)
-    {
-        this.io = io;
-    }
-
-    /// <summary>
     /// Executes a parsed programme and returns a collection of runtime diagnostics.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// An empty collection with no errors indicates successful execution.
+    /// The main entry-point for the interpreter to execute a parsed Topsy Turvy programme as a <see cref="ProgramNode"/>.
+    /// The interpretation follows a "tree-walk" process where the interpreter recursively executes statements in the AST
+    /// sequentially from beginning to end.  On completion, an empty <see cref="DiagnosticCollection"/> indicates successful
+    /// execution.
     /// </para>
     /// <para>
-    /// Pass a <see cref="CancellationToken"/> from a <see cref="CancellationTokenSource"/>
-    /// with a timeout to guard against infinite loops.  The maximum duration is checked in
-    /// addition to the cancellation token to allow timeouts to work in single-threaded
-    /// environments such as Blazor WebAssembly.
-    /// </para>
-    /// <para>
-    /// Pass <c>null</c> as a source file path when executing from a string without a backing file.
+    /// The execution can be configured using an <see cref="InterpreterExecutionOptions"/> object.  One important configuration
+    /// is the ability to specify a timeout to guard against infinite loops or excessively long execution times.  Pass a
+    /// <see cref="CancellationToken"/> from a <see cref="CancellationTokenSource"/> to guard against infinite loops.  The
+    /// <see cref="InterpreterExecutionOptions.ExecutionTimeout"/> property sets a deadline that is checked in addition to the
+    /// cancellation token to allow timeouts to work in single-threaded environments such as Blazor WebAssembly.
     /// </para>
     /// </remarks>
     /// <param name="program">The root node of the parsed programme.</param>
     /// <param name="cancellationToken">A token that can be used to cancel execution.</param>
-    /// <param name="timeout">A maximum wall-clock duration for execution, after which execution will be cancelled.</param>
-    /// <param name="sourceFilePath">The absolute or relative path of the source file being executed, used to resolve relative import paths.</param>
-    /// <param name="fileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to use the real file system.</param>
-    /// <remarks>
-    ///  When the <paramref name="fileResolver"/> parameter is supplied, the real file system is not accessed for imports.
-    /// This is intended for virtual file systems such as a WebAssembly environments.
-    /// </remarks>
+    /// <param name="options">Optional execution options; pass <c>null</c> to use defaults.</param>
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
-    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, TimeSpan? timeout = null, string? sourceFilePath = null, Func<string, string?>? fileResolver = null)
+    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, InterpreterExecutionOptions? options = null)
     {
         this.cancellationToken = cancellationToken;
-        this.executionTimeout = timeout.HasValue
-            ? DateTime.UtcNow + timeout.Value
+        this.executionTimeout = options?.ExecutionTimeout.HasValue == true
+            ? DateTime.UtcNow + options.ExecutionTimeout.Value
             : DateTime.MinValue;
-        this.sourceDirectory = sourceFilePath is not null
-            ? Path.GetDirectoryName(Path.GetFullPath(sourceFilePath))
+
+        this.sourceDirectory = options?.SourceFilePath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(options.SourceFilePath))
             : null;
-        this.fileResolver = fileResolver;
+
+        this.fileResolver = options?.SourceFileResolver;
 
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
@@ -143,8 +178,8 @@ public sealed class Interpreter
             case InputNode input:
                 this.ExecuteInput(input, environment);
                 break;
-            case ExpressionStatement exprStmt:
-                environment.JustSo = this.EvaluateExpression(exprStmt.Expression, environment);
+            case ExpressionStatement expressionStatement:
+                environment.JustSo = this.EvaluateExpression(expressionStatement.Expression, environment);
                 break;
             case FunctionDefinitionNode functionDefinition:
                 this.functions[functionDefinition.Name] = functionDefinition;
@@ -301,6 +336,11 @@ public sealed class Interpreter
     /// <summary>
     /// Executes a switch block.
     /// </summary>
+    /// <remarks>
+    /// Case fall-through is the default behaviour in Topsy Turvy unless a <c>THAT WILL DO.</c> (break) statement is used to
+    /// exit the switch block.  This means that once a case is matched, all subsequent cases will be executed until the end of the
+    /// switch block or a break statement is encountered, even if their case literal does not match the switch expression value.
+    /// </remarks>
     /// <param name="node">The switch node.</param>
     /// <param name="environment">The environment.</param>
     private void ExecuteSwitch(SwitchNode node, TopsyTurvyEnvironment environment)
@@ -553,8 +593,8 @@ public sealed class Interpreter
         IdentifierNode ident => environment.Get(ident.Name),
         PrefixExpressionNode prefix => EvaluatePrefix(prefix, environment),
         _ => throw new TopsyTurvyRuntimeException(
-                                            $"Unhandled expression type: {expression.GetType().Name}",
-                                            expression.Span)
+            $"Unhandled expression type: {expression.GetType().Name}",
+            expression.Span)
     };
 
     /// <summary>
@@ -589,11 +629,17 @@ public sealed class Interpreter
                 return TopsyTurvyValue.Boolean(!this.EvaluateExpression(node.Arguments[0], environment).IsTruthy());
             case Operator.Both:
                 if (!this.EvaluateExpression(node.Arguments[0], environment).IsTruthy())
+                {
                     return TopsyTurvyValue.Boolean(false);
+                }
+
                 return TopsyTurvyValue.Boolean(this.EvaluateExpression(node.Arguments[1], environment).IsTruthy());
             case Operator.Either:
                 if (this.EvaluateExpression(node.Arguments[0], environment).IsTruthy())
+                {
                     return TopsyTurvyValue.Boolean(true);
+                }
+
                 return TopsyTurvyValue.Boolean(this.EvaluateExpression(node.Arguments[1], environment).IsTruthy());
             case Operator.WovenOf:
                 return this.EvaluateWovenOf(node.Arguments, environment);
@@ -604,55 +650,61 @@ public sealed class Interpreter
             default:
                 TopsyTurvyValue left = this.EvaluateExpression(node.Arguments[0], environment);
                 TopsyTurvyValue right = this.EvaluateExpression(node.Arguments[1], environment);
-                return this.EvaluateBinaryOp(node.Operator, left, right, node.Span);
+                return this.EvaluateBinaryOperator(node.Operator, left, right, node.Span);
         }
     }
 
     /// <summary>
     /// Evaluates a binary operator with the given operands and returns the result.
     /// </summary>
-    /// <param name="op">The binary operator.</param>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="binaryOperator">The binary operator.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
     /// <param name="span">The source span of the operator.</param>
     /// <returns>The result of the binary operation.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the binary operator is unhandled.</exception>
-    private TopsyTurvyValue EvaluateBinaryOp(Operator op, TopsyTurvyValue left, TopsyTurvyValue right, SourceSpan span)
+    private TopsyTurvyValue EvaluateBinaryOperator(Operator binaryOperator, TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        switch (op)
+        switch (binaryOperator)
         {
             case Operator.Sum:
-                return ApplyArithmetic(left, right, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
+                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
             case Operator.Difference:
-                return ApplyArithmetic(left, right, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
+                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
             case Operator.Product:
-                return ApplyArithmetic(left, right, (a, b) => a * b, (a, b) => a * b, span, "PRODUCT OF");
+                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a * b, (a, b) => a * b, span, "PRODUCT OF");
             case Operator.Quotient:
-                return ApplyQuotient(left, right, span);
+                return ApplyQuotient(leftOperand, rightOperand, span);
             case Operator.Remainder:
-                return ApplyRemainder(left, right, span);
+                return ApplyRemainder(leftOperand, rightOperand, span);
             case Operator.Larger:
-                return SelectValue(left, right, greater: true, span);
+                return SelectValue(leftOperand, rightOperand, selectIsGreater: true, span);
             case Operator.Smaller:
-                return SelectValue(left, right, greater: false, span);
+                return SelectValue(leftOperand, rightOperand, selectIsGreater: false, span);
             case Operator.Alike:
-                return TopsyTurvyValue.Boolean(AreEqual(left, right));
+                return TopsyTurvyValue.Boolean(AreEqual(leftOperand, rightOperand));
             case Operator.Unlike:
-                return TopsyTurvyValue.Boolean(!AreEqual(left, right));
+                return TopsyTurvyValue.Boolean(!AreEqual(leftOperand, rightOperand));
             case Operator.PreAdamite:
-                if (!IsNumeric(left) || !IsNumeric(right))
+                if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
+                {
                     throw new TopsyTurvyRuntimeException(
-                        $"PRE-ADAMITE requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                        $"PRE-ADAMITE requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
                         span);
-                return TopsyTurvyValue.Boolean(CompareNumeric(left, right, span) > 0);
+                }
+
+                return TopsyTurvyValue.Boolean(CompareNumeric(leftOperand, rightOperand, span) > 0);
             case Operator.LowerDegree:
-                if (!IsNumeric(left) || !IsNumeric(right))
+                if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
+                {
                     throw new TopsyTurvyRuntimeException(
-                        $"LOWER DEGREE requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                        $"LOWER DEGREE requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
                         span);
-                return TopsyTurvyValue.Boolean(CompareNumeric(left, right, span) < 0);
+                }
+
+                return TopsyTurvyValue.Boolean(CompareNumeric(leftOperand, rightOperand, span) < 0);
             default:
-                throw new TopsyTurvyRuntimeException($"Unhandled binary operator: {op}", span);
+                throw new TopsyTurvyRuntimeException($"Unhandled binary operator: {binaryOperator}", span);
         }
     }
 
@@ -661,148 +713,161 @@ public sealed class Interpreter
     /// </summary>
     /// <remarks>
     /// If both operands are integers, the integer operation is applied and an
-    /// integer result is returned.  If at least one operand is a float, both
+    /// integer result is returned.  If at least one operand is floating-point, both
     /// operands are converted to floats, the float operation is applied, and a
-    /// float result is returned.
+    /// floating-point result is returned.
     /// </remarks>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
-    /// <param name="intOp">The operation to apply if both operands are integers.</param>
-    /// <param name="floatOp">The operation to apply if at least one operand is a float.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
+    /// <param name="integerOperation">The operation to apply if both operands are integers.</param>
+    /// <param name="floatingPointOperation">The operation to apply if at least one operand is a float.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <param name="operatorName">The Topsy Turvy keyword for the operator, used in error messages.</param>
     /// <returns>The result of the arithmetic operation.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operands are not numeric.</exception>
     private static TopsyTurvyValue ApplyArithmetic(
-        TopsyTurvyValue left,
-        TopsyTurvyValue right,
-        Func<int, int, int> intOp,
-        Func<double, double, double> floatOp,
+        TopsyTurvyValue leftOperand,
+        TopsyTurvyValue rightOperand,
+        Func<int, int, int> integerOperation,
+        Func<double, double, double> floatingPointOperation,
         SourceSpan span,
         string operatorName)
     {
-        if (left.TopsyTurvyType == LiteralType.Integer && right.TopsyTurvyType == LiteralType.Integer)
+        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
         {
-            return TopsyTurvyValue.Integer(intOp((int)left.RawValue!, (int)right.RawValue!));
+            return TopsyTurvyValue.Integer(integerOperation((int)leftOperand.RawValue!, (int)rightOperand.RawValue!));
         }
 
-        if (IsNumeric(left) && IsNumeric(right))
+        if (IsNumeric(leftOperand) && IsNumeric(rightOperand))
         {
-            return TopsyTurvyValue.Float(floatOp(ToDouble(left), ToDouble(right)));
+            return TopsyTurvyValue.Float(floatingPointOperation(ToDouble(leftOperand), ToDouble(rightOperand)));
         }
 
         throw new TopsyTurvyRuntimeException(
-            $"{operatorName} requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+            $"{operatorName} requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
             span);
     }
 
     /// <summary>
     /// Applies the quotient operation to two operands.
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <remarks>
     /// Performs integer division if both operands are integers, or floating-point division otherwise.
     /// </remarks>
     /// <returns>The result of the division.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when division by zero occurs or operands are not numeric.</exception>
-    private static TopsyTurvyValue ApplyQuotient(TopsyTurvyValue left, TopsyTurvyValue right, SourceSpan span)
+    private static TopsyTurvyValue ApplyQuotient(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        if (left.TopsyTurvyType == LiteralType.Integer && right.TopsyTurvyType == LiteralType.Integer)
+        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
         {
-            int divisor = (int)right.RawValue!;
+            int divisor = (int)rightOperand.RawValue!;
             if (divisor == 0)
+            {
                 throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
-            return TopsyTurvyValue.Integer((int)left.RawValue! / divisor);
+            }
+
+            return TopsyTurvyValue.Integer((int)leftOperand.RawValue! / divisor);
         }
 
-        if (IsNumeric(left) && IsNumeric(right))
+        if (IsNumeric(leftOperand) && IsNumeric(rightOperand))
         {
-            double divisor = ToDouble(right);
+            double divisor = ToDouble(rightOperand);
             if (divisor == 0.0)
-                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
-            return TopsyTurvyValue.Float(ToDouble(left) / divisor);
+            {
+                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);                
+            }
+
+            return TopsyTurvyValue.Float(ToDouble(leftOperand) / divisor);
         }
 
         throw new TopsyTurvyRuntimeException(
-            $"QUOTIENT OF requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+            $"QUOTIENT OF requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
             span);
     }
 
     /// <summary>
     /// Applies the remainder operation to two operands.
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <returns>The result of the remainder operation.</returns>
-    /// <exception cref="TopsyTurvyRuntimeException"></exception>
-    private static TopsyTurvyValue ApplyRemainder(TopsyTurvyValue left, TopsyTurvyValue right, SourceSpan span)
+    /// <exception cref="TopsyTurvyRuntimeException">Exception thrown when division by zero occurs or operands are not integers.</exception>
+    private static TopsyTurvyValue ApplyRemainder(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        if (left.TopsyTurvyType == LiteralType.Integer && right.TopsyTurvyType == LiteralType.Integer)
+        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
         {
-            int divisor = (int)right.RawValue!;
+            int divisor = (int)rightOperand.RawValue!;
             if (divisor == 0)
-                throw new TopsyTurvyRuntimeException("Division by zero in REMAINDER OF.", span);
-            return TopsyTurvyValue.Integer((int)left.RawValue! % divisor);
+            {
+                throw new TopsyTurvyRuntimeException("Division by zero in REMAINDER OF.", span);                
+            }
+
+            return TopsyTurvyValue.Integer((int)leftOperand.RawValue! % divisor);
         }
 
         throw new TopsyTurvyRuntimeException(
-            $"REMAINDER OF requires integer operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+            $"REMAINDER OF requires integer operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
             span);
     }
 
     /// <summary>
     /// Selects either the left or right operand based on their comparison.
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
-    /// <param name="greater">If <c>true</c>, selects the greater operand, otherwise selects the lesser operand.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
+    /// <param name="selectIsGreater">If <c>true</c>, selects the greater operand, otherwise selects the lesser operand.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <returns>The selected operand.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operands are not numeric.</exception>
-    private static TopsyTurvyValue SelectValue(
-        TopsyTurvyValue left,
-        TopsyTurvyValue right,
-        bool greater,
-        SourceSpan span)
+    private static TopsyTurvyValue SelectValue(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, bool selectIsGreater, SourceSpan span)
     {
-        if (!IsNumeric(left) || !IsNumeric(right))
+        if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
         {
             throw new TopsyTurvyRuntimeException(
-                $"LARGER OF / SMALLER OF require numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                $"LARGER OF / SMALLER OF require numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
                 span);
         }
 
-        int comparison = CompareNumeric(left, right, span);
-        return (greater ? comparison >= 0 : comparison <= 0) ? left : right;
+        int comparison = CompareNumeric(leftOperand, rightOperand, span);
+        return (selectIsGreater
+            ? comparison >= 0
+            : comparison <= 0)
+                ? leftOperand
+                : rightOperand;
     }
 
     /// <summary>
     /// Determines whether two values are equal.
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <remarks>
+    /// Comparisons are performed cross-type, for example, an integer of <c>5</c> is considered equal to a float of <c>5.0</c> as
+    /// both are converted to floating-point for the comparison.
+    /// </remarks>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
     /// <returns><c>true</c> if the values are equal, otherwise <c>false</c>.</returns>
-    private static bool AreEqual(TopsyTurvyValue left, TopsyTurvyValue right)
+    private static bool AreEqual(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand)
     {
-        if (left.TopsyTurvyType != right.TopsyTurvyType)
+        if (leftOperand.LiteralType != rightOperand.LiteralType)
         {
-            if (IsNumeric(left) && IsNumeric(right))
+            if (IsNumeric(leftOperand) && IsNumeric(rightOperand))
             {
-                return ToDouble(left) == ToDouble(right);
+                return ToDouble(leftOperand) == ToDouble(rightOperand);
             }
 
             return false;
         }
 
-        return left.TopsyTurvyType switch
+        return leftOperand.LiteralType switch
         {
-            LiteralType.Integer => (int)left.RawValue! == (int)right.RawValue!,
-            LiteralType.Float => (double)left.RawValue! == (double)right.RawValue!,
-            LiteralType.String => string.Equals((string)left.RawValue!, (string)right.RawValue!, StringComparison.Ordinal),
-            LiteralType.Boolean => (bool)left.RawValue! == (bool)right.RawValue!,
+            LiteralType.Integer => (int)leftOperand.RawValue! == (int)rightOperand.RawValue!,
+            LiteralType.Float => (double)leftOperand.RawValue! == (double)rightOperand.RawValue!,
+            LiteralType.String => string.Equals((string)leftOperand.RawValue!, (string)rightOperand.RawValue!, StringComparison.Ordinal),
+            LiteralType.Boolean => (bool)leftOperand.RawValue! == (bool)rightOperand.RawValue!,
             LiteralType.Null => true,
             _ => false
         };
@@ -811,21 +876,21 @@ public sealed class Interpreter
     /// <summary>
     /// Compares two numeric values and returns an integer indicating their relative order.
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <returns>An integer indicating the relative order of the operands.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operands are not numeric.</exception>
-    private static int CompareNumeric(TopsyTurvyValue left, TopsyTurvyValue right, SourceSpan span)
+    private static int CompareNumeric(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        if (!IsNumeric(left) || !IsNumeric(right))
+        if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
         {
             throw new TopsyTurvyRuntimeException(
-                $"Numeric comparison requires numeric operands, got {left.TopsyTurvyType} and {right.TopsyTurvyType}.",
+                $"Numeric comparison requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
                 span);
         }
 
-        return ToDouble(left).CompareTo(ToDouble(right));
+        return ToDouble(leftOperand).CompareTo(ToDouble(rightOperand));
     }
 
     /// <summary>
@@ -903,10 +968,9 @@ public sealed class Interpreter
                 node.Span);
         }
 
-        List<TopsyTurvyValue> arguments = node.Arguments
+        List<TopsyTurvyValue> arguments = [.. node.Arguments
             .Skip(1)
-            .Select(argument => EvaluateExpression(argument, environment))
-            .ToList();
+            .Select(argument => EvaluateExpression(argument, environment))];
 
         return this.EvaluateFunctionCall(functionIdentifier.Name, arguments, environment, node.Span);
     }
@@ -914,27 +978,27 @@ public sealed class Interpreter
     /// <summary>
     /// Evaluates a function call with the given name and arguments in the specified environment.
     /// </summary>
-    /// <param name="name">The name of the function to call.</param>
+    /// <param name="functionName">The name of the function to call.</param>
     /// <param name="arguments">The list of arguments to pass to the function.</param>
     /// <param name="callingEnvironment">The environment from which the function is called.</param>
     /// <param name="span">The source span of the function call.</param>
     /// <returns>A <see cref="TopsyTurvyValue"/> representing the result of the function call.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the function call is invalid.</exception>
     private TopsyTurvyValue EvaluateFunctionCall(
-        string name,
+        string functionName,
         List<TopsyTurvyValue> arguments,
         TopsyTurvyEnvironment callingEnvironment,
         SourceSpan span)
     {
-        if (!functions.TryGetValue(name, out FunctionDefinitionNode? function))
+        if (!this.functions.TryGetValue(functionName, out FunctionDefinitionNode? function))
         {
-            throw new TopsyTurvyRuntimeException($"Function '{name}' is not defined.", span);
+            throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
         }
 
         if (arguments.Count != function.Parameters.Count)
         {
             throw new TopsyTurvyRuntimeException(
-                $"Function '{name}' expects {function.Parameters.Count} argument(s), got {arguments.Count}.",
+                $"Function '{functionName}' expects {function.Parameters.Count} argument(s), got {arguments.Count}.",
                 span);
         }
 
@@ -947,7 +1011,7 @@ public sealed class Interpreter
         TopsyTurvyValue returnValue = TopsyTurvyValue.Null();
         try
         {
-            ExecuteStatements(function.Body, scope);
+            this.ExecuteStatements(function.Body, scope);
         }
         catch (ReturnSignalException returnSignal)
         {
@@ -968,15 +1032,15 @@ public sealed class Interpreter
     {
         if (literal == null)
         {
-            return value.TopsyTurvyType == LiteralType.Null;
+            return value.LiteralType == LiteralType.Null;
         }
 
         return literal switch
         {
-            int i => value.TopsyTurvyType == LiteralType.Integer && (int)value.RawValue! == i,
-            double d => value.TopsyTurvyType == LiteralType.Float && (double)value.RawValue! == d,
-            string s => value.TopsyTurvyType == LiteralType.String && string.Equals((string)value.RawValue!, s, StringComparison.Ordinal),
-            bool b => value.TopsyTurvyType == LiteralType.Boolean && (bool)value.RawValue! == b,
+            int integerLiteral => value.LiteralType == LiteralType.Integer && (int)value.RawValue! == integerLiteral,
+            double doubleLiteral => value.LiteralType == LiteralType.Float && (double)value.RawValue! == doubleLiteral,
+            string stringLiteral => value.LiteralType == LiteralType.String && string.Equals((string)value.RawValue!, stringLiteral, StringComparison.Ordinal),
+            bool boolLiteral => value.LiteralType == LiteralType.Boolean && (bool)value.RawValue! == boolLiteral,
             _ => false
         };
     }
@@ -984,17 +1048,21 @@ public sealed class Interpreter
     /// <summary>
     /// Performs string interpolation on the given template.
     /// </summary>
+    /// <remarks>
+    /// If the interpolation does not match an identifier in the environment, the placeholder template is left intact in the
+    /// output string.
+    /// </remarks>
     /// <param name="template">The template string containing placeholders.</param>
-    /// <param name="environment">The environment..</param>
+    /// <param name="environment">The environment.</param>
     /// <returns>The interpolated string.</returns>
     private static string Interpolate(string template, TopsyTurvyEnvironment environment)
     {
         return Regex.Replace(template, @"\{([^}]+)\}", match =>
         {
-            string name = match.Groups[1].Value;
+            string identifier = match.Groups[1].Value;
             try
             {
-                return environment.Get(name).ToString();
+                return environment.Get(identifier).ToString();
             }
             catch (TopsyTurvyRuntimeException)
             {
@@ -1009,7 +1077,7 @@ public sealed class Interpreter
     /// <param name="value">The value to check.</param>
     /// <returns><c>true</c> if the value is numeric, otherwise <c>false</c>.</returns>
     private static bool IsNumeric(TopsyTurvyValue value) =>
-        value.TopsyTurvyType is LiteralType.Integer or LiteralType.Float;
+        value.LiteralType is LiteralType.Integer or LiteralType.Float;
 
     /// <summary>
     /// Converts a numeric value to a double.
@@ -1017,7 +1085,7 @@ public sealed class Interpreter
     /// <param name="value">The numeric value to convert.</param>
     /// <returns>The converted double value.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the value is not numeric.</exception>
-    private static double ToDouble(TopsyTurvyValue value) => value.TopsyTurvyType switch
+    private static double ToDouble(TopsyTurvyValue value) => value.LiteralType switch
     {
         LiteralType.Integer => (double)(int)value.RawValue!,
         LiteralType.Float => (double)value.RawValue!,

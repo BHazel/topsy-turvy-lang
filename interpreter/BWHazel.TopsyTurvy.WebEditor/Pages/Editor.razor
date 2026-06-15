@@ -485,8 +485,7 @@
         DiagnosticCollection runtimeDiagnostics = interpreter.Execute(
             parseResult.Program!,
             cancellationTokenSource.Token,
-            TimeSpan.FromSeconds(10),
-            fileResolver: fileResolver);
+            options: new(TimeSpan.FromSeconds(10), null, fileResolver));
 
         foreach (string line in io.OutputLines)
         {

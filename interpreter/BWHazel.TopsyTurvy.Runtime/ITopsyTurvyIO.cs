@@ -1,10 +1,12 @@
 namespace BWHazel.TopsyTurvy.Runtime;
 
 /// <summary>
-/// Defines the input and output operations for the Topsy Turvy runtime.
+/// Defines the input and output operations for Topsy Turvy programmes.
 /// </summary>
 /// <remarks>
-/// This abstraction allows the interpreter to be decoupled from the system console.
+/// I/O operations enable Topsy Turvy programmes to interact with the "outside world" via input and output operations.  Each
+/// different type of I/O source, such as the console, must implement the <see cref="ITopsyTurvyIO"/> interface which defines
+/// the methods for reading and writing text from and to a source.
 /// </remarks>
 public interface ITopsyTurvyIO
 {
