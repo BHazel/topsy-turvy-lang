@@ -10,14 +10,25 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/foldingRange</c> requests.
+/// Identifies foldable regions in a document so the editor can collapse code blocks.
 /// </summary>
 /// <remarks>
-/// Uses a stack-based single-pass line scan to identify foldable regions.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/foldingRange</c>: The client requests a list of foldable regions in a text document.
+/// </para>
+/// <para>
+/// Folding ranges are identified by a single-pass line scan using a stack to match opener and closer keywords.
+/// When an opener is encountered its line number and folding kind are pushed onto the stack; when a closer is
+/// encountered the most recent opener is popped and a range is recorded.  Each opener is paired with a folding
+/// kind: <c>region</c> for code blocks and <c>comment</c> for comments.
+/// </para>
 /// </remarks>
-public class FoldingRangeHandler : FoldingRangeHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class FoldingRangeHandler(DocumentStateManager documentStateManager)
+    : FoldingRangeHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
     /// Block openers paired with their folding kind.
@@ -50,25 +61,41 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
     ];
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="FoldingRangeHandler"/> class.
+    /// Creates the registration options for folding range handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public FoldingRangeHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override FoldingRangeRegistrationOptions CreateRegistrationOptions(
-        FoldingRangeCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The folding range capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler has no additional configuration beyond registering for Topsy Turvy documents.
+    /// </remarks>
+    /// <returns>The registration options for folding range handling.</returns>
+    protected override FoldingRangeRegistrationOptions CreateRegistrationOptions(FoldingRangeCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
-    /// <inheritdoc/>
-    public override Task<Container<FoldingRange>?> Handle(
-        FoldingRangeRequestParam request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handles the <c>textDocument/foldingRange</c> request from the client when folding ranges are requested.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// <para>
+    /// Unlike most handlers, this does not check whether the symbol table is available: folding is determined
+    /// entirely from the source text, so it works even when the document has syntax errors.
+    /// </para>
+    /// * The document source is split into lines and scanned in a single pass.
+    /// * When an opener keyword is encountered, its line number and folding kind are pushed onto a stack.
+    /// * When a closer keyword is encountered, the most recent opener is popped from the stack and a <see cref="FoldingRange"/> is recorded covering the lines between them.  The end line is the line immediately before the closer.
+    /// * Ranges of zero or negative length are discarded.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a container of <see cref="FoldingRange"/> items for each matched opener/closer pair,
+    /// or <c>null</c> if the document state is unavailable.
+    /// </returns>
+    public override Task<Container<FoldingRange>?> Handle(FoldingRangeRequestParam request, CancellationToken cancellationToken)
     {
         try
         {
@@ -84,9 +111,8 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
 
             for (int i = 0; i < lines.Length; i++)
             {
-                string trimmed = lines[i].Trim();
-
-                if (IsCloser(trimmed))
+                string trimmedLine = lines[i].Trim();
+                if (IsCloser(trimmedLine))
                 {
                     if (stack.Count > 0)
                     {
@@ -94,7 +120,7 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
                         int endLine = i - 1;
                         if (endLine > startLine)
                         {
-                            ranges.Add(new FoldingRange
+                            ranges.Add(new()
                             {
                                 StartLine = startLine,
                                 EndLine = endLine,
@@ -106,14 +132,14 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
                     continue;
                 }
 
-                string? openerKind = FindOpenerKind(trimmed);
+                string? openerKind = FindOpenerKind(trimmedLine);
                 if (openerKind is not null)
                 {
                     stack.Push((i, openerKind));
                 }
             }
 
-            return Task.FromResult<Container<FoldingRange>?>(new Container<FoldingRange>(ranges));
+            return Task.FromResult<Container<FoldingRange>?>(new(ranges));
         }
         catch (Exception)
         {
@@ -177,7 +203,9 @@ public class FoldingRangeHandler : FoldingRangeHandlerBase
             return true;
         }
 
-        char next = trimmedLine[keyword.Length];
-        return !char.IsLetterOrDigit(next) && next != '_' && next != '-';
+        char nextCharacter = trimmedLine[keyword.Length];
+        return !char.IsLetterOrDigit(nextCharacter) &&
+            nextCharacter != '_' &&
+            nextCharacter != '-';
     }
 }

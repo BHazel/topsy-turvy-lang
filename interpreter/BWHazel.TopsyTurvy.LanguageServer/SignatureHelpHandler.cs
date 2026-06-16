@@ -13,37 +13,61 @@ using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/signatureHelp</c> requests.
+/// Displays the parameter list of a function call as the user types, highlighting the active parameter.
 /// </summary>
 /// <remarks>
-/// Displays the parameter list for a function call as the developer types,
-/// highlighting the active parameter.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/signatureHelp</c>: The client requests signature help at a given position in a text document.
+/// </para>
+/// <para>
+/// In Topsy Turvy, function calls take the form <c>SUMMON functionName WITH arg1 AND arg2 IF YOU PLEASE.</c>
+/// The handler parses the text before the cursor to identify the function being called, the arguments typed so
+/// far and which parameter is currently active.
+/// </para>
 /// </remarks>
-public class SignatureHelpHandler : SignatureHelpHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class SignatureHelpHandler(DocumentStateManager documentStateManager)
+    : SignatureHelpHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="SignatureHelpHandler"/> class.
+    /// Creates the registration options for signature help handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public SignatureHelpHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override SignatureHelpRegistrationOptions CreateRegistrationOptions(
-        SignatureHelpCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The signature help capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler is configured to trigger on a space character as function arguments in Topsy Turvy
+    /// are space-separated.
+    /// </remarks>
+    /// <returns>The registration options for signature help handling.</returns>
+    protected override SignatureHelpRegistrationOptions CreateRegistrationOptions(SignatureHelpCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
-            TriggerCharacters = new Container<string>(" ")
+            TriggerCharacters = new(" ")
         };
 
-    /// <inheritdoc/>
-    public override Task<SignatureHelp?> Handle(
-        SignatureHelpParams request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handles the <c>textDocument/signatureHelp</c> request from the client when signature help is requested.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c> then <c>null</c> is returned so no signature pop-up is displayed.
+    /// * The text before the cursor on the current line is scanned for a <c>SUMMON</c> keyword.  If not found, or the call is already complete (the closing <c>IF YOU PLEASE.</c> is present), <c>null</c> is returned.
+    /// * The function name is extracted as the first token following <c>SUMMON</c> and looked up in the symbol table.  If not found or not a function, <c>null</c> is returned.
+    /// * If no <c> WITH</c> has been typed yet, or the argument list begins with <c>NOTHING</c> (a zero-argument call), <c>null</c> is returned.
+    /// * The active parameter index is determined by counting <c>AND</c> separators in the argument text using <see cref="CountAndTokens"/>, clamped to the last parameter index.
+    /// * A <see cref="SignatureHelp"/> is built with the function label and parameter list and returned to the client.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="SignatureHelp"/> containing the function signature and the index of the
+    /// active parameter, or <c>null</c> if no in-progress function call is detected at the cursor position.
+    /// </returns>
+    public override Task<SignatureHelp?> Handle(SignatureHelpParams request, CancellationToken cancellationToken)
     {
         try
         {
@@ -61,23 +85,22 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
             }
 
             string lineText = lines[lineIndex];
-            int safeChar = Math.Min(request.Position.Character, lineText.Length);
-            string beforeCursor = lineText[..safeChar];
+            int safeCharacter = Math.Min(request.Position.Character, lineText.Length);
+            string textBeforeCursor = lineText[..safeCharacter];
 
-            int summonIndex = beforeCursor.LastIndexOf("SUMMON", StringComparison.OrdinalIgnoreCase);
+            int summonIndex = textBeforeCursor.LastIndexOf("SUMMON", StringComparison.OrdinalIgnoreCase);
             if (summonIndex < 0)
             {
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            string afterSummon = beforeCursor[(summonIndex + "SUMMON".Length)..].TrimStart();
-
-            if (afterSummon.IndexOf("IF YOU PLEASE.", StringComparison.OrdinalIgnoreCase) >= 0)
+            string afterSummonText = textBeforeCursor[(summonIndex + "SUMMON".Length)..].TrimStart();
+            if (afterSummonText.IndexOf("IF YOU PLEASE.", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            string[] tokens = afterSummon.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            string[] tokens = afterSummonText.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
             if (tokens.Length == 0)
             {
                 return Task.FromResult<SignatureHelp?>(null);
@@ -90,19 +113,19 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            int withIndex = afterSummon.IndexOf(" WITH", StringComparison.OrdinalIgnoreCase);
+            int withIndex = afterSummonText.IndexOf(" WITH", StringComparison.OrdinalIgnoreCase);
             if (withIndex < 0)
             {
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            string afterWith = afterSummon[(withIndex + " WITH".Length)..];
-            if (afterWith.TrimStart().StartsWith("NOTHING", StringComparison.OrdinalIgnoreCase))
+            string afterWithText = afterSummonText[(withIndex + " WITH".Length)..];
+            if (afterWithText.TrimStart().StartsWith("NOTHING", StringComparison.OrdinalIgnoreCase))
             {
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            int activeParamIndex = CountAndTokens(afterWith);
+            int activeParamIndex = CountAndTokens(afterWithText);
             int paramCount = info.Parameters?.Count ?? 0;
             if (paramCount > 0)
             {
@@ -110,17 +133,19 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
             }
 
             string label = $"{info.Name}({string.Join(", ", info.Parameters ?? Array.Empty<string>())})";
-            List<ParameterInformation> paramInfos = (info.Parameters ?? Array.Empty<string>())
-                .Select(static p => new ParameterInformation { Label = p })
-                .ToList();
+            List<ParameterInformation> parameterInfoEntries = [.. (info.Parameters ?? Array.Empty<string>())
+                .Select(static parameter => new ParameterInformation()
+                    {
+                        Label = parameter
+                    })];
 
-            return Task.FromResult<SignatureHelp?>(new SignatureHelp
+            return Task.FromResult<SignatureHelp?>(new()
             {
-                Signatures = new Container<SignatureInformation>(
-                    new SignatureInformation
+                Signatures = new(
+                    new SignatureInformation()
                     {
                         Label = label,
-                        Parameters = new Container<ParameterInformation>(paramInfos)
+                        Parameters = new(parameterInfoEntries)
                     }),
                 ActiveSignature = 0,
                 ActiveParameter = activeParamIndex
@@ -133,15 +158,18 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
     }
 
     /// <summary>
-    /// Counts whole-word joining tokens (case-insensitive) in <paramref name="text"/>.
+    /// Counts whole-word joining tokens (case-insensitive) in the specified text.
     /// </summary>
+    /// <remarks>
+    /// Each <c>AND</c> token separates one function argument from the next so the count corresponds to the
+    /// zero-based index of the parameter currently being typed.
+    /// </remarks>
     /// <param name="text">The text to scan.</param>
-    /// <returns>The number of joining tokens found.</returns>
+    /// <returns>The number of <c>AND</c> tokens found.</returns>
     private static int CountAndTokens(string text)
     {
         int count = 0;
-        foreach (string token in text.Split(
-            new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string token in text.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
         {
             if (token.Equals("AND", StringComparison.OrdinalIgnoreCase))
             {

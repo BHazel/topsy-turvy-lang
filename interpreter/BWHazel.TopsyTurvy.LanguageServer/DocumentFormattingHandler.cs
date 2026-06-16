@@ -11,42 +11,61 @@ using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/formatting</c> requests.
+/// Formats a document according to language standards.
 /// </summary>
 /// <remarks>
-/// Applies two transforms to a Topsy Turvy source file:
-/// <list type="number">
-///   <item>Keyword casing: All language keywords are normalised to their canonical case.</item>
-///   <item>Indentation: Every line is re-indented to 2-space libretto style.</item>
-/// </list>
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/formatting</c>: The client requests the formatted version of a text document.
+/// </para>
+/// <para>
+/// Formatting logic is delegated to <see cref="SourceFormatter"/> and applies two transforms:
+/// * Keyword normalisation to standard case with the majority of keywords in uppercase.
+/// * Indentation based on the depth of the current block.
 /// The result is returned as a single <see cref="TextEdit"/> replacing the entire document.
-/// Formatting logic is delegated to <see cref="SourceFormatter"/>.
+/// </para>
 /// </remarks>
-public class DocumentFormattingHandler : DocumentFormattingHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class DocumentFormattingHandler(DocumentStateManager documentStateManager)
+    : DocumentFormattingHandlerBase
 {
-
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="DocumentFormattingHandler"/> class.
+    /// Creates the registration options for document formatting handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public DocumentFormattingHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override DocumentFormattingRegistrationOptions CreateRegistrationOptions(
-        DocumentFormattingCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The document formatting capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler has no additional configuration beyond registering for Topsy Turvy documents.
+    /// </remarks>
+    /// <returns>The registration options for document formatting handling.</returns>
+    protected override DocumentFormattingRegistrationOptions CreateRegistrationOptions(DocumentFormattingCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
-    /// <inheritdoc/>
-    public override Task<TextEditContainer?> Handle(
-        DocumentFormattingParams request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handles the <c>textDocument/formatting</c> request from the client when document formatting is requested.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// <para>
+    /// Unlike most handlers, this does not check whether the symbol table is available: formatting is a purely
+    /// textual operation and works even when the document has syntax errors.
+    /// </para>
+    /// * The current document source is retrieved from the document state manager.  If it is <c>null</c> then <c>null</c> is returned so the editor takes no action.
+    /// * The source is formatted by <see cref="SourceFormatter.FormatSource"/>.
+    /// * A <see cref="TextEdit"/> is built covering the entire document from position (0, 0) to the end of the last line, with the formatted source as its replacement text.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="TextEditContainer"/> containing a single edit that replaces the entire
+    /// document with the formatted source, or <c>null</c> if the document state is unavailable.
+    /// </returns>
+    public override Task<TextEditContainer?> Handle(DocumentFormattingParams request, CancellationToken cancellationToken)
     {
         try
         {
@@ -56,24 +75,20 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
                 return Task.FromResult<TextEditContainer?>(null);
             }
 
-            string formatted = SourceFormatter.FormatSource(state.Source);
-
+            string formattedSource = SourceFormatter.FormatSource(state.Source);
             string[] originalLines = state.Source.Split('\n');
             string lastOriginalLine = originalLines.Length > 0
                 ? originalLines[^1].TrimEnd('\r')
                 : string.Empty;
 
-            LspRange fullDocumentRange = new(
-                new Position(0, 0),
-                new Position(originalLines.Length - 1, lastOriginalLine.Length));
-
-            TextEdit edit = new()
+            LspRange fullDocumentRange = new(new(0, 0), new(originalLines.Length - 1, lastOriginalLine.Length));
+            TextEdit textEdit = new()
             {
                 Range = fullDocumentRange,
-                NewText = formatted
+                NewText = formattedSource
             };
 
-            return Task.FromResult<TextEditContainer?>(new TextEditContainer(edit));
+            return Task.FromResult<TextEditContainer?>(new(textEdit));
         }
         catch (Exception)
         {

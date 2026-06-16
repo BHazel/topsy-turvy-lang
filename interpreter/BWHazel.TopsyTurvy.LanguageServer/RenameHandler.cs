@@ -13,28 +13,35 @@ using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/rename</c> requests.
+/// Renames all occurrences of a symbol across all open documents.
 /// </summary>
 /// <remarks>
-/// Finds every whole-word, case-insensitive occurrence of the symbol under the cursor
-/// across all open documents (skipping comments and string literals) and replaces each
-/// with the new name supplied by the editor, returning a <see cref="WorkspaceEdit"/>
-/// with one <see cref="TextEdit"/> per occurrence.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/rename</c>: The client requests a rename of the symbol at a given position in a text document.
+/// </para>
+/// <para>
+/// Every whole-word, case-insensitive occurrence of the symbol across all open documents is replaced with the new
+/// name, skipping occurrences inside comments and string literals.  Multi-word built-in symbols cannot be renamed
+/// and result in a <c>null</c> response.
+/// </para>
 /// </remarks>
-public class RenameHandler : RenameHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class RenameHandler(DocumentStateManager documentStateManager)
+    : RenameHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="RenameHandler"/> class.
+    /// Creates the registration options for rename handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public RenameHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
+    /// <param name="capability">The rename capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler has no additional configuration beyond registering for Topsy Turvy documents.
+    /// </remarks>
+    /// <returns>The registration options for rename handling.</returns>
     protected override RenameRegistrationOptions CreateRegistrationOptions(
         RenameCapability capability, ClientCapabilities clientCapabilities) =>
         new()
@@ -42,7 +49,22 @@ public class RenameHandler : RenameHandlerBase
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Handles the <c>textDocument/rename</c> request from the client when a rename is applied.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c> then <c>null</c> is returned so the editor takes no action.
+    /// * The word at the cursor position is extracted using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
+    /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, or the symbol name contains a space (indicating a multi-word built-in that cannot be renamed), <c>null</c> is returned.
+    /// * All open documents are scanned and <see cref="TextEdit"/> items are collected for each occurrence using <see cref="CollectEdits"/>.
+    /// * A <see cref="WorkspaceEdit"/> grouping the edits by document URI is returned to the client.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="WorkspaceEdit"/> containing one <see cref="TextEdit"/> per occurrence across
+    /// all open documents, or <c>null</c> if the symbol cannot be found or renamed.
+    /// </returns>
     public override Task<WorkspaceEdit?> Handle(RenameParams request, CancellationToken cancellationToken)
     {
         try
@@ -63,21 +85,21 @@ public class RenameHandler : RenameHandlerBase
                 return Task.FromResult<WorkspaceEdit?>(null);
             }
 
-            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
+            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? symbolInfo) || symbolInfo is null)
             {
-                info = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
-                if (info is null)
+                symbolInfo = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
+                if (symbolInfo is null)
                 {
                     return Task.FromResult<WorkspaceEdit?>(null);
                 }
             }
 
-            if (info.Name.Contains(' '))
+            if (symbolInfo.Name.Contains(' '))
             {
                 return Task.FromResult<WorkspaceEdit?>(null);
             }
 
-            Dictionary<DocumentUri, IEnumerable<TextEdit>> changes = [];
+            Dictionary<DocumentUri, IEnumerable<TextEdit>> renames = [];
             foreach ((DocumentUri documentUri, DocumentState documentState) in this.documentStateManager.AllDocuments())
             {
                 string documentSource = documentState.Source;
@@ -86,19 +108,22 @@ public class RenameHandler : RenameHandlerBase
                     continue;
                 }
 
-                List<TextEdit> edits = CollectEdits(documentSource, word, request.NewName);
-                if (edits.Count > 0)
+                List<TextEdit> textEdits = CollectEdits(documentSource, word, request.NewName);
+                if (textEdits.Count > 0)
                 {
-                    changes[documentUri] = edits;
+                    renames[documentUri] = textEdits;
                 }
             }
 
-            if (changes.Count == 0)
+            if (renames.Count == 0)
             {
                 return Task.FromResult<WorkspaceEdit?>(null);
             }
 
-            return Task.FromResult<WorkspaceEdit?>(new WorkspaceEdit { Changes = changes });
+            return Task.FromResult<WorkspaceEdit?>(new()
+                {
+                    Changes = renames
+                });
         }
         catch (Exception)
         {
@@ -117,15 +142,12 @@ public class RenameHandler : RenameHandlerBase
     {
         string[] lines = source.Split('\n');
         List<TextEdit> edits = [];
-
-        foreach ((int lineIndex, int foundAt) in SourceAnalyser.FindWordOccurrences(lines, word))
+        foreach ((int lineIndex, int foundAtIndex) in SourceAnalyser.FindWordOccurrences(lines, word))
         {
-            int endChar = foundAt + word.Length;
-            edits.Add(new TextEdit
+            int endCharacter = foundAtIndex + word.Length;
+            edits.Add(new()
             {
-                Range = new LspRange(
-                    new Position(lineIndex, foundAt),
-                    new Position(lineIndex, endChar)),
+                Range = new(new(lineIndex, foundAtIndex), new(lineIndex, endCharacter)),
                 NewText = newName
             });
         }

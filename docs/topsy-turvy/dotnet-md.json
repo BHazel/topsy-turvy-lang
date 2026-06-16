@@ -2,11 +2,9 @@
   "assemblies": [
     "../../interpreter/BWHazel.TopsyTurvy.Ast/bin/Debug/net10.0/BWHazel.TopsyTurvy.Ast.dll",
     "../../interpreter/BWHazel.TopsyTurvy.Analysis/bin/Debug/net10.0/BWHazel.TopsyTurvy.Analysis.dll",
-    "../../interpreter/BWHazel.TopsyTurvy.Parser/bin/Debug/net10.0/BWHazel.TopsyTurvy.Parser.dll",
-    "../../interpreter/BWHazel.TopsyTurvy.Runtime/bin/Debug/net10.0/BWHazel.TopsyTurvy.Runtime.dll",
     "../../interpreter/BWHazel.TopsyTurvy.LanguageServer/bin/Debug/net10.0/BWHazel.TopsyTurvy.LanguageServer.dll",
-    "../../interpreter/BWHazel.TopsyTurvy.Cli/bin/Debug/net10.0/operetta.dll",
-    "../../interpreter/BWHazel.TopsyTurvy.WebEditor/bin/Debug/net10.0/BWHazel.TopsyTurvy.WebEditor.dll"
+    "../../interpreter/BWHazel.TopsyTurvy.Parser/bin/Debug/net10.0/BWHazel.TopsyTurvy.Parser.dll",
+    "../../interpreter/BWHazel.TopsyTurvy.Runtime/bin/Debug/net10.0/BWHazel.TopsyTurvy.Runtime.dll"
   ],
   "outputPath": "./docs/api/dotnet",
   "outputStyle": "default",
