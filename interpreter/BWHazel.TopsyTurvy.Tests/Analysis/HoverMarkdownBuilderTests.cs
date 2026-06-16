@@ -35,7 +35,7 @@ public class HoverMarkdownBuilderTests
         {
             Name = "JUST SO",
             Kind = SymbolKind.Variable,
-            TypeDisplayName = "implicit accumulator"
+            TypeDisplayName = "implicit variable"
         };
 
         string result = HoverMarkdownBuilder.Build(info);

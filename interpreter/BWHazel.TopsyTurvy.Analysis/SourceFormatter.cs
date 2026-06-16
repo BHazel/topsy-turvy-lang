@@ -7,8 +7,15 @@ using System.Text.RegularExpressions;
 namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
-/// Formats Topsy Turvy source text by applying keyword normalisation and libretto-style indentation.
+/// Formats Topsy Turvy source text according to language standards, including keyword normalisation and indentation.
 /// </summary>
+/// <remarks>
+/// <para>
+/// This applies formatting to a Topsy Turvy source text including:
+/// * Keyword normalisation to standard case with the majority of keywords in uppercase.
+/// * Indentation based on the depth of the current block.
+/// </para>
+/// </remarks>
 public static class SourceFormatter
 {
     private const int IndentWidth = 2;
@@ -157,47 +164,50 @@ public static class SourceFormatter
         new(@"(?i)ASIDE:.*", RegexOptions.Compiled);
 
     /// <summary>
-    /// Formats the given Topsy Turvy source text by applying keyword normalisation
-    /// and libretto-style indentation.
+    /// Formats the given Topsy Turvy source text according to language standards.
     /// </summary>
-    /// <param name="source">The raw source text.</param>
+    /// <param name="source">The source text.</param>
+    /// <remarks>
+    /// This is the entry point for formatting a Topsy Turvy source text according to language standards.  It works through the source
+    /// line by line, starting with block comments, blank lines then main content.
+    /// </remarks>
     /// <returns>The formatted source text.</returns>
     public static string FormatSource(string source)
     {
         string[] lines = source.Split('\n');
-        StringBuilder output = new();
+        StringBuilder formattedSourceBuilder = new();
         int depth = 0;
         bool inBlockComment = false;
 
         for (int i = 0; i < lines.Length; i++)
         {
             string rawLine = lines[i].TrimEnd('\r');
-            string trimmed = rawLine.Trim();
+            string trimmedLine = rawLine.Trim();
             bool appendNewline = i < lines.Length - 1;
 
-            if (HandleBlockCommentLine(rawLine, trimmed, ref inBlockComment, output, appendNewline))
+            if (HandleBlockCommentLine(rawLine, trimmedLine, ref inBlockComment, formattedSourceBuilder, appendNewline))
             {
                 continue;
             }
 
-            if (HandleBlankLine(trimmed, output, appendNewline))
+            if (HandleBlankLine(trimmedLine, formattedSourceBuilder, appendNewline))
             {
                 continue;
             }
 
-            HandleContentLine(trimmed, ref depth, output, appendNewline);
+            HandleContentLine(trimmedLine, ref depth, formattedSourceBuilder, appendNewline);
         }
 
-        return output.ToString();
+        return formattedSourceBuilder.ToString();
     }
 
     /// <summary>
     /// Handles a line that is inside a block comment, or that opens a block comment.
     /// </summary>
     /// <param name="rawLine">The raw untrimmed source line.</param>
-    /// <param name="trimmed">The trimmed source line.</param>
+    /// <param name="trimmedLine">The trimmed source line.</param>
     /// <param name="inBlockComment">The current block comment state, updated by this method.</param>
-    /// <param name="output">The output builder to append to.</param>
+    /// <param name="formattedSourceBuilder">The output builder to append to.</param>
     /// <param name="appendNewline">A value indicating whether a new line should be appended after the line.</param>
     /// <remarks>
     /// Block comment lines are written verbatim without indentation or keyword normalisation.
@@ -205,20 +215,20 @@ public static class SourceFormatter
     /// <returns><c>true</c> if the line was consumed as a block comment line, otherwise <c>false</c>.</returns>
     private static bool HandleBlockCommentLine(
         string rawLine,
-        string trimmed,
+        string trimmedLine,
         ref bool inBlockComment,
-        StringBuilder output,
+        StringBuilder formattedSourceBuilder,
         bool appendNewline)
     {
         if (inBlockComment)
         {
-            output.Append(rawLine);
+            formattedSourceBuilder.Append(rawLine);
             if (appendNewline)
             {
-                output.Append('\n');
+                formattedSourceBuilder.Append('\n');
             }
 
-            if (trimmed.EndsWith("END OF ASIDE.)", StringComparison.OrdinalIgnoreCase))
+            if (trimmedLine.EndsWith("END OF ASIDE.)", StringComparison.OrdinalIgnoreCase))
             {
                 inBlockComment = false;
             }
@@ -226,13 +236,13 @@ public static class SourceFormatter
             return true;
         }
 
-        if (trimmed.StartsWith("(ASIDE, AT SOME LENGTH:", StringComparison.OrdinalIgnoreCase))
+        if (trimmedLine.StartsWith("(ASIDE, AT SOME LENGTH:", StringComparison.OrdinalIgnoreCase))
         {
-            inBlockComment = !trimmed.EndsWith("END OF ASIDE.)", StringComparison.OrdinalIgnoreCase);
-            output.Append(rawLine);
+            inBlockComment = !trimmedLine.EndsWith("END OF ASIDE.)", StringComparison.OrdinalIgnoreCase);
+            formattedSourceBuilder.Append(rawLine);
             if (appendNewline)
             {
-                output.Append('\n');
+                formattedSourceBuilder.Append('\n');
             }
 
             return true;
@@ -244,17 +254,17 @@ public static class SourceFormatter
     /// <summary>
     /// Handles a blank line by appending a new line to the output if required.
     /// </summary>
-    /// <param name="trimmed">The trimmed source line.</param>
-    /// <param name="output">The output builder to append to.</param>
+    /// <param name="trimmedLine">The trimmed source line.</param>
+    /// <param name="formattedSourceBuilder">The output builder to append to.</param>
     /// <param name="appendNewline">A value indicating whether a new line should be appended.</param>
     /// <returns><c>true</c> if the line was blank and consumed, otherwise <c>false</c>.</returns>
-    private static bool HandleBlankLine(string trimmed, StringBuilder output, bool appendNewline)
+    private static bool HandleBlankLine(string trimmedLine, StringBuilder formattedSourceBuilder, bool appendNewline)
     {
-        if (trimmed.Length == 0)
+        if (trimmedLine.Length == 0)
         {
             if (appendNewline)
             {
-                output.Append('\n');
+                formattedSourceBuilder.Append('\n');
             }
 
             return true;
@@ -266,37 +276,34 @@ public static class SourceFormatter
     /// <summary>
     /// Handles a regular content line.
     /// </summary>
-    /// <param name="trimmed">The trimmed source line.</param>
+    /// <param name="trimmedLine">The trimmed source line.</param>
     /// <param name="depth">The current indentation depth, updated by this method.</param>
-    /// <param name="output">The output builder to append to.</param>
+    /// <param name="formattedSourceBuilder">The output builder to append to.</param>
     /// <param name="appendNewline">A value indicating whether a new line should be appended after the line.</param>
     /// <remarks>
-    /// Adjusts the indentation depth, normalises keywords, applies indentation, and appends the result to the output.
+    /// Adjusts the indentation depth, normalises keywords, applies indentation and appends the result to the output.
     /// </remarks>
-    private static void HandleContentLine(
-        string trimmed, ref int depth, StringBuilder output, bool appendNewline)
+    private static void HandleContentLine(string trimmedLine, ref int depth, StringBuilder formattedSourceBuilder, bool appendNewline)
     {
-        DepthAction action = ClassifyLine(trimmed);
-
+        DepthAction action = ClassifyLine(trimmedLine);
         switch (action)
         {
             case DepthAction.PreDecrease1:
             case DepthAction.MidBlock:
                 depth = Math.Max(0, depth - 1);
                 break;
-
             case DepthAction.PreDecrease2:
                 depth = Math.Max(0, depth - 2);
                 break;
         }
 
-        string normalisedLine = NormaliseKeywords(trimmed);
-        string indentedLine = ApplyIndentation(normalisedLine, trimmed, depth);
+        string normalisedLine = NormaliseKeywords(trimmedLine);
+        string indentedLine = ApplyIndentation(normalisedLine, trimmedLine, depth);
 
-        output.Append(indentedLine);
+        formattedSourceBuilder.Append(indentedLine);
         if (appendNewline)
         {
-            output.Append('\n');
+            formattedSourceBuilder.Append('\n');
         }
 
         switch (action)
@@ -318,12 +325,12 @@ public static class SourceFormatter
     /// Subtitle lines are always indented by 2 spaces regardless of the current depth.
     /// </remarks>
     /// <param name="normalisedLine">The keyword-normalised line content.</param>
-    /// <param name="trimmed">The original trimmed line, used to detect subtitle lines.</param>
+    /// <param name="trimmedLine">The original trimmed line, used to detect subtitle lines.</param>
     /// <param name="depth">The current indentation depth.</param>
     /// <returns>The indented line.</returns>
-    private static string ApplyIndentation(string normalisedLine, string trimmed, int depth)
+    private static string ApplyIndentation(string normalisedLine, string trimmedLine, int depth)
     {
-        if (trimmed.StartsWith("or,", StringComparison.OrdinalIgnoreCase))
+        if (trimmedLine.StartsWith("or,", StringComparison.OrdinalIgnoreCase))
         {
             return "  " + normalisedLine;
         }
@@ -386,7 +393,10 @@ public static class SourceFormatter
     /// </summary>
     /// <param name="trimmedLine">The trimmed source line.</param>
     /// <remarks>
-    /// Occurrences inside string literals and line comments are left unchanged.
+    /// Skip ranges are built to identify string literals and line comments, which are ignored when normalising keywords.  The
+    /// longest keywords are matched first to avoid shorter keywords that are prefixes of longer ones being matched instead.
+    /// Right-most replacements are performed first to avoid affecting the character offsets of earlier matches if performed left
+    /// to right.
     /// </remarks>
     /// <returns>The line with keywords in canonical case.</returns>
     private static string NormaliseKeywords(string trimmedLine)
@@ -398,11 +408,14 @@ public static class SourceFormatter
         {
             foreach (Match match in pattern.Matches(trimmedLine))
             {
+                // If the match is already inside a skip range, it is ignored.
                 if (SourceAnalyser.IsInSkipRange(match.Index, skipRanges))
                 {
                     continue;
                 }
 
+                // If the match overlaps with an existing replacement, it is ignored.  This can happen if a longer keyword has
+                // already been replaced, and a shorter keyword that is a prefix of it is matched later.
                 bool overlaps = replacements.Exists(replacement =>
                     replacement.Start < match.Index + match.Length && replacement.End > match.Index);
 
@@ -418,16 +431,18 @@ public static class SourceFormatter
             return trimmedLine;
         }
 
+        // Right-most replacement is performed first as a replacement can affect string length, therefore, replacements to the left
+        // will only affect already processed text.
         replacements.Sort(static (a, b) => b.Start.CompareTo(a.Start));
 
-        StringBuilder sb = new(trimmedLine);
-        foreach ((int start, int end, string rep) in replacements)
+        StringBuilder replacementStringBuilder = new(trimmedLine);
+        foreach ((int start, int end, string replacement) in replacements)
         {
-            sb.Remove(start, end - start);
-            sb.Insert(start, rep);
+            replacementStringBuilder.Remove(start, end - start);
+            replacementStringBuilder.Insert(start, replacement);
         }
 
-        return sb.ToString();
+        return replacementStringBuilder.ToString();
     }
 
     /// <summary>
@@ -435,16 +450,16 @@ public static class SourceFormatter
     /// </summary>
     /// <param name="line">The source line.</param>
     /// <remarks>
-    /// This includes string literals and single-line comments.
+    /// This identifies the ranges for string literals and line comments, which should be skipped when normalising keywords.
     /// </remarks>
     /// <returns>A list of start and end positions for character offset pairs to skip.</returns>
     private static List<(int Start, int End)> BuildLineSkipRanges(string line)
     {
         List<(int Start, int End)> ranges = [];
 
-        foreach (Match m in StringLiteralPattern.Matches(line))
+        foreach (Match match in StringLiteralPattern.Matches(line))
         {
-            ranges.Add((m.Index, m.Index + m.Length));
+            ranges.Add((match.Index, match.Index + match.Length));
         }
 
         Match lineComment = LineCommentPattern.Match(line);
@@ -475,13 +490,21 @@ public static class SourceFormatter
             return true;
         }
 
-        char next = trimmedLine[keyword.Length];
-        return !char.IsLetterOrDigit(next) && next != '_' && next != '-';
+        char nextCharacter = trimmedLine[keyword.Length];
+        return !char.IsLetterOrDigit(nextCharacter) &&
+            nextCharacter != '_' &&
+            nextCharacter != '-';
     }
 
     /// <summary>
     /// Builds the compiled keyword regular expression patterns sorted longest-first.
     /// </summary>
+    /// <remarks>
+    /// This is run once at startup to compile all the regular expressions and avoid recompilation during formatting.  It sorts
+    /// the keywords longest-first to ensure that longer keywords are matched before shorter ones that may be prefixes of them.
+    /// It then escapes the keywords for use in a regular expression, replacing spaces with \s+ to allow for flexible whitespace
+    /// matching.
+    /// </remarks>
     /// <returns>An array of pattern and replacement pairs.</returns>
     private static (Regex Pattern, string Replacement)[] BuildKeywordPatterns()
     {
@@ -489,9 +512,9 @@ public static class SourceFormatter
             .OrderByDescending(static keyword => keyword.Length)
             .Select(static keyword =>
             {
-                string escaped = Regex.Escape(keyword).Replace(@"\ ", @"\s+");
-                Regex pattern = new(@"(?i)\b" + escaped, RegexOptions.Compiled);
-                return (pattern, keyword);
+                string whitespaceEscaped = Regex.Escape(keyword).Replace(@"\ ", @"\s+");
+                Regex wordBoundaryPattern = new(@"(?i)\b" + whitespaceEscaped, RegexOptions.Compiled);
+                return (wordBoundaryPattern, keyword);
             })
             .ToArray();
     }

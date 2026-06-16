@@ -26,7 +26,7 @@ public static class SourceAnalyser
     /// </summary>
     /// <param name="source">The full document source text.</param>
     /// <remarks>
-    /// Covers block comments, string literals, and line comments in that priority order.
+    /// This adds ranges for block comments, string literals, and line comments in that priority order.
     /// </remarks>
     /// <returns>A list of start and end absolute offset pairs to skip.</returns>
     public static List<(int Start, int End)> FindSkipRanges(string source)
@@ -63,15 +63,15 @@ public static class SourceAnalyser
     /// <returns>An array of absolute start offsets, one per line.</returns>
     public static int[] BuildLineOffsets(string[] lines)
     {
-        int[] offsets = new int[lines.Length];
+        int[] lineStartOffsets = new int[lines.Length];
         int current = 0;
         for (int i = 0; i < lines.Length; i++)
         {
-            offsets[i] = current;
+            lineStartOffsets[i] = current;
             current += lines[i].Length + 1;
         }
 
-        return offsets;
+        return lineStartOffsets;
     }
 
     /// <summary>
@@ -99,74 +99,80 @@ public static class SourceAnalyser
     /// <param name="character">The character to test.</param>
     /// <returns><c>true</c> if the character is a valid identifier character, otherwise <c>false</c>.</returns>
     public static bool IsIdentifierChar(char character) =>
-        char.IsLetterOrDigit(character) || character == '-' || character == '_';
-
+        char.IsLetterOrDigit(character) ||
+            character == '-' ||
+            character == '_';
 
     /// <summary>
-    /// Yields the line and character offset of every whole-word, case-insensitive match of
-    /// a word across a specified set of lines, excluding occurrences inside comments and
-    /// string literals.
+    /// Finds the line and character positions of every specified whole-word match in the source.
     /// </summary>
-    /// <param name="lines">The source lines to scan.</param>
+    /// <param name="sourceLines">The source lines to scan.</param>
     /// <param name="word">The word to search for.</param>
+    /// <remarks>
+    /// The match is case-insensitive and returns all occurrences except in comments and string literals.  The search is performed in
+    /// order from top to bottom, left to right.
+    /// </remarks>
     /// <returns>
     /// A sequence of Line, Character pairs for every whole-word match in document order.
     /// </returns>
-    public static IEnumerable<(int Line, int Character)> FindWordOccurrences(string[] lines, string word)
+    public static IEnumerable<(int Line, int Character)> FindWordOccurrences(string[] sourceLines, string word)
     {
-        string joinedLines = string.Join("\n", lines);
-        int[] lineOffsets = BuildLineOffsets(lines);
+        // Source is joined into a single string as block comments can span multiples lines and line offsets are absolute
+        // for the entire document.  Skip ranges are built using the absolute offsets.
+        string joinedLines = string.Join("\n", sourceLines);
+        int[] lineOffsets = BuildLineOffsets(sourceLines);
         List<(int Start, int End)> skipRanges = FindSkipRanges(joinedLines);
 
-        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        for (int lineIndex = 0; lineIndex < sourceLines.Length; lineIndex++)
         {
-            string lineText = lines[lineIndex];
-            int searchFrom = 0;
-            int foundAt;
+            string lineText = sourceLines[lineIndex];
+            int searchStartIndex = 0;
+            int matchFoundIndex;
 
-            while ((foundAt = lineText.IndexOf(word, searchFrom, StringComparison.OrdinalIgnoreCase)) >= 0)
+            while ((matchFoundIndex = lineText.IndexOf(word, searchStartIndex, StringComparison.OrdinalIgnoreCase)) >= 0)
             {
-                searchFrom = foundAt + 1;
-                if (foundAt > 0 && IsIdentifierChar(lineText[foundAt - 1]))
+                searchStartIndex = matchFoundIndex + 1;
+
+                // Check the character before the found match to ensure it is not part of a larger identifier.
+                if (matchFoundIndex > 0 && IsIdentifierChar(lineText[matchFoundIndex - 1]))
                 {
                     continue;
                 }
 
-                int endChar = foundAt + word.Length;
-                if (endChar < lineText.Length && IsIdentifierChar(lineText[endChar]))
+                // Check the character after the found match to ensure it is not part of a larger identifier.
+                int endCharacter = matchFoundIndex + word.Length;
+                if (endCharacter < lineText.Length && IsIdentifierChar(lineText[endCharacter]))
                 {
                     continue;
                 }
 
-                int absoluteOffset = lineOffsets[lineIndex] + foundAt;
+                // Check the absolute offset of the found match to ensure it is not inside a skip range.
+                int absoluteOffset = lineOffsets[lineIndex] + matchFoundIndex;
                 if (IsInSkipRange(absoluteOffset, skipRanges))
                 {
                     continue;
                 }
 
-                yield return (lineIndex, foundAt);
+                yield return (lineIndex, matchFoundIndex);
             }
         }
     }
 
     /// <summary>
-    /// Counts whole-word, case-insensitive occurrences of <paramref name="symbolName"/> across
-    /// the source lines, excluding a specified line and any occurrences inside strings or comments.
+    /// Counts the number of occurrences of a specified whole-word symbol in the source lines excluding a specified line.
     /// </summary>
-    /// <param name="lines">The source lines.</param>
+    /// <param name="sourceLines">The source lines.</param>
     /// <param name="symbolName">The symbol name to count.</param>
     /// <param name="excludeLineIndex">The 0-indexed line to exclude from the count; pass <c>-1</c> to include all lines.</param>
     /// <remarks>
-    /// Skip range detection is handled internally via <see cref="FindWordOccurrences"/>.
+    /// The search is performed in order from top to bottom, left to right.  The count excludes any occurrences inside comments or
+    /// string literals.
     /// </remarks>
     /// <returns>The number of occurrences found outside the excluded line and skip ranges.</returns>
-    public static int CountOccurrences(
-        string[] lines,
-        string symbolName,
-        int excludeLineIndex)
+    public static int CountOccurrences(string[] sourceLines, string symbolName, int excludeLineIndex)
     {
         int count = 0;
-        foreach ((int lineIndex, int _) in FindWordOccurrences(lines, symbolName))
+        foreach ((int lineIndex, int _) in FindWordOccurrences(sourceLines, symbolName))
         {
             if (lineIndex != excludeLineIndex)
             {

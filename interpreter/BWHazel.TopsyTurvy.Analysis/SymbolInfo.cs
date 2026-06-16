@@ -5,6 +5,63 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// <summary>
 /// Represents a named symbol found in a Topsy Turvy source file.
 /// </summary>
+/// <remarks>
+/// <para>
+/// An instance of <see cref="SymbolInfo"/> is used to represent a symbol in a Topsy Turvy programme.
+/// </para>
+/// <para>
+/// In the following example:
+/// </para>
+/// <code>
+/// PRAY WELCOME AllLords AS A PEER
+/// IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AND Liberals
+///     AND SO I FIND SUM OF Conservatives AND Liberals
+/// MY DUTY IS DISCHARGED.
+/// </code>
+/// <para>
+/// there are 4 symbols in total:
+/// * <c>AllLords</c> is a <see cref="SymbolKind"/><c>.Variable</c> with a type display name of <c>PEER</c>.
+/// * <c>TotalLords</c> is a <see cref="SymbolKind"/><c>.Function</c> with parameters <c>Conservatives</c> and <c>Liberals</c>.
+/// * <c>Conservatives</c> is a <see cref="SymbolKind"/><c>.Parameter</c> for the <c>TotalLords</c> function.
+/// * <c>Liberals</c> is also a <see cref="SymbolKind"/><c>.Parameter</c> for the <c>TotalLords</c> function.
+/// </para>
+/// and would be represented by the following instances of <see cref="SymbolInfo"/>:
+/// <code>
+/// SymbolInfo allLordsSymbol = new()
+/// {
+///     Name = "AllLords",
+///     Kind = SymbolKind.Variable,
+///     TypeDisplayName = "PEER",
+///     DefinitionLine = 1,
+///     DefinitionColumn = 1
+/// };
+/// 
+/// SymbolInfo totalLordsSymbol = new()
+/// {
+///     Name = "TotalLords",
+///     Kind = SymbolKind.Function,
+///     Parameters = ["Conservatives", "Liberals"],
+///     DefinitionLine = 2,
+///     DefinitionColumn = 1
+/// };
+/// 
+/// SymbolInfo conservativesSymbol = new()
+/// {
+///     Name = "Conservatives",
+///     Kind = SymbolKind.Parameter,
+///     DefinitionLine = 2,
+///     DefinitionColumn = 38
+/// };
+/// 
+/// SymbolInfo liberalsSymbol = new()
+/// {
+///     Name = "Liberals",
+///     Kind = SymbolKind.Parameter,
+///     DefinitionLine = 2,
+///     DefinitionColumn = 52
+/// };x
+/// </code>
+/// </remarks>
 public class SymbolInfo
 {
     /// <summary>
