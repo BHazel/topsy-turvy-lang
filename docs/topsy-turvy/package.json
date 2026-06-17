@@ -14,7 +14,7 @@
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc",
     "api:generate": "npm run api:clean && DOTNET_ROLL_FORWARD=LatestMajor dotnetmd --config dotnet-md.json",
-    "api:clean": "find docs/api/dotnet -mindepth 1 -maxdepth 1 -not -name 'index.md' -exec rm -rf {} +"
+    "api:clean": "find docs/api/dotnet -mindepth 1 -maxdepth 1 -not -name 'index.md' -exec rm -rf {} + 2>/dev/null || true"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",
