@@ -70,3 +70,50 @@ jobs:
           name: vscode-extension_${{ matrix.rid }}
           path: vscode-extension_${{ matrix.rid }}.tar.gz
           retention-days: 7
+  docs:
+    name: Publish Documentation
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: 'interpreter/**/*.csproj'
+      - name: Build Solution
+        run: |
+          dotnet build interpreter/BWHazel.TopsyTurvy.slnx --no-incremental
+      - name: Install dotnetmd
+        run: |
+          dotnet tool install -g pierodetomi.dotnetmd
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: 'docs/topsy-turvy/package-lock.json'
+      - name: Install NPM Dependencies
+        working-directory: docs/topsy-turvy
+        run: |
+          npm ci
+      - name: Generate API Documentation
+        working-directory: docs/topsy-turvy
+        run: |
+          npm run api:generate
+      - name: Build Documentation
+        working-directory: docs/topsy-turvy
+        run: |
+          npm run build
+      - name: Package Documentation
+        run: |
+          tar -czf docs.tar.gz -C docs/topsy-turvy build
+      - name: Upload Documentation Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs
+          path: docs.tar.gz
+          retention-days: 7

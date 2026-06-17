@@ -3,10 +3,11 @@ using System;
 namespace BWHazel.TopsyTurvy.Runtime;
 
 /// <summary>
-/// Internal signal used to unwind the call stack when a return statement is executed.
+/// Internal signal thrown when a return statement is executed.
 /// </summary>
 /// <remarks>
-/// This is not a language-visible exception.
+/// This exception is used within the language runtime to signal a <c>MY DUTY IS DISCHARGED.</c> return statement.  It is not an
+/// error and is used to cleanly unwind the call stack.  It is not intended to be used or caught by user code.
 /// </remarks>
 internal sealed class ReturnSignalException : Exception
 {

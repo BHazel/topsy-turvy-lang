@@ -5,6 +5,8 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </summary>
 internal static class LanguageServerConstants
 {
-    /// <summary>The language identifier registered with the LSP client.</summary>
+    /// <summary>
+    /// The language identifier registered with the LSP client.
+    /// </summary>
     internal const string LanguageId = "topsy-turvy";
 }

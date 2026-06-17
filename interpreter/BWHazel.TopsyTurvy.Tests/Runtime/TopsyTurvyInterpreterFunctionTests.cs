@@ -151,7 +151,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
 
-        DiagnosticCollection diagnostics = interpreter.Execute(program, fileResolver: name => fileSystem.GetValueOrDefault(name));
+        DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(null, null, name => fileSystem.GetValueOrDefault(name)));
 
         diagnostics.HasErrors.ShouldBeFalse();
         output[0].ShouldBe("Hello, World!");
@@ -174,7 +174,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
 
-        DiagnosticCollection diagnostics = interpreter.Execute(program, fileResolver: _ => null);
+        DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(null, null, _ => null));
 
         diagnostics.HasErrors.ShouldBeTrue();
     }
@@ -198,7 +198,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
         
         DiagnosticCollection diagnostics = interpreter.Execute(
             program,
-            fileResolver: _ => "THIS IS NOT VALID TOPSY TURVY SYNTAX AT ALL");
+            options: new(null, null, _ => "THIS IS NOT VALID TOPSY TURVY SYNTAX AT ALL"));
 
         diagnostics.HasErrors.ShouldBeTrue();
     }

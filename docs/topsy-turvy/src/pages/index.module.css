@@ -1,0 +1,43 @@
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.epigraph {
+  opacity: 0.8;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.snippet {
+  padding: 3rem 0;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.codeBlock {
+  background: #1a0a0d;
+  color: #f5e9d0;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 680px;
+  margin: 1.5rem auto 0;
+  overflow-x: auto;
+}

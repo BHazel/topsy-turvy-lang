@@ -19,9 +19,10 @@ public static class IncantationCommandBuilder
     /// Builds and configures the <c>incantation</c> subcommand.
     /// </summary>
     /// <remarks>
-    /// The ---stdio flag is included for compatibility with language clients that automatically
+    /// The --stdio flag is included for compatibility with language clients that automatically
     /// append it when using stdio transport, such as vscode-languageclient. It is accepted but
     /// silently ignored by the command handler.
+    /// </remarks>
     /// <returns>A configured <see cref="Command"/> instance.</returns>
     public static Command Build()
     {

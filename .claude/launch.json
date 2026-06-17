@@ -2,6 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "docs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--no-open"],
+      "port": 3000,
+      "autoPort": true,
+      "cwd": "docs/topsy-turvy"
+    },
+    {
       "name": "web-editor",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "interpreter/BWHazel.TopsyTurvy.WebEditor", "--no-launch-profile", "--urls", "http://localhost:5001"],

@@ -79,7 +79,7 @@ window.topsyTurvy = {
             ["VERITY",                              "boolean true"],
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
-            ["JUST SO",                             "implicit accumulator"],
+            ["JUST SO",                             "implicit variable"],
             ["PEER",                                "integer type"],
             ["FATHOM",                              "float type"],
             ["YARN",                                "string type"],

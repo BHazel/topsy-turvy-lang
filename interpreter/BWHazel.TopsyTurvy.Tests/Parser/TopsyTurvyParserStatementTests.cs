@@ -38,7 +38,7 @@ public class TopsyTurvyParserStatementTests
     /// Tests that each type keyword maps to the correct <see cref="LiteralType"/> on the declaration node.
     /// </summary>
     /// <param name="keyword">The type keyword to test.</param>
-    /// <param name="expectedType">The expected <see cref="LiteralType"/> corresponding to
+    /// <param name="expectedType">The expected <see cref="LiteralType"/> corresponding to the keyword.</param>
     [Theory]
     [InlineData("PEER",   LiteralType.Integer)]
     [InlineData("FATHOM", LiteralType.Float)]

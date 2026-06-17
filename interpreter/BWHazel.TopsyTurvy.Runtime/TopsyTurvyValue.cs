@@ -7,20 +7,21 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// Represents a runtime value in the Topsy Turvy interpreter.
 /// </summary>
 /// <remarks>
-/// Wraps a .NET primitive together with a <see cref="LiteralType"/> tag as the language is
-/// dynamically typed at runtime.
+/// Instances of <see cref="TopsyTurvyValue"/> only exist at runtime and are not part of the AST.  They are created using static
+/// factory methods for each supported literl type to ensure consistency between the underlying .NET value and Topsy Turvy literal
+/// type.
 /// </remarks>
 public sealed class TopsyTurvyValue
 {
     /// <summary>
     /// Initialises a new instance of the <see cref="TopsyTurvyValue"/> class with the specified raw value and type.
     /// </summary>
-    /// <param name="raw">The underlying .NET value.</param>
-    /// <param name="type">The Topsy Turvy type of the value.</param>
-    private TopsyTurvyValue(object? raw, LiteralType type)
+    /// <param name="rawValue">The underlying .NET value.</param>
+    /// <param name="literalType">The Topsy Turvy literal type of the value.</param>
+    private TopsyTurvyValue(object? rawValue, LiteralType literalType)
     {
-        this.RawValue = raw;
-        this.TopsyTurvyType = type;
+        this.RawValue = rawValue;
+        this.LiteralType = literalType;
     }
 
     /// <summary>
@@ -29,14 +30,19 @@ public sealed class TopsyTurvyValue
     public object? RawValue { get; }
 
     /// <summary>
-    /// Gets the Topsy Turvy type of this value.
+    /// Gets the Topsy Turvy literal type of this value.
     /// </summary>
-    public LiteralType TopsyTurvyType { get; }
+    public LiteralType LiteralType { get; }
 
     /// <summary>
     /// Creates an integer value.
     /// </summary>
     /// <param name="value">The integer value.</param>
+    /// <remarks>
+    /// <code>
+    /// TopsyTurvyValue integerValue = TopsyTurvyValue.Integer(20);
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> representing the integer value.</returns>
     public static TopsyTurvyValue Integer(int value) => new(value, LiteralType.Integer);
 
@@ -44,6 +50,11 @@ public sealed class TopsyTurvyValue
     /// Creates a floating-point value.
     /// </summary>
     /// <param name="value">The floating-point value.</param>
+    /// <remarks>
+    /// <code>
+    /// TopsyTurvyValue floatValue = TopsyTurvyValue.Float(3.14);
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> representing the floating-point value.</returns>
     public static TopsyTurvyValue Float(double value) => new(value, LiteralType.Float);
 
@@ -51,6 +62,11 @@ public sealed class TopsyTurvyValue
     /// Creates a string value.
     /// </summary>
     /// <param name="value">The string value.</param>
+    /// <remarks>
+    /// <code>
+    /// TopsyTurvyValue stringValue = TopsyTurvyValue.String("Hello, World!");
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> representing the string.</returns>
     public static TopsyTurvyValue String(string value) => new(value, LiteralType.String);
 
@@ -58,68 +74,128 @@ public sealed class TopsyTurvyValue
     /// Creates a boolean value.
     /// </summary>
     /// <param name="value">The boolean value.</param>
+    /// <remarks>
+    /// <code>
+    /// TopsyTurvyValue booleanValue = TopsyTurvyValue.Boolean(true);
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> representing the boolean.</returns>
     public static TopsyTurvyValue Boolean(bool value) => new(value, LiteralType.Boolean);
 
     /// <summary>
     /// Creates a null value.
     /// </summary>
+    /// <remarks>
+    /// <code>
+    /// TopsyTurvyValue nullValue = TopsyTurvyValue.Null();
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> representing null.</returns>
     public static TopsyTurvyValue Null() => new(null, LiteralType.Null);
 
     /// <summary>
-    /// Evaluates the truthiness of this value in a boolean context.
+    /// Evaluates the truthiness of this value in a Boolean context.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For each supported type, a value to be considered "truthy" is:
+    /// * **Integer**: Any non-zero value.
+    /// * **Float**: Any non-zero value.
+    /// * **String**: Any non-empty string.
+    /// * **Boolean**: <c>true</c>
+    /// * **Null**: Never "truthy".
+    /// </para>
+    /// <code>
+    /// // "Truthy" Value
+    /// TopsyTurvyValue value = TopsyTurvyValue.Integer(42);
+    /// bool isTruthy = value.IsTruthy();
+    /// 
+    /// // Non-"Truthy" Value
+    /// TopsyTurvyValue stringValue = TopsyTurvyValue.String(string.Empty);
+    /// bool isStringTruthy = stringValue.IsTruthy();
+    /// </code>
+    /// </remarks>
     /// <returns><c>true</c> for "truthy" values, otherwise <c>false</c>.</returns>
-    public bool IsTruthy() => TopsyTurvyType switch
+    public bool IsTruthy() => LiteralType switch
     {
-        LiteralType.Integer => (int)RawValue! != 0,
-        LiteralType.Float => (double)RawValue! != 0.0,
-        LiteralType.String => !string.IsNullOrEmpty((string)RawValue!),
-        LiteralType.Boolean => (bool)RawValue!,
+        LiteralType.Integer => (int)this.RawValue! != 0,
+        LiteralType.Float => (double)this.RawValue! != 0.0,
+        LiteralType.String => !string.IsNullOrEmpty((string)this.RawValue!),
+        LiteralType.Boolean => (bool)this.RawValue!,
         LiteralType.Null => false,
         _ => true
     };
 
     /// <summary>
-    /// Returns a new value coerced to the specified target type.
+    /// Casts this value to the specified target type
     /// </summary>
-    /// <param name="target">The target Topsy Turvy type.</param>
+    /// <param name="targetType">The target Topsy Turvy type.</param>
+    /// <remarks>
+    /// <para>
+    /// Types in Topsy Turvy can be cast to other target types:
+    /// * **Integer** casts from other types:
+    ///     * Floating-point values are truncated to their integer part.
+    ///     * Boolean values are converted to 1 for <c>true</c> and 0 for <c>false</c>.
+    ///     * Null values are converted to 0.
+    ///     * Strings are parsed as integers if possible, otherwise an exception is thrown.
+    /// * **Float** casts from other types:
+    ///     * Integer values are converted to their floating-point representation.
+    ///     * Boolean values are converted to 1.0 for <c>true</c> and 0.0 for <c>false</c>.
+    ///     * Null values are converted to 0.0.
+    ///     * Strings are parsed as floating-point numbers if possible, otherwise an exception is thrown.
+    /// * **String** casts from other types:
+    ///     * All types are converted to their string representation.
+    /// * **Boolean** casts from other types:
+    ///     * All types are evaluated for truthiness using the <see cref="IsTruthy"/> method.
+    /// * **Null** casts from other types:
+    ///     * All types are converted to null.
+    /// </para>
+    /// The following example demonstrates casting an integer value to a floating-point value:
+    /// <code>
+    /// TopsyTurvyValue integerValue = TopsyTurvyValue.Integer(42);
+    /// TopsyTurvyValue floatValue = integerValue.CastTo(LiteralType.Float);
+    /// </code>
+    /// Whereas, the following example would throw an exception when attempting to cast a string that cannot be parsed as an integer:
+    /// <code>
+    /// TopsyTurvyValue stringValue = TopsyTurvyValue.String("Hello, World!");
+    /// TopsyTurvyValue invalidCast = stringValue.CastTo(LiteralType.Integer);
+    /// </code>
+    /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> of the target type.</returns>
-    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the value cannot be coerced.</exception>
-    public TopsyTurvyValue CastTo(LiteralType target)
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the value cannot be cast to the target type.</exception>
+    public TopsyTurvyValue CastTo(LiteralType targetType)
     {
-        if (TopsyTurvyType == target)
+        if (LiteralType == targetType)
         {
             return this;
         }
 
-        return target switch
+        return targetType switch
         {
-            LiteralType.Integer => TopsyTurvyType switch
+            LiteralType.Integer => this.LiteralType switch
             {
-                LiteralType.Float => Integer((int)(double)RawValue!),
-                LiteralType.Boolean => Integer((bool)RawValue! ? 1 : 0),
+                LiteralType.Float => Integer((int)(double)this.RawValue!),
+                LiteralType.Boolean => Integer((bool)this.RawValue! ? 1 : 0),
                 LiteralType.Null => Integer(0),
                 LiteralType.String =>
-                    int.TryParse((string)RawValue!, NumberStyles.Integer, CultureInfo.InvariantCulture, out int i)
-                        ? Integer(i)
-                        : throw new TopsyTurvyRuntimeException($"Cannot cast '{RawValue}' to {Keywords.TypeNames.Peer}."),
+                    int.TryParse((string)this.RawValue!, NumberStyles.Integer, CultureInfo.InvariantCulture, out int valueAsInt)
+                        ? Integer(valueAsInt)
+                        : throw new TopsyTurvyRuntimeException(this.GetInvalidCastErrorMessage(Keywords.TypeNames.Peer)),
                 _ => this
             },
-            LiteralType.Float => TopsyTurvyType switch
+            LiteralType.Float => this.LiteralType switch
             {
-                LiteralType.Integer => Float((double)(int)RawValue!),
-                LiteralType.Boolean => Float((bool)RawValue! ? 1.0 : 0.0),
+                LiteralType.Integer => Float((double)(int)this.RawValue!),
+                LiteralType.Boolean => Float((bool)this.RawValue! ? 1.0 : 0.0),
                 LiteralType.Null => Float(0.0),
                 LiteralType.String =>
-                    double.TryParse((string)RawValue!, NumberStyles.Float, CultureInfo.InvariantCulture, out double f)
-                        ? Float(f)
-                        : throw new TopsyTurvyRuntimeException($"Cannot cast '{RawValue}' to {Keywords.TypeNames.Fathom}."),
+                    double.TryParse((string)this.RawValue!, NumberStyles.Float, CultureInfo.InvariantCulture, out double valueAsFloat)
+                        ? Float(valueAsFloat)
+                        : throw new TopsyTurvyRuntimeException(this.GetInvalidCastErrorMessage(Keywords.TypeNames.Fathom)),
                 _ => this
             },
-            LiteralType.String => String(ToString()),
-            LiteralType.Boolean => Boolean(IsTruthy()),
+            LiteralType.String => String(this.ToString()),
+            LiteralType.Boolean => Boolean(this.IsTruthy()),
             LiteralType.Null => Null(),
             _ => this
         };
@@ -129,14 +205,42 @@ public sealed class TopsyTurvyValue
     /// Returns the string representation of this value.
     /// </summary>
     /// <remarks>
-    /// Booleans render as <c>VERITY</c> or <c>NAY</c>; null renders as <c>NAUGHT</c>.
-    /// all other types use their default .NET string representation.
+    /// <para>
+    /// With the exception of Boolean and Null types, the string representation is the default .NET string representation of the
+    /// underlying value.  Boolean types render as <c>VERITY</c> for <c>true</c> or <c>NAY</c> for <c>false</c> and Null types
+    /// render as <c>NAUGHT</c>.
+    /// </para>
+    /// In the following example various TopsyTurvy values are converted to strings:
+    /// <code>
+    /// TopsyTurvyValue.Integer(42).ToString();
+    /// TopsyTurvyValue.Float(3.14).ToString();
+    /// TopsyTurvyValue.String("Hello, World!").ToString();
+    /// TopsyTurvyValue.Boolean(true).ToString();
+    /// TopsyTurvyValue.Null().ToString();
+    /// </code>
+    /// and will be rendered as:
+    /// <code>
+    /// "42"
+    /// "3.14"
+    /// "Hello, World!"
+    /// "VERITY"
+    /// "NAUGHT"
+    /// </code>
     /// </remarks>
     /// <returns>A string representation of this value.</returns>
-    public override string ToString() => TopsyTurvyType switch
+    public override string ToString() => LiteralType switch
     {
-        LiteralType.Boolean => (bool)RawValue! ? Keywords.Literals.Verity : Keywords.Literals.Nay,
+        LiteralType.Boolean => (bool)this.RawValue!
+            ? Keywords.Literals.Verity
+            : Keywords.Literals.Nay,
         LiteralType.Null => Keywords.Literals.Naught,
-        _ => RawValue?.ToString() ?? Keywords.Literals.Naught
+        _ => this.RawValue?.ToString() ?? Keywords.Literals.Naught
     };
+
+    /// <summary>
+    /// Builds an error message for an invalid cast operation.
+    /// </summary>
+    /// <param name="targetType">The target Topsy Turvy type.</param>
+    /// <returns>An error message indicating the invalid cast.</returns>
+    private string GetInvalidCastErrorMessage(string targetType) => $"Cannot cast '{this.RawValue}' to {targetType}.";
 }

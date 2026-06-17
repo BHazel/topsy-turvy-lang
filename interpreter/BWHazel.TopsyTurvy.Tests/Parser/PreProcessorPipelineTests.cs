@@ -18,7 +18,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute(input);
 
-        result.Text.ShouldBe(input);
+        result.TransformedText.ShouldBe(input);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("hello");
 
-        result.Text.ShouldBe(">>hello");
+        result.TransformedText.ShouldBe(">>hello");
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("X");
 
-        result.Text.ShouldBe("BAX");
+        result.TransformedText.ShouldBe("BAX");
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class PreProcessorPipelineTests
 
         PreProcessResult result = pipeline.Execute("X");
 
-        result.Text.ShouldBe("ABX");
+        result.TransformedText.ShouldBe("ABX");
     }
 
     /// <summary>

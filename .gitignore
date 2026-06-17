@@ -1,7 +1,11 @@
 bin/
-obj/
+build/
 dist/
+docs/topsy-turvy/docs/api/dotnet/
+.github/artifacts/
 node_modules/
+obj/
 out/
 .vscode-test/
-.github/artifacts/
+.docusaurus
+.cache-loader

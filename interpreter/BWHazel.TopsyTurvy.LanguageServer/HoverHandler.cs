@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BWHazel.TopsyTurvy.Analysis;
-using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -10,33 +9,51 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/hover</c> requests.
+/// Provides hover information for symbols.
 /// </summary>
 /// <remarks>
-/// Returns type or signature information for the symbol under the cursor.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/hover</c>: The client requests hover information for a symbol at a given position in a text document.
+/// </para>
 /// </remarks>
-public class HoverHandler : HoverHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class HoverHandler(DocumentStateManager documentStateManager)
+    : HoverHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="HoverHandler"/> class.
+    /// Creates the registration options for hover handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public HoverHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override HoverRegistrationOptions CreateRegistrationOptions(
-        HoverCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The hover capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler has no additional configuration beyond registering for Topsy Turvy documents.
+    /// </remarks>
+    /// <returns>The registration options for hover handling.</returns>
+    protected override HoverRegistrationOptions CreateRegistrationOptions(HoverCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Handles the <c>textDocument/hover</c> request from the client when hover information is requested.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>, <c>null</c> is returned so no hover pop-up is displayed.
+    /// * The word at the cursor position is extracted from the source using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
+    /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, <c>null</c> is returned.
+    /// * A Markdown hover card is built using <see cref="HoverMarkdownBuilder.Build"/> and returned to the client.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="Hover"/> containing a Markdown card for the symbol under the cursor,
+    /// or <c>null</c> if no symbol is found at that position.
+    /// </returns>
     public override Task<Hover?> Handle(HoverParams request, CancellationToken cancellationToken)
     {
         try
@@ -57,28 +74,28 @@ public class HoverHandler : HoverHandlerBase
                 return Task.FromResult<Hover?>(null);
             }
 
-            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
+            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? symbolInfo) || symbolInfo is null)
             {
-                info = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
-                if (info is null)
+                symbolInfo = this.documentStateManager.FindSymbolInOtherDocuments(word, request.TextDocument.Uri);
+                if (symbolInfo is null)
                 {
                     return Task.FromResult<Hover?>(null);
                 }
             }
 
-            return Task.FromResult<Hover?>(new Hover
-            {
-                Contents = new MarkedStringsOrMarkupContent(new MarkupContent
+            return Task.FromResult<Hover?>(
+                new()
                 {
-                    Kind = MarkupKind.Markdown,
-                    Value = HoverMarkdownBuilder.Build(info)
-                })
-            });
+                    Contents = new(new MarkupContent()
+                    {
+                        Kind = MarkupKind.Markdown,
+                        Value = HoverMarkdownBuilder.Build(symbolInfo)
+                    })
+                });
         }
         catch (Exception)
         {
             return Task.FromResult<Hover?>(null);
         }
     }
-
 }

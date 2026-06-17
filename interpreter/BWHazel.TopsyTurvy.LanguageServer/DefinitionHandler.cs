@@ -12,33 +12,52 @@ using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/definition</c> requests.
+/// Navigates to the definition, using Go-to-Definition, of the symbol under the cursor.
 /// </summary>
 /// <remarks>
-/// This navigates to the declaration or definition of the symbol under the cursor.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/definition</c>: The client requests the definition location of the symbol at a given position in a text document.
+/// </para>
 /// </remarks>
-public class DefinitionHandler : DefinitionHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class DefinitionHandler(DocumentStateManager documentStateManager)
+    : DefinitionHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="DefinitionHandler"/> class.
+    /// Creates the registration options for definition handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public DefinitionHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override DefinitionRegistrationOptions CreateRegistrationOptions(
-        DefinitionCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The definition capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  This handler has no additional configuration beyond registering for Topsy Turvy documents.
+    /// </remarks>
+    /// <returns>The registration options for definition handling.</returns>
+    protected override DefinitionRegistrationOptions CreateRegistrationOptions(DefinitionCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId)
         };
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Handles the <c>textDocument/definition</c> request from the client when a Go-to-Definition action is triggered.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>, an empty result is returned so the editor takes no action.
+    /// * The word at the cursor position is extracted from the source using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, an empty result is returned.
+    /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolWithUriInOtherDocuments"/>, which also returns the URI of the document where the symbol was found.
+    /// * If the symbol has no known definition position (<see cref="SymbolInfo.DefinitionLine"/> is <c>0</c>), an empty result is returned.
+    /// * An LSP <see cref="Location"/> is built covering the symbol name on its definition line, converting from 1-based Topsy Turvy co-ordinates to 0-based LSP co-ordinates, and returned to the client.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a collection containing the definition <see cref="Location"/> of the symbol,
+    /// or an empty collection if no definition can be found.
+    /// </returns>
     public override Task<LocationOrLocationLinks?> Handle(
         DefinitionParams request, CancellationToken cancellationToken)
     {
@@ -61,34 +80,31 @@ public class DefinitionHandler : DefinitionHandlerBase
             }
 
             DocumentUri definitionUri = request.TextDocument.Uri;
-            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? info) || info is null)
+            if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? symbolInfo) || symbolInfo is null)
             {
-                (definitionUri, info) = this.documentStateManager.FindSymbolWithUriInOtherDocuments(word, request.TextDocument.Uri);
+                (definitionUri, symbolInfo) = this.documentStateManager.FindSymbolWithUriInOtherDocuments(word, request.TextDocument.Uri);
             }
 
-            if (info is null || info.DefinitionLine == 0)
+            if (symbolInfo is null || symbolInfo.DefinitionLine == 0)
             {
-                return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks());
+                return Task.FromResult<LocationOrLocationLinks?>(new());
             }
 
-            int startLine = info.DefinitionLine - 1;
-            int startChar = info.DefinitionColumn - 1;
-            int endChar = startChar + word.Length;
+            int startLine = symbolInfo.DefinitionLine - 1;
+            int startCharacter = symbolInfo.DefinitionColumn - 1;
+            int endCharacter = startCharacter + word.Length;
 
-            LocationOrLocationLink location = new(new Location
+            LocationOrLocationLink location = new(new Location()
             {
                 Uri = definitionUri,
-                Range = new LspRange(
-                    new Position(startLine, startChar),
-                    new Position(startLine, endChar))
+                Range = new(new(startLine, startCharacter), new(startLine, endCharacter))
             });
 
-            return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks(location));
+            return Task.FromResult<LocationOrLocationLinks?>(new(location));
         }
         catch (Exception)
         {
-            return Task.FromResult<LocationOrLocationLinks?>(new LocationOrLocationLinks());
+            return Task.FromResult<LocationOrLocationLinks?>(new());
         }
     }
-
 }

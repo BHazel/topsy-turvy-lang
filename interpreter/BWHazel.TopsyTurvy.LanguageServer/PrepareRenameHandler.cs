@@ -11,39 +11,61 @@ using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/prepareRename</c> requests.
+/// Validates whether the symbol under the cursor can be renamed before the editor shows the rename input box.
 /// </summary>
 /// <remarks>
-/// Validates whether the symbol under the cursor can be renamed before the editor shows
-/// the rename input box.  Returns the token span and current name as placeholder text
-/// when the cursor is on a renameable user symbol.  It returns <c>null</c> to suppress the
-/// box when the cursor is on a keyword, an unknown token or a multi-word built-in.
+/// <para>
+/// This handler handles the following LSP request:
+/// * <c>textDocument/prepareRename</c>: The client requests validation of a rename target before showing the rename input box.
+/// </para>
+/// <para>
+/// When a rename is triggered, the editor calls this handler first.  If <c>null</c> is returned the rename input box
+/// is suppressed; if a <see cref="RangeOrPlaceholderRange"/> is returned the editor shows the input box pre-filled with
+/// the symbol name.  The <see cref="RenameRegistrationOptions.PrepareProvider"/> property is set to <c>true</c> to enable
+/// this pre-flight check.
+/// </para>
 /// </remarks>
-public class PrepareRenameHandler : PrepareRenameHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class PrepareRenameHandler(DocumentStateManager documentStateManager)
+    : PrepareRenameHandlerBase
 {
-    private readonly DocumentStateManager documentStateManager;
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="PrepareRenameHandler"/> class.
+    /// Creates the registration options for rename preparation handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public PrepareRenameHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override RenameRegistrationOptions CreateRegistrationOptions(
-        RenameCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The rename capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  The <see cref="RenameRegistrationOptions.PrepareProvider"/> property is set to <c>true</c> to instruct
+    /// the editor to call <c>textDocument/prepareRename</c> before displaying the rename input box.
+    /// </remarks>
+    /// <returns>The registration options for rename handling.</returns>
+    protected override RenameRegistrationOptions CreateRegistrationOptions(RenameCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             PrepareProvider = true
         };
 
-    /// <inheritdoc/>
-    public override Task<RangeOrPlaceholderRange?> Handle(
-        PrepareRenameParams request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handles the <c>textDocument/prepareRename</c> request from the client when a rename is initiated.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c> then <c>null</c> is returned to suppress the rename input box.
+    /// * The word at the cursor position is extracted using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
+    /// * The word is looked up in the current document symbol table only.  If not found, or the symbol name contains a space, indicating a multi-word built-in that cannot be renamed, <c>null</c> is returned.
+    /// * The start column of the token is located by walking backwards from the cursor position using <see cref="SourceAnalyser.IsIdentifierChar"/> to build the token range.
+    /// * A <see cref="PlaceholderRange"/> is returned containing the token range and the symbol name as placeholder text, which the editor uses to pre-fill the rename input box.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="RangeOrPlaceholderRange"/> containing the token span and placeholder name,
+    /// or <c>null</c> if the symbol at the cursor position cannot be renamed.
+    /// </returns>
+    public override Task<RangeOrPlaceholderRange?> Handle(PrepareRenameParams request, CancellationToken cancellationToken)
     {
         try
         {
@@ -79,19 +101,17 @@ public class PrepareRenameHandler : PrepareRenameHandlerBase
             }
 
             string lineText = lines[line].TrimEnd('\r');
-            int col = Math.Min(character, lineText.Length - 1);
-            int startCol = col;
-            while (startCol > 0 && SourceAnalyser.IsIdentifierChar(lineText[startCol - 1]))
+            int column = Math.Min(character, lineText.Length - 1);
+            int startColumn = column;
+            while (startColumn > 0 && SourceAnalyser.IsIdentifierChar(lineText[startColumn - 1]))
             {
-                startCol--;
+                startColumn--;
             }
 
-            LspRange range = new(
-                new Position(line, startCol),
-                new Position(line, startCol + word.Length));
+            LspRange range = new(new(line, startColumn), new(line, startColumn + word.Length));
 
             return Task.FromResult<RangeOrPlaceholderRange?>(
-                new RangeOrPlaceholderRange(new PlaceholderRange
+                new(new PlaceholderRange()
                 {
                     Range = range,
                     Placeholder = word
@@ -102,5 +122,4 @@ public class PrepareRenameHandler : PrepareRenameHandlerBase
             return Task.FromResult<RangeOrPlaceholderRange?>(null);
         }
     }
-
 }

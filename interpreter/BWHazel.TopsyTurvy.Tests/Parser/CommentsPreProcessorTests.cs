@@ -19,7 +19,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldBe(input);
+        result.TransformedText.ShouldBe(input);
     }
 
     /// <summary>
@@ -32,8 +32,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldNotContain("ASIDE:");
-        result.Text.ShouldNotContain("this is a comment");
+        result.TransformedText.ShouldNotContain("ASIDE:");
+        result.TransformedText.ShouldNotContain("this is a comment");
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldStartWith("BEHOLD x");
+        result.TransformedText.ShouldStartWith("BEHOLD x");
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
         
-        result.Text.ShouldNotContain("some text");
+        result.TransformedText.ShouldNotContain("some text");
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class CommentsPreProcessorTests
         PreProcessResult result = this.processor.Process(input, new());
 
         int newLineCount = 0;
-        foreach (char character in result.Text)
+        foreach (char character in result.TransformedText)
         {
             if (character == '\n')
             {
@@ -94,8 +94,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldNotContain("first comment");
-        result.Text.ShouldNotContain("second comment");
+        result.TransformedText.ShouldNotContain("first comment");
+        result.TransformedText.ShouldNotContain("second comment");
     }
 
     /// <summary>
@@ -108,8 +108,8 @@ public class CommentsPreProcessorTests
 
         PreProcessResult result = this.processor.Process(input, new());
 
-        result.Text.ShouldNotContain("(ASIDE, AT SOME LENGTH: ignored END OF ASIDE.)");
-        result.Text.ShouldContain("BEHOLD");
-        result.Text.ShouldContain("x");
+        result.TransformedText.ShouldNotContain("(ASIDE, AT SOME LENGTH: ignored END OF ASIDE.)");
+        result.TransformedText.ShouldContain("BEHOLD");
+        result.TransformedText.ShouldContain("x");
     }
 }

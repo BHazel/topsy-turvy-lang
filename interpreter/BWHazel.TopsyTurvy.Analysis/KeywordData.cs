@@ -3,6 +3,9 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// <summary>
 /// Provides the canonical set of Topsy Turvy language keywords with descriptive labels.
 /// </summary>
+/// <remarks>
+/// This is the authoritative source of truth for language keywords, their canonical case and their descriptions.
+/// </remarks>
 public static class KeywordData
 {
     /// <summary>
@@ -79,7 +82,7 @@ public static class KeywordData
         ("VERITY",                                   "boolean true"),
         ("NAY",                                      "boolean false"),
         ("NAUGHT",                                   "null"),
-        ("JUST SO",                                  "implicit accumulator"),
+        ("JUST SO",                                  "implicit variable"),
         ("PEER",                                     "integer type"),
         ("FATHOM",                                   "float type"),
         ("YARN",                                     "string type"),

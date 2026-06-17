@@ -5,10 +5,19 @@ using BWHazel.TopsyTurvy.Ast;
 namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
-/// Holds all named symbols collected from a successfully parsed Topsy Turvy program.
+/// Holds all named symbols collected from a successfully parsed Topsy Turvy programme.
 /// </summary>
 /// <remarks>
-/// Provides lookup and cursor-position utilities for LSP handlers and analysis consumers.
+/// <para>
+/// Symbols refer to all variables, functions and function parameters, each of which is represented by a <see cref="SymbolInfo"/>
+/// object.  The symbol table is built by walking the AST and scanning the original source text to recover definition positions.
+/// </para>
+/// <para>
+/// It should be noted that there is a limitation regarding function parameters.  Currently the symbol table is a flat dictionary
+/// of all symbols, therefore, if a function parameter has the same name as a variable or another function parameter, the symbol
+/// table will only contain one entry for that name.  This is not a problem for the interpreter, which uses the AST to resolve
+/// scopes, but analysis tools will incorrectly use the single symbol table entry for all references to that name.
+/// </para>
 /// </remarks>
 public class SymbolTable
 {
@@ -26,31 +35,40 @@ public class SymbolTable
     /// <summary>
     /// Builds a <see cref="SymbolTable"/>.
     /// </summary>
-    /// <param name="ast">The root node of the parsed program.</param>
+    /// <param name="program">The root node of the parsed programme.</param>
     /// <param name="originalSource">The original (unprocessed) source text.</param>
     /// <remarks>
     /// This walks the AST and scans the original source line-by-line to recover definition positions.
     /// </remarks>
     /// <returns>A populated <see cref="SymbolTable"/>.</returns>
-    public static SymbolTable Build(ProgramNode ast, string originalSource)
+    public static SymbolTable Build(ProgramNode program, string originalSource)
     {
         Dictionary<string, SymbolInfo> collectedSymbols = new(StringComparer.OrdinalIgnoreCase);
         string[] sourceLines = originalSource.Split('\n');
 
-        collectedSymbols[Keywords.SpecialNames.JustSo] = new SymbolInfo
+        collectedSymbols[Keywords.SpecialNames.JustSo] = new SymbolInfo()
         {
             Name = Keywords.SpecialNames.JustSo,
             Kind = SymbolKind.Variable,
-            TypeDisplayName = "implicit accumulator"
+            TypeDisplayName = "implicit variable"
         };
 
-        CollectFromStatements(ast.Statements, collectedSymbols, sourceLines);
+        CollectFromStatements(program.Statements, collectedSymbols, sourceLines);
         return new SymbolTable(collectedSymbols);
     }
 
     /// <summary>
     /// Attempts to retrieve a symbol by name (case-insensitive).
     /// </summary>
+    /// <remarks>
+    /// <code>
+    /// bool symbolFound = symbolTable.TryGetSymbol("LovesickMaidens", out SymbolInfo? info);
+    /// if (symbolFound)
+    /// {
+    ///   Console.WriteLine($"Symbol {info.Name} is a {info.Kind} defined at line {info.DefinitionLine}");
+    /// }
+    /// </code>
+    /// </remarks>
     /// <param name="name">The symbol name to look up.</param>
     /// <param name="info">When this method returns, contains the <see cref="SymbolInfo"/> if found.</param>
     /// <returns><c>true</c> if the symbol was found, otherwise <c>false</c>.</returns>
@@ -60,6 +78,14 @@ public class SymbolTable
     /// <summary>
     /// Returns all symbols in the table.
     /// </summary>
+    /// <remarks>
+    /// <code>
+    /// foreach (SymbolInfo symbol in symbolTable.AllSymbols())
+    /// {
+    ///     Console.WriteLine($"Symbol {symbol.Name} is a {symbol.Kind} defined at line {symbol.DefinitionLine}");
+    /// }
+    /// </code>
+    /// </remarks>
     /// <returns>All <see cref="SymbolInfo"/> entries.</returns>
     public IEnumerable<SymbolInfo> AllSymbols() => this.symbols.Values;
 
@@ -69,17 +95,34 @@ public class SymbolTable
     /// <param name="source">The full document source text.</param>
     /// <param name="line">The 0-indexed line number.</param>
     /// <param name="column">The 0-indexed character column.</param>
+    /// <remarks>
+    /// <para>
+    /// Extraction of a word follows the process below, which returns early if any check fails:
+    /// * The source code is split into lines and any Windows-specific carriage return characters are removed.
+    /// * Check that the character at the specified line and column is a valid identifier character.
+    /// * Search left and right from the position to find the full word, ensuring it is a valid identifier.
+    /// </para>
+    /// <code>
+    /// string symbol = SymbolTable.ExtractWordAt(source, 10, 15);
+    /// if (symbol != null)
+    /// {
+    ///     Console.WriteLine($"Found symbol: {symbol}");
+    /// }
+    /// </code>
+    /// </remarks>
     /// <returns>
     /// The identifier word at the position, or <c>null</c> if no identifier is present there.
     /// </returns>
     public static string? ExtractWordAt(string source, int line, int column)
     {
+        // Splitting on '\n' handles all newlines regardless of platform.
         string[] lines = source.Split('\n');
         if (line < 0 || line >= lines.Length)
         {
             return null;
         }
 
+        // Trimming on a '\r' character ensures that it does not corrupt the column-based substring.
         string lineText = lines[line].TrimEnd('\r');
         if (column < 0 || column >= lineText.Length)
         {
@@ -91,40 +134,37 @@ public class SymbolTable
             return null;
         }
 
-        int start = column;
-        while (start > 0 && SourceAnalyser.IsIdentifierChar(lineText[start - 1]))
+        int wordStartColumn = column;
+        while (wordStartColumn > 0 && SourceAnalyser.IsIdentifierChar(lineText[wordStartColumn - 1]))
         {
-            start--;
+            wordStartColumn--;
         }
 
-        int end = column;
-        while (end < lineText.Length - 1 && SourceAnalyser.IsIdentifierChar(lineText[end + 1]))
+        int wordEndColumn = column;
+        while (wordEndColumn < lineText.Length - 1 && SourceAnalyser.IsIdentifierChar(lineText[wordEndColumn + 1]))
         {
-            end++;
+            wordEndColumn++;
         }
 
-        if (!char.IsLetter(lineText[start]))
+        if (!char.IsLetter(lineText[wordStartColumn]))
         {
             return null;
         }
 
-        return lineText.Substring(start, end - start + 1);
+        return lineText.Substring(wordStartColumn, wordEndColumn - wordStartColumn + 1);
     }
 
     /// <summary>
     /// Walks the given statements recursively to collect symbol information.
     /// </summary>
     /// <param name="statements">The statements to process.</param>
-    /// <param name="collected">The dictionary to collect symbol information into.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void CollectFromStatements(
-        IReadOnlyList<Statement> statements,
-        Dictionary<string, SymbolInfo> collected,
-        string[] sourceLines)
+    private static void CollectFromStatements(IReadOnlyList<Statement> statements, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
     {
         foreach (Statement statement in statements)
         {
-            CollectFromStatement(statement, collected, sourceLines);
+            CollectFromStatement(statement, collectedSymbols, sourceLines);
         }
     }
 
@@ -134,17 +174,14 @@ public class SymbolTable
     /// <param name="statement">The statement to process.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void CollectFromStatement(
-        Statement statement,
-        Dictionary<string, SymbolInfo> collectedSymbols,
-        string[] sourceLines)
+    private static void CollectFromStatement(Statement statement, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
     {
         switch (statement)
         {
             case PrincipalBlockNode principals:
-                foreach (DeclarationNode decl in principals.Declarations)
+                foreach (DeclarationNode declaration in principals.Declarations)
                 {
-                    AddVariable(decl, collectedSymbols, sourceLines);
+                    AddVariable(declaration, collectedSymbols, sourceLines);
                 }
 
                 break;
@@ -184,13 +221,13 @@ public class SymbolTable
     /// <summary>
     /// Adds a variable to the collected symbol information.
     /// </summary>
+    /// <remarks>
+    /// If the variable name already exists, it is not added again.
+    /// </remarks>
     /// <param name="declaration">The declaration node representing the variable.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void AddVariable(
-        DeclarationNode declaration,
-        Dictionary<string, SymbolInfo> collectedSymbols,
-        string[] sourceLines)
+    private static void AddVariable(DeclarationNode declaration, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
     {
         if (collectedSymbols.ContainsKey(declaration.Name))
         {
@@ -198,7 +235,7 @@ public class SymbolTable
         }
 
         SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
-        collectedSymbols[declaration.Name] = new SymbolInfo
+        collectedSymbols[declaration.Name] = new SymbolInfo()
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
@@ -214,17 +251,16 @@ public class SymbolTable
     /// <param name="function">The function definition node representing the function.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void AddFunction(
-        FunctionDefinitionNode function,
-        Dictionary<string, SymbolInfo> collectedSymbols,
-        string[] sourceLines)
+    private static void AddFunction(FunctionDefinitionNode function, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
     {
         SourceLocation functionDefinition = FindDefinitionLine(
-            sourceLines, "IT IS MY DUTY TO PERFORM", function.Name);
+            sourceLines,
+            "IT IS MY DUTY TO PERFORM",
+            function.Name);
 
         if (!collectedSymbols.ContainsKey(function.Name))
         {
-            collectedSymbols[function.Name] = new SymbolInfo
+            collectedSymbols[function.Name] = new SymbolInfo()
             {
                 Name = function.Name,
                 Kind = SymbolKind.Function,
@@ -238,7 +274,7 @@ public class SymbolTable
         {
             if (!collectedSymbols.ContainsKey(parameter))
             {
-                collectedSymbols[parameter] = new SymbolInfo
+                collectedSymbols[parameter] = new SymbolInfo()
                 {
                     Name = parameter,
                     Kind = SymbolKind.Parameter,
@@ -258,8 +294,7 @@ public class SymbolTable
     /// <param name="keyword">The keyword to search for.</param>
     /// <param name="name">The name of the symbol to find.</param>
     /// <returns>The 1-indexed location of the symbol definition, or <c>(0, 0)</c> if not found.</returns>
-    private static SourceLocation FindDefinitionLine(
-        string[] sourceLines, string keyword, string name)
+    private static SourceLocation FindDefinitionLine(string[] sourceLines, string keyword, string name)
     {
         for (int i = 0; i < sourceLines.Length; i++)
         {
@@ -270,18 +305,19 @@ public class SymbolTable
                 continue;
             }
 
-            int searchFrom = keywordIndex + keyword.Length;
-            int nameIndex = line.IndexOf(name, searchFrom, StringComparison.OrdinalIgnoreCase);
+            int searchFromIndex = keywordIndex + keyword.Length;
+            int nameIndex = line.IndexOf(name, searchFromIndex, StringComparison.OrdinalIgnoreCase);
             if (nameIndex < 0)
             {
                 continue;
             }
 
-            bool leadingOk = nameIndex == 0 || !SourceAnalyser.IsIdentifierChar(line[nameIndex - 1]);
-            bool trailingOk = nameIndex + name.Length >= line.Length
+            // The characters immediately before and after the name must not be valid identifier characters.
+            bool isLeadingCharacterValid = nameIndex == 0 || !SourceAnalyser.IsIdentifierChar(line[nameIndex - 1]);
+            bool isTrailingCharacterValid = nameIndex + name.Length >= line.Length
                 || !SourceAnalyser.IsIdentifierChar(line[nameIndex + name.Length]);
 
-            if (leadingOk && trailingOk)
+            if (isLeadingCharacterValid && isTrailingCharacterValid)
             {
                 return new(i + 1, nameIndex + 1);
             }

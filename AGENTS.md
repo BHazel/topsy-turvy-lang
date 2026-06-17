@@ -42,7 +42,7 @@ are not valid without it:
 `MY DUTY IS PREMATURELY DISCHARGED.` `IF YOU PLEASE.`
 
 **I4 — `JUST SO` is the sole implicit variable.**
-No other implicit accumulator exists. `JUST SO` receives the result of any
+No other implicit variable exists. `JUST SO` receives the result of any
 expression not explicitly assigned. Conditionals and switch always read from
 `JUST SO`.
 

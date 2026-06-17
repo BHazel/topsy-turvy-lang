@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using BWHazel.TopsyTurvy.Ast;
@@ -145,7 +146,7 @@ public class TopsyTurvyInterpreterExceptionTests : TopsyTurvyInterpreterTestBase
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
         
-        DiagnosticCollection diagnostics = interpreter.Execute(program, timeout: System.TimeSpan.FromMilliseconds(1));
+        DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(TimeSpan.FromMilliseconds(1), null, null));
 
         diagnostics.HasErrors.ShouldBeTrue();
     }

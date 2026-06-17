@@ -447,7 +447,7 @@ THE TERM EXPIRES.
 ```
 
 - `BY A LEGAL FICTION` — begins a loop. The Lord Chancellor in *Iolanthe* and the baronets of *Ruddigore* both operate under legal fictions that force them to repeat actions indefinitely — the precise G&S metaphor for a loop: a construct that, by a convenient fiction, repeats events until reality reasserts itself.
-- `KNOWN AS <label>` — optional label for the loop; a legal fiction, like all G&S legal fictions, may be named or may proceed anonymously
+- `KNOWN AS <label>` — optional label for the loop; a legal fiction, like all G&S legal fictions, may be named or may proceed anonymously. Labels are for readability only — `THAT WILL DO.` and `ONCE MORE.` always apply to the nearest enclosing loop regardless of whether any loop carries a label.
 - `THAT WILL DO.` — breaks out of the innermost loop immediately; the universal break keyword, valid in both loop and switch contexts — see §9
 - `ONCE MORE.` — skips the remainder of the current iteration and proceeds immediately to the next; the stage call to repeat from the top of a passage. Applies to all loop forms.
 - `THE TERM EXPIRES.` — closes the loop. Drawn from *The Grand Duke*, Act I: the Statutory Duel law *"expires to-morrow"* — a recurring obligation reaching its natural terminus.

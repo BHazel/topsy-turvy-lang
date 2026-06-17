@@ -11,19 +11,19 @@ public static class HoverMarkdownBuilder
     /// <summary>
     /// Builds a Markdown hover string for the given symbol.
     /// </summary>
-    /// <param name="info">The symbol to describe.</param>
+    /// <param name="symbolInfo">The symbol to describe.</param>
     /// <returns>A Markdown string suitable for display in a hover tooltip.</returns>
-    public static string Build(SymbolInfo info) => info.Kind switch
+    public static string Build(SymbolInfo symbolInfo) => symbolInfo.Kind switch
     {
-        SymbolKind.Variable when info.Name.Equals(Keywords.SpecialNames.JustSo, StringComparison.OrdinalIgnoreCase) =>
+        SymbolKind.Variable when symbolInfo.Name.Equals(Keywords.SpecialNames.JustSo, StringComparison.OrdinalIgnoreCase) =>
             "**implicit variable** `JUST SO` — receives the result of the last expression",
         SymbolKind.Variable =>
-            $"**(variable)** `{info.Name}` : {info.TypeDisplayName}",
+            $"**(variable)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
         SymbolKind.Function =>
-            $"**(function)** `{info.Name}`({string.Join(", ", info.Parameters ?? Array.Empty<string>())})",
+            $"**(function)** `{symbolInfo.Name}`({string.Join(", ", symbolInfo.Parameters ?? Array.Empty<string>())})",
         SymbolKind.Parameter =>
-            $"**(parameter)** `{info.Name}`",
+            $"**(parameter)** `{symbolInfo.Name}`",
         _ =>
-            $"`{info.Name}`"
+            $"`{symbolInfo.Name}`"
     };
 }

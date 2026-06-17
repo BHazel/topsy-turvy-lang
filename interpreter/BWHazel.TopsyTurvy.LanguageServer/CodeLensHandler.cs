@@ -8,55 +8,88 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
-using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Handles <c>textDocument/codeLens</c> requests.
+/// Shows inline reference-count annotations above each function and variable declaration.
 /// </summary>
 /// <remarks>
-/// Emits an inline reference-count annotation above each function and variable declaration.
-/// Clicking the lens opens the Find All References panel at the declaration position.
-/// Reference counts exclude the declaration line itself, so <c>0 references</c> indicates an
-/// unused symbol.  Parameters are excluded as their scope is local to the enclosing function.
-/// Symbols with unknown definition positions are also excluded.
+/// <para>
+/// This handler handles the following LSP requests:
+/// * <c>textDocument/codeLens</c>: The client requests inline CodeLens annotations for a document.
+/// * <c>codeLens/resolve</c>: The client requests additional detail for a specific CodeLens item.
+/// </para>
+/// <para>
+/// Each annotation displays the number of references to the symbol across all open documents, excluding the
+/// declaration line itself, so <c>0 references</c> indicates an unused symbol.  Clicking the annotation opens the
+/// Find All References panel at the declaration position.  Parameters are excluded as their scope is local to the
+/// enclosing function.  Symbols with unknown definition positions are also excluded.
+/// </para>
+/// <para>
+/// The <see cref="CodeLensRegistrationOptions.ResolveProvider"/> property is set to <c>false</c> as all CodeLens data is
+/// populated up front, removing the need for a second resolve request per CodeLens item.
+/// </para>
 /// </remarks>
-public class CodeLensHandler : CodeLensHandlerBase
+/// <param name="documentStateManager">The manager providing per-document symbol state.</param>
+public class CodeLensHandler(DocumentStateManager documentStateManager)
+    : CodeLensHandlerBase
 {
+    /// <summary>
+    /// The VS Code command identifier used to open the Find All References panel at the symbol position.
+    /// </summary>
     private const string ShowReferencesCommandId = "topsy-turvy.showReferences";
-    private readonly DocumentStateManager documentStateManager;
+
+    private readonly DocumentStateManager documentStateManager = documentStateManager;
 
     /// <summary>
-    /// Initialises a new instance of the <see cref="CodeLensHandler"/> class.
+    /// Creates the registration options for code lens handling.
     /// </summary>
-    /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
-    public CodeLensHandler(DocumentStateManager documentStateManager)
-    {
-        this.documentStateManager = documentStateManager;
-    }
-
-    /// <inheritdoc/>
-    protected override CodeLensRegistrationOptions CreateRegistrationOptions(
-        CodeLensCapability capability, ClientCapabilities clientCapabilities) =>
+    /// <param name="capability">The CodeLens capability of the client.</param>
+    /// <param name="clientCapabilities">The capabilities of the client.</param>
+    /// <remarks>
+    /// This is called by the language server on start-up to register the handler document handling capabilities and options
+    /// with the server.  The <see cref="CodeLensRegistrationOptions.ResolveProvider"/> property is set to <c>false</c> as all
+    /// CodeLens data is populated up front in <see cref="Handle(CodeLensParams, CancellationToken)"/>.
+    /// </remarks>
+    /// <returns>The registration options for code lens handling.</returns>
+    protected override CodeLensRegistrationOptions CreateRegistrationOptions(CodeLensCapability capability, ClientCapabilities clientCapabilities) =>
         new()
         {
             DocumentSelector = TextDocumentSelector.ForLanguage(LanguageServerConstants.LanguageId),
             ResolveProvider = false
         };
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Handles a CodeLens resolve request.
+    /// </summary>
+    /// <param name="request">The CodeLens item to resolve.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <remarks>
-    /// Resolve is not used (<c>ResolveProvider = false</c>); lenses are returned fully populated
-    /// from <see cref="Handle(CodeLensParams, CancellationToken)"/>.
+    /// <c>ResolveProvider</c> is set to <c>false</c> in <see cref="CreateRegistrationOptions"/>, so the client will not
+    /// call this method.  It is implemented as a pass-through to satisfy the base class contract.
     /// </remarks>
+    /// <returns>A task resolving to the same <see cref="CodeLens"/> unchanged.</returns>
     public override Task<CodeLens> Handle(CodeLens request, CancellationToken cancellationToken) =>
         Task.FromResult(request);
 
-    /// <inheritdoc/>
-    public override Task<CodeLensContainer?> Handle(
-        CodeLensParams request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handles the <c>textDocument/codeLens</c> request from the client when CodeLens annotations are requested.
+    /// </summary>
+    /// <param name="request">The parameters of the request.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>, an empty container is returned so no annotations are displayed.
+    /// * Parameters and symbols with unknown definition positions are skipped.
+    /// * For each remaining symbol, <see cref="SourceAnalyser.CountOccurrences"/> is called to count references in the current document, excluding the definition line.  References in all other open documents are also counted and added to the total.
+    /// * A <see cref="CodeLens"/> is built for each symbol with the reference count as the title and a command targeting <see cref="ShowReferencesCommandId"/> to open the Find All References panel.
+    /// </remarks>
+    /// <returns>
+    /// A task resolving to a <see cref="CodeLensContainer"/> with one annotation per function and variable symbol,
+    /// or an empty container if the document has not been successfully parsed or an error occurs.
+    /// </returns>
+    public override Task<CodeLensContainer?> Handle(CodeLensParams request, CancellationToken cancellationToken)
     {
         try
         {
@@ -68,8 +101,7 @@ public class CodeLensHandler : CodeLensHandlerBase
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            List<CodeLens> lenses = [];
-
+            List<CodeLens> codeLenses = [];
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
             {
                 if (symbol.Kind == TopsyTurvySymbolKind.Parameter || symbol.DefinitionLine == 0)
@@ -78,9 +110,9 @@ public class CodeLensHandler : CodeLensHandlerBase
                 }
 
                 int lspLine = symbol.DefinitionLine - 1;
-                int lspChar = symbol.DefinitionColumn - 1;
+                int lspCharacter = symbol.DefinitionColumn - 1;
 
-                int refCount = SourceAnalyser.CountOccurrences(lines, symbol.Name, lspLine);
+                int referenceCount = SourceAnalyser.CountOccurrences(lines, symbol.Name, lspLine);
 
                 foreach ((_, DocumentState otherState) in this.documentStateManager.AllDocuments())
                 {
@@ -96,34 +128,33 @@ public class CodeLensHandler : CodeLensHandlerBase
                     }
 
                     string[] otherLines = otherSource.Split('\n');
-                    refCount += SourceAnalyser.CountOccurrences(otherLines, symbol.Name, -1);
+                    referenceCount += SourceAnalyser.CountOccurrences(otherLines, symbol.Name, -1);
                 }
 
-                string title = refCount == 1 ? "1 reference" : $"{refCount} references";
-
-                lenses.Add(new CodeLens
+                string title = referenceCount == 1
+                    ? "1 reference"
+                    : $"{referenceCount} references";
+                
+                codeLenses.Add(new()
                 {
-                    Range = new LspRange(
-                        new Position(lspLine, lspChar),
-                        new Position(lspLine, lspChar + symbol.Name.Length)),
-                    Command = new Command
+                    Range = new(new(lspLine, lspCharacter), new(lspLine, lspCharacter + symbol.Name.Length)),
+                    Command = new()
                     {
                         Title = title,
                         Name = ShowReferencesCommandId,
                         Arguments = new JArray(
                             JValue.CreateString(request.TextDocument.Uri.ToString()),
                             new JValue(lspLine),
-                            new JValue(lspChar))
+                            new JValue(lspCharacter))
                     }
                 });
             }
 
-            return Task.FromResult<CodeLensContainer?>(new CodeLensContainer(lenses));
+            return Task.FromResult<CodeLensContainer?>(new(codeLenses));
         }
         catch (Exception)
         {
-            return Task.FromResult<CodeLensContainer?>(new CodeLensContainer());
+            return Task.FromResult<CodeLensContainer?>(new());
         }
     }
-
 }

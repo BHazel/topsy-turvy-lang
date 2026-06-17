@@ -14,9 +14,9 @@ public class EditorToolbarTests(WebEditorAppFixture fixture)
     : WebEditorTestBase(fixture)
 {
     /// <summary>
-    /// Tests that toggling the G&S Labels switch changes every affected toolbar button label.
+    /// Tests that toggling the G&amp;S Labels switch changes every affected toolbar button label.
     /// </summary>
-    /// <param name="gsLabel">The G&S-themed button label visible before toggling.</param>
+    /// <param name="gsLabel">The G&amp;S-themed button label visible before toggling.</param>
     /// <param name="standardLabel">The standard button label expected after toggling.</param>
     [Theory]
     [InlineData("Mount", "New Project")]

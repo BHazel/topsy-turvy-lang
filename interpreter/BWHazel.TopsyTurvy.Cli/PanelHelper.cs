@@ -157,7 +157,7 @@ public static class PanelHelper
     /// <param name="result">The execution result containing the errors to report.</param>
     /// <param name="isPlainText">A value indicating whether to report errors as plain text or as styled panels.</param>
     /// <remarks>
-    /// Errors are reported using either plain-text outputor rich Spectre.Console panels.
+    /// Errors are reported using either plain-text output or rich Spectre.Console panels.
     /// </remarks>
     public static void ReportErrors(ProgramExecutionResult result, bool isPlainText)
     {
