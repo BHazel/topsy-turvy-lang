@@ -212,10 +212,119 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
 
         ProgramNode program = this.parser.Parse(source);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-        
+
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         diagnostics.HasErrors.ShouldBeFalse();
         output[0].ShouldBe("7");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method returns a runtime error diagnostic when IS APPOINTED targets a CONSERVATIVE variable.
+    /// </summary>
+    [Fact]
+    public void Execute_AssignToConstant_ReturnsRuntimeErrorDiagnostic()
+    {
+        string source = """
+            HARK! "Constant Assignment"
+            PRAY WELCOME x AS A CONSERVATIVE PEER BEING 10
+            x IS APPOINTED 20
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method returns a runtime error diagnostic when IS HENCEFORTH A targets a CONSERVATIVE variable.
+    /// </summary>
+    [Fact]
+    public void Execute_InPlaceCastOnConstant_ReturnsRuntimeErrorDiagnostic()
+    {
+        string source = """
+            HARK! "Constant Cast"
+            PRAY WELCOME x AS A CONSERVATIVE PEER BEING 10
+            x IS HENCEFORTH A YARN
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method returns a runtime error diagnostic when PRAY TELL targets a CONSERVATIVE variable.
+    /// </summary>
+    [Fact]
+    public void Execute_InputToConstant_ReturnsRuntimeErrorDiagnostic()
+    {
+        string source = """
+            HARK! "Constant Input"
+            PRAY WELCOME x AS A CONSERVATIVE YARN
+            PRAY TELL x
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter("some input");
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method allows assignment to a LIBERAL variable.
+    /// </summary>
+    [Fact]
+    public void Execute_LiberalDeclaration_AllowsAssignment()
+    {
+        string source = """
+            HARK! "Liberal Variable"
+            PRAY WELCOME x AS A LIBERAL PEER BEING 10
+            x IS APPOINTED 99
+            BEHOLD x
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("99");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method allows assignment to a variable declared without a modifier.
+    /// </summary>
+    [Fact]
+    public void Execute_NoModifierDeclaration_AllowsAssignment()
+    {
+        string source = """
+            HARK! "Mutable Default"
+            PRAY WELCOME x AS A PEER BEING 10
+            x IS APPOINTED 99
+            BEHOLD x
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("99");
     }
 }

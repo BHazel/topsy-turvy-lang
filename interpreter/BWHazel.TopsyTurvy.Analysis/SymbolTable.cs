@@ -239,6 +239,7 @@ public class SymbolTable
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
+            IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
             DefinitionLine = definition.Line,
             DefinitionColumn = definition.Column

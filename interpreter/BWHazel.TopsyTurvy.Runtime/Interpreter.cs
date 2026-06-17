@@ -238,7 +238,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             ? this.EvaluateExpression(node.InitialValue, environment)
             : TopsyTurvyValue.Null();
 
-        environment.Declare(node.Name, value);
+        environment.Declare(node.Name, value, isConstant: node.IsConstant);
     }
 
     /// <summary>

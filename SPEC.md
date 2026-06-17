@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.2.0
+### Language Specification — Version 0.3.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -89,16 +89,34 @@ THE CURTAIN RISES.
 **Syntax:**
 ```
 PRINCIPALS
-  PRAY WELCOME <name> AS A <type> [BEING <value>]
+  PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] <type> [BEING <value>]
   ...
 THE CURTAIN RISES.
 ```
 
 - `PRAY WELCOME` — the formal welcoming of a new character onto the stage; `PRAY` drawn verbatim from *The Mikado*, Act I (*"Gentlemen, I pray you tell me..."*); `WELCOME` reflecting the theatrical tradition of receiving each new arrival before the assembled company, as in the *Dramatis Personae*
 - `<name>` — any valid identifier (letters, digits, hyphens, underscores; must begin with a letter)
-- `AS A <type>` — declares the type
+- `AS A [CONSERVATIVE | LIBERAL] <type>` — declares the type, with an optional mutability modifier (see §3.1 below)
 - `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to `NAUGHT` (null)
 - `THE CURTAIN RISES.` — closes the `PRINCIPALS` block. Once all characters have been introduced and the company is assembled, the curtain rises and the drama begins. The full stop is mandatory.
+
+### 3.1 Constants and Mutability Modifiers
+
+An optional mutability modifier may appear between `AS A` and the type keyword to declare whether a variable is a constant or a mutable variable:
+
+| Modifier | Meaning |
+|---|---|
+| `CONSERVATIVE` | The variable is a **constant**. Once declared, it cannot be reassigned by `IS APPOINTED`, recast in place by `IS HENCEFORTH A`, or overwritten by `PRAY TELL`. Attempting any of these operations is a runtime error. |
+| `LIBERAL` | The variable is explicitly **mutable**. This is identical to declaring without a modifier and exists for documentation clarity. |
+| *(none)* | Mutable — the default when no modifier is given. All existing code continues to work unchanged. |
+
+```topsy
+PRAY WELCOME LovesickMaidens AS A CONSERVATIVE PEER BEING 20
+PRAY WELCOME TotalLords       AS A LIBERAL      PEER BEING  0
+PRAY WELCOME Ko-Ko            AS A PEER         BEING  0
+```
+
+`CONSERVATIVE` draws from the G&S tradition of immovable institutional authority — the House of Lords in *Iolanthe*, the Lord Chancellor, the ancestral portraits in *Ruddigore*: things that, by long-established rule, simply *cannot* be changed. *"I often think it's comical / Fal lal la! / How Nature always does contrive / Fal lal la! / That every boy and every gal / That's born into the world alive / Is either a little Liberal / Or else a little Conservative! / Fal lal la!"* — *Iolanthe*, Act II. The modifier restores Gilbert's own distinction to the language: those values that are fixed by decree, and those that may yet be persuaded.
 
 Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax; inline declarations are free-standing statements and do not require `THE CURTAIN RISES.`
 
@@ -601,6 +619,8 @@ PRAY ADMIT "filename"
 | `PRAY WELCOME`                                   | Variable declaration        | *The Mikado*, Act I — `PRAY` verbatim; welcoming each new variable before the assembled company |
 | `AS A`                                           | Type annotation             | —                                                                                 |
 | `BEING`                                          | Initial value               | *Dramatis Personae* parentheticals — "Nanki-Poo, *being* the son of the Mikado..." |
+| `CONSERVATIVE`                                   | Constant modifier           | *Iolanthe*, Act II — "every boy and every gal ... is either a little Liberal or else a little Conservative"; a value fixed by decree, immovable by any subsequent appointment |
+| `LIBERAL`                                        | Explicit mutable modifier   | *Iolanthe*, Act II — same verse; the mutable counterpart to `CONSERVATIVE`; optional, as mutability is the default |
 | `IS APPOINTED`                                   | Assignment                  | *The Mikado*, Act I — Ko-Ko raised to Lord High Executioner by official proclamation |
 | `IS HENCEFORTH A`                                | In-place cast               | *Iolanthe* — the Fairy Queen's transforming declaration                           |
 | `AS IT WERE`                                     | Expression cast             | G&S hedging construction — invoking a convenient fiction about what something is  |
@@ -799,4 +819,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.2.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — Version 0.3.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

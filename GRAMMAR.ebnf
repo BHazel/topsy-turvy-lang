@@ -1,5 +1,5 @@
-(* Topsy Turvy Formal Grammar v0.1 *)
-(* Based on SPEC.md v0.2.0 *)
+(* Topsy Turvy Formal Grammar *)
+(* Based on SPEC.md v0.3.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -38,7 +38,9 @@ Statement       = PrincipalBlock
 (*----------------------------------------------------------------------------*)
 PrincipalBlock  = "PRINCIPALS", { Declaration }, "THE CURTAIN RISES." ;
 
-Declaration     = "PRAY WELCOME", Identifier, "AS A", Type, [ "BEING", Expression ] ;
+Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], Type, [ "BEING", Expression ] ;
+
+MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
 
 Type            = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
 

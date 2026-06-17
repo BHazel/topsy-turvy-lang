@@ -75,6 +75,15 @@ public class SymbolInfo
     public required SymbolKind Kind { get; init; }
 
     /// <summary>
+    /// Gets or initialises a value indicating whether this variable is a constant.
+    /// </summary>
+    /// <remarks>
+    /// Only meaningful for <see cref="SymbolKind.Variable"/>.  When <c>true</c>, the variable was declared with the
+    /// <c>CONSERVATIVE</c> modifier and cannot be reassigned at runtime.
+    /// </remarks>
+    public bool IsConstant { get; init; }
+
+    /// <summary>
     /// Gets or initialises the display name of the declared type.
     /// </summary>
     /// <remarks>

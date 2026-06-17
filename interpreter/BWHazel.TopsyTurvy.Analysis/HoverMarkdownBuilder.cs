@@ -17,6 +17,8 @@ public static class HoverMarkdownBuilder
     {
         SymbolKind.Variable when symbolInfo.Name.Equals(Keywords.SpecialNames.JustSo, StringComparison.OrdinalIgnoreCase) =>
             "**implicit variable** `JUST SO` — receives the result of the last expression",
+        SymbolKind.Variable when symbolInfo.IsConstant =>
+            $"**(constant)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
         SymbolKind.Variable =>
             $"**(variable)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
         SymbolKind.Function =>

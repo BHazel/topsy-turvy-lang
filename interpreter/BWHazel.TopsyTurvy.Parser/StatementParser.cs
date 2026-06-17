@@ -24,10 +24,11 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Variable Declarations
-/// The <c>Declaration</c> parser matches on variable declarations, returning a <see cref="DeclarationNode"/> with the variable name, type, and optional initial value:
+/// The <c>Declaration</c> parser matches on variable declarations, returning a <see cref="DeclarationNode"/> with the variable name, type, optional mutability modifier and optional initial value:
 /// * It first matches the <c>PRAY WELCOME</c> keyword.
 /// * It then matches required whitespace followed by an identifier for the variable name using the <see cref="Lexer"/><c>.Identifier</c> parser.
 /// * It then matches more required whitespace followed by the <c>AS A</c> keyword.
+/// * It then optionally matches a mutability modifier (<c>CONSERVATIVE</c> or <c>LIBERAL</c>), back-tracking if neither is present.
 /// * It then matches more required whitespace followed by a type keyword using the <c>TypeKeyword</c> parser.
 /// * Finally, it tries to match on an initial value, back-tracking if not matched:
 ///     * It first matches more required whitespace followed by the <c>BEING</c> keyword.
@@ -37,12 +38,12 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <para>
 /// In the following Topsy Turvy examples:
 /// <code>
-/// PRAY WELCOME LovesickMaidens AS A PEER BEING 20
+/// PRAY WELCOME LovesickMaidens AS A CONSERVATIVE PEER BEING 20
 /// PRAY WELCOME TotalLords AS A PEER
 /// </code>
 /// both would return a <see cref="DeclarationNode"/> and for each example:
-/// * The first would have the variable name <c>LovesickMaidens</c>, a type of <see cref="LiteralType"/><c>.Integer</c> and initial value of an integer literal with value 20.
-/// * The second would have the variable name <c>TotalLords</c>, also a type of <see cref="LiteralType"/><c>.Integer</c> and no initial value, thus set to <c>null</c>.
+/// * The first would have the variable name <c>LovesickMaidens</c>, a type of <see cref="LiteralType"/><c>.Integer</c>, <see cref="DeclarationNode.IsConstant"/> set to <c>true</c>, and initial value of an integer literal with value 20.
+/// * The second would have the variable name <c>TotalLords</c>, also a type of <see cref="LiteralType"/><c>.Integer</c>, <see cref="DeclarationNode.IsConstant"/> set to <c>false</c> (mutable, the default), and no initial value, thus set to <c>null</c>.
 /// </para>
 /// <para>
 /// ### Assignments
@@ -457,6 +458,11 @@ public static class StatementParser
         from _ in Lexer.Keyword("PRAY WELCOME")
         from variableName in Ws(Lexer.Identifier)
         from asAKeyword in Ws(Lexer.Keyword("AS A"))
+        from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
+            .Try()
+            .Or(Lexer.Keyword("LIBERAL")
+            .Try()))
+            .OptionalOrDefault(null!)
         from variableType in Ws(TypeKeyword)
         from initialValue in Ws(Lexer.Keyword("BEING")
             .IgnoreThen(Ws(ExpressionParser.Expression)))
@@ -466,6 +472,7 @@ public static class StatementParser
         {
             Name = variableName,
             Type = variableType,
+            IsConstant = mutabilityModifier == "CONSERVATIVE",
             InitialValue = initialValue,
             Span = PlaceholderSpan
         };

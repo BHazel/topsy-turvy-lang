@@ -481,6 +481,51 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>true</c> when the CONSERVATIVE modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithConservativeModifier_SetsIsConstantTrue()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A CONSERVATIVE PEER");
+
+        node.IsConstant.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>false</c> when the LIBERAL modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithLiberalModifier_SetsIsConstantFalse()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A LIBERAL PEER");
+
+        node.IsConstant.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>false</c> when no mutability modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithoutModifier_DefaultsIsConstantFalse()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A PEER");
+
+        node.IsConstant.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method correctly parses a CONSERVATIVE declaration that also includes a BEING initial value.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithConservativeModifierAndInitialValue_ParsesCorrectly()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A CONSERVATIVE PEER BEING 42");
+
+        node.IsConstant.ShouldBeTrue();
+        node.InitialValue.ShouldNotBeNull();
+    }
+
+    /// <summary>
     /// Parses a single statement of a specific type from a source string.
     /// </summary>
     /// <typeparam name="T">The type of statement to parse.</typeparam>

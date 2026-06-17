@@ -6,16 +6,17 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <remarks>
 /// <para>
 /// This corresponds to the <c>PRAY WELCOME</c> ... <c>BEING</c> variable declaration statement in Topsy Turvy.  Every declaration consists
-/// of the <see cref="Name"/> of the variable being declared, the <see cref="Type"/> of the variable and an optional initial
-/// value represented by an <see cref="Expression"/>. The type of the initial value determines the type of the <see cref="Expression"/>,
-/// which can be any <see cref="Node"/>.  If no initial value is provided, the <see cref="InitialValue"/> property will be <c>null</c>.
+/// of the <see cref="Name"/> of the variable being declared, the <see cref="Type"/> of the variable, an optional <see cref="IsConstant"/>
+/// flag set by the <c>CONSERVATIVE</c> or <c>LIBERAL</c> mutability modifier and an optional initial value represented by an
+/// <see cref="Expression"/>. The type of the initial value determines the type of the <see cref="Expression"/>, which can be any
+/// <see cref="Node"/>.  If no initial value is provided, the <see cref="InitialValue"/> property will be <c>null</c>.
 /// </para>
 /// <para>
-/// For example, the following code in Topsy Turvy to declare and assign a variable <c>LovesickMaidens</c> the literal Peer (integer)
+/// For example, the following code in Topsy Turvy to declare a constant variable <c>LovesickMaidens</c> with the literal Peer (integer)
 /// value <c>20</c>:
 /// </para>
 /// <code>
-/// PRAY WELCOME LovesickMaidens AS A PEER BEING 20
+/// PRAY WELCOME LovesickMaidens AS A CONSERVATIVE PEER BEING 20
 /// </code>
 /// <para>
 /// would be represented in the AST as a <see cref="DeclarationNode"/> with:
@@ -94,6 +95,16 @@ public class DeclarationNode : Statement
     /// Gets or initialises the type of the variable.
     /// </summary>
     public required LiteralType Type { get; init; }
+
+    /// <summary>
+    /// Gets or initialises a value indicating whether this declaration is a constant.
+    /// </summary>
+    /// <remarks>
+    /// When <c>true</c>, the variable is declared with the <c>CONSERVATIVE</c> modifier and may not be reassigned,
+    /// recast in place or overwritten by input at runtime.  When <c>false</c> (the default), the variable is mutable
+    /// and may be reassigned freely.
+    /// </remarks>
+    public bool IsConstant { get; init; }
 
     /// <summary>
     /// Gets or initialises the optional initial value.

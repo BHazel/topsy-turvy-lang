@@ -25,6 +25,8 @@ The environment, implemented in the `TopsyTurvyEnvironment` class, serves two pu
 
 Every named value, both variables and function parameters, in a Topsy Turvy programme is maintained in the environment, added on declaration and updated on assignment.  The environment also retrieves values when accessed.  These values are stored as instances of the `TopsyTurvyValue` class which wraps the underlying .NET primitive type and its equivalent Topsy Turvy literal type enumeration constant.  For example, a `PEER` of value `20` would be:
 
+Variables declared with the `CONSERVATIVE` modifier are tracked separately as constants.  Any attempt to mutate a constant via `IS APPOINTED` (assignment), `IS HENCEFORTH A` (in-place cast), or `PRAY TELL` (input) raises a runtime error.  Variables declared with `LIBERAL`, or with no modifier (the default), remain freely mutable.
+
 ```cs
 TopsyTurvyValue value = TopsyTurvyValue.Integer(20);
 ```

@@ -295,6 +295,14 @@
         {
           "name": "keyword.other.declaration.topsy",
           "match": "(?i)\\bBEING\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "(?i)\\bCONSERVATIVE\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "(?i)\\bLIBERAL\\b"
         }
       ]
     },

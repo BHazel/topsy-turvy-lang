@@ -141,6 +141,12 @@ PEER
 BEING 1
 //^ keyword.other.declaration.topsy
 
+CONSERVATIVE
+//^ keyword.other.declaration.topsy
+
+LIBERAL
+//^ keyword.other.declaration.topsy
+
 // ── Assignment and implicit variable ─────────────────────────────────────────
 
 JUST SO IS APPOINTED 1

@@ -21,6 +21,8 @@ public static class KeywordData
         ("PRAY WELCOME",                             "variable declaration"),
         ("AS A",                                     "type annotation"),
         ("BEING",                                    "initial value"),
+        ("CONSERVATIVE",                             "constant declaration modifier"),
+        ("LIBERAL",                                  "mutable declaration modifier"),
         ("IS APPOINTED",                             "assignment"),
         ("IS HENCEFORTH A",                          "in-place cast"),
         ("AS IT WERE",                               "expression cast"),

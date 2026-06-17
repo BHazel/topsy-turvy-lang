@@ -209,4 +209,56 @@ public class TopsyTurvyEnvironmentTests
         functionEnvironment.Get("param").RawValue.ShouldBe(7);
         Should.Throw<TopsyTurvyRuntimeException>(() => functionEnvironment.Get("nonexistent"));
     }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyEnvironment.Assign"/> method throws when the target was declared as a constant (CONSERVATIVE).
+    /// </summary>
+    [Fact]
+    public void Assign_ToConstant_ThrowsTopsyTurvyRuntimeException()
+    {
+        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
+        environment.Declare(name: "x", value: TopsyTurvyValue.Integer(20), isConstant: true);
+
+        Should.Throw<TopsyTurvyRuntimeException>(() => environment.Assign("x", TopsyTurvyValue.Integer(99)));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyEnvironment.Assign"/> method succeeds when the target was declared as mutable (LIBERAL).
+    /// </summary>
+    [Fact]
+    public void Assign_ToLiberal_Succeeds()
+    {
+        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
+        environment.Declare(name: "x", value: TopsyTurvyValue.Integer(20), isConstant: false);
+
+        environment.Assign("x", TopsyTurvyValue.Integer(99));
+
+        environment.Get("x").RawValue.ShouldBe(99);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyEnvironment.IsConstant"/> method returns <c>true</c> for a variable declared with the constant flag.
+    /// </summary>
+    [Fact]
+    public void IsConstant_WithConstantDeclaration_ReturnsTrue()
+    {
+        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
+
+        environment.Declare(name: "x", value: TopsyTurvyValue.Integer(20), isConstant: true);
+
+        environment.IsConstant("x").ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyEnvironment.IsConstant"/> method returns <c>false</c> for a variable declared without the constant flag.
+    /// </summary>
+    [Fact]
+    public void IsConstant_WithMutableDeclaration_ReturnsFalse()
+    {
+        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
+
+        environment.Declare(name: "x", value: TopsyTurvyValue.Integer(20), isConstant: false);
+
+        environment.IsConstant("x").ShouldBeFalse();
+    }
 }
