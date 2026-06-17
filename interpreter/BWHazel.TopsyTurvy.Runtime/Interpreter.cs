@@ -526,7 +526,16 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         catch (TopsyTurvyThrowException ex)
         {
             environment.JustSo = ex.ThrowValue;
-            this.ExecuteStatements(node.ExceptionBlock, environment);
+            if (node.CaughtValueName is not null)
+            {
+                TopsyTurvyEnvironment catchEnvironment = environment.CreateNested();
+                catchEnvironment.Declare(node.CaughtValueName, ex.ThrowValue);
+                this.ExecuteStatements(node.ExceptionBlock, catchEnvironment);
+            }
+            else
+            {
+                this.ExecuteStatements(node.ExceptionBlock, environment);
+            }
         }
     }
 

@@ -566,14 +566,14 @@ A HIDEOUS CURSE ON <value>
 WITH THE GREATEST RESPECT, <operation>
   WITH GRATITUDE
     <success block>
-  MODIFIED RAPTURE
+  MODIFIED RAPTURE[, <name>]
     <exception block>
 THAT CONCLUDES THE MATTER.
 ```
 
 - `WITH THE GREATEST RESPECT, <operation>` — wraps a potentially-failing operation; catches any exception raised by `A HIDEOUS CURSE ON` within `<operation>`
 - `WITH GRATITUDE` — the success handler; entered when no exception is raised
-- `MODIFIED RAPTURE` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is available as `JUST SO` on entry to this block
+- `MODIFIED RAPTURE[, <name>]` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is always available as `JUST SO` on entry to this block; if `, <name>` is given, the cursed value is also auto-declared as a named variable scoped to the exception block (no prior `PRAY WELCOME` required)
 - `THAT CONCLUDES THE MATTER.` — closes the block
 
 **Example:**
@@ -593,6 +593,17 @@ WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
     BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
   MODIFIED RAPTURE
     BEHOLD WOVEN OF "A curse has been invoked: " AND JUST SO IF YOU PLEASE.
+THAT CONCLUDES THE MATTER.
+```
+
+The optional `<name>` after `MODIFIED RAPTURE` binds the cursed value to a named variable for the duration of the exception block.  The named variable is auto-declared — no `PRAY WELCOME` is needed — and is not accessible outside the block.  `JUST SO` is still set regardless.
+
+```topsy
+WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
+  WITH GRATITUDE
+    BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
+  MODIFIED RAPTURE, Grievance
+    BEHOLD WOVEN OF "A curse has been invoked: " AND Grievance IF YOU PLEASE.
 THAT CONCLUDES THE MATTER.
 ```
 
@@ -679,7 +690,7 @@ PRAY ADMIT "filename"
 | `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given value; terminates programme if uncaught |
 | `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
-| `MODIFIED RAPTURE`                               | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO` |
+| `MODIFIED RAPTURE[, <name>]`                     | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO`; optional `, <name>` auto-declares a binding in the exception block scope |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
 

@@ -450,6 +450,68 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser sets <see cref="TryCatchNode.CaughtValueName"/> when an identifier follows MODIFIED RAPTURE.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_WithCaughtBinding_SetsCaughtValueName()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE, Grievance
+                BEHOLD Grievance
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBe("Grievance");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser leaves <see cref="TryCatchNode.CaughtValueName"/> as <c>null</c> when no identifier follows MODIFIED RAPTURE.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_WithoutCaughtBinding_CaughtValueNameIsNull()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE
+                BEHOLD JUST SO
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser correctly parses both the caught binding and the exception block body when both are present.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_CaughtBinding_WithBodyStatements_ParsesCorrectly()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE, Disaster
+                BEHOLD Disaster
+                BEHOLD "done"
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBe("Disaster");
+        node.ExceptionBlock.Count.ShouldBe(2);
+    }
+
+    /// <summary>
     /// Tests that a PRINCIPALS block collects all its inner declarations.
     /// </summary>
     [Fact]

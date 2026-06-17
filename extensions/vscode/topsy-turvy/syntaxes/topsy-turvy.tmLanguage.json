@@ -206,7 +206,7 @@
         },
         {
           "name": "keyword.control.exception.topsy",
-          "match": "(?i)\\bMODIFIED\\s+RAPTURE\\b"
+          "match": "(?i)\\bMODIFIED\\s+RAPTURE,?"
         },
         {
           "name": "keyword.control.exception.topsy",

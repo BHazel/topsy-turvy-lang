@@ -1,4 +1,4 @@
-(* Topsy Turvy Formal Grammar *)
+(* Topsy Turvy Formal Grammar v0.2.0 *)
 (* Based on SPEC.md v0.3.0 *)
 
 (*----------------------------------------------------------------------------*)
@@ -120,9 +120,9 @@ FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
 ImportStatement    = "PRAY ADMIT", StringLiteral ;
 
-TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression, 
-                    "WITH GRATITUDE", StatementList, 
-                    "MODIFIED RAPTURE", StatementList, 
+TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression,
+                    "WITH GRATITUDE", StatementList,
+                    "MODIFIED RAPTURE", [ ",", Identifier ], StatementList,
                     "THAT CONCLUDES THE MATTER." ;
 
 (*----------------------------------------------------------------------------*)

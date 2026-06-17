@@ -221,7 +221,7 @@ window.topsyTurvy = {
                     [/\bSO\s+MUCH\s+FOR\s+THAT\./, 'keyword'],
                     [/\bTHAT\s+CONCLUDES\s+THE\s+MATTER\./, 'keyword'],
                     [/\bWITHOUT\s+CEREMONY\b/, 'keyword'],
-                    [/\bMODIFIED\s+RAPTURE\b/, 'keyword'],
+                    [/\bMODIFIED\s+RAPTURE,?/, 'keyword'],
                     [/\bIF\s+YOU\s+PLEASE\./, 'keyword'],
                     [/\bONCE\s+MORE\./, 'keyword'],
 

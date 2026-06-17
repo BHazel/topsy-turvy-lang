@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Superpower;
+using Superpower.Parsers;
 using BWHazel.TopsyTurvy.Ast;
 using static BWHazel.TopsyTurvy.Parser.ParserHelpers;
 
@@ -302,6 +303,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * It then matches on required whitespace followed by the <c>WITH GRATITUDE</c> keyword to open the success block.
 /// * It then matches on zero or more statements for the success block, executed if the guarded expression succeeds.
 /// * It then matches on required whitespace followed by the <c>MODIFIED RAPTURE</c> keyword to open the exception block.
+/// * It then optionally matches on required whitespace followed by an identifier for the caught value binding.
 /// * It then matches on zero or more statements for the exception block, executed if the guarded expression throws.
 /// * Finally it matches on required whitespace followed by the closing <c>THAT CONCLUDES THE MATTER.</c> keyword.
 ///
@@ -735,6 +737,7 @@ public static class StatementParser
         from withGratitudeKeyword in Ws(Lexer.Keyword("WITH GRATITUDE"))
         from successBlock in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from modifiedRaptureKeyword in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
+        from caughtName in Character.EqualTo(',').IgnoreThen(Ws(Lexer.Identifier)).Try().OptionalOrDefault(null!)
         from catchBlock in Ws(Parse.Ref(() => Statement!)).Try().Many()
         from closer in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER.").Named("THAT CONCLUDES THE MATTER. (end of try/catch)"))
         select (Statement)new TryCatchNode()
@@ -742,6 +745,9 @@ public static class StatementParser
             Operation = throwableExpression,
             SuccessBlock = [.. successBlock],
             ExceptionBlock = [.. catchBlock],
+            CaughtValueName = string.IsNullOrEmpty(caughtName)
+                ? null
+                : caughtName,
             Span = PlaceholderSpan
         };
 

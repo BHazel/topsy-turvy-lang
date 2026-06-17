@@ -27,6 +27,8 @@ Every named value, both variables and function parameters, in a Topsy Turvy prog
 
 Variables declared with the `CONSERVATIVE` modifier are tracked separately as constants.  Any attempt to mutate a constant via `IS APPOINTED` (assignment), `IS HENCEFORTH A` (in-place cast), or `PRAY TELL` (input) raises a runtime error.  Variables declared with `LIBERAL`, or with no modifier (the default), remain freely mutable.
 
+When a `WITH THE GREATEST RESPECT` block catches a thrown value, the cursed value is always placed in the `JUST SO` implicit variable on entry to the `MODIFIED RAPTURE` block.  Optionally, a named binding may be written immediately after `MODIFIED RAPTURE` separated by a comma, for example `MODIFIED RAPTURE, Grievance`, and the interpreter will auto-declare `Grievance` in a nested scope covering the exception block.  The binding is scoped to the exception block only and is inaccessible after `THAT CONCLUDES THE MATTER.`
+
 ```cs
 TopsyTurvyValue value = TopsyTurvyValue.Integer(20);
 ```
