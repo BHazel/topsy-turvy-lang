@@ -155,12 +155,17 @@ is_guilty IS APPOINTED VERITY
 ### Type Casting
 
 ```topsy
-Ko-Ko IS HENCEFORTH A PEER          ASIDE: re-cast Ko-Ko to integer in place
-AS IT WERE Ko-Ko AS A YARN          ASIDE: cast expression without mutating the variable
+Ko-Ko IS HENCEFORTH A PEER                                          ASIDE: re-cast Ko-Ko to integer in place
+
+PRAY WELCOME age AS A YARN BEING AS IT WERE Ko-Ko AS A YARN         ASIDE: cast in a declaration initialiser
+
+ageStr IS APPOINTED AS IT WERE Ko-Ko AS A YARN                      ASIDE: cast in an assignment
+
+AS IT WERE Ko-Ko AS A YARN                                          ASIDE: standalone cast — result stored in JUST SO
 ```
 
-- `IS HENCEFORTH A <type>` — casts the variable in place
-- `AS IT WERE <var> AS A <type>` — produces a cast value without mutating; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is
+- `IS HENCEFORTH A <type>` — casts the variable in place (statement)
+- `AS IT WERE <expr> AS A <type>` — a cast **expression** that evaluates to the cast value without mutating the source; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is. Because it is an expression, it can appear anywhere a value is expected: as the right-hand side of `IS APPOINTED`, as the `BEING` initialiser of a declaration, as a function argument, or as a sub-expression. When used as a standalone statement, the result is stored in the implicit `JUST SO` variable for use in subsequent statements.
 
 ---
 

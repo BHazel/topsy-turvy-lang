@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Superpower;
 using BWHazel.TopsyTurvy.Ast;
+using static BWHazel.TopsyTurvy.Parser.ParserHelpers;
 
 namespace BWHazel.TopsyTurvy.Parser;
 
@@ -25,10 +26,17 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// source code to assign approximate spans as needed.  Once the expression parser supports accurate spans, this workaround can be removed.
 /// </para>
 /// <para>
+/// ### Type Keywords
+/// The <c>TypeKeyword</c> parser matches on type keywords, returning the corresponding <see cref="LiteralType"/> value.  As an
+/// example, the keyword <c>PEER</c> will be parsed as <see cref="LiteralType"/><c>.Integer</c>.  This parser lives in
+/// <see cref="ExpressionParser"/> (rather than <see cref="StatementParser"/>) because it is also needed by
+/// <see cref="ExpressionCast"/> at the expression layer; placing it here avoids a circular static-field initialisation dependency.
+/// </para>
+/// <para>
 /// ### Operators
 /// The <c>OperatorToken</c> parser matches on any of the operator keywords and returns the corresponding <see cref="Operator"/> value.
 /// * It uses the <c>Keyword</c> parser from the lexer to match on each operator keyword.
-/// 
+///
 /// This parser supports back-tracking on failure.
 /// </para>
 /// <para>
@@ -151,11 +159,20 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Two arguments, an <see cref="IdentifierNode"/> each for <c>Conservatives</c> and <c>Liberals</c>.
 /// </para>
 /// <para>
+/// ### Cast Expressions
+/// The <c>ExpressionCast</c> parser matches on a non-mutating type cast in the form
+/// <c>AS IT WERE &lt;expression&gt; AS A &lt;type&gt;</c>, returning an
+/// <see cref="ExpressionCastNode"/> that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> is expected.
+/// When used as a standalone statement the result is stored in the implicit <c>JUST SO</c> variable via the
+/// <c>ExpressionStatement</c> path.
+/// </para>
+/// <para>
 /// ### Expression Parser
 /// The <c>Expression</c> parser is the main entry point for parsing any Topsy Turvy expression, matching on any of the above
 /// expression types, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> in the order they are tried as follows:
 /// * SUMMON Expression (<c>SummonExpression</c>)
 ///     * This is checked first as <c>SUMMON</c> is a keyword and could be confused with an identifier if checked later.
+/// * Cast Expression (<c>ExpressionCast</c>)
 /// * Prefix Expression (<c>PrefixExpression</c>)
 /// * Literal Expression (<c>LiteralExpression</c>)
 /// * Just So Expression (<c>JustSoExpression</c>)
@@ -312,10 +329,41 @@ public static class ExpressionParser
          }).Try();
 
     /// <summary>
+    /// Parses a Topsy Turvy type keyword and returns the corresponding <see cref="LiteralType"/> value.
+    /// </summary>
+    public static readonly TextParser<LiteralType> TypeKeyword =
+        Lexer.Keyword(Keywords.TypeNames.Peer)
+            .Value(LiteralType.Integer)
+            .Or(Lexer.Keyword(Keywords.TypeNames.Fathom)
+                .Value(LiteralType.Float))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Yarn)
+                .Value(LiteralType.String))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Decree)
+                .Value(LiteralType.Boolean))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
+                .Value(LiteralType.Null));
+
+    /// <summary>
+    /// Parses a non-mutating expression cast.
+    /// </summary>
+    public static readonly TextParser<Expression> ExpressionCast =
+        from asItWwereKeyword in Lexer.Keyword("AS IT WERE")
+        from expression in Ws(Parse.Ref(() => Expression!))
+        from asAKeyword in Ws(Lexer.Keyword("AS A"))
+        from newType in Ws(TypeKeyword)
+        select (Expression)new ExpressionCastNode()
+        {
+            Expression = expression,
+            NewType = newType,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
     /// Parses any valid Topsy Turvy expression.
     /// </summary>
     public static readonly TextParser<Expression> Expression =
         SummonExpression
+            .Or(ExpressionCast)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)

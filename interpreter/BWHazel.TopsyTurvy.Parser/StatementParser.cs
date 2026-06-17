@@ -19,18 +19,13 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <c>SHOULD IT TRANSPIRE THAT</c> conditional, can contain nested statements within their bodies.
 /// </para>
 /// <para>
-/// ### Type Keywords
-/// The <c>TypeKeyword</c> parser matches on type keywords, returning the corresponding <see cref="LiteralType"/>.  As an example,
-/// the keyword <c>PEER</c> will be parsed as <see cref="LiteralType"/><c>.Integer</c>.
-/// </para>
-/// <para>
 /// ### Variable Declarations
 /// The <c>Declaration</c> parser matches on variable declarations, returning a <see cref="DeclarationNode"/> with the variable name, type, optional mutability modifier and optional initial value:
 /// * It first matches the <c>PRAY WELCOME</c> keyword.
 /// * It then matches required whitespace followed by an identifier for the variable name using the <see cref="Lexer"/><c>.Identifier</c> parser.
 /// * It then matches more required whitespace followed by the <c>AS A</c> keyword.
 /// * It then optionally matches a mutability modifier (<c>CONSERVATIVE</c> or <c>LIBERAL</c>), back-tracking if neither is present.
-/// * It then matches more required whitespace followed by a type keyword using the <c>TypeKeyword</c> parser.
+/// * It then matches more required whitespace followed by a type keyword using the <see cref="ExpressionParser"/><c>.TypeKeyword</c> parser.
 /// * Finally, it tries to match on an initial value, back-tracking if not matched:
 ///     * It first matches more required whitespace followed by the <c>BEING</c> keyword.
 ///     * It then matches more required whitespace followed by an expression for the initial value using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
@@ -68,13 +63,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Type Casts
-/// 3 parsers are included for type casts to support both in-place and expression casts.
+/// The in-place cast is the only type cast handled at the statement layer.
+/// The non-mutating expression cast (<c>AS IT WERE ... AS A</c>) is handled by <see cref="ExpressionParser.ExpressionCast"/>.
 /// #### In-place Casts
 /// The <c>InPlaceCast</c> parser matches on in-place type casts, returning an <see cref="InPlaceCastNode"/> with the target variable name and new type:
 /// * It first matches an identifier for the target variable name using the <see cref="Lexer"/><c>.Identifier</c> parser.
 /// * It then matches required whitespace followed by the <c>IS HENCEFORTH A</c> keyword.
-/// * It then matches more required whitespace followed by a type keyword using the <c>TypeKeyword</c> parser.
-/// 
+/// * It then matches more required whitespace followed by a type keyword using the <see cref="ExpressionParser"/><c>.TypeKeyword</c> parser.
+///
 /// This parser supports back-tracking on failure.
 /// </para>
 /// <para>
@@ -86,29 +82,13 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// variable name <c>LovesickMaidens</c> and new type of <see cref="LiteralType"/><c>.String</c>.
 /// </para>
 /// <para>
-/// #### Expression Casts
-/// The <c>ExpressionCast</c> parser matches on <see cref="Expression"/> type casts, returning an <see cref="ExpressionCastNode"/> with the
-/// expression being cast and the new type:
-/// * It first matches the <c>AS IT WERE</c> keyword.
-/// * It then matches required whitespace followed by an expression for the value being cast using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
-/// * It then matches more required whitespace followed by the <c>AS A</c> keyword.
-/// * It then matches more required whitespace followed by a type keyword using the <c>TypeKeyword</c> parser.
-/// 
-/// It should be noted the result of the cast is stored in the <c>JUST SO</c> implicit variable.
-/// </para>
-/// <para>
-/// In the following Topsy Turvy example:
-/// <code>
-/// AS IT WERE LovesickMaidens AS A YARN
-/// </code>
-/// the statement would be matched by the <c>ExpressionCast</c> parser, returning an <see cref="ExpressionCastNode"/> with the
-/// expression to cast (the variable <c>LovesickMaidens</c>) and the new type of <see cref="LiteralType"/><c>.String</c>.
+/// The non-mutating expression cast (<c>AS IT WERE ... AS A</c>) is handled at the expression layer by
+/// <see cref="ExpressionParser.ExpressionCast"/>.
 /// </para>
 /// <para>
 /// #### Type Cast Parser
-/// The <c>TypeCast</c> parser is the entry point for parsing type casts in the order they are tried as follows:
+/// The <c>TypeCast</c> parser is the entry point for in-place type casts:
 /// * In-place Casts (<c>InPlaceCast</c>)
-/// * Expression Casts (<c>ExpressionCast</c>)
 /// </para>
 /// <para>
 /// ### User I/O
@@ -409,6 +389,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <see cref="ExpressionParser.PrefixExpression"/>: a prefix operator expression.
 /// * <see cref="ExpressionParser.LiteralExpression"/>: a literal value.
 /// * <see cref="ExpressionParser.JustSoExpression"/>: the <c>JUST SO</c> implicit variable.
+/// * <see cref="ExpressionParser.ExpressionCast"/>: a non-mutating type cast (<c>AS IT WERE ... AS A</c>).
 ///
 /// It should be noted <see cref="ExpressionParser.IdentifierExpression"/> is intentionally excluded: a bare identifier would be ambiguous
 /// with the start of an <c>Assignment</c> or <c>InPlaceCast</c> statement, both of which also begin with an identifier.
@@ -439,21 +420,6 @@ namespace BWHazel.TopsyTurvy.Parser;
 public static class StatementParser
 {
     /// <summary>
-    /// Parses a Topsy Turvy type keyword and returns the corresponding <see cref="LiteralType"/> value.
-    /// </summary>
-    public static readonly TextParser<LiteralType> TypeKeyword =
-        Lexer.Keyword(Keywords.TypeNames.Peer)
-            .Value(LiteralType.Integer)
-            .Or(Lexer.Keyword(Keywords.TypeNames.Fathom)
-                .Value(LiteralType.Float))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Yarn)
-                .Value(LiteralType.String))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Decree)
-                .Value(LiteralType.Boolean))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
-                .Value(LiteralType.Null));
-
-    /// <summary>
     /// Parses a variable declaration.
     /// </summary>
     public static readonly TextParser<Statement> Declaration =
@@ -465,7 +431,7 @@ public static class StatementParser
             .Or(Lexer.Keyword("LIBERAL")
             .Try()))
             .OptionalOrDefault(null!)
-        from variableType in Ws(TypeKeyword)
+        from variableType in Ws(ExpressionParser.TypeKeyword)
         from initialValue in Ws(Lexer.Keyword("BEING")
             .IgnoreThen(Ws(ExpressionParser.Expression)))
             .Try()
@@ -500,7 +466,7 @@ public static class StatementParser
     public static readonly TextParser<Statement> InPlaceCast =
         (from variableName in Lexer.Identifier
          from _ in Ws(Lexer.Keyword("IS HENCEFORTH A"))
-         from newType in Ws(TypeKeyword)
+         from newType in Ws(ExpressionParser.TypeKeyword)
          select (Statement)new InPlaceCastNode()
          {
              Target = variableName,
@@ -510,26 +476,10 @@ public static class StatementParser
          .Try();
 
     /// <summary>
-    /// Parses a non-mutating expression cast.
-    /// </summary>
-    public static readonly TextParser<Statement> ExpressionCast =
-        from _ in Lexer.Keyword("AS IT WERE")
-        from expression in Ws(ExpressionParser.Expression)
-        from asAKeyword in Ws(Lexer.Keyword("AS A"))
-        from newType in Ws(TypeKeyword)
-        select (Statement)new ExpressionCastNode()
-        {
-            Expression = expression,
-            NewType = newType,
-            Span = PlaceholderSpan
-        };
-
-    /// <summary>
     /// Parses either form of type cast.
     /// </summary>
     public static readonly TextParser<Statement> TypeCast =
-        InPlaceCast
-            .Or(ExpressionCast);
+        InPlaceCast;
 
     /// <summary>
     /// Parses an output statement.
@@ -861,6 +811,7 @@ public static class StatementParser
             .Or(ExpressionParser.PrefixExpression)
             .Or(ExpressionParser.LiteralExpression)
             .Or(ExpressionParser.JustSoExpression)
+            .Or(ExpressionParser.ExpressionCast)
             .Select(expression => (Statement)new ExpressionStatement()
                 {
                     Expression = expression,

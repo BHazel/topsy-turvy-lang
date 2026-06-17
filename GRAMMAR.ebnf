@@ -46,19 +46,21 @@ Type            = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
 
 Assignment      = Identifier, "IS APPOINTED", Expression ;
 
-TypeCast        = ( Identifier, "IS HENCEFORTH A", Type )
-                | ( "AS IT WERE", Expression, "AS A", Type ) ;
+TypeCast        = Identifier, "IS HENCEFORTH A", Type ;
 
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
 (*----------------------------------------------------------------------------*)
-Expression      = PrefixExpression 
-                | StringLiteral 
-                | BooleanLit 
-                | NullLit 
-                | Integer 
-                | Float 
+Expression      = CastExpression
+                | PrefixExpression
+                | StringLiteral
+                | BooleanLit
+                | NullLit
+                | Integer
+                | Float
                 | Identifier ;
+
+CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 
 PrefixExpression = FixedOpExpression | VariadicExpression ;
 

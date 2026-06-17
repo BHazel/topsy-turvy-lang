@@ -169,9 +169,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case InPlaceCastNode inPlaceCast:
                 this.ExecuteInPlaceCast(inPlaceCast, environment);
                 break;
-            case ExpressionCastNode expressionCast:
-                this.ExecuteExpressionCast(expressionCast, environment);
-                break;
             case PrintNode print:
                 this.ExecutePrint(print, environment);
                 break;
@@ -261,17 +258,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     {
         TopsyTurvyValue value = environment.Get(node.Target).CastTo(node.NewType);
         environment.Assign(node.Target, value);
-    }
-
-    /// <summary>
-    /// Executes an expression cast statement.
-    /// </summary>
-    /// <param name="node">The expression cast node.</param>
-    /// <param name="environment">The environment.</param>
-    private void ExecuteExpressionCast(ExpressionCastNode node, TopsyTurvyEnvironment environment)
-    {
-        TopsyTurvyValue value = this.EvaluateExpression(node.Expression, environment).CastTo(node.NewType);
-        environment.JustSo = value;
     }
 
     /// <summary>
@@ -601,6 +587,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         LiteralNode literal => EvaluateLiteral(literal),
         IdentifierNode ident => environment.Get(ident.Name),
         PrefixExpressionNode prefix => EvaluatePrefix(prefix, environment),
+        ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
             expression.Span)

@@ -172,6 +172,57 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method assigns the cast result directly to a variable via <c>IS APPOINTED AS IT WERE</c>.
+    /// </summary>
+    [Fact]
+    public void Execute_ExpressionCast_InAssignment_AssignsResult()
+    {
+        string source = """
+            HARK! "Cast in assignment"
+            PRINCIPALS
+              PRAY WELCOME n AS A PEER BEING 7
+              PRAY WELCOME s AS A YARN
+            THE CURTAIN RISES.
+            s IS APPOINTED AS IT WERE n AS A YARN
+            BEHOLD s
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("7");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method initialises a variable using a cast expression in a <c>BEING</c> clause.
+    /// </summary>
+    [Fact]
+    public void Execute_ExpressionCast_InDeclaration_InitialisesVariable()
+    {
+        string source = """
+            HARK! "Cast in declaration"
+            PRINCIPALS
+              PRAY WELCOME n AS A PEER BEING 3
+              PRAY WELCOME s AS A YARN BEING AS IT WERE n AS A YARN
+            THE CURTAIN RISES.
+            BEHOLD s
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("3");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method interpolates a variable reference inside a printed string.
     /// </summary>
     [Fact]

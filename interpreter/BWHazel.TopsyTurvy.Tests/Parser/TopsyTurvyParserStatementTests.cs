@@ -87,12 +87,12 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that AS IT WERE produces an <see cref="ExpressionCastNode"/> with the correct new type.
+    /// Tests that AS IT WERE produces an <see cref="ExpressionCastNode"/> with the correct new type when used as a standalone statement.
     /// </summary>
     [Fact]
     public void Parse_WithExpressionCast_SetsExpressionAndNewType()
     {
-        ExpressionCastNode node = this.ParseFirstStatement<ExpressionCastNode>("AS IT WERE x AS A YARN");
+        ExpressionCastNode node = this.ParseFirstExpressionStatement<ExpressionCastNode>("AS IT WERE x AS A YARN");
 
         node.Expression.ShouldNotBeNull();
         node.NewType.ShouldBe(LiteralType.String);
@@ -588,6 +588,30 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that <c>IS APPOINTED AS IT WERE</c> parses the assignment value as an <see cref="ExpressionCastNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_ExpressionCast_InAssignment_SetsValueNode()
+    {
+        AssignmentNode assignment = this.ParseFirstStatement<AssignmentNode>("x IS APPOINTED AS IT WERE y AS A YARN");
+
+        ExpressionCastNode cast = assignment.Value.ShouldBeOfType<ExpressionCastNode>();
+        cast.NewType.ShouldBe(LiteralType.String);
+    }
+
+    /// <summary>
+    /// Tests that <c>PRAY WELCOME ... BEING AS IT WERE</c> parses the initial value as an <see cref="ExpressionCastNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_ExpressionCast_InDeclarationBeing_SetsInitialValue()
+    {
+        DeclarationNode declaration = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A YARN BEING AS IT WERE y AS A YARN");
+
+        ExpressionCastNode cast = declaration.InitialValue.ShouldBeOfType<ExpressionCastNode>();
+        cast.NewType.ShouldBe(LiteralType.String);
+    }
+
+    /// <summary>
     /// Parses a single statement of a specific type from a source string.
     /// </summary>
     /// <typeparam name="T">The type of statement to parse.</typeparam>
@@ -601,5 +625,18 @@ public class TopsyTurvyParserStatementTests
         ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
         Statement statement = program.Statements.ShouldHaveSingleItem();
         return statement.ShouldBeOfType<T>();
+    }
+
+    /// <summary>
+    /// Parses a single standalone expression statement and returns the inner expression cast as <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The expected <see cref="Expression"/> type wrapped by the <see cref="ExpressionStatement"/>.</typeparam>
+    /// <param name="statementSource">The source text for the expression statement.</param>
+    private T ParseFirstExpressionStatement<T>(string statementSource) where T : Expression
+    {
+        ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
+        Statement statement = program.Statements.ShouldHaveSingleItem();
+        ExpressionStatement expressionStatement = statement.ShouldBeOfType<ExpressionStatement>();
+        return expressionStatement.Expression.ShouldBeOfType<T>();
     }
 }

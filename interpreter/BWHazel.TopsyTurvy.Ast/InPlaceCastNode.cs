@@ -8,7 +8,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// This corresponds to the <c>IS HENCEFORTH A</c> type casting statement in Topsy Turvy.  It converts a variable from one
 /// type to another by mutating it in place, replacing the original value.  Every in-place cast consists of a variable to cast,
 /// the <see cref="Target"/>, and the destination type, <see cref="NewType"/>.  This contrasts with
-/// <see cref="ExpressionCastNode"/>, which produces a cast value without modifying the original variable.
+/// <see cref="ExpressionCastNode"/>, which returns a cast value as an expression without modifying the original variable.
 /// </para>
 /// <para>
 /// For example, the following code in Topsy Turvy to re-cast the variable <c>Ko-Ko</c> from a Fathom (float) to a Peer (integer):
@@ -36,7 +36,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// Please note examples have commented out sections for brevity.
 /// </para>
 /// </remarks>
-public class InPlaceCastNode : TypeCastNode
+public class InPlaceCastNode : Statement
 {
     /// <summary>
     /// Gets or initialises the name of the variable to cast.
