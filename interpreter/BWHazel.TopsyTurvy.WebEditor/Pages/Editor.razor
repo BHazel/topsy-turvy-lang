@@ -97,9 +97,15 @@
 @code {
     private const string DefaultFileName = "programme.topsy";
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the editor is currently in dark mode.
+    /// </summary>
     [CascadingParameter(Name = "IsDarkMode")]
     private bool IsDarkMode { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the callback that toggles dark mode on the root layout.
+    /// </summary>
     [CascadingParameter(Name = "ToggleDarkMode")]
     private Action? ToggleDarkMode { get; set; }
 
@@ -350,7 +356,7 @@
     /// Row and column are 1-indexed to match the Monaco coordinate system.
     /// </remarks>
     /// <returns>
-    /// An object with line and colum or <c>null</c> if no recognised symbol
+    /// An object with line and column or <c>null</c> if no recognised symbol
     /// with a known definition is at the position.
     /// </returns>
     [JSInvokable]
