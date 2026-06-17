@@ -38,7 +38,7 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
     private static readonly SemanticTokensLegend Legend = new()
     {
         TokenTypes = new("variable", "parameter", "function"),
-        TokenModifiers = new()
+        TokenModifiers = new("readonly")
     };
 
     /// <summary>
@@ -104,7 +104,7 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
 
             string source = state.Source;
             string[] lines = source.Split('\n');
-            List<(int Line, int Char, int Length, string TokenType)> tokens = [];
+            List<(int Line, int Char, int Length, string TokenType, string[] Modifiers)> tokens = [];
 
             IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
                 .Concat(this.documentStateManager.GetImportedFunctionSymbols(identifier.TextDocument.Uri));
@@ -123,16 +123,18 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
                     _ => "variable"
                 };
 
+                string[] modifiers = symbol.IsConstant ? ["readonly"] : [];
+
                 foreach ((int lineIndex, int foundAtIndex) in SourceAnalyser.FindWordOccurrences(lines, symbol.Name))
                 {
-                    tokens.Add((lineIndex, foundAtIndex, symbol.Name.Length, tokenType));
+                    tokens.Add((lineIndex, foundAtIndex, symbol.Name.Length, tokenType, modifiers));
                 }
             }
 
-            foreach ((int line, int character, int length, string tokenType) in
+            foreach ((int line, int character, int length, string tokenType, string[] modifiers) in
                 tokens.OrderBy(token => token.Line).ThenBy(token => token.Char))
             {
-                builder.Push(line, character, length, tokenType, Array.Empty<string>());
+                builder.Push(line, character, length, tokenType, modifiers);
             }
         }
         catch (Exception)

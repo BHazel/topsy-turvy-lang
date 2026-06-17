@@ -49,6 +49,7 @@ Object.assign(window.topsyTurvy, {
      */
     applyLanguageToEditor(editorId) {
         this.registerLanguage();
+        this.registerThemes();
         const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
         if (!editorHolder) {
             return;
@@ -61,6 +62,33 @@ Object.assign(window.topsyTurvy, {
 
         monaco.editor.setModelLanguage(model, 'topsy-turvy');
         editorHolder.editor.updateOptions({ autoIndent: 'full' });
+    },
+
+    /**
+     * Applies inline decorations to all constant identifier occurrences.
+     * @description Called from Blazor after each analysis pass. Replaces the previous
+     *              decoration set so stale ranges are cleared automatically.
+     * @param {string} editorId The `BlazorMonaco` editor element ID.
+     * @param {object[]} ranges The ranges of constant identifiers to decorate.
+     */
+    setConstantDecorations(editorId, ranges) {
+        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
+        if (!editorHolder) {
+            return;
+        }
+
+        const decorations = ranges.map(range => ({
+            range,
+            options: {
+                inlineClassName: 'topsy-constant-var'
+            },
+        }));
+
+        if (this._constantDecorations) {
+            this._constantDecorations.set(decorations);
+        } else {
+            this._constantDecorations = editorHolder.editor.createDecorationsCollection(decorations);
+        }
     },
 
     /**

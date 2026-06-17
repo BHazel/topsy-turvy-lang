@@ -158,6 +158,7 @@
         {
             this.dotNetRef = DotNetObjectReference.Create(this);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.applyLanguageToEditor", "topsy-turvy-editor");
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
@@ -173,7 +174,7 @@
         if (this.editorReady && this.IsDarkMode != this.previousIsDarkMode)
         {
             previousIsDarkMode = this.IsDarkMode;
-            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "vs-dark" : "vs");
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
         }
     }
 
@@ -255,8 +256,24 @@
 
         if (result.Program is not null)
         {
-            this.symbolTables[this.activeFileName] = SymbolTable.Build(result.Program, source);
+            SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            this.symbolTables[this.activeFileName] = symbolTable;
             this.parsedSources[this.activeFileName] = source;
+
+            string[] lines = source.Split('\n');
+            IEnumerable<object> constantRanges = symbolTable.AllSymbols()
+                .Where(symbol => symbol.Kind == SymbolKind.Variable && symbol.IsConstant)
+                .SelectMany(
+                    symbol => SourceAnalyser.FindWordOccurrences(lines, symbol.Name),
+                    (symbol, occurrence) => (object)new
+                    {
+                        startLineNumber = occurrence.Line + 1,
+                        startColumn = occurrence.Character + 1,
+                        endLineNumber = occurrence.Line + 1,
+                        endColumn = occurrence.Character + symbol.Name.Length + 1,
+                    });
+
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setConstantDecorations", "topsy-turvy-editor", constantRanges);
         }
 
         IEnumerable<object> markers = result.Diagnostics

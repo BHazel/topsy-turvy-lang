@@ -327,4 +327,23 @@ window.topsyTurvy = {
             },
         });
     },
+
+    /**
+     * Registers custom Monaco themes that extend the built-in vs-dark and vs themes.
+     */
+    registerThemes() {
+        monaco.editor.defineTheme('topsy-turvy-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('topsy-turvy-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [],
+            colors: {},
+        });
+    },
 };

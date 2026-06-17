@@ -115,6 +115,9 @@
           "variable": [
             "variable.other.readwrite"
           ],
+          "variable.readonly": [
+            "variable.other.constant"
+          ],
           "parameter": [
             "variable.parameter"
           ],

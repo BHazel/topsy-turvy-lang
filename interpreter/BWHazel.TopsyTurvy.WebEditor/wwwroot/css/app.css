@@ -253,3 +253,19 @@ html, body {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+
+/**
+ * The identifier highlight for a constant in the Monaco editor in dark mode.
+ */
+.monaco-editor.vs-dark .topsy-constant-var,
+.monaco-editor.topsy-turvy-dark .topsy-constant-var {
+    color: #9CDCFE !important;
+}
+
+/**
+ * The identifier highlight for a constant in the Monaco editor in light mode.
+ */
+.monaco-editor.vs .topsy-constant-var,
+.monaco-editor.topsy-turvy-light .topsy-constant-var {
+    color: #001080 !important;
+}
