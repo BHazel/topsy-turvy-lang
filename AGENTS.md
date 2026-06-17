@@ -171,6 +171,19 @@ These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
 * **Virtual File System:** `VirtualFile` is the file registry (name, open/close state). The Monaco editor models are the source of truth for file content: always read/write content via `monacoEditor.GetValue`/`monacoEditor.SetValue`, not from `VirtualFile`.
 * **MudBlazor API:** Use current MudBlazor 9.x property names.
 
+## Documentation Site (`docs/topsy-turvy/`)
+
+The Docusaurus site under `docs/topsy-turvy/` is structured into three content areas:
+
+* **Concepts (`docs/concepts/`):** High-level explanations of each toolchain component (parser, runtime, analysis layer, etc.).  These pages must describe *how the component works*, not what the language does.  Do not copy or summarise language-spec content here — that belongs in `SPEC.md`.
+* **Guide (`docs/guide/`):** Task-oriented how-to pages for users of the language and toolchain.
+* **API Reference (`docs/api/`):** Auto-generated from XML documentation comments; do not edit generated files by hand.
+
 ## Implementing Language Features
 
 When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
+
+After completing the implementation, documentation must also be kept in sync:
+
+* **XML documentation comments:** Update the `<summary>` and `<remarks>` blocks on any modified or newly added public type or member.  The XML docs are the source of truth for the API reference; stale comments are worse than no comments.
+* **Docusaurus concepts pages:** Update a concepts page only if the component's high-level behaviour has materially changed, for example, if the parser now handles a new construct category or the runtime introduces a new execution model.  Do not add language-spec detail (keyword syntax, example programs, cast rules) to a concepts page; that content belongs in `SPEC.md`.
