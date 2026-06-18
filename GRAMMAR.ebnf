@@ -156,3 +156,20 @@ InputStatement     = "PRAY TELL", Identifier ;
 ExpressionStatement = Expression ;
 
 Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;
+
+(*----------------------------------------------------------------------------*)
+(* Runtime-Injected Built-In Variables                                        *)
+(*----------------------------------------------------------------------------*)
+(* The following identifiers are not grammar productions — they are injected  *)
+(* by the interpreter before execution begins and are always present.         *)
+(*                                                                             *)
+(* JUST SO    : implicit variable; receives any expression result not         *)
+(*              explicitly assigned.                                           *)
+(* THE PROPS  : CONSERVATIVE LITTLE LIST OF YARN; contains the arguments      *)
+(*              passed to the programme at invocation.  Empty array when none  *)
+(*              are supplied.  1-based indexing; elements are always YARN.     *)
+(*              Inaccessible inside functions per Invariant I7.                *)
+(*                                                                             *)
+(* Neither identifier may be re-declared with PRAY WELCOME; doing so is a    *)
+(* runtime error.                                                              *)
+(*----------------------------------------------------------------------------*)

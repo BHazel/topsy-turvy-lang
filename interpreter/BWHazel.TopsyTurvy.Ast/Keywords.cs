@@ -60,5 +60,8 @@ public static class Keywords
     {
         /// <summary>The implicit variable.</summary>
         public const string JustSo = "JUST SO";
+
+        /// <summary>The constant array of command-line arguments.</summary>
+        public const string TheProps = "THE PROPS";
     }
 }

@@ -76,7 +76,7 @@
     },
     "implicit-variable": {
       "name": "variable.language.topsy",
-      "match": "(?i)\\bJUST\\s+SO\\b"
+      "match": "(?i)(?:\\bJUST\\s+SO\\b|\\bTHE\\s+PROPS\\b)"
     },
     "program-structure": {
       "patterns": [

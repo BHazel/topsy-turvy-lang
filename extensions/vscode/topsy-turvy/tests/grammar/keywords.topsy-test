@@ -151,10 +151,13 @@ AS A LITTLE LIST OF YARN
 //^ keyword.other.declaration.topsy
 //     ^ storage.type.topsy
 
-// ── Assignment and implicit variable ─────────────────────────────────────────
+// ── Assignment and implicit variables ────────────────────────────────────────
 
 JUST SO IS APPOINTED 1
 //^ variable.language.topsy
+
+VICTIM 1 ON THE PROPS
+//              ^ variable.language.topsy
 
 IS APPOINTED 1
 //^ keyword.operator.assignment.topsy

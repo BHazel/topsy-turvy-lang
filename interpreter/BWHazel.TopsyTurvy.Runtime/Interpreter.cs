@@ -107,6 +107,11 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         DiagnosticCollection diagnostics = new();
         TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
 
+        List<TopsyTurvyValue> commandLineArgElements = options?.CommandLineArguments is not null
+            ? [.. options.CommandLineArguments.Select(TopsyTurvyValue.String)]
+            : [];
+        environment.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array(commandLineArgElements), isConstant: true);
+
         try
         {
             this.ExecuteStatements(program.Statements, environment);

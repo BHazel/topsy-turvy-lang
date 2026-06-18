@@ -53,6 +53,14 @@ public class SymbolTable
             TypeDisplayName = "implicit variable"
         };
 
+        collectedSymbols[Keywords.SpecialNames.TheProps] = new SymbolInfo()
+        {
+            Name = Keywords.SpecialNames.TheProps,
+            Kind = SymbolKind.Variable,
+            IsConstant = true,
+            TypeDisplayName = $"CONSERVATIVE {Keywords.TypeNames.LittleListOf} {Keywords.TypeNames.Yarn}"
+        };
+
         CollectFromStatements(program.Statements, collectedSymbols, sourceLines);
         return new SymbolTable(collectedSymbols);
     }

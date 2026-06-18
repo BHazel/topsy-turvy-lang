@@ -84,6 +84,12 @@
                 <Xterm @ref="terminal" Options="terminalOptions" />
             </div>
             <MudTextField T="string"
+                          @bind-Value="commandLineArgumentsText"
+                          Label="Command-Line Arguments"
+                          HelperText="Space-separated"
+                          Variant="Variant.Outlined"
+                          Class="ma-2" />
+            <MudTextField T="string"
                           @bind-Value="stdinText"
                           Label="Standard Input"
                           HelperText="One value per line"
@@ -112,6 +118,7 @@
     private StandaloneCodeEditor? monacoEditor;
     private Xterm? terminal;
     private bool editorReady = false;
+    private string commandLineArgumentsText = string.Empty;
     private string stdinText = string.Empty;
     private bool isRunning = false;
     private string lastRunOutput = string.Empty;
@@ -262,7 +269,7 @@
 
             string[] lines = source.Split('\n');
             IEnumerable<object> constantRanges = symbolTable.AllSymbols()
-                .Where(symbol => symbol.Kind == SymbolKind.Variable && symbol.IsConstant)
+                .Where(symbol => symbol.Kind == SymbolKind.Variable && symbol.IsConstant && !symbol.Name.Contains(' '))
                 .SelectMany(
                     symbol => SourceAnalyser.FindWordOccurrences(lines, symbol.Name),
                     (symbol, occurrence) => (object)new
@@ -485,6 +492,8 @@
         Dictionary<string, string> currentFileContents = this.files.ToDictionary(file => file.Name, file => file.Content);
         string source = currentFileContents[this.activeFileName];
         IEnumerable<string> stdinLines = this.stdinText.Split('\n');
+        string[] commandLineArguments = this.commandLineArgumentsText
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         TopsyTurvyParser parser = new();
         ParseResult parseResult = parser.TryParse(source);
@@ -508,7 +517,7 @@
         DiagnosticCollection runtimeDiagnostics = interpreter.Execute(
             parseResult.Program!,
             cancellationTokenSource.Token,
-            options: new(TimeSpan.FromSeconds(10), null, fileResolver));
+            options: new(TimeSpan.FromSeconds(10), null, fileResolver, commandLineArguments));
 
         foreach (string line in io.OutputLines)
         {

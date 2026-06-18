@@ -543,7 +543,7 @@ public static class StatementParser
         (from victimKeyword in Lexer.Keyword("VICTIM")
          from index in Ws(ExpressionParser.Expression)
          from onKeyword in Ws(Lexer.Keyword("ON"))
-         from arrayName in Ws(Lexer.Identifier)
+         from arrayName in Ws(ExpressionParser.ArrayNameParser)
          from isAppointedKeyword in Ws(Lexer.Keyword("IS APPOINTED"))
          from value in Ws(ExpressionParser.Expression)
          select (Statement)new ArrayElementAssignmentNode()

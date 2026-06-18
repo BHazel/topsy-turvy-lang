@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace BWHazel.TopsyTurvy.Runtime;
@@ -27,11 +28,18 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// This enables custom resolution of import paths, for example to support virtual file systems or to resolve imports from a database.
 /// If this is not provided the interpreter will attempt to read files from the real file system.
 /// </para>
+/// <para>
+/// ### Command-Line Arguments
+/// An ordered, read-only list of strings injected into the programme as the built-in <c>THE PROPS</c> constant array.  If <c>null</c>,
+/// <c>THE PROPS</c> is still declared but contains an empty list.
+/// </para>
 /// </remarks>
 /// <param name="ExecutionTimeout">A maximum wall-clock duration for execution, after which execution will be cancelled.</param>
 /// <param name="SourceFilePath">The absolute or relative path of the source file being executed, used to resolve relative import paths.</param>
 /// <param name="SourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to use the real file system.</param>
+/// <param name="CommandLineArguments">The command-line arguments to expose as <c>THE PROPS</c> inside the programme, or <c>null</c> for an empty array.</param>
 public record InterpreterExecutionOptions(
     TimeSpan? ExecutionTimeout,
     string? SourceFilePath,
-    Func<string, string?>? SourceFileResolver);
+    Func<string, string?>? SourceFileResolver,
+    IReadOnlyList<string>? CommandLineArguments = null);

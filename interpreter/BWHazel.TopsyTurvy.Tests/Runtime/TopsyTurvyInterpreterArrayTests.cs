@@ -323,4 +323,93 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
         diagnostics.HasErrors.ShouldBeFalse();
         output[0].ShouldBe("10");
     }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method declares THE PROPS as an empty array when no programme arguments are provided.
+    /// </summary>
+    [Fact]
+    public void Execute_TheProps_WithNoArguments_IsEmptyArray()
+    {
+        string source = """
+            HARK! "THE PROPS"
+            BEHOLD THE PROPS
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("[]");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method populates THE PROPS with the provided programme arguments as YARN elements.
+    /// </summary>
+    [Fact]
+    public void Execute_TheProps_WithArguments_ContainsPassedStrings()
+    {
+        string source = """
+            HARK! "THE PROPS"
+            BEHOLD THE PROPS
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(
+            program,
+            options: new(null, null, null, ["Ko-Ko", "Pooh-Bah"]));
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("[Ko-Ko, Pooh-Bah]");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method returns the correct 1-based element from THE PROPS.
+    /// </summary>
+    [Fact]
+    public void Execute_TheProps_ElementAccess_ReturnsCorrect1BasedElement()
+    {
+        string source = """
+            HARK! "THE PROPS"
+            BEHOLD VICTIM 2 ON THE PROPS
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(
+            program,
+            options: new(null, null, null, ["Ko-Ko", "Pooh-Bah"]));
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("Pooh-Bah");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method produces a runtime error when element reassignment is attempted on THE PROPS.
+    /// </summary>
+    [Fact]
+    public void Execute_TheProps_ElementReassignment_ProducesRuntimeError()
+    {
+        string source = """
+            HARK! "THE PROPS"
+            VICTIM 1 ON THE PROPS IS APPOINTED "changed"
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(
+            program,
+            options: new(null, null, null, ["Ko-Ko"]));
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
 }

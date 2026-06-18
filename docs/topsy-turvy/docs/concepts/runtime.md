@@ -87,4 +87,5 @@ Execution of the interpreter can be configured by passing an `InterpreterExecuti
 * An execution timeout as a guard against infinite loops or excessively long-running programmes.
 * A source file path to resolve relative import paths.
 * A custom file resolver for use in contexts such as a virtual file system.
+* A list of command-line arguments, exposed inside the programme as the built-in `THE PROPS` constant array.
 

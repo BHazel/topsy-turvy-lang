@@ -332,7 +332,9 @@ When a non-`DECREE` value is used in a boolean context:
 
 ---
 
-## 8. The JUST SO Variable
+## 8. Built-In Variables
+
+### JUST SO
 
 Any expression that is evaluated but not explicitly assigned deposits its result in the implicit variable **`JUST SO`**. This is used primarily to feed values into conditional constructs without an intermediate assignment.
 
@@ -348,6 +350,25 @@ SO MUCH FOR THAT.
 ```
 
 When the inline conditional form is used (`SHOULD IT TRANSPIRE THAT <expression>` or `IN WHICH CAPACITY? <expression>`), the expression is evaluated directly and `JUST SO` is bypassed — the expression's result is consumed immediately by the conditional and is not deposited into `JUST SO`.
+
+### THE PROPS
+
+**`THE PROPS`** is a built-in `CONSERVATIVE LITTLE LIST OF YARN` variable that is always present at programme start. It contains the arguments passed to the programme at the point of invocation, in the order they were provided.
+
+- If no arguments are passed, `THE PROPS` is an empty array (`[]`).
+- Elements are always `YARN`; cast to another type if a different type is needed.
+- Indexing is 1-based, consistent with all arrays: `VICTIM 1 ON THE PROPS` retrieves the first argument.
+- `THE PROPS` is `CONSERVATIVE` — any attempt to reassign the array or any of its elements is a runtime error.
+- Per Invariant I7, `THE PROPS` is a global variable and is therefore inaccessible inside functions. Pass individual elements as function arguments when needed.
+
+```topsy
+HARK! "THE PROPS example"
+BEHOLD VICTIM 1 ON THE PROPS          ASIDE: prints first argument
+BEHOLD VICTIM 2 ON THE PROPS          ASIDE: prints second argument
+FINALE.
+```
+
+> *"The properties of a troupe are the lifeblood of a performance."* — theatrical tradition
 
 ---
 

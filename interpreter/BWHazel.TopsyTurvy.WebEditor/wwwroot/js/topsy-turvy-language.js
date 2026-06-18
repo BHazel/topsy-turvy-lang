@@ -82,6 +82,7 @@ window.topsyTurvy = {
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
             ["JUST SO",                             "implicit variable"],
+            ["THE PROPS",                           "built-in programme arguments"],
             ["PEER",                                "integer type"],
             ["FATHOM",                              "float type"],
             ["YARN",                                "string type"],
@@ -209,8 +210,9 @@ window.topsyTurvy = {
                     [/\b[0-9]+\.[0-9]+\b/, 'number.float'],
                     [/\b[0-9]+\b/, 'number'],
 
-                    // Implicit variable — before other keyword rules
+                    // Implicit variables — before other keyword rules
                     [/\bJUST\s+SO\b/, 'variable'],
+                    [/\bTHE\s+PROPS\b/, 'variable'],
 
                     // Long multi-word keywords with no shared prefix conflicts
                     [/\bNOTHING\s+COULD\s+BE\s+MORE\s+SATISFACTORY\./, 'keyword'],
