@@ -150,6 +150,25 @@ public sealed class TopsyTurvyEnvironment
     public bool IsConstant(string name) => this.constants.Contains(name);
 
     /// <summary>
+    /// Determines whether a variable is declared as a constant anywhere in the accessible scope chain.
+    /// </summary>
+    /// <param name="name">The variable name.</param>
+    /// <returns><c>true</c> if the variable was declared with the <c>CONSERVATIVE</c> modifier in any accessible scope, otherwise <c>false</c>.</returns>
+    /// <remarks>
+    /// Walks the enclosing chain to find the scope where the variable is declared, then checks whether it is constant there.
+    /// Use this when the variable may have been declared in an enclosing scope, such as when mutating an array element inside a conditional block.
+    /// </remarks>
+    public bool IsConstantInChain(string name)
+    {
+        if (this.variables.ContainsKey(name))
+        {
+            return this.constants.Contains(name);
+        }
+
+        return this.enclosingEnvironment?.IsConstantInChain(name) ?? false;
+    }
+
+    /// <summary>
     /// Assigns a new value to an existing variable, walking the enclosing chain to find it.
     /// </summary>
     /// <param name="name">The variable name.</param>

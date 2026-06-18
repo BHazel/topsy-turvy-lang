@@ -118,6 +118,40 @@ PRAY WELCOME Ko-Ko            AS A PEER         BEING  0
 
 `CONSERVATIVE` draws from the G&S tradition of immovable institutional authority — the House of Lords in *Iolanthe*, the Lord Chancellor, the ancestral portraits in *Ruddigore*: things that, by long-established rule, simply *cannot* be changed. *"I often think it's comical / Fal lal la! / How Nature always does contrive / Fal lal la! / That every boy and every gal / That's born into the world alive / Is either a little Liberal / Or else a little Conservative! / Fal lal la!"* — *Iolanthe*, Act II. The modifier restores Gilbert's own distinction to the language: those values that are fixed by decree, and those that may yet be persuaded.
 
+### 3.2 Dynamic Typing
+
+Topsy Turvy is a **dynamically typed** language in the Python tradition: type annotations are **advisory**, not enforced.
+
+**The declared type is documentation, not a constraint.** A variable declared as `PEER` may hold a `YARN` value after a subsequent `IS APPOINTED`. The interpreter will not raise an error when a value of a different type is stored. This mirrors Python's behaviour with annotated variables:
+
+```python
+# Python — valid at runtime, annotation is advisory
+Ko_Ko: int = 42
+Ko_Ko = "Lord High Executioner"  # no error
+```
+
+The equivalent in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Ko-Ko AS A PEER BEING 42
+Ko-Ko IS APPOINTED "Lord High Executioner"  ASIDE: perfectly legal — annotation is advisory
+```
+
+**Explicit casts are still required to convert values.** Storing a different type does not convert it; `IS HENCEFORTH A` or `AS IT WERE` must be used when a specific type is needed:
+
+```topsy
+Ko-Ko IS HENCEFORTH A PEER  ASIDE: now converts whatever Ko-Ko holds to PEER
+```
+
+**Type annotations serve three purposes:**
+1. They set the initial value's type when `BEING` is provided.
+2. They document the programmer's intent for future readers.
+3. They inform the LSP hover tooltip.
+
+This philosophy extends to collection types. An `A LITTLE LIST OF YARN` declares the programmer's intent that the list should contain strings — but the runtime will not reject an element of a different type (see §14 Arrays).
+
+---
+
 Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax; inline declarations are free-standing statements and do not require `THE CURTAIN RISES.`
 
 ```topsy
@@ -624,7 +658,82 @@ PRAY ADMIT "filename"
 
 ---
 
-## 14. Complete Keyword Reference
+## 14. Arrays
+
+Arrays are ordered, indexed collections of values. An array is declared with the `LITTLE LIST OF` type annotation and accessed or mutated element-by-element with `VICTIM`.
+
+### Declaring an Array
+
+```
+PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] LITTLE LIST OF [<size>] <type>
+    [BEING <expr> AND <expr> [AND <expr> ...] IF YOU PLEASE.]
+```
+
+```topsy
+PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AND "Pish-Tush" IF YOU PLEASE.
+PRAY WELCOME scores     AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME empty      AS A LITTLE LIST OF PEER
+PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
+```
+
+- `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
+- `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, or `NAUGHT`); advisory only — see §3.2.
+- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many `NAUGHT` elements, making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
+- `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §6); omitting `BEING` produces an empty array, **not** `NAUGHT`.
+- `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
+- `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.
+- Index positions are **1-based**: the first element is at position 1.
+- Arrays have **reference semantics**: assigning an array variable to another variable makes both names point to the same list. Mutating via either name is visible through the other.
+
+### Reading an Element
+
+```topsy
+VICTIM <index> ON <array>
+```
+
+```topsy
+BEHOLD VICTIM 1 ON miscreants         ASIDE: prints Pooh-Bah
+PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
+```
+
+`VICTIM <index> ON <array>` is an **expression** that evaluates to the element at position `<index>`. `<index>` is 1-based — `VICTIM 1` is the first element. `<index>` may be any expression that evaluates to a `PEER`. Accessing an out-of-range index is a runtime error.
+
+*`VICTIM` — Ko-Ko's little list consists of intended victims; every item retrieved from the list is, necessarily, a victim.*
+
+### Setting an Element
+
+```topsy
+VICTIM <index> ON <array> IS APPOINTED <value>
+```
+
+```topsy
+VICTIM 2 ON miscreants IS APPOINTED "Nanki-Poo"
+```
+
+Replaces the element at position `<index>` with `<value>`. If the array was declared `CONSERVATIVE`, attempting to set an element is a runtime error.
+
+### Array Truthiness
+
+| State      | Truthiness |
+|------------|------------|
+| Non-empty  | `VERITY`   |
+| Empty      | `NAY`      |
+
+### Display
+
+`BEHOLD` renders an array as a comma-separated, bracket-enclosed list of its elements' string representations:
+
+```topsy
+BEHOLD miscreants   ASIDE: prints ["Pooh-Bah", "Ko-Ko", "Pish-Tush"]
+```
+
+### Note on Element-Type Enforcement
+
+Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 42` is valid even if `arr` was declared `A LITTLE LIST OF YARN` — no runtime error will be raised. This matches the general dynamic-typing philosophy of the language.
+
+---
+
+## 15. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -698,22 +807,26 @@ PRAY ADMIT "filename"
 | `MODIFIED RAPTURE[, <name>]`                     | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO`; optional `, <name>` auto-declares a binding in the exception block scope |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
+| `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
+| `VICTIM <index> ON <array>`                      | Array element access        | The item at position `<index>` (1-based) on Ko-Ko's list                          |
+| `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`                            |
 
 ---
 
-## 15. Type Reference
+## 16. Type Reference
 
-| Keyword  | Type    | Values                               |
-|----------|---------|--------------------------------------|
-| `PEER`   | Integer | Any whole number                     |
-| `FATHOM` | Float   | Any real number                      |
-| `YARN`   | String  | Any sequence of characters in `""`   |
-| `DECREE` | Boolean | `VERITY` or `NAY`                      |
-| `NAUGHT` | Null    | `NAUGHT`                             |
+| Keyword                 | Type         | Values                                      |
+|-------------------------|--------------|---------------------------------------------|
+| `PEER`                  | Integer      | Any whole number                            |
+| `FATHOM`                | Float        | Any real number                             |
+| `YARN`                  | String       | Any sequence of characters in `""`          |
+| `DECREE`                | Boolean      | `VERITY` or `NAY`                           |
+| `NAUGHT`                | Null         | `NAUGHT`                                    |
+| `A LITTLE LIST OF <T>`  | Array of `T` | Ordered 1-based collection; element type advisory (see §3.2) |
 
 ---
 
-## 16. Operator Precedence
+## 17. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -726,7 +839,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 17. Scoping
+## 18. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -735,7 +848,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 18. Line Structure
+## 19. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -772,7 +885,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 19. A Note on Style
+## 20. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -787,7 +900,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 20. Complete Example
+## 21. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"

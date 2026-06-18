@@ -147,6 +147,10 @@ CONSERVATIVE
 LIBERAL
 //^ keyword.other.declaration.topsy
 
+AS A LITTLE LIST OF YARN
+//^ keyword.other.declaration.topsy
+//     ^ storage.type.topsy
+
 // ── Assignment and implicit variable ─────────────────────────────────────────
 
 JUST SO IS APPOINTED 1

@@ -163,8 +163,14 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case DeclarationNode declaration:
                 this.ExecuteDeclaration(declaration, environment);
                 break;
+            case ArrayDeclarationNode arrayDeclaration:
+                this.ExecuteArrayDeclaration(arrayDeclaration, environment);
+                break;
             case AssignmentNode assignment:
                 this.ExecuteAssignment(assignment, environment);
+                break;
+            case ArrayElementAssignmentNode arrayElementAssignment:
+                this.ExecuteArrayElementAssignment(arrayElementAssignment, environment);
                 break;
             case InPlaceCastNode inPlaceCast:
                 this.ExecuteInPlaceCast(inPlaceCast, environment);
@@ -218,10 +224,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <param name="environment">The environment.</param>
     private void ExecutePrincipalBlock(PrincipalBlockNode node, TopsyTurvyEnvironment environment)
     {
-        foreach (DeclarationNode declaration in node.Declarations)
-        {
-            this.ExecuteDeclaration(declaration, environment);
-        }
+        this.ExecuteStatements(node.Declarations, environment);
     }
 
     /// <summary>
@@ -236,6 +239,102 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             : TopsyTurvyValue.Null();
 
         environment.Declare(node.Name, value, isConstant: node.IsConstant);
+    }
+
+    /// <summary>
+    /// Executes an array declaration statement.
+    /// </summary>
+    /// <param name="node">The array declaration node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when <see cref="ArrayDeclarationNode.Size"/> is set and <see cref="ArrayDeclarationNode.InitialValues"/>
+    /// is non-empty (mutually exclusive), or when <see cref="ArrayDeclarationNode.Size"/> is negative.
+    /// </exception>
+    private void ExecuteArrayDeclaration(ArrayDeclarationNode node, TopsyTurvyEnvironment environment)
+    {
+        if (node.Size.HasValue && node.InitialValues.Count > 0)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Array '{node.Name}' specifies both a size and a BEING initialiser: these are mutually exclusive.",
+                node.Span);
+        }
+
+        if (node.Size.HasValue && node.Size.Value < 0)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Array '{node.Name}' was declared with a negative size ({node.Size.Value}).",
+                node.Span);
+        }
+
+        List<TopsyTurvyValue> elements = node.Size.HasValue
+            ? [.. Enumerable.Repeat(TopsyTurvyValue.Null(), node.Size.Value)]
+            : [.. node.InitialValues.Select(expression => this.EvaluateExpression(expression, environment))];
+
+        environment.Declare(node.Name, TopsyTurvyValue.Array(elements), isConstant: node.IsConstant);
+    }
+
+    /// <summary>
+    /// Executes an array element assignment statement.
+    /// </summary>
+    /// <param name="node">The array element assignment node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array, the array is CONSERVATIVE, or the index is out of range.</exception>
+    private void ExecuteArrayElementAssignment(ArrayElementAssignmentNode node, TopsyTurvyEnvironment environment)
+    {
+        (int index, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
+
+        if (environment.IsConstantInChain(node.ArrayName))
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{node.ArrayName}' is CONSERVATIVE: its elements cannot be reassigned.",
+                node.Span);
+        }
+
+        elements[index - 1] = this.EvaluateExpression(node.Value, environment);
+    }
+
+    /// <summary>
+    /// Resolves an array element by evaluating the index expression and returning the 1-based position and the element list.
+    /// </summary>
+    /// <param name="indexExpression">The expression that evaluates to the 1-based element index.</param>
+    /// <param name="arrayName">The name of the array variable.</param>
+    /// <param name="span">The source span used in error messages.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The validated 1-based index and the backing element list.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array, or the index is out of range.</exception>
+    private (int Index, List<TopsyTurvyValue> Elements) ResolveArrayElement(
+        Expression indexExpression,
+        string arrayName,
+        SourceSpan span,
+        TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue indexValue = this.EvaluateExpression(indexExpression, environment);
+        if (indexValue.LiteralType != LiteralType.Integer)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Array index must be a PEER (integer), got {indexValue.LiteralType}.",
+                span);
+        }
+
+        TopsyTurvyValue arrayValue = environment.Get(arrayName);
+        if (arrayValue.LiteralType != LiteralType.Array)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{arrayName}' is not an array.",
+                span);
+        }
+
+        int index = (int)indexValue.RawValue!;
+        List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)arrayValue.RawValue!;
+
+        if (index < 1 || index > elements.Count)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Array index {index} is out of range for '{arrayName}' (length {elements.Count}).",
+                span);
+        }
+
+        return (index, elements);
     }
 
     /// <summary>
@@ -588,10 +687,24 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         IdentifierNode ident => environment.Get(ident.Name),
         PrefixExpressionNode prefix => EvaluatePrefix(prefix, environment),
         ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
+        ArrayIndexNode arrayIndex => this.EvaluateArrayIndex(arrayIndex, environment),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
             expression.Span)
     };
+
+    /// <summary>
+    /// Evaluates an array index expression and returns the element at the given 1-based position.
+    /// </summary>
+    /// <param name="node">The array index node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The element at the specified index.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array, or the index is out of range.</exception>
+    private TopsyTurvyValue EvaluateArrayIndex(ArrayIndexNode node, TopsyTurvyEnvironment environment)
+    {
+        (int index, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
+        return elements[index - 1];
+    }
 
     /// <summary>
     /// Evaluates a literal expression and returns its value.

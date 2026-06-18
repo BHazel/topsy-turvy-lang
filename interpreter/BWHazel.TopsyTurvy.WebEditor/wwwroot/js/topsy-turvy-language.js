@@ -86,6 +86,9 @@ window.topsyTurvy = {
             ["FATHOM",                              "float type"],
             ["YARN",                                "string type"],
             ["DECREE",                              "boolean type"],
+            ["A LITTLE LIST OF",                    "array type annotation"],
+            ["VICTIM",                              "array element access / assignment"],
+            ["ON",                                  "array index separator"],
         ];
 
         monaco.languages.registerCompletionItemProvider('topsy-turvy', {
@@ -216,6 +219,9 @@ window.topsyTurvy = {
                     [/\bIN\s+WHICH\s+CAPACITY\?/, 'keyword'],
                     [/\bWHEN\s+ACTING\s+AS\b/, 'keyword'],
                     [/\bIT\s+IS\s+MY\s+DUTY\s+TO\s+PERFORM\b/, 'keyword'],
+
+                    // A LITTLE LIST OF: after "AS A" consumes the leading A, only "LITTLE LIST OF" remains in the token stream
+                    [/\bLITTLE\s+LIST\s+OF\b/, 'type'],
                     [/\bA\s+HIDEOUS\s+CURSE\s+ON\b/, 'keyword'],
                     [/\bBY\s+A\s+LEGAL\s+FICTION\b/, 'keyword'],
                     [/\bSO\s+MUCH\s+FOR\s+THAT\./, 'keyword'],
@@ -290,6 +296,7 @@ window.topsyTurvy = {
                     [/\bUNTIL\b/, 'keyword'],
                     [/\bWHILST\b/, 'keyword'],
                     [/\bSUMMON\b/, 'keyword'],
+                    [/\bVICTIM\b/, 'keyword'],
                     [/\bBEHOLD\b/, 'keyword'],
                     [/\bBEING\b/, 'keyword'],
                     [/\bBOTH\b/, 'keyword'],
@@ -297,6 +304,7 @@ window.topsyTurvy = {
 
                     // Operators that need to follow their multi-word variants above
                     [/\bAND\b/, 'keyword'],
+                    [/\bON\b/, 'keyword'],
                     [/\bWITH\b/, 'keyword'],
                     [/\b(ALIKE|UNLIKE)\b/, 'keyword'],
                     [/\bPRE-ADAMITE\b/, 'keyword'],

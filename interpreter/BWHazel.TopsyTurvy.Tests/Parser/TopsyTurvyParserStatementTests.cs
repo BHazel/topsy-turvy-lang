@@ -527,8 +527,8 @@ public class TopsyTurvyParserStatementTests
         PrincipalBlockNode node = this.ParseFirstStatement<PrincipalBlockNode>(statements);
 
         node.Declarations.Count.ShouldBe(2);
-        node.Declarations[0].Name.ShouldBe("alpha");
-        node.Declarations[1].Name.ShouldBe("beta");
+        ((DeclarationNode)node.Declarations[0]).Name.ShouldBe("alpha");
+        ((DeclarationNode)node.Declarations[1]).Name.ShouldBe("beta");
     }
 
     /// <summary>

@@ -311,8 +311,16 @@
       "match": "(?i)\\bIS\\s+APPOINTED\\b"
     },
     "types": {
-      "name": "storage.type.topsy",
-      "match": "(?i)\\b(PEER|FATHOM|YARN|DECREE)\\b"
+      "patterns": [
+        {
+          "name": "storage.type.topsy",
+          "match": "(?i)\\bLITTLE\\s+LIST\\s+OF\\b"
+        },
+        {
+          "name": "storage.type.topsy",
+          "match": "(?i)\\b(PEER|FATHOM|YARN|DECREE)\\b"
+        }
+      ]
     },
     "operators": {
       "patterns": [
@@ -355,6 +363,14 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\bAND\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bVICTIM\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bON\\b"
         },
         {
           "name": "keyword.operator.topsy",

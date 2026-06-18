@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Runtime;
@@ -94,6 +96,22 @@ public sealed class TopsyTurvyValue
     public static TopsyTurvyValue Null() => new(null, LiteralType.Null);
 
     /// <summary>
+    /// Creates an array value from a list of elements.
+    /// </summary>
+    /// <param name="elements">The ordered list of elements.</param>
+    /// <remarks>
+    /// <para>
+    /// The list is stored by reference; two array variables assigned to the same list share the same underlying storage.
+    /// This implements reference semantics for arrays.
+    /// </para>
+    /// <code>
+    /// TopsyTurvyValue arrayValue = TopsyTurvyValue.Array(new List&lt;TopsyTurvyValue&gt; { TopsyTurvyValue.Integer(1) });
+    /// </code>
+    /// </remarks>
+    /// <returns>A new <see cref="TopsyTurvyValue"/> wrapping the element list.</returns>
+    public static TopsyTurvyValue Array(List<TopsyTurvyValue> elements) => new(elements, LiteralType.Array);
+
+    /// <summary>
     /// Evaluates the truthiness of this value in a Boolean context.
     /// </summary>
     /// <remarks>
@@ -123,6 +141,7 @@ public sealed class TopsyTurvyValue
         LiteralType.String => !string.IsNullOrEmpty((string)this.RawValue!),
         LiteralType.Boolean => (bool)this.RawValue!,
         LiteralType.Null => false,
+        LiteralType.Array => ((List<TopsyTurvyValue>)this.RawValue!).Count > 0,
         _ => true
     };
 
@@ -149,6 +168,11 @@ public sealed class TopsyTurvyValue
     ///     * All types are evaluated for truthiness using the <see cref="IsTruthy"/> method.
     /// * **Null** casts from other types:
     ///     * All types are converted to null.
+    /// * **Array** casts:
+    ///     * Arrays can only be cast to <c>String</c> (via <see cref="ToString"/>) or <c>Boolean</c> (via <see cref="IsTruthy"/>).
+    ///     * Casting an array to any other type throws a <see cref="TopsyTurvyRuntimeException"/>.
+    ///     * Without this guard the <c>targetType</c> switch would fall to its <c>_ =&gt; this</c> arm and silently
+    ///       return the array value labelled with the wrong <see cref="LiteralType"/>.
     /// </para>
     /// The following example demonstrates casting an integer value to a floating-point value:
     /// <code>
@@ -168,6 +192,11 @@ public sealed class TopsyTurvyValue
         if (LiteralType == targetType)
         {
             return this;
+        }
+
+        if (this.LiteralType == LiteralType.Array && targetType is not (LiteralType.String or LiteralType.Boolean))
+        {
+            throw new TopsyTurvyRuntimeException($"Cannot cast an array to {targetType}.");
         }
 
         return targetType switch
@@ -234,6 +263,7 @@ public sealed class TopsyTurvyValue
             ? Keywords.Literals.Verity
             : Keywords.Literals.Nay,
         LiteralType.Null => Keywords.Literals.Naught,
+        LiteralType.Array => "[" + string.Join(", ", ((List<TopsyTurvyValue>)this.RawValue!).Select(v => v.ToString())) + "]",
         _ => this.RawValue?.ToString() ?? Keywords.Literals.Naught
     };
 

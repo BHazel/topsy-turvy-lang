@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Superpower;
@@ -395,10 +396,63 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// with the start of an <c>Assignment</c> or <c>InPlaceCast</c> statement, both of which also begin with an identifier.
 /// </para>
 /// <para>
+/// ### Array Declarations
+/// The <c>ArrayDeclaration</c> parser matches on array variable declarations, returning an <see cref="ArrayDeclarationNode"/>
+/// with the variable name, element type, optional size, optional mutability modifier and optional initial values:
+/// * It first matches the <c>PRAY WELCOME</c> keyword and required whitespace.
+/// * It then matches the variable name identifier.
+/// * It then matches <c>AS A</c>.
+/// * It optionally matches a mutability modifier (<c>CONSERVATIVE</c> or <c>LIBERAL</c>), back-tracking if absent.
+/// * It then matches the <c>LITTLE LIST OF</c> keyword.
+///     * This does not match <c>A LITTLE LIST OF</c>, because the <c>A</c> was already consumed with <c>AS A</c> above.
+/// * It optionally matches an integer size literal, back-tracking if absent.
+/// * It then matches a scalar type keyword using <see cref="ExpressionParser.TypeKeyword"/>.
+/// * Finally it tries to match the optional <c>BEING ... IF YOU PLEASE.</c> initialiser clause via the <c>ArrayInitialiser</c> parser.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" IF YOU PLEASE.
+/// PRAY WELCOME slots AS A LITTLE LIST OF 3 YARN
+/// </code>
+/// both would return an <see cref="ArrayDeclarationNode"/> where:
+/// * The first would have element type <see cref="LiteralType"/><c>.String</c>, no size, and two initial values.
+/// * The second would have element type <see cref="LiteralType"/><c>.String</c>, size 3, and no initial values.
+/// </para>
+/// <para>
+/// This parser must be tried before <c>Declaration</c> because both begin with <c>PRAY WELCOME</c>; the
+/// <c>LITTLE LIST OF</c> keyword after <c>AS A</c> is the disambiguator.
+/// </para>
+/// <para>
+/// ### Array Element Assignments
+/// The <c>ArrayElementAssignment</c> parser matches on array element assignment statements, returning an
+/// <see cref="ArrayElementAssignmentNode"/>:
+/// * It first matches the <c>VICTIM</c> keyword.
+/// * It then matches required whitespace followed by an index expression.
+/// * It then matches required whitespace followed by the <c>ON</c> keyword.
+/// * It then matches required whitespace followed by the array variable name identifier.
+/// * It then matches required whitespace followed by the <c>IS APPOINTED</c> keyword.
+/// * Finally it matches required whitespace followed by the new value expression.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// VICTIM 2 ON miscreants IS APPOINTED "Nanki-Poo"
+/// </code>
+/// the statement would be matched by the <c>ArrayElementAssignment</c> parser, returning an
+/// <see cref="ArrayElementAssignmentNode"/> with index <c>2</c>, array name <c>miscreants</c> and value <c>Nanki-Poo</c>.
+/// </para>
+/// <para>
+/// This parser must be tried before <c>Assignment</c> because both eventually match <c>IS APPOINTED</c>;
+/// the leading <c>VICTIM</c> keyword disambiguates them.
+/// </para>
+/// <para>
 /// ### Main Entry Point
 /// The <c>Statement</c> parser is the main entry point that tries every statement parser in turn:
 /// * <c>PrincipalBlock</c>
+/// * <c>ArrayDeclaration</c>
 /// * <c>Declaration</c>
+/// * <c>ArrayElementAssignment</c>
 /// * <c>Assignment</c>
 /// * <c>TypeCast</c>
 /// * <c>Print</c>
@@ -419,6 +473,88 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </remarks>
 public static class StatementParser
 {
+    /// <summary>
+    /// Parses the element-initialiser list used by array declarations.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>BEING &lt;expr&gt; AND &lt;expr&gt; ... IF YOU PLEASE.</c> and returns the collected expressions as a list.
+    /// Returns an empty list when no <c>BEING</c> clause is present.
+    /// </remarks>
+    private static readonly TextParser<List<Expression>> ArrayInitialiser =
+        (from beingKeyword in Ws(Lexer.Keyword("BEING"))
+         from firstValue in Ws(ExpressionParser.Expression)
+         from remainingValues in (
+             from andKeyword in Ws(Lexer.Keyword("AND"))
+             from value in Ws(ExpressionParser.Expression)
+             select value
+         )
+         .Try()
+         .Many()
+         from closer in Ws(Lexer.Keyword("IF YOU PLEASE."))
+         select new List<Expression>(remainingValues.Length + 1) { firstValue }
+             .Concat(remainingValues)
+             .ToList())
+         .Try()
+         .OptionalOrDefault(null!);
+
+    /// <summary>
+    /// Parses an array variable declaration.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>PRAY WELCOME &lt;name&gt; AS A [CONSERVATIVE|LIBERAL] LITTLE LIST OF [size] &lt;type&gt; [BEING ... IF YOU PLEASE.]</c>
+    /// and returns an <see cref="ArrayDeclarationNode"/>.  This parser must be tried before <see cref="Declaration"/>
+    /// because both begin with <c>PRAY WELCOME</c>.
+    /// </remarks>
+    public static readonly TextParser<Statement> ArrayDeclaration =
+        (from _ in Lexer.Keyword("PRAY WELCOME")
+         from variableName in Ws(Lexer.Identifier)
+         from asAKeyword in Ws(Lexer.Keyword("AS A"))
+         from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
+             .Try()
+             .Or(Lexer.Keyword("LIBERAL")
+             .Try()))
+             .OptionalOrDefault(null!)
+         from littleListOfKeyword in Ws(Lexer.Keyword("LITTLE LIST OF"))
+         from sizeValue in Ws(Lexer.IntegerLiteral).Select(value => (int?)value)
+            .Try()
+            .OptionalOrDefault(null)
+         from elementType in Ws(ExpressionParser.TypeKeyword)
+         from initialValues in ArrayInitialiser
+         select (Statement)new ArrayDeclarationNode()
+         {
+             Name = variableName,
+             ElementType = elementType,
+             Size = sizeValue,
+             IsConstant = mutabilityModifier == "CONSERVATIVE",
+             InitialValues = initialValues ?? [],
+             Span = PlaceholderSpan
+         })
+         .Try();
+
+    /// <summary>
+    /// Parses an array element assignment statement.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>VICTIM &lt;index&gt; ON &lt;array&gt; IS APPOINTED &lt;value&gt;</c> and returns an
+    /// <see cref="ArrayElementAssignmentNode"/>.  This parser must be tried before <see cref="Assignment"/> because both
+    /// eventually match <c>IS APPOINTED</c>; the <c>VICTIM</c> prefix disambiguates them.
+    /// </remarks>
+    public static readonly TextParser<Statement> ArrayElementAssignment =
+        (from victimKeyword in Lexer.Keyword("VICTIM")
+         from index in Ws(ExpressionParser.Expression)
+         from onKeyword in Ws(Lexer.Keyword("ON"))
+         from arrayName in Ws(Lexer.Identifier)
+         from isAppointedKeyword in Ws(Lexer.Keyword("IS APPOINTED"))
+         from value in Ws(ExpressionParser.Expression)
+         select (Statement)new ArrayElementAssignmentNode()
+         {
+             Index = index,
+             ArrayName = arrayName,
+             Value = value,
+             Span = PlaceholderSpan
+         })
+         .Try();
+
     /// <summary>
     /// Parses a variable declaration.
     /// </summary>
@@ -775,19 +911,21 @@ public static class StatementParser
     /// <summary>
     /// Parses a variable-declaration block.
     /// </summary>
+    /// <remarks>
+    /// Accepts both scalar declarations (<see cref="Declaration"/>) and array declarations
+    /// (<see cref="ArrayDeclaration"/>) in any interleaved order, preserving source order in
+    /// <see cref="PrincipalBlockNode.Declarations"/>.
+    /// </remarks>
     public static readonly TextParser<Statement> PrincipalBlock =
         from _ in Lexer.Keyword("PRINCIPALS")
-        from declarations in (
-            from declaration in Ws(Declaration)
-            select (DeclarationNode)declaration
-        )
-        .Try()
-        .Many()
+        from declarations in Ws(ArrayDeclaration.Or(Declaration))
+            .Try()
+            .Many()
         from closer in Ws(Lexer.Keyword("THE CURTAIN RISES.")
             .Named("THE CURTAIN RISES. (end of declarations)"))
         select (Statement)new PrincipalBlockNode()
         {
-            Declarations = [.. declarations],
+            Declarations = declarations,
             Span = PlaceholderSpan
         };
 
@@ -808,6 +946,7 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<Statement> ExpressionStatementParser =
         ExpressionParser.SummonExpression
+            .Or(ExpressionParser.ArrayIndexExpression)
             .Or(ExpressionParser.PrefixExpression)
             .Or(ExpressionParser.LiteralExpression)
             .Or(ExpressionParser.JustSoExpression)
@@ -823,7 +962,9 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<Statement> Statement =
         PrincipalBlock
+            .Or(ArrayDeclaration)
             .Or(Declaration)
+            .Or(ArrayElementAssignment)
             .Or(Assignment)
             .Or(TypeCast)
             .Or(Print)

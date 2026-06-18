@@ -159,6 +159,31 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Two arguments, an <see cref="IdentifierNode"/> each for <c>Conservatives</c> and <c>Liberals</c>.
 /// </para>
 /// <para>
+/// ### Array Index Expressions
+/// The <c>ArrayIndexExpression</c> parser matches on array element access, returning an <see cref="ArrayIndexNode"/>
+/// that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> is expected.  The index is 1-based:
+/// <c>VICTIM 1</c> is the first element.
+/// * It first matches the <c>VICTIM</c> keyword.
+/// * It then matches required whitespace followed by a recursive <see cref="Expression"/> call for the index: any expression that evaluates to a <c>PEER</c> is accepted.
+/// * It then matches required whitespace followed by the <c>ON</c> keyword.
+/// * Finally it matches required whitespace followed by an identifier for the array variable name.
+///
+/// This parser supports back-tracking on failure.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// BEHOLD VICTIM 1 ON miscreants
+/// PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
+/// </code>
+/// both would return an <see cref="ArrayIndexNode"/> with the index expression set to a <see cref="LiteralNode"/> of
+/// integer 1 and the array name set to <c>miscreants</c>.
+/// </para>
+/// <para>
+/// This parser must appear in the <c>Expression</c> alternatives before <c>IdentifierExpression</c> so that the
+/// <c>VICTIM</c> keyword is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
 /// ### Cast Expressions
 /// The <c>ExpressionCast</c> parser matches on a non-mutating type cast in the form
 /// <c>AS IT WERE &lt;expression&gt; AS A &lt;type&gt;</c>, returning an
@@ -173,6 +198,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * SUMMON Expression (<c>SummonExpression</c>)
 ///     * This is checked first as <c>SUMMON</c> is a keyword and could be confused with an identifier if checked later.
 /// * Cast Expression (<c>ExpressionCast</c>)
+/// * Array Index Expression (<c>ArrayIndexExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>VICTIM</c> is matched as a keyword.
 /// * Prefix Expression (<c>PrefixExpression</c>)
 /// * Literal Expression (<c>LiteralExpression</c>)
 /// * Just So Expression (<c>JustSoExpression</c>)
@@ -344,6 +371,30 @@ public static class ExpressionParser
                 .Value(LiteralType.Null));
 
     /// <summary>
+    /// Parses an array element access expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>VICTIM &lt;index&gt; ON &lt;array&gt;</c> and returns an <see cref="ArrayIndexNode"/>.
+    /// The index is 1-based.  This parser must appear in the <see cref="Expression"/> alternatives before
+    /// <see cref="IdentifierExpression"/> so that the <c>VICTIM</c> keyword is matched as a keyword rather than
+    /// consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> ArrayIndexExpression =
+        (from victimKeyword in Lexer.Keyword("VICTIM")
+         from index in Lexer.WhitespaceRequired
+            .IgnoreThen(Parse.Ref(() => Expression!))
+         from onKeyword in Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("ON"))
+         from arrayName in Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Identifier)
+         select (Expression)new ArrayIndexNode()
+         {
+             Index = index,
+             ArrayName = arrayName,
+             Span = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
     /// Parses a non-mutating expression cast.
     /// </summary>
     public static readonly TextParser<Expression> ExpressionCast =
@@ -364,6 +415,7 @@ public static class ExpressionParser
     public static readonly TextParser<Expression> Expression =
         SummonExpression
             .Or(ExpressionCast)
+            .Or(ArrayIndexExpression)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)

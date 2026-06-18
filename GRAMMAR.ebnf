@@ -19,39 +19,56 @@ Program         = "HARK!", StringLiteral, [ "\n", "or,", StringLiteral ],
 
 StatementList   = { Statement } ;
 
-Statement       = PrincipalBlock 
-                | Declaration 
-                | Assignment 
-                | TypeCast 
-                | PrintStatement 
-                | InputStatement 
-                | Conditional 
-                | Switch 
-                | Loop 
-                | FunctionDefinition 
-                | ImportStatement 
-                | TryCatchBlock 
+Statement       = PrincipalBlock
+                | ArrayDeclaration
+                | Declaration
+                | ArrayAssignment
+                | Assignment
+                | TypeCast
+                | PrintStatement
+                | InputStatement
+                | Conditional
+                | Switch
+                | Loop
+                | FunctionDefinition
+                | ImportStatement
+                | TryCatchBlock
                 | ExpressionStatement ;
 
 (*----------------------------------------------------------------------------*)
 (* Declarations & Assignments                                                 *)
 (*----------------------------------------------------------------------------*)
-PrincipalBlock  = "PRINCIPALS", { Declaration }, "THE CURTAIN RISES." ;
+PrincipalBlock  = "PRINCIPALS", { Declaration | ArrayDeclaration }, "THE CURTAIN RISES." ;
 
-Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], Type, [ "BEING", Expression ] ;
+Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], ScalarType, [ "BEING", Expression ] ;
+
+ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "LITTLE LIST OF", [ Integer ], ScalarType,
+                      [ "BEING", Expression, { "AND", Expression }, "IF YOU PLEASE." ] ;
+(* Note: "AS A LITTLE LIST OF" is the user-visible phrase; the parser consumes "AS A" first,
+   leaving "LITTLE LIST OF" as the array-type marker.  The "A" is shared between the two tokens.
+   The optional Integer pre-allocates that many NAUGHT elements; mutually exclusive with the BEING clause
+   (providing both is a runtime error).  A negative Integer is also a runtime error. *)
 
 MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
 
-Type            = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+ScalarType      = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+
+ArrayType       = "LITTLE LIST OF", ScalarType ;
+(* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
+
+Type            = ScalarType | ArrayType ;
 
 Assignment      = Identifier, "IS APPOINTED", Expression ;
 
-TypeCast        = Identifier, "IS HENCEFORTH A", Type ;
+ArrayAssignment = "VICTIM", Expression, "ON", Identifier, "IS APPOINTED", Expression ;
+
+TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
 (*----------------------------------------------------------------------------*)
 Expression      = CastExpression
+                | ArrayIndexExpression
                 | PrefixExpression
                 | StringLiteral
                 | BooleanLit
@@ -59,6 +76,8 @@ Expression      = CastExpression
                 | Integer
                 | Float
                 | Identifier ;
+
+ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 

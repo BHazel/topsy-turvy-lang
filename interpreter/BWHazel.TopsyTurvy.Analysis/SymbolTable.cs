@@ -179,14 +179,24 @@ public class SymbolTable
         switch (statement)
         {
             case PrincipalBlockNode principals:
-                foreach (DeclarationNode declaration in principals.Declarations)
+                foreach (Statement declaration in principals.Declarations)
                 {
-                    AddVariable(declaration, collectedSymbols, sourceLines);
+                    if (declaration is DeclarationNode scalarDeclaration)
+                    {
+                        AddVariable(scalarDeclaration, collectedSymbols, sourceLines);
+                    }
+                    else if (declaration is ArrayDeclarationNode arrayDecl)
+                    {
+                        AddArrayVariable(arrayDecl, collectedSymbols, sourceLines);
+                    }
                 }
 
                 break;
             case DeclarationNode declaration:
                 AddVariable(declaration, collectedSymbols, sourceLines);
+                break;
+            case ArrayDeclarationNode arrayDeclaration:
+                AddArrayVariable(arrayDeclaration, collectedSymbols, sourceLines);
                 break;
             case FunctionDefinitionNode function:
                 AddFunction(function, collectedSymbols, sourceLines);
@@ -241,6 +251,36 @@ public class SymbolTable
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
+            DefinitionLine = definition.Line,
+            DefinitionColumn = definition.Column
+        };
+    }
+
+    /// <summary>
+    /// Adds an array variable to the collected symbol information.
+    /// </summary>
+    /// <remarks>
+    /// If the variable name already exists, it is not added again.
+    /// </remarks>
+    /// <param name="declaration">The array declaration node representing the variable.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="sourceLines">The original source lines.</param>
+    private static void AddArrayVariable(ArrayDeclarationNode declaration, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    {
+        if (collectedSymbols.ContainsKey(declaration.Name))
+        {
+            return;
+        }
+
+        SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
+        collectedSymbols[declaration.Name] = new SymbolInfo()
+        {
+            Name = declaration.Name,
+            Kind = SymbolKind.Variable,
+            IsConstant = declaration.IsConstant,
+            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
+                ? $"{declaration.Size.Value} "
+                : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
             DefinitionLine = definition.Line,
             DefinitionColumn = definition.Column
         };
@@ -340,6 +380,7 @@ public class SymbolTable
         LiteralType.String => Keywords.TypeNames.Yarn,
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
+        LiteralType.Array => Keywords.TypeNames.LittleListOf,
         _ => "unknown"
     };
 }

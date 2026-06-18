@@ -46,6 +46,11 @@ public static class Keywords
         /// The same token as the null literal, <see cref="Literals.Naught"/>.
         /// </remarks>
         public const string Naught = Literals.Naught;
+
+        /// <summary>
+        /// Array type annotation prefix (<c>LITTLE LIST OF</c>).
+        /// </summary>
+        public const string LittleListOf = "LITTLE LIST OF";
     }
 
     /// <summary>

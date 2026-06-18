@@ -177,7 +177,9 @@ public static class Lexer
                   && !name.Equals("SO", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("QUITE", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("WHEN", System.StringComparison.OrdinalIgnoreCase)
-                  && !name.Equals("NOTHING", System.StringComparison.OrdinalIgnoreCase),
+                  && !name.Equals("NOTHING", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("VICTIM", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("ON", System.StringComparison.OrdinalIgnoreCase),
             "identifier (not a reserved keyword)")
         .Named("identifier");
 

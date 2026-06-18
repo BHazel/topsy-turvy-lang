@@ -89,5 +89,8 @@ public static class KeywordData
         ("FATHOM",                                   "float type"),
         ("YARN",                                     "string type"),
         ("DECREE",                                   "boolean type"),
+        ("A LITTLE LIST OF",                         "array type annotation"),
+        ("VICTIM",                                   "array element access / assignment"),
+        ("ON",                                       "array index separator"),
     ];
 }
