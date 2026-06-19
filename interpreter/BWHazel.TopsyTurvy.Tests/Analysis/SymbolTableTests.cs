@@ -465,6 +465,74 @@ public class SymbolTableTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method collects an array variable declared with PRAY WELCOME.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayDeclaration_CollectsArrayVariableByName()
+    {
+        SymbolTable table = this.BuildTable("""
+            HARK! "Test"
+            PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "a" AND "b" IF YOU PLEASE.
+            FINALE.
+            """);
+
+        table.TryGetSymbol("miscreants", out _).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method sets the correct type display name for an array declaration.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayDeclaration_SetsTypeDisplayNameWithElementType()
+    {
+        SymbolTable table = this.BuildTable("""
+            HARK! "Test"
+            PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "a" IF YOU PLEASE.
+            FINALE.
+            """);
+        table.TryGetSymbol("miscreants", out SymbolInfo? info);
+
+        info!.TypeDisplayName.ShouldBe("LITTLE LIST OF YARN");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method sets <see cref="SymbolInfo.IsConstant"/> to <c>true</c> for a CONSERVATIVE array.
+    /// </summary>
+    [Fact]
+    public void Build_WithConservativeArrayDeclaration_SetsIsConstantTrue()
+    {
+        SymbolTable table = this.BuildTable("""
+            HARK! "Test"
+            PRAY WELCOME fixed AS A CONSERVATIVE LITTLE LIST OF PEER BEING 1 IF YOU PLEASE.
+            FINALE.
+            """);
+        table.TryGetSymbol("fixed", out SymbolInfo? info);
+
+        info!.IsConstant.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method collects array declarations declared inside a PRINCIPALS block.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayDeclarationInPrincipalsBlock_CollectsArrayVariable()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+              PRAY WELCOME names AS A LITTLE LIST OF YARN BEING "a" AND "b" IF YOU PLEASE.
+              PRAY WELCOME count AS A PEER BEING 0
+            THE CURTAIN RISES.
+            FINALE.
+            """;
+
+        SymbolTable table = this.BuildTable(source);
+
+        table.TryGetSymbol("names", out _).ShouldBeTrue();
+        table.TryGetSymbol("count", out _).ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Builds a symbol table from a source string.
     /// </summary>
     /// <param name="source">The Topsy Turvy source code to parse and analyse.</param>

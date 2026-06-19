@@ -70,7 +70,12 @@ namespace BWHazel.TopsyTurvy.Ast;
 public class PrincipalBlockNode : Statement
 {
     /// <summary>
-    /// Gets or initialises the list of variable declarations in the block.
+    /// Gets or initialises the ordered list of declarations in the block.
     /// </summary>
-    public required IReadOnlyList<DeclarationNode> Declarations { get; init; }
+    /// <remarks>
+    /// Each element is either a <see cref="DeclarationNode"/> (scalar declaration) or an
+    /// <see cref="ArrayDeclarationNode"/> (array declaration).  The list preserves source order so that a declaration
+    /// may depend on an earlier one in the same block.
+    /// </remarks>
+    public required IReadOnlyList<Statement> Declarations { get; init; }
 }

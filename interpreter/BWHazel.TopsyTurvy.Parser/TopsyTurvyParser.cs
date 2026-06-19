@@ -356,9 +356,16 @@ public class TopsyTurvyParser
             switch (statement)
             {
                 case PrincipalBlockNode principalBlock:
-                    foreach (DeclarationNode declaration in principalBlock.Declarations)
+                    foreach (Statement declaration in principalBlock.Declarations)
                     {
-                        CheckDeclarationName(declaration.Name, "variable", sourceLines, diagnostics);
+                        if (declaration is DeclarationNode scalarDeclaration)
+                        {
+                            CheckDeclarationName(scalarDeclaration.Name, "variable", sourceLines, diagnostics);
+                        }
+                        else if (declaration is ArrayDeclarationNode arrayDeclaration)
+                        {
+                            CheckDeclarationName(arrayDeclaration.Name, "variable", sourceLines, diagnostics);
+                        }
                     }
 
                     break;

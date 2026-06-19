@@ -23,18 +23,26 @@ public static class PerformCommandBuilder
             Description = "The Topsy Turvy file to perform."
         };
 
+        Argument<string[]> commandLineArgsArgument = new("arguments")
+        {
+            Description = "Command-line arguments to pass in.",
+            Arity = ArgumentArity.ZeroOrMore
+        };
+
         Option<bool> tiptoeOption = new("--tiptoe")
         {
             Description = "Only prints program output and thus chooses to discard aestheticism."
         };
 
         performCommand.Arguments.Add(fileArgument);
+        performCommand.Arguments.Add(commandLineArgsArgument);
         performCommand.Options.Add(tiptoeOption);
 
         performCommand.SetAction(parseResult =>
             HandlePerform(
                 parseResult.GetValue(fileArgument) ?? string.Empty,
-                parseResult.GetValue(tiptoeOption)));
+                parseResult.GetValue(tiptoeOption),
+                parseResult.GetValue(commandLineArgsArgument)));
 
         return performCommand;
     }
@@ -44,8 +52,9 @@ public static class PerformCommandBuilder
     /// </summary>
     /// <param name="filename">The filename of the Topsy Turvy file to perform.</param>
     /// <param name="tiptoe">A value indicating whether to only print program output.</param>
+    /// <param name="commandLineArguments">Command-line arguments to pass to the program, or <c>null</c> for none.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandlePerform(string filename, bool tiptoe)
+    private static int HandlePerform(string filename, bool tiptoe, string[]? commandLineArguments)
     {
         if (!tiptoe)
         {
@@ -53,7 +62,7 @@ public static class PerformCommandBuilder
         }
 
         ConsoleIO io = new();
-        ProgramExecutionResult result = ProgramRunner.Run(filename, io);
+        ProgramExecutionResult result = ProgramRunner.Run(filename, io, commandLineArguments: commandLineArguments);
 
         if (result.IsSuccess)
         {

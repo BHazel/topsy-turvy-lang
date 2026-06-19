@@ -98,12 +98,19 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
 
+            const storedCommandLineArguments = context.workspaceState.get<string>(`commandLineArgs.${filePath}`, '');
+            const cliArgs: string[] = ['perform', filePath];
+            if (storedCommandLineArguments.trim().length > 0) {
+                cliArgs.push('--');
+                cliArgs.push(...storedCommandLineArguments.trim().split(/\s+/));
+            }
+
             const task = new vscode.Task(
                 { type: 'topsy-turvy-run' },
                 vscode.TaskScope.Global,
                 'Run Topsy Turvy File',
                 'Topsy Turvy',
-                new vscode.ProcessExecution(cliPath, ['perform', filePath]),
+                new vscode.ProcessExecution(cliPath, cliArgs),
             );
             task.presentationOptions = {
                 reveal: vscode.TaskRevealKind.Always,
@@ -115,6 +122,28 @@ export function activate(context: vscode.ExtensionContext): void {
 
             runTaskExecution = await vscode.tasks.executeTask(task);
             await vscode.commands.executeCommand('setContext', 'topsyTurvyRunning', true);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.setCommandLineArgs', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            const filePath = editor.document.uri.fsPath;
+            const current = context.workspaceState.get<string>(`commandLineArgs.${filePath}`, '');
+            const result = await vscode.window.showInputBox({
+                prompt: 'Command-line arguments (space-separated)',
+                value: current,
+                placeHolder: 'e.g. Ko-Ko "Pooh-Bah" 42',
+            });
+
+            if (result !== undefined) {
+                await context.workspaceState.update(`commandLineArgs.${filePath}`, result);
+            }
         }),
     );
 

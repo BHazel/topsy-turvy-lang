@@ -87,12 +87,12 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that AS IT WERE produces an <see cref="ExpressionCastNode"/> with the correct new type.
+    /// Tests that AS IT WERE produces an <see cref="ExpressionCastNode"/> with the correct new type when used as a standalone statement.
     /// </summary>
     [Fact]
     public void Parse_WithExpressionCast_SetsExpressionAndNewType()
     {
-        ExpressionCastNode node = this.ParseFirstStatement<ExpressionCastNode>("AS IT WERE x AS A YARN");
+        ExpressionCastNode node = this.ParseFirstExpressionStatement<ExpressionCastNode>("AS IT WERE x AS A YARN");
 
         node.Expression.ShouldNotBeNull();
         node.NewType.ShouldBe(LiteralType.String);
@@ -450,6 +450,68 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser sets <see cref="TryCatchNode.CaughtValueName"/> when an identifier follows MODIFIED RAPTURE.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_WithCaughtBinding_SetsCaughtValueName()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE, Grievance
+                BEHOLD Grievance
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBe("Grievance");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser leaves <see cref="TryCatchNode.CaughtValueName"/> as <c>null</c> when no identifier follows MODIFIED RAPTURE.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_WithoutCaughtBinding_CaughtValueNameIsNull()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE
+                BEHOLD JUST SO
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="StatementParser.TryCatch"/> parser correctly parses both the caught binding and the exception block body when both are present.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatch_CaughtBinding_WithBodyStatements_ParsesCorrectly()
+    {
+        string statements = """
+            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE, Disaster
+                BEHOLD Disaster
+                BEHOLD "done"
+            THAT CONCLUDES THE MATTER.
+            """;
+
+        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
+
+        node.CaughtValueName.ShouldBe("Disaster");
+        node.ExceptionBlock.Count.ShouldBe(2);
+    }
+
+    /// <summary>
     /// Tests that a PRINCIPALS block collects all its inner declarations.
     /// </summary>
     [Fact]
@@ -465,8 +527,8 @@ public class TopsyTurvyParserStatementTests
         PrincipalBlockNode node = this.ParseFirstStatement<PrincipalBlockNode>(statements);
 
         node.Declarations.Count.ShouldBe(2);
-        node.Declarations[0].Name.ShouldBe("alpha");
-        node.Declarations[1].Name.ShouldBe("beta");
+        ((DeclarationNode)node.Declarations[0]).Name.ShouldBe("alpha");
+        ((DeclarationNode)node.Declarations[1]).Name.ShouldBe("beta");
     }
 
     /// <summary>
@@ -478,6 +540,75 @@ public class TopsyTurvyParserStatementTests
         ImportNode node = this.ParseFirstStatement<ImportNode>("PRAY ADMIT \"utils.topsy\"");
 
         node.FilePath.ShouldBe("utils.topsy");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>true</c> when the CONSERVATIVE modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithConservativeModifier_SetsIsConstantTrue()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A CONSERVATIVE PEER");
+
+        node.IsConstant.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>false</c> when the LIBERAL modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithLiberalModifier_SetsIsConstantFalse()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A LIBERAL PEER");
+
+        node.IsConstant.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method sets <see cref="DeclarationNode.IsConstant"/> to <c>false</c> when no mutability modifier is present.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithoutModifier_DefaultsIsConstantFalse()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A PEER");
+
+        node.IsConstant.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyParser.Parse"/> method correctly parses a CONSERVATIVE declaration that also includes a BEING initial value.
+    /// </summary>
+    [Fact]
+    public void Parse_Declaration_WithConservativeModifierAndInitialValue_ParsesCorrectly()
+    {
+        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A CONSERVATIVE PEER BEING 42");
+
+        node.IsConstant.ShouldBeTrue();
+        node.InitialValue.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that <c>IS APPOINTED AS IT WERE</c> parses the assignment value as an <see cref="ExpressionCastNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_ExpressionCast_InAssignment_SetsValueNode()
+    {
+        AssignmentNode assignment = this.ParseFirstStatement<AssignmentNode>("x IS APPOINTED AS IT WERE y AS A YARN");
+
+        ExpressionCastNode cast = assignment.Value.ShouldBeOfType<ExpressionCastNode>();
+        cast.NewType.ShouldBe(LiteralType.String);
+    }
+
+    /// <summary>
+    /// Tests that <c>PRAY WELCOME ... BEING AS IT WERE</c> parses the initial value as an <see cref="ExpressionCastNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_ExpressionCast_InDeclarationBeing_SetsInitialValue()
+    {
+        DeclarationNode declaration = this.ParseFirstStatement<DeclarationNode>("PRAY WELCOME x AS A YARN BEING AS IT WERE y AS A YARN");
+
+        ExpressionCastNode cast = declaration.InitialValue.ShouldBeOfType<ExpressionCastNode>();
+        cast.NewType.ShouldBe(LiteralType.String);
     }
 
     /// <summary>
@@ -494,5 +625,18 @@ public class TopsyTurvyParserStatementTests
         ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
         Statement statement = program.Statements.ShouldHaveSingleItem();
         return statement.ShouldBeOfType<T>();
+    }
+
+    /// <summary>
+    /// Parses a single standalone expression statement and returns the inner expression cast as <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The expected <see cref="Expression"/> type wrapped by the <see cref="ExpressionStatement"/>.</typeparam>
+    /// <param name="statementSource">The source text for the expression statement.</param>
+    private T ParseFirstExpressionStatement<T>(string statementSource) where T : Expression
+    {
+        ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
+        Statement statement = program.Statements.ShouldHaveSingleItem();
+        ExpressionStatement expressionStatement = statement.ShouldBeOfType<ExpressionStatement>();
+        return expressionStatement.Expression.ShouldBeOfType<T>();
     }
 }

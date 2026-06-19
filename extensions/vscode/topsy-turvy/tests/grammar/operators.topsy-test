@@ -77,6 +77,14 @@ WITH NOTHING
 WITH
 //^ keyword.operator.topsy
 
+// ── Array element access ─────────────────────────────────────────────────────
+
+VICTIM 1 ON arr
+//^ keyword.operator.topsy
+
+x ON arr
+//^ keyword.operator.topsy
+
 // ── User-defined identifiers ──────────────────────────────────────────────────
 
 myVariable

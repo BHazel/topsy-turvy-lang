@@ -59,8 +59,9 @@ public class ProgramRunner
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
     /// <param name="io">The IO implementation to use during execution.</param>
     /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
+    /// <param name="commandLineArguments">Command-line arguments to pass to the program, or <c>null</c> for none.</param>
     /// <returns>A result containing the outcome of the execution.</returns>
-    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io, IFileSystem? fileSystem = null)
+    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io, IFileSystem? fileSystem = null, string[]? commandLineArguments = null)
     {
         (bool success, string? errorMessage) = FileManager.TryReadSource(filePath, out string source, fileSystem);
         if (!success)
@@ -81,7 +82,7 @@ public class ProgramRunner
         }
 
         Interpreter interpreter = new(io);
-        DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(null, filePath, null));
+        DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(null, filePath, null, commandLineArguments));
 
         if (diagnostics.HasErrors)
         {

@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.2.0
+### Language Specification — Version 0.3.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -89,16 +89,68 @@ THE CURTAIN RISES.
 **Syntax:**
 ```
 PRINCIPALS
-  PRAY WELCOME <name> AS A <type> [BEING <value>]
+  PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] <type> [BEING <value>]
   ...
 THE CURTAIN RISES.
 ```
 
 - `PRAY WELCOME` — the formal welcoming of a new character onto the stage; `PRAY` drawn verbatim from *The Mikado*, Act I (*"Gentlemen, I pray you tell me..."*); `WELCOME` reflecting the theatrical tradition of receiving each new arrival before the assembled company, as in the *Dramatis Personae*
 - `<name>` — any valid identifier (letters, digits, hyphens, underscores; must begin with a letter)
-- `AS A <type>` — declares the type
+- `AS A [CONSERVATIVE | LIBERAL] <type>` — declares the type, with an optional mutability modifier (see §3.1 below)
 - `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to `NAUGHT` (null)
 - `THE CURTAIN RISES.` — closes the `PRINCIPALS` block. Once all characters have been introduced and the company is assembled, the curtain rises and the drama begins. The full stop is mandatory.
+
+### 3.1 Constants and Mutability Modifiers
+
+An optional mutability modifier may appear between `AS A` and the type keyword to declare whether a variable is a constant or a mutable variable:
+
+| Modifier | Meaning |
+|---|---|
+| `CONSERVATIVE` | The variable is a **constant**. Once declared, it cannot be reassigned by `IS APPOINTED`, recast in place by `IS HENCEFORTH A`, or overwritten by `PRAY TELL`. Attempting any of these operations is a runtime error. |
+| `LIBERAL` | The variable is explicitly **mutable**. This is identical to declaring without a modifier and exists for documentation clarity. |
+| *(none)* | Mutable — the default when no modifier is given. All existing code continues to work unchanged. |
+
+```topsy
+PRAY WELCOME LovesickMaidens AS A CONSERVATIVE PEER BEING 20
+PRAY WELCOME TotalLords       AS A LIBERAL      PEER BEING  0
+PRAY WELCOME Ko-Ko            AS A PEER         BEING  0
+```
+
+`CONSERVATIVE` draws from the G&S tradition of immovable institutional authority — the House of Lords in *Iolanthe*, the Lord Chancellor, the ancestral portraits in *Ruddigore*: things that, by long-established rule, simply *cannot* be changed. *"I often think it's comical / Fal lal la! / How Nature always does contrive / Fal lal la! / That every boy and every gal / That's born into the world alive / Is either a little Liberal / Or else a little Conservative! / Fal lal la!"* — *Iolanthe*, Act II. The modifier restores Gilbert's own distinction to the language: those values that are fixed by decree, and those that may yet be persuaded.
+
+### 3.2 Dynamic Typing
+
+Topsy Turvy is a **dynamically typed** language in the Python tradition: type annotations are **advisory**, not enforced.
+
+**The declared type is documentation, not a constraint.** A variable declared as `PEER` may hold a `YARN` value after a subsequent `IS APPOINTED`. The interpreter will not raise an error when a value of a different type is stored. This mirrors Python's behaviour with annotated variables:
+
+```python
+# Python — valid at runtime, annotation is advisory
+Ko_Ko: int = 42
+Ko_Ko = "Lord High Executioner"  # no error
+```
+
+The equivalent in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Ko-Ko AS A PEER BEING 42
+Ko-Ko IS APPOINTED "Lord High Executioner"  ASIDE: perfectly legal — annotation is advisory
+```
+
+**Explicit casts are still required to convert values.** Storing a different type does not convert it; `IS HENCEFORTH A` or `AS IT WERE` must be used when a specific type is needed:
+
+```topsy
+Ko-Ko IS HENCEFORTH A PEER  ASIDE: now converts whatever Ko-Ko holds to PEER
+```
+
+**Type annotations serve three purposes:**
+1. They set the initial value's type when `BEING` is provided.
+2. They document the programmer's intent for future readers.
+3. They inform the LSP hover tooltip.
+
+This philosophy extends to collection types. An `A LITTLE LIST OF YARN` declares the programmer's intent that the list should contain strings — but the runtime will not reject an element of a different type (see §14 Arrays).
+
+---
 
 Variables may also be declared inline anywhere in the program using the same `PRAY WELCOME` syntax; inline declarations are free-standing statements and do not require `THE CURTAIN RISES.`
 
@@ -137,12 +189,17 @@ is_guilty IS APPOINTED VERITY
 ### Type Casting
 
 ```topsy
-Ko-Ko IS HENCEFORTH A PEER          ASIDE: re-cast Ko-Ko to integer in place
-AS IT WERE Ko-Ko AS A YARN          ASIDE: cast expression without mutating the variable
+Ko-Ko IS HENCEFORTH A PEER                                          ASIDE: re-cast Ko-Ko to integer in place
+
+PRAY WELCOME age AS A YARN BEING AS IT WERE Ko-Ko AS A YARN         ASIDE: cast in a declaration initialiser
+
+ageStr IS APPOINTED AS IT WERE Ko-Ko AS A YARN                      ASIDE: cast in an assignment
+
+AS IT WERE Ko-Ko AS A YARN                                          ASIDE: standalone cast — result stored in JUST SO
 ```
 
-- `IS HENCEFORTH A <type>` — casts the variable in place
-- `AS IT WERE <var> AS A <type>` — produces a cast value without mutating; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is
+- `IS HENCEFORTH A <type>` — casts the variable in place (statement)
+- `AS IT WERE <expr> AS A <type>` — a cast **expression** that evaluates to the cast value without mutating the source; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is. Because it is an expression, it can appear anywhere a value is expected: as the right-hand side of `IS APPOINTED`, as the `BEING` initialiser of a declaration, as a function argument, or as a sub-expression. When used as a standalone statement, the result is stored in the implicit `JUST SO` variable for use in subsequent statements.
 
 ---
 
@@ -275,7 +332,9 @@ When a non-`DECREE` value is used in a boolean context:
 
 ---
 
-## 8. The JUST SO Variable
+## 8. Built-In Variables
+
+### JUST SO
 
 Any expression that is evaluated but not explicitly assigned deposits its result in the implicit variable **`JUST SO`**. This is used primarily to feed values into conditional constructs without an intermediate assignment.
 
@@ -291,6 +350,25 @@ SO MUCH FOR THAT.
 ```
 
 When the inline conditional form is used (`SHOULD IT TRANSPIRE THAT <expression>` or `IN WHICH CAPACITY? <expression>`), the expression is evaluated directly and `JUST SO` is bypassed — the expression's result is consumed immediately by the conditional and is not deposited into `JUST SO`.
+
+### THE PROPS
+
+**`THE PROPS`** is a built-in `CONSERVATIVE LITTLE LIST OF YARN` variable that is always present at programme start. It contains the arguments passed to the programme at the point of invocation, in the order they were provided.
+
+- If no arguments are passed, `THE PROPS` is an empty array (`[]`).
+- Elements are always `YARN`; cast to another type if a different type is needed.
+- Indexing is 1-based, consistent with all arrays: `VICTIM 1 ON THE PROPS` retrieves the first argument.
+- `THE PROPS` is `CONSERVATIVE` — any attempt to reassign the array or any of its elements is a runtime error.
+- Per Invariant I7, `THE PROPS` is a global variable and is therefore inaccessible inside functions. Pass individual elements as function arguments when needed.
+
+```topsy
+HARK! "THE PROPS example"
+BEHOLD VICTIM 1 ON THE PROPS          ASIDE: prints first argument
+BEHOLD VICTIM 2 ON THE PROPS          ASIDE: prints second argument
+FINALE.
+```
+
+> *"The properties of a troupe are the lifeblood of a performance."* — theatrical tradition
 
 ---
 
@@ -548,14 +626,14 @@ A HIDEOUS CURSE ON <value>
 WITH THE GREATEST RESPECT, <operation>
   WITH GRATITUDE
     <success block>
-  MODIFIED RAPTURE
+  MODIFIED RAPTURE[, <name>]
     <exception block>
 THAT CONCLUDES THE MATTER.
 ```
 
 - `WITH THE GREATEST RESPECT, <operation>` — wraps a potentially-failing operation; catches any exception raised by `A HIDEOUS CURSE ON` within `<operation>`
 - `WITH GRATITUDE` — the success handler; entered when no exception is raised
-- `MODIFIED RAPTURE` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is available as `JUST SO` on entry to this block
+- `MODIFIED RAPTURE[, <name>]` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is always available as `JUST SO` on entry to this block; if `, <name>` is given, the cursed value is also auto-declared as a named variable scoped to the exception block (no prior `PRAY WELCOME` required)
 - `THAT CONCLUDES THE MATTER.` — closes the block
 
 **Example:**
@@ -578,6 +656,17 @@ WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
 THAT CONCLUDES THE MATTER.
 ```
 
+The optional `<name>` after `MODIFIED RAPTURE` binds the cursed value to a named variable for the duration of the exception block.  The named variable is auto-declared — no `PRAY WELCOME` is needed — and is not accessible outside the block.  `JUST SO` is still set regardless.
+
+```topsy
+WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
+  WITH GRATITUDE
+    BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
+  MODIFIED RAPTURE, Grievance
+    BEHOLD WOVEN OF "A curse has been invoked: " AND Grievance IF YOU PLEASE.
+THAT CONCLUDES THE MATTER.
+```
+
 ---
 
 ## 13. Libraries & Imports
@@ -590,7 +679,167 @@ PRAY ADMIT "filename"
 
 ---
 
-## 14. Complete Keyword Reference
+## 14. Arrays
+
+Arrays are ordered, indexed collections of values. An array is declared with the `LITTLE LIST OF` type annotation and accessed or mutated element-by-element with `VICTIM`.
+
+### Declaring an Array
+
+```
+PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] LITTLE LIST OF [<size>] <type>
+    [BEING <expr> AND <expr> [AND <expr> ...] IF YOU PLEASE.]
+```
+
+```topsy
+PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AND "Pish-Tush" IF YOU PLEASE.
+PRAY WELCOME scores     AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME empty      AS A LITTLE LIST OF PEER
+PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
+```
+
+- `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
+- `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, or `NAUGHT`); advisory only — see §3.2.
+- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many `NAUGHT` elements, making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
+- `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §6); omitting `BEING` produces an empty array, **not** `NAUGHT`.
+- `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
+- `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.
+- Index positions are **1-based**: the first element is at position 1.
+- Arrays have **reference semantics**: assigning an array variable to another variable makes both names point to the same list. Mutating via either name is visible through the other.
+
+### Reading an Element
+
+```topsy
+VICTIM <index> ON <array>
+```
+
+```topsy
+BEHOLD VICTIM 1 ON miscreants         ASIDE: prints Pooh-Bah
+PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
+```
+
+`VICTIM <index> ON <array>` is an **expression** that evaluates to the element at position `<index>`. `<index>` is 1-based — `VICTIM 1` is the first element. `<index>` may be any expression that evaluates to a `PEER`. Accessing an out-of-range index is a runtime error.
+
+*`VICTIM` — Ko-Ko's little list consists of intended victims; every item retrieved from the list is, necessarily, a victim.*
+
+### Array Length
+
+```topsy
+RECKONING OF <array>
+```
+
+```topsy
+RECKONING OF miscreants                            ASIDE: evaluates to 3 (for a 3-element array)
+length IS APPOINTED RECKONING OF miscreants
+BEHOLD SUM OF RECKONING OF miscreants AND 1        ASIDE: prints 4
+```
+
+`RECKONING OF <array>` is an **expression** that evaluates to the number of elements in `<array>` as a `PEER` (integer). The result is always ≥ 0. Applying it to a variable that is not an array is a runtime error.
+
+*`RECKONING OF` — Ko-Ko keeps a careful reckoning of his little list; every tally is a formal accounting of what is owed.*
+
+### Setting an Element
+
+```topsy
+VICTIM <index> ON <array> IS APPOINTED <value>
+```
+
+```topsy
+VICTIM 2 ON miscreants IS APPOINTED "Nanki-Poo"
+```
+
+Replaces the element at position `<index>` with `<value>`. If the array was declared `CONSERVATIVE`, attempting to set an element is a runtime error.
+
+### Array Truthiness
+
+| State      | Truthiness |
+|------------|------------|
+| Non-empty  | `VERITY`   |
+| Empty      | `NAY`      |
+
+### Display
+
+`BEHOLD` renders an array as a comma-separated, bracket-enclosed list of its elements' string representations:
+
+```topsy
+BEHOLD miscreants   ASIDE: prints ["Pooh-Bah", "Ko-Ko", "Pish-Tush"]
+```
+
+### Note on Element-Type Enforcement
+
+Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 42` is valid even if `arr` was declared `A LITTLE LIST OF YARN` — no runtime error will be raised. This matches the general dynamic-typing philosophy of the language.
+
+---
+
+## 15. Documentation Comments
+
+A **documentation comment** is an `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block placed immediately before a `PRAY WELCOME` declaration or an `IT IS MY DUTY TO PERFORM` function declaration. Blank lines between the block and the declaration are allowed; any intervening non-blank line breaks the association and the block is treated as a plain comment with no special meaning.
+
+Documentation comments are not executed. They annotate the programme for human readers and tooling that can display rich descriptions when hovering over a symbol in an editor.
+
+### 15.1 Tags
+
+Within a documentation comment, content is organised by **keyword tags**. Each tag opens a section that continues across as many lines as needed, until the next tag or the end of the block. Tags are case-insensitive.
+
+| Tag | Purpose | Occurrences |
+|---|---|---|
+| `LEGEND: <text>` | One-line summary of the symbol | Once |
+| `RECITATIVE: <text>` | Additional remarks; may span multiple lines | Once |
+| `ARTICLE <name> (<type>): <text>` | Description of a function parameter; `<name>` is the parameter name, `<type>` is its declared type | Once per parameter |
+| `CONSEQUENCE (<type>): <text>` | Description of the return value; `<type>` is the declared return type | Once |
+| `CURSES <name> (<type>): <text>` | Description of a thrown value; `<name>` is the identifier passed to `A HIDEOUS CURSE ON`, `<type>` is its type | Once per thrown value |
+| `CHORUS: <text>` | Code example; all lines following until the next tag form a code block | Multiple |
+| `ENSEMBLE: <text>` | See-also reference | Multiple |
+| `STATUTORY: <text>` | Deprecation notice; marks the symbol as deprecated | Once |
+
+A block with no recognised tags is treated as a plain comment.
+
+### 15.2 Examples
+
+**Documented variable:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Holds the numbers for the range calculation.
+END OF ASIDE.)
+PRAY WELCOME Numbers AS A PEER
+```
+
+**Documented function:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Sums the numbers in a range.
+  RECITATIVE: Any additional remarks.
+    Further elaboration on the second line.
+  ARTICLE Start (PEER): The starting number.
+  ARTICLE End (PEER): The ending number.
+  CONSEQUENCE (PEER): The total sum.
+  CURSES SameValues (DECREE): Thrown if Start and End are the same.
+  CHORUS:
+  SUMMON SumRange WITH 1 AND 10 IF YOU PLEASE.
+  ENSEMBLE: AnotherFunc
+END OF ASIDE.)
+IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+  PRAY WELCOME Total AS A PEER BEING 0
+  ASIDE: Code logic...
+  A HIDEOUS CURSE ON SameValues
+  AND SO I FIND Total
+MY DUTY IS DISCHARGED.
+```
+
+**Deprecated symbol:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Old sum variable. Use SumRange instead.
+  STATUTORY: Use SumRange, which supports all range sizes.
+END OF ASIDE.)
+PRAY WELCOME OldSum AS A PEER
+```
+
+---
+
+## 16. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -601,6 +850,8 @@ PRAY ADMIT "filename"
 | `PRAY WELCOME`                                   | Variable declaration        | *The Mikado*, Act I — `PRAY` verbatim; welcoming each new variable before the assembled company |
 | `AS A`                                           | Type annotation             | —                                                                                 |
 | `BEING`                                          | Initial value               | *Dramatis Personae* parentheticals — "Nanki-Poo, *being* the son of the Mikado..." |
+| `CONSERVATIVE`                                   | Constant modifier           | *Iolanthe*, Act II — "every boy and every gal ... is either a little Liberal or else a little Conservative"; a value fixed by decree, immovable by any subsequent appointment |
+| `LIBERAL`                                        | Explicit mutable modifier   | *Iolanthe*, Act II — same verse; the mutable counterpart to `CONSERVATIVE`; optional, as mutability is the default |
 | `IS APPOINTED`                                   | Assignment                  | *The Mikado*, Act I — Ko-Ko raised to Lord High Executioner by official proclamation |
 | `IS HENCEFORTH A`                                | In-place cast               | *Iolanthe* — the Fairy Queen's transforming declaration                           |
 | `AS IT WERE`                                     | Expression cast             | G&S hedging construction — invoking a convenient fiction about what something is  |
@@ -610,6 +861,14 @@ PRAY ADMIT "filename"
 | `ASIDE:`                                         | Single-line comment         | Stage direction throughout every G&S libretto — heard by the audience, not the characters |
 | `(ASIDE, AT SOME LENGTH:`                        | Multi-line comment (open)   | Gilbert's own parenthetical stage direction style                                 |
 | `END OF ASIDE.)`                                 | Multi-line comment (close)  | Closes the parenthetical aside                                                    |
+| `LEGEND:`                                        | Documentation — summary     | Placed inside a documentation comment block; one-line summary of the symbol       |
+| `RECITATIVE:`                                    | Documentation — remarks     | Placed inside a documentation comment block; additional remarks, may span multiple lines |
+| `ARTICLE <name> (<type>):`                       | Documentation — parameter   | Placed inside a documentation comment block; describes a function parameter       |
+| `CONSEQUENCE (<type>):`                          | Documentation — return      | Placed inside a documentation comment block; describes the return value           |
+| `CURSES <name> (<type>):`                        | Documentation — thrown      | Placed inside a documentation comment block; describes a thrown value             |
+| `CHORUS:`                                        | Documentation — example     | Placed inside a documentation comment block; introduces a code example            |
+| `ENSEMBLE:`                                      | Documentation — see also    | Placed inside a documentation comment block; see-also reference                   |
+| `STATUTORY:`                                     | Documentation — deprecated  | Placed inside a documentation comment block; marks the symbol as deprecated       |
 | `SUM OF ... AND ...`                             | Addition                    | —                                                                                 |
 | `DIFFERENCE OF ... AND ...`                      | Subtraction                 | —                                                                                 |
 | `PRODUCT OF ... AND ...`                         | Multiplication              | —                                                                                 |
@@ -659,25 +918,29 @@ PRAY ADMIT "filename"
 | `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given value; terminates programme if uncaught |
 | `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
-| `MODIFIED RAPTURE`                               | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO` |
+| `MODIFIED RAPTURE[, <name>]`                     | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO`; optional `, <name>` auto-declares a binding in the exception block scope |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
+| `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
+| `VICTIM <index> ON <array>`                      | Array element access        | The item at position `<index>` (1-based) on Ko-Ko's list                          |
+| `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`                            |
 
 ---
 
-## 15. Type Reference
+## 17. Type Reference
 
-| Keyword  | Type    | Values                               |
-|----------|---------|--------------------------------------|
-| `PEER`   | Integer | Any whole number                     |
-| `FATHOM` | Float   | Any real number                      |
-| `YARN`   | String  | Any sequence of characters in `""`   |
-| `DECREE` | Boolean | `VERITY` or `NAY`                      |
-| `NAUGHT` | Null    | `NAUGHT`                             |
+| Keyword                 | Type         | Values                                      |
+|-------------------------|--------------|---------------------------------------------|
+| `PEER`                  | Integer      | Any whole number                            |
+| `FATHOM`                | Float        | Any real number                             |
+| `YARN`                  | String       | Any sequence of characters in `""`          |
+| `DECREE`                | Boolean      | `VERITY` or `NAY`                           |
+| `NAUGHT`                | Null         | `NAUGHT`                                    |
+| `A LITTLE LIST OF <T>`  | Array of `T` | Ordered 1-based collection; element type advisory (see §3.2) |
 
 ---
 
-## 16. Operator Precedence
+## 18. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -690,7 +953,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 17. Scoping
+## 19. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -699,7 +962,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 18. Line Structure
+## 20. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -736,7 +999,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 19. A Note on Style
+## 21. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -751,7 +1014,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 20. Complete Example
+## 22. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"
@@ -799,4 +1062,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.2.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — Version 0.3.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

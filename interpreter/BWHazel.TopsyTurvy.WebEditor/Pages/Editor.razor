@@ -40,7 +40,8 @@
                        StartIcon="@(IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
                        OnClick="this.OnToggleDarkMode">@(IsDarkMode ? "Light Mode" : "Dark Mode")</MudButton>
             <MudSwitch T="bool"
-                       @bind-Value="areGsLabelsEnabled"
+                       Value="this.areGsLabelsEnabled"
+                       ValueChanged="this.OnGsLabelsToggledAsync"
                        Label="G&amp;S Labels"
                        Color="Color.Primary"
                        Class="mr-1" />
@@ -79,12 +80,21 @@
                                   ConstructionOptions="GetEditorOptions"
                                   OnDidChangeModelContent="OnContentChangedAsync" />
         </div>
+        <div class="pane-divider"></div>
         <div class="output-pane">
             <div class="terminal-wrapper">
-                <Xterm @ref="terminal" Options="terminalOptions" />
+                <Xterm @ref="terminal" Options="this.terminalOptions" />
             </div>
             <MudTextField T="string"
-                          @bind-Value="stdinText"
+                          @bind-Value="this.commandLineArgumentsText"
+                          @bind-Value:after="this.SavePreferencesAsync"
+                          Label="Command-Line Arguments"
+                          HelperText="Space-separated"
+                          Variant="Variant.Outlined"
+                          Class="ma-2" />
+            <MudTextField T="string"
+                          @bind-Value="this.stdinText"
+                          @bind-Value:after="this.SavePreferencesAsync"
                           Label="Standard Input"
                           HelperText="One value per line"
                           Lines="2"
@@ -112,6 +122,7 @@
     private StandaloneCodeEditor? monacoEditor;
     private Xterm? terminal;
     private bool editorReady = false;
+    private string commandLineArgumentsText = string.Empty;
     private string stdinText = string.Empty;
     private bool isRunning = false;
     private string lastRunOutput = string.Empty;
@@ -125,14 +136,14 @@
     private List<VirtualFile> files = [new(DefaultFileName)];
     private string activeFileName = DefaultFileName;
 
-    private readonly TerminalOptions terminalOptions = new()
+    private TerminalOptions terminalOptions => new()
     {
         CursorBlink = false,
         ConvertEOL = true,
         Theme = new Theme
         {
-            Background = "#1e1e1e",
-            Foreground = "#d4d4d4",
+            Background = this.IsDarkMode ? "#1e1e1e" : "#f5f5f5",
+            Foreground = this.IsDarkMode ? "#d4d4d4" : "#1e1e1e",
         },
     };
 
@@ -161,10 +172,72 @@
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSemanticTokensProvider");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.enableSemanticHighlighting", "topsy-turvy-editor");
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.initPaneDrag");
+            await this.RestorePreferencesAsync();
+
             this.editorReady = true;
             this.previousIsDarkMode = IsDarkMode;
         }
+    }
+
+    /// <summary>
+    /// Restores editor state from Local Storage on the initial render.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task RestorePreferencesAsync()
+    {
+        EditorPreferences? savedPreferences = await this.JSRuntime.InvokeAsync<EditorPreferences>("topsyTurvy.loadPreferences");
+        if (savedPreferences is null)
+        {
+            return;
+        }
+
+        if (savedPreferences.AreGsLabelsEnabled.HasValue)
+        {
+            this.areGsLabelsEnabled = savedPreferences.AreGsLabelsEnabled.Value;
+        }
+
+        this.commandLineArgumentsText = savedPreferences.CommandLineArguments ?? string.Empty;
+        this.stdinText = savedPreferences.StandardInput ?? string.Empty;
+
+        if (savedPreferences.Files is { Count: > 0 })
+        {
+            this.files.Clear();
+            foreach (VirtualFile file in savedPreferences.Files)
+            {
+                this.files.Add(file);
+                this.BuildSymbolTableForFile(file.Name, file.Content);
+            }
+
+            this.activeFileName = savedPreferences.ActiveFile is not null
+                && this.files.Any(file => file.Name == savedPreferences.ActiveFile)
+                    ? savedPreferences.ActiveFile
+                    : this.files[0].Name;
+
+            VirtualFile activeFile = this.files.First(file => file.Name == this.activeFileName);
+            await this.monacoEditor!.SetValue(activeFile.Content);
+        }
+
+        if (!string.IsNullOrEmpty(savedPreferences.TerminalOutput))
+        {
+            foreach (string line in savedPreferences.TerminalOutput.Split('\n'))
+            {
+                await this.terminal!.WriteLine(line);
+            }
+
+            this.lastRunOutput = savedPreferences.TerminalOutput;
+        }
+
+        if (savedPreferences.IsDarkMode.HasValue && savedPreferences.IsDarkMode.Value != this.IsDarkMode)
+        {
+            this.ToggleDarkMode?.Invoke();
+        }
+
+        this.StateHasChanged();
     }
 
     /// <inheritdoc />
@@ -173,7 +246,9 @@
         if (this.editorReady && this.IsDarkMode != this.previousIsDarkMode)
         {
             previousIsDarkMode = this.IsDarkMode;
-            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "vs-dark" : "vs");
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setTerminalTheme", this.IsDarkMode);
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -236,7 +311,15 @@
         {
             await Task.Delay(400, token);
             string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+
+            VirtualFile? activeFile = this.files.Find(file => file.Name == this.activeFileName);
+            if (activeFile is not null)
+            {
+                activeFile.Content = source;
+            }
+
             await this.UpdateDiagnosticsAsync(source);
+            await this.SavePreferencesAsync();
         }
         catch (OperationCanceledException)
         {
@@ -252,11 +335,34 @@
     {
         TopsyTurvyParser parser = new();
         ParseResult result = parser.TryParse(source);
+        IEnumerable<object> deprecatedWarningMarkers = [];
 
         if (result.Program is not null)
         {
-            this.symbolTables[this.activeFileName] = SymbolTable.Build(result.Program, source);
+            SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            this.symbolTables[this.activeFileName] = symbolTable;
             this.parsedSources[this.activeFileName] = source;
+
+            string[] lines = source.Split('\n');
+            IReadOnlyList<int> tokenData = this.ComputeSemanticTokenData(symbolTable, lines);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setSemanticTokens", tokenData);
+
+            deprecatedWarningMarkers = symbolTable.AllSymbols()
+                .Where(symbol => symbol.Documentation?.IsDeprecated == true && !symbol.Name.Contains(' '))
+                .SelectMany(
+                    symbol => SourceAnalyser.FindWordOccurrences(lines, symbol.Name)
+                        .Where(occurrence => occurrence.Line + 1 != symbol.DefinitionLine),
+                    (symbol, occurrence) => (object)new
+                    {
+                        startLineNumber = occurrence.Line + 1,
+                        startColumn = occurrence.Character + 1,
+                        endLineNumber = occurrence.Line + 1,
+                        endColumn = occurrence.Character + symbol.Name.Length + 1,
+                        message = string.IsNullOrWhiteSpace(symbol.Documentation?.DeprecationMessage)
+                            ? $"'{symbol.Name}' is deprecated."
+                            : $"'{symbol.Name}' is deprecated: {symbol.Documentation.DeprecationMessage}",
+                        severity = 4,
+                    });
         }
 
         IEnumerable<object> markers = result.Diagnostics
@@ -269,7 +375,8 @@
                 endColumn = diagnostic.Span.End.Column,
                 message = diagnostic.Message,
                 severity = 8,
-            });
+            })
+            .Concat(deprecatedWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }
@@ -453,6 +560,7 @@
         finally
         {
             this.isRunning = false;
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -463,11 +571,14 @@
     private async Task RunProgramCoreAsync()
     {
         await this.terminal!.Clear();
+        this.lastRunOutput = string.Empty;
         await this.SyncActiveFileContentAsync();
 
         Dictionary<string, string> currentFileContents = this.files.ToDictionary(file => file.Name, file => file.Content);
         string source = currentFileContents[this.activeFileName];
         IEnumerable<string> stdinLines = this.stdinText.Split('\n');
+        string[] commandLineArguments = this.commandLineArgumentsText
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         TopsyTurvyParser parser = new();
         ParseResult parseResult = parser.TryParse(source);
@@ -491,7 +602,7 @@
         DiagnosticCollection runtimeDiagnostics = interpreter.Execute(
             parseResult.Program!,
             cancellationTokenSource.Token,
-            options: new(TimeSpan.FromSeconds(10), null, fileResolver));
+            options: new(TimeSpan.FromSeconds(10), null, fileResolver, commandLineArguments));
 
         foreach (string line in io.OutputLines)
         {
@@ -635,6 +746,7 @@
         {
             await this.terminal!.Clear();
             this.lastRunOutput = string.Empty;
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -736,6 +848,73 @@
     }
 
     /// <summary>
+    /// Encodes all symbol occurrences from the given symbol table as a flat delta-encoded
+    /// semantic token array compatible with the Monaco <c>DocumentSemanticTokensProvider</c>.
+    /// </summary>
+    /// <param name="symbolTable">The symbol table for the current source file.</param>
+    /// <param name="lines">The source file split into lines.</param>
+    /// <returns>A flat list of integers in the Monaco 5-int-per-token delta encoding.</returns>
+    private IReadOnlyList<int> ComputeSemanticTokenData(SymbolTable symbolTable, string[] lines)
+    {
+        List<(int Line, int Char, int Length, int TokenType, int Modifiers)> tokens = [];
+
+        foreach (SymbolInfo symbol in symbolTable.AllSymbols())
+        {
+            if (symbol.Name.Contains(' '))
+            {
+                continue;
+            }
+
+            int tokenType = symbol.Kind switch
+            {
+                SymbolKind.Function => 2,
+                SymbolKind.Parameter => 1,
+                _ => 0,
+            };
+
+            int modifiers = 0;
+            if (symbol.IsConstant)
+            {
+                modifiers |= 1;
+            }
+
+            if (symbol.Documentation?.IsDeprecated == true)
+            {
+                modifiers |= 2;
+            }
+
+            foreach ((int line, int character) in SourceAnalyser.FindWordOccurrences(lines, symbol.Name))
+            {
+                tokens.Add((line, character, symbol.Name.Length, tokenType, modifiers));
+            }
+        }
+
+        tokens.Sort((a, b) => a.Line != b.Line
+            ? a.Line.CompareTo(b.Line)
+            : a.Char.CompareTo(b.Char));
+
+        List<int> data = new(tokens.Count * 5);
+        int previousLine = 0;
+        int previousCharacter = 0;
+
+        foreach ((int line, int character, int length, int tokenType, int modifiers) in tokens)
+        {
+            int deltaLine = line - previousLine;
+            data.Add(deltaLine);
+            data.Add(deltaLine == 0
+                ? character - previousCharacter
+                : character);
+            data.Add(length);
+            data.Add(tokenType);
+            data.Add(modifiers);
+            previousLine = line;
+            previousCharacter = character;
+        }
+
+        return data;
+    }
+
+    /// <summary>
     /// Parses a source and, if successful, stores the resulting
     /// <see cref="SymbolTable"/> and source text in the per-file dictionaries.
     /// </summary>
@@ -764,5 +943,36 @@
             activeFile.Content = await this.JSRuntime.InvokeAsync<string>(
                 "blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
         }
+    }
+
+    /// <summary>
+    /// Persists the current editor state to Local Storage.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task SavePreferencesAsync()
+    {
+        EditorPreferences preferences = new()
+        {
+            Files = [.. this.files],
+            ActiveFile = this.activeFileName,
+            CommandLineArguments = this.commandLineArgumentsText,
+            StandardInput = this.stdinText,
+            AreGsLabelsEnabled = this.areGsLabelsEnabled,
+            IsDarkMode = this.IsDarkMode,
+            TerminalOutput = this.lastRunOutput,
+        };
+
+        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.savePreferences", preferences);
+    }
+
+    /// <summary>
+    /// Handles the G&amp;S labels toggle, updating state and persisting the preference.
+    /// </summary>
+    /// <param name="value">The new toggle value.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnGsLabelsToggledAsync(bool value)
+    {
+        this.areGsLabelsEnabled = value;
+        await this.SavePreferencesAsync();
     }
 }

@@ -49,6 +49,7 @@ Object.assign(window.topsyTurvy, {
      */
     applyLanguageToEditor(editorId) {
         this.registerLanguage();
+        this.registerThemes();
         const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
         if (!editorHolder) {
             return;
@@ -61,6 +62,105 @@ Object.assign(window.topsyTurvy, {
 
         monaco.editor.setModelLanguage(model, 'topsy-turvy');
         editorHolder.editor.updateOptions({ autoIndent: 'full' });
+    },
+
+    semanticTokensData: null,
+    semanticTokensListeners: [],
+
+    /**
+     * Stores the latest encoded semantic token array and notifies Monaco to re-request tokens.
+     * @description Called from Blazor after each analysis pass with the delta-encoded token data.
+     * @param {number[]} data Flat delta-encoded token array (5 integers per token).
+     */
+    setSemanticTokens(data) {
+        this.semanticTokensData = data;
+        this.semanticTokensListeners.forEach(listener => listener());
+    },
+
+    /**
+     * Registers a Monaco `DocumentSemanticTokensProvider` for the Topsy Turvy language.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              The provider uses a push model: C# pushes encoded token data after each
+     *              analysis pass via {@link setSemanticTokens}, and the `onDidChange` event
+     *              notifies Monaco to re-request tokens immediately.
+     */
+    registerSemanticTokensProvider() {
+        const self = this;
+        const legend = {
+            tokenTypes: ['variable', 'variable.parameter', 'variable.function'],
+            tokenModifiers: ['readonly', 'deprecated']
+        };
+
+        monaco.languages.registerDocumentSemanticTokensProvider('topsy-turvy', {
+            onDidChange(listener) {
+                self.semanticTokensListeners.push(listener);
+                return {
+                    dispose() {
+                        const index = self.semanticTokensListeners.indexOf(listener);
+                        if (index >= 0) {
+                            self.semanticTokensListeners.splice(index, 1);
+                        }
+                    }
+                };
+            },
+
+            getLegend() {
+                return legend;
+            },
+
+            provideDocumentSemanticTokens(model, lastResultId, token) {
+                if (!self.semanticTokensData) {
+                    return null;
+                }
+
+                return {
+                    data: new Uint32Array(self.semanticTokensData),
+                    resultId: null
+                };
+            },
+
+            releaseDocumentSemanticTokens(resultId) {}
+        });
+    },
+
+    /**
+     * Enables semantic highlighting on the given Monaco editor instance and patches
+     * both custom themes with the semantic token colour rules.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              Semantic token colour rules are applied here, not in registerThemes,
+     *              so they are always loaded from this file, avoiding stale-cache issues
+     *              with topsy-turvy-language.js.  Calling defineTheme for an already-defined
+     *              theme also invalidates the Monaco internal _tokenTheme cache, ensuring the
+     *              new rules take effect immediately.
+     * @param {string} editorId The `BlazorMonaco` editor element ID.
+     */
+    enableSemanticHighlighting(editorId) {
+        monaco.editor.defineTheme('topsy-turvy-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'variable',          foreground: 'D4D4D4' },
+                { token: 'variable.function', foreground: 'DCDCAA' },
+                { token: 'variable.readonly', foreground: '4FC1FF' },
+            ],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('topsy-turvy-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [
+                { token: 'variable',          foreground: '000000' },
+                { token: 'variable.function', foreground: '795E26' },
+                { token: 'variable.readonly', foreground: '0070C1' },
+            ],
+            colors: {},
+        });
+
+        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
+        if (editorHolder) {
+            editorHolder.editor.updateOptions({ 'semanticHighlighting.enabled': true });
+        }
     },
 
     /**
@@ -103,12 +203,10 @@ Object.assign(window.topsyTurvy, {
                 }
 
                 return {
-                    contents: [
-                        {
-                            value: markdown,
-                            isTrusted: true
-                        }
-                    ]
+                    contents: markdown.split('\n\n---\n\n').map(part => ({
+                        value: part,
+                        isTrusted: true
+                    }))
                 };
             }
         });
@@ -197,6 +295,178 @@ Object.assign(window.topsyTurvy, {
                 };
             }
         });
+    },
+
+    /**
+     * Reads the persisted editor preferences from Local Storage.
+     * @returns {object} The preferences object or an empty object if none is stored.
+     */
+    loadPreferences() {
+        try {
+            return JSON.parse(localStorage.getItem('topsy-turvy-editor')) ?? {};
+        } catch {
+            return {};
+        }
+    },
+
+    /**
+     * Saves the editor preferences to Local Storage.
+     * @description Existing keys not present in `preferences` are preserved,
+     *              so JS-managed keys, such as split ratios, and Blazor-managed keys,
+     *              such as files and dark theme, can be written independently without
+     *              affecting each other.
+     * @param {object} preferences Editor preferences to persist.
+     */
+    savePreferences(preferences) {
+        const combinedPreferences = {
+            ...this.loadPreferences(),
+            ...preferences
+        };
+
+        localStorage.setItem('topsy-turvy-editor', JSON.stringify(combinedPreferences));
+    },
+
+    /**
+     * Links up the drag handle between the editor and output panes.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              Restores a persisted split from Local Storage and attaches
+     *              mouse and touch listeners so the user can drag the divider to
+     *              resize the two panes.  The Monaco `automaticLayout` and the
+     *              terminal `ResizeObserver` handle relayout automatically.
+     */
+    initPaneDrag() {
+        const self = this;
+        const panesContainer = document.querySelector('.panes-container');
+        const paneDivider = document.querySelector('.pane-divider');
+        if (!panesContainer || !paneDivider) {
+            return;
+        }
+
+        const mobileQuery = window.matchMedia('(max-width: 959px)');
+        const DIVIDER_PIXELS = 6;
+        const MIN_SPLIT_RATIO = 0.15;
+        const MAX_SPLIT_RATIO = 0.85;
+        const dragConfig = {
+            isActive: false,
+            pointerStart: 0,
+            ratioStart: 0
+        };
+
+        // Determines if the current layout is mobile.
+        const isMobile = () => mobileQuery.matches;
+
+        // Gets the size of the container along the axis of the split.
+        const getContainerAxisSize = () => {
+            const containerBoundingClientRectangle = panesContainer.getBoundingClientRect();
+            return isMobile()
+                ? containerBoundingClientRectangle.height
+                : containerBoundingClientRectangle.width;
+        };
+
+        // Gets the current split ratio of the two panes.
+        const getCurrentSplitRatio = () => {
+            const computedStyle = window.getComputedStyle(panesContainer);
+            const gridTemplate = isMobile()
+                ? computedStyle.gridTemplateRows
+                : computedStyle.gridTemplateColumns;
+            
+            return parseFloat(gridTemplate) / getContainerAxisSize();
+        };
+
+        // Gets the pointer position along the axis of the split, supporting both mouse and touch events.
+        const getPointerAxisPosition = (event) => {
+            const firstTouch = event.touches?.[0];
+            return isMobile()
+                ? (firstTouch?.clientY ?? event.clientY)
+                : (firstTouch?.clientX ?? event.clientX);
+        };
+
+        // Applies the given split ratio to the panes container clamping it within the allowed range.
+        const applyPaneSplit = (splitRatio) => {
+            const clampedSplitRatio = Math.max(MIN_SPLIT_RATIO, Math.min(MAX_SPLIT_RATIO, splitRatio));
+            const firstPaneSplitPercentage = (clampedSplitRatio * 100).toFixed(3) + '%';
+            if (isMobile()) {
+                panesContainer.style.gridTemplateColumns = '';
+                panesContainer.style.gridTemplateRows = `${firstPaneSplitPercentage} ${DIVIDER_PIXELS}px 1fr`;
+            } else {
+                panesContainer.style.gridTemplateRows = '';
+                panesContainer.style.gridTemplateColumns = `${firstPaneSplitPercentage} ${DIVIDER_PIXELS}px 1fr`;
+            }
+        };
+
+        // Restores the split ratio from Local Storage or defaults to 50/50 if none is stored.
+        const restoreSplit = () => {
+            const preferences = self.loadPreferences();
+            const savedRatio = isMobile()
+                ? preferences.verticalSplit
+                : preferences.horizontalSplit;
+            
+            applyPaneSplit(typeof savedRatio === 'number'
+                ? savedRatio
+                : 0.5
+            );
+        };
+
+        // Handles the start of a drag operation, storing the initial pointer position and split ratio.
+        const onDragStart = (event) => {
+            dragConfig.ratioStart = getCurrentSplitRatio();
+            dragConfig.pointerStart = getPointerAxisPosition(event);
+            dragConfig.isActive = true;
+            event.preventDefault();
+        };
+
+        // Handles the movement of the pointer during a drag operation, updating the split ratio accordingly.
+        const onDragMove = (event) => {
+            if (!dragConfig.isActive) {
+                return;
+            }
+
+            const pointerDelta = getPointerAxisPosition(event) - dragConfig.pointerStart;
+            applyPaneSplit(dragConfig.ratioStart + pointerDelta / getContainerAxisSize());
+            event.preventDefault();
+        };
+
+        // Handles the end of a drag operation saving the final split ratio to Local Storage.
+        const onDragEnd = () => {
+            if (!dragConfig.isActive) {
+                return;
+            }
+
+            dragConfig.isActive = false;
+            self.savePreferences(isMobile()
+                ? { verticalSplit: getCurrentSplitRatio() }
+                : { horizontalSplit: getCurrentSplitRatio() }
+            );
+        };
+
+        restoreSplit();
+        mobileQuery.addEventListener('change', restoreSplit);
+
+        paneDivider.addEventListener('mousedown', onDragStart);
+        paneDivider.addEventListener('touchstart', onDragStart, { passive: false });
+        window.addEventListener('mousemove', onDragMove);
+        window.addEventListener('touchmove', onDragMove, { passive: false });
+        window.addEventListener('mouseup', onDragEnd);
+        window.addEventListener('touchend', onDragEnd);
+    },
+
+    /**
+     * Updates the xterm terminal colour theme to match the current light or dark mode of the editor.
+     * @description Called from Blazor in `OnParametersSetAsync` whenever the theme changes.
+     *              XtermBlazor does not re-apply `Options` after initialisation, so the theme
+     *              must be updated directly on the xterm instance via this method.
+     * @param {boolean} isDarkMode Whether dark mode is active.
+     */
+    setTerminalTheme(isDarkMode) {
+        const entries = [...XtermBlazor._terminals.entries()];
+        if (!entries.length) {
+            return;
+        }
+
+        const term = entries[0][1].terminal;
+        term.options.theme = isDarkMode
+            ? { background: '#1e1e1e', foreground: '#d4d4d4' }
+            : { background: '#f5f5f5', foreground: '#1e1e1e' };
     },
 
     /**

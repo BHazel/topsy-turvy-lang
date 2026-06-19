@@ -155,7 +155,11 @@ These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
 
 * **Test Class Naming:** `{TestedClass}Tests`, one test class per production type, one file per test class.
 * **Test Method Naming:** `{MethodOrProperty}_{Condition}_{ExpectedOutcome}` (e.g. `StringLiteral_WithoutClosingQuote_Fails`).
-* **XML Summary Format:** Every test method summary must follow the pattern `Tests that the <see cref="{Class}.{Member}"/> method/parser/property {action in present tense}.` The `cref` must point to the specific member under test.
+* **XML Summary Format:** Test method summaries differ by project layer:
+  * **Interpreter tests** (`TopsyTurvyInterpreter*Tests`): `Tests that the <see cref="Interpreter.Execute"/> method {present-tense action}.`
+  * **Parser tests** (`TopsyTurvyParser*Tests`): `Tests that {language construct description} produces a <see cref="ResultNode"/> with {property} set correctly.`  Use `<see cref>` for all referenced node types and `LiteralType` values.
+  * **Class-level summaries: interpreter**: `{Category} tests for the <see cref="Interpreter"/> class.`
+  * **Class-level summaries: parser**: `Tests for {form description} parsed by the <see cref="TopsyTurvyParser"/> class.`
 * **Theory Parameters:** All parameters on a `[Theory]` test method must have a corresponding `<param>` tag in the XML documentation.
 * **Arrange / Act / Assert:** Separate each phase with a blank line. Do not put inline `//` comments inside test bodies; if the intent is unclear rewrite the XML summary to be more specific.
 * **Test Stubs and Helpers:** Each stub or helper class lives in its own file, is named with a `Test` prefix, e.g. `TestPrefixingPreProcessor`, and is declared `internal sealed`. Place it in the same subdirectory as the tests that use it.
@@ -171,6 +175,19 @@ These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
 * **Virtual File System:** `VirtualFile` is the file registry (name, open/close state). The Monaco editor models are the source of truth for file content: always read/write content via `monacoEditor.GetValue`/`monacoEditor.SetValue`, not from `VirtualFile`.
 * **MudBlazor API:** Use current MudBlazor 9.x property names.
 
+## Documentation Site (`docs/topsy-turvy/`)
+
+The Docusaurus site under `docs/topsy-turvy/` is structured into three content areas:
+
+* **Concepts (`docs/concepts/`):** High-level explanations of each toolchain component (parser, runtime, analysis layer, etc.).  These pages must describe *how the component works*, not what the language does.  Do not copy or summarise language-spec content here: that belongs in `SPEC.md`.  Before adding content to a concepts page apply this test: _does this sentence describe the toolchain component (a class, a design decision, an implementation mechanism) or does it describe the language feature (syntax, semantics, example programs)?_  Only the former belongs here.  Appropriate content includes how classes relate to each other, non-obvious design choices (e.g. using .NET exceptions as control-flow signals), storage representation of new types, and enforcement mechanisms that are not obvious from the source.  Syntax tables, keyword lists, example programs, cast rules and traversal patterns are usually considered language specification detail and should be avoided but could be useful in context.  Do not create a new subsection for each language feature: fold implementation notes into the existing component section (Environment, Interpreter, etc.) where they naturally belong.
+* **Guide (`docs/guide/`):** Task-oriented how-to pages for users of the language and toolchain.
+* **API Reference (`docs/api/`):** Auto-generated from XML documentation comments; do not edit generated files by hand.
+
 ## Implementing Language Features
 
 When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
+
+After completing the implementation, documentation must also be kept in sync:
+
+* **XML documentation comments:** Update the `<summary>` and `<remarks>` blocks on any modified or newly added public type or member.  The XML docs are the source of truth for the API reference; stale comments are worse than no comments.
+* **Docusaurus concepts pages:** Update a concepts page only if the component's high-level behaviour has materially changed, for example, if the parser now handles a new construct category or the runtime introduces a new execution model.  Do not add language-spec detail (keyword syntax, example programs, cast rules) to a concepts page; that content belongs in `SPEC.md`.

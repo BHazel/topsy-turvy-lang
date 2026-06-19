@@ -18,6 +18,8 @@ window.topsyTurvy = {
             ["PRAY WELCOME",                        "variable declaration"],
             ["AS A",                                "type annotation"],
             ["BEING",                               "initial value"],
+            ["CONSERVATIVE",                        "constant declaration modifier"],
+            ["LIBERAL",                             "mutable declaration modifier"],
             ["IS APPOINTED",                        "assignment"],
             ["IS HENCEFORTH A",                     "in-place cast"],
             ["AS IT WERE",                          "expression cast"],
@@ -80,10 +82,15 @@ window.topsyTurvy = {
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
             ["JUST SO",                             "implicit variable"],
+            ["THE PROPS",                           "built-in programme arguments"],
             ["PEER",                                "integer type"],
             ["FATHOM",                              "float type"],
             ["YARN",                                "string type"],
             ["DECREE",                              "boolean type"],
+            ["A LITTLE LIST OF",                    "array type annotation"],
+            ["VICTIM",                              "array element access / assignment"],
+            ["ON",                                  "array index separator"],
+            ["RECKONING OF",                        "array length expression"],
         ];
 
         monaco.languages.registerCompletionItemProvider('topsy-turvy', {
@@ -204,8 +211,9 @@ window.topsyTurvy = {
                     [/\b[0-9]+\.[0-9]+\b/, 'number.float'],
                     [/\b[0-9]+\b/, 'number'],
 
-                    // Implicit variable — before other keyword rules
+                    // Implicit variables — before other keyword rules
                     [/\bJUST\s+SO\b/, 'variable'],
+                    [/\bTHE\s+PROPS\b/, 'variable'],
 
                     // Long multi-word keywords with no shared prefix conflicts
                     [/\bNOTHING\s+COULD\s+BE\s+MORE\s+SATISFACTORY\./, 'keyword'],
@@ -214,12 +222,15 @@ window.topsyTurvy = {
                     [/\bIN\s+WHICH\s+CAPACITY\?/, 'keyword'],
                     [/\bWHEN\s+ACTING\s+AS\b/, 'keyword'],
                     [/\bIT\s+IS\s+MY\s+DUTY\s+TO\s+PERFORM\b/, 'keyword'],
+
+                    // A LITTLE LIST OF: after "AS A" consumes the leading A, only "LITTLE LIST OF" remains in the token stream
+                    [/\bLITTLE\s+LIST\s+OF\b/, 'type'],
                     [/\bA\s+HIDEOUS\s+CURSE\s+ON\b/, 'keyword'],
                     [/\bBY\s+A\s+LEGAL\s+FICTION\b/, 'keyword'],
                     [/\bSO\s+MUCH\s+FOR\s+THAT\./, 'keyword'],
                     [/\bTHAT\s+CONCLUDES\s+THE\s+MATTER\./, 'keyword'],
                     [/\bWITHOUT\s+CEREMONY\b/, 'keyword'],
-                    [/\bMODIFIED\s+RAPTURE\b/, 'keyword'],
+                    [/\bMODIFIED\s+RAPTURE,?/, 'keyword'],
                     [/\bIF\s+YOU\s+PLEASE\./, 'keyword'],
                     [/\bONCE\s+MORE\./, 'keyword'],
 
@@ -268,7 +279,7 @@ window.topsyTurvy = {
                     [/\bPRAY\s+WELCOME\b/, 'keyword'],
 
                     // Remaining multi-word operators and keywords
-                    [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER)\s+OF\b/, 'keyword'],
+                    [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|RECKONING)\s+OF\b/, 'keyword'],
                     [/\bWOVEN\s+OF\b/, 'keyword'],
                     [/\bHARDLY\s+EVER\b/, 'keyword'],
                     [/\bLOWER\s+DEGREE\b/, 'keyword'],
@@ -281,11 +292,14 @@ window.topsyTurvy = {
                     [/\bFINALE\./, 'keyword'],
                     [/\bPRINCIPALS\b/, 'keyword'],
                     [/\bOTHERWISE,/, 'keyword'],
+                    [/\bCONSERVATIVE\b/, 'keyword'],
+                    [/\bLIBERAL\b/, 'keyword'],
                     [/\bASCENDING\b/, 'keyword'],
                     [/\bDESCENDING\b/, 'keyword'],
                     [/\bUNTIL\b/, 'keyword'],
                     [/\bWHILST\b/, 'keyword'],
                     [/\bSUMMON\b/, 'keyword'],
+                    [/\bVICTIM\b/, 'keyword'],
                     [/\bBEHOLD\b/, 'keyword'],
                     [/\bBEING\b/, 'keyword'],
                     [/\bBOTH\b/, 'keyword'],
@@ -293,6 +307,7 @@ window.topsyTurvy = {
 
                     // Operators that need to follow their multi-word variants above
                     [/\bAND\b/, 'keyword'],
+                    [/\bON\b/, 'keyword'],
                     [/\bWITH\b/, 'keyword'],
                     [/\b(ALIKE|UNLIKE)\b/, 'keyword'],
                     [/\bPRE-ADAMITE\b/, 'keyword'],
@@ -321,6 +336,28 @@ window.topsyTurvy = {
                     [/[^"~]+/, 'string'],
                 ],
             },
+        });
+    },
+
+    /**
+     * Registers custom Monaco themes that extend the built-in vs-dark and vs themes.
+     * @remarks Semantic token colour rules (`variable.function`, `variable.readonly`) are
+     *          applied later by `enableSemanticHighlighting` in `web-editor.js` so that
+     *          they are always loaded from that file and never stale-cached from this one.
+     */
+    registerThemes() {
+        monaco.editor.defineTheme('topsy-turvy-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('topsy-turvy-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [],
+            colors: {},
         });
     },
 };

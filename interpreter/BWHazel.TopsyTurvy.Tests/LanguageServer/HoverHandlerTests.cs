@@ -107,6 +107,33 @@ public class HoverHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="HoverHandler.Handle"/> method includes the documentation summary when a documentation comment precedes the declaration.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithDocumentationComment_ReturnsHoverIncludingSummary()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+              (ASIDE, AT SOME LENGTH:
+                LEGEND: Holds the numbers.
+              END OF ASIDE.)
+              PRAY WELCOME Numbers AS A PEER
+            THE CURTAIN RISES.
+            BEHOLD Numbers
+            FINALE.
+            """;
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(this.MakeRequest(line: 7, character: 7), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        result.Contents.MarkupContent!.Value.ShouldContain("Holds the numbers.");
+    }
+
+    /// <summary>
     /// Create a <see cref="HoverParams"/> request for the test document at a specific position.
     /// </summary>
     /// <param name="line">The line number of the position.</param>

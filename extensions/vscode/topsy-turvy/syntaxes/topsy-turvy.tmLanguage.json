@@ -76,7 +76,7 @@
     },
     "implicit-variable": {
       "name": "variable.language.topsy",
-      "match": "(?i)\\bJUST\\s+SO\\b"
+      "match": "(?i)(?:\\bJUST\\s+SO\\b|\\bTHE\\s+PROPS\\b)"
     },
     "program-structure": {
       "patterns": [
@@ -206,7 +206,7 @@
         },
         {
           "name": "keyword.control.exception.topsy",
-          "match": "(?i)\\bMODIFIED\\s+RAPTURE\\b"
+          "match": "(?i)\\bMODIFIED\\s+RAPTURE,?"
         },
         {
           "name": "keyword.control.exception.topsy",
@@ -295,6 +295,14 @@
         {
           "name": "keyword.other.declaration.topsy",
           "match": "(?i)\\bBEING\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "(?i)\\bCONSERVATIVE\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "(?i)\\bLIBERAL\\b"
         }
       ]
     },
@@ -303,8 +311,16 @@
       "match": "(?i)\\bIS\\s+APPOINTED\\b"
     },
     "types": {
-      "name": "storage.type.topsy",
-      "match": "(?i)\\b(PEER|FATHOM|YARN|DECREE)\\b"
+      "patterns": [
+        {
+          "name": "storage.type.topsy",
+          "match": "(?i)\\bLITTLE\\s+LIST\\s+OF\\b"
+        },
+        {
+          "name": "storage.type.topsy",
+          "match": "(?i)\\b(PEER|FATHOM|YARN|DECREE)\\b"
+        }
+      ]
     },
     "operators": {
       "patterns": [
@@ -347,6 +363,18 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\bAND\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bVICTIM\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bON\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bRECKONING\\s+OF\\b"
         },
         {
           "name": "keyword.operator.topsy",

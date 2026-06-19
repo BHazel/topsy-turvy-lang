@@ -141,10 +141,23 @@ PEER
 BEING 1
 //^ keyword.other.declaration.topsy
 
-// ── Assignment and implicit variable ─────────────────────────────────────────
+CONSERVATIVE
+//^ keyword.other.declaration.topsy
+
+LIBERAL
+//^ keyword.other.declaration.topsy
+
+AS A LITTLE LIST OF YARN
+//^ keyword.other.declaration.topsy
+//     ^ storage.type.topsy
+
+// ── Assignment and implicit variables ────────────────────────────────────────
 
 JUST SO IS APPOINTED 1
 //^ variable.language.topsy
+
+VICTIM 1 ON THE PROPS
+//              ^ variable.language.topsy
 
 IS APPOINTED 1
 //^ keyword.operator.assignment.topsy

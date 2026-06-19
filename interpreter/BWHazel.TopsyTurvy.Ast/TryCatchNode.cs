@@ -11,7 +11,8 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// in Topsy Turvy.  It wraps a potentially-failing expression, in <see cref="Operation"/>.  If the operation succeeds,
 /// the <see cref="SuccessBlock"/>, <c>WITH GRATITUDE</c>, is executed.  However, if a <see cref="ThrowNode"/>, <c>A HIDEOUS CURSE ON</c>,
 /// is raised within the operation the <see cref="ExceptionBlock"/>, <c>MODIFIED RAPTURE</c>, is executed instead with the
-/// cursed value in the <c>JUST SO</c> implicit variable on entry.
+/// cursed value in the <c>JUST SO</c> implicit variable on entry.  If <see cref="CaughtValueName"/> is non-null, the cursed
+/// value is also auto-declared as a named variable scoped to the exception block.
 /// </para>
 /// <para>
 /// For example, the following try-catch block in Topsy Turvy guards a division:
@@ -68,4 +69,13 @@ public class TryCatchNode : Statement
     /// Gets or initialises the block of statements to execute on exception.
     /// </summary>
     public required IReadOnlyList<Statement> ExceptionBlock { get; init; }
+
+    /// <summary>
+    /// Gets or initialises the name of the variable to bind the caught value to on entering the exception block, or <c>null</c> if no binding is required.
+    /// </summary>
+    /// <remarks>
+    /// When non-null the interpreter auto-declares this identifier in a nested scope wrapping the exception block; no prior <c>PRAY WELCOME</c> declaration is needed.
+    /// The binding is introduced by a comma immediately following <c>MODIFIED RAPTURE</c>, for example <c>MODIFIED RAPTURE, Grievance</c>.
+    /// </remarks>
+    public string? CaughtValueName { get; init; }
 }

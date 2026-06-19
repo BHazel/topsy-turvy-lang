@@ -16,7 +16,7 @@ Statements on the other hand perform an action when executed and stand alone.  T
 * `greeting IS APPOINTED "Hello, World!"`, or,
 * `total IS APPOINTED SUM OF 3 AND 4`
 
-Additional statement examples include function declarations or in-place casts to name a couple.
+Additional statement examples include function declarations, in-place casts, and array element assignments to name a few.
 
 ## Example
 

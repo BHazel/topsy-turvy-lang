@@ -37,6 +37,7 @@ namespace BWHazel.TopsyTurvy.Runtime;
 public sealed class TopsyTurvyEnvironment
 {
     private readonly Dictionary<string, TopsyTurvyValue> variables = [];
+    private readonly HashSet<string> constants = [];
     private readonly TopsyTurvyEnvironment? enclosingEnvironment;
 
     /// <summary>
@@ -107,21 +108,23 @@ public sealed class TopsyTurvyEnvironment
     public static TopsyTurvyEnvironment CreateFunctionEnvironment() => new(null);
 
     /// <summary>
-    /// Declares a new variable in this environment with the given initial value.
+    /// Declares a new variable in this environment with the given initial value and optional constant constraint.
     /// </summary>
     /// <param name="name">The variable name.</param>
     /// <param name="value">The initial value.</param>
+    /// <param name="isConstant">When <c>true</c> the variable is a constant and may not be reassigned.</param>
     /// <remarks>
     /// <para>
-    /// Variables can only be declared in the current environment instance.
+    /// Variables can only be declared in the current environment instance.  When <paramref name="isConstant"/> is <c>true</c>,
+    /// any subsequent call to <see cref="Assign"/> for the same name will throw a <see cref="TopsyTurvyRuntimeException"/>.
     /// </para>
     /// <code>
     /// TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
-    /// environment.Declare("LovesickMaidens", TopsyTurvyValue.Integer(20));
+    /// environment.Declare("LovesickMaidens", TopsyTurvyValue.Integer(20), isConstant: true);
     /// </code>
     /// </remarks>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown if <paramref name="name"/> is already declared in this environment.</exception>
-    public void Declare(string name, TopsyTurvyValue value)
+    public void Declare(string name, TopsyTurvyValue value, bool isConstant = false)
     {
         if (this.variables.ContainsKey(name))
         {
@@ -129,6 +132,40 @@ public sealed class TopsyTurvyEnvironment
         }
 
         this.variables[name] = value;
+        if (isConstant)
+        {
+            this.constants.Add(name);
+        }
+    }
+
+    /// <summary>
+    /// Determines whether a variable is declared as a constant in this environment.
+    /// </summary>
+    /// <param name="name">The variable name.</param>
+    /// <returns><c>true</c> if the variable was declared with the <c>CONSERVATIVE</c> modifier, otherwise <c>false</c>.</returns>
+    /// <remarks>
+    /// Only the current environment is checked.  This method does not walk the enclosing chain.
+    /// Use this before a mutation operation to provide a clear error when targeting a constant declared in this scope.
+    /// </remarks>
+    public bool IsConstant(string name) => this.constants.Contains(name);
+
+    /// <summary>
+    /// Determines whether a variable is declared as a constant anywhere in the accessible scope chain.
+    /// </summary>
+    /// <param name="name">The variable name.</param>
+    /// <returns><c>true</c> if the variable was declared with the <c>CONSERVATIVE</c> modifier in any accessible scope, otherwise <c>false</c>.</returns>
+    /// <remarks>
+    /// Walks the enclosing chain to find the scope where the variable is declared, then checks whether it is constant there.
+    /// Use this when the variable may have been declared in an enclosing scope, such as when mutating an array element inside a conditional block.
+    /// </remarks>
+    public bool IsConstantInChain(string name)
+    {
+        if (this.variables.ContainsKey(name))
+        {
+            return this.constants.Contains(name);
+        }
+
+        return this.enclosingEnvironment?.IsConstantInChain(name) ?? false;
     }
 
     /// <summary>
@@ -152,6 +189,11 @@ public sealed class TopsyTurvyEnvironment
     {
         if (this.variables.ContainsKey(name))
         {
+            if (this.constants.Contains(name))
+            {
+                throw new TopsyTurvyRuntimeException($"'{name}' is CONSERVATIVE: it has been appointed and cannot be reassigned.");
+            }
+
             this.variables[name] = value;
             return;
         }

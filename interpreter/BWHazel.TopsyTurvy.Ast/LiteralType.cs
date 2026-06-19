@@ -11,6 +11,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// * <see cref="LiteralType"/><c>.String</c>: A sequence of characters, represented in Topsy Turvy as a YARN, e.g. <c>"Hello, World!"</c>.
 /// * <see cref="LiteralType"/><c>.Boolean</c>: A boolean value, represented in Topsy Turvy as a DECREE, e.g. <c>VERITY</c> or <c>NAY</c>.
 /// * <see cref="LiteralType"/><c>.Null</c>: A null value, represented in Topsy Turvy as NAUGHT, e.g. <c>NAUGHT</c>.
+/// * <see cref="LiteralType"/><c>.Array</c>: An ordered collection declared with <c>A LITTLE LIST OF &lt;type&gt;</c>.
 /// </para>
 /// </remarks>
 public enum LiteralType
@@ -28,5 +29,8 @@ public enum LiteralType
     Boolean,
 
     /// <summary>A null value (NAUGHT).</summary>
-    Null
+    Null,
+
+    /// <summary>An ordered collection (<c>A LITTLE LIST OF &lt;type&gt;</c>).</summary>
+    Array
 }

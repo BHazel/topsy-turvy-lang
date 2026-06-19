@@ -1,5 +1,5 @@
-(* Topsy Turvy Formal Grammar v0.1 *)
-(* Based on SPEC.md v0.2.0 *)
+(* Topsy Turvy Formal Grammar v0.2.0 *)
+(* Based on SPEC.md v0.3.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -19,44 +19,70 @@ Program         = "HARK!", StringLiteral, [ "\n", "or,", StringLiteral ],
 
 StatementList   = { Statement } ;
 
-Statement       = PrincipalBlock 
-                | Declaration 
-                | Assignment 
-                | TypeCast 
-                | PrintStatement 
-                | InputStatement 
-                | Conditional 
-                | Switch 
-                | Loop 
-                | FunctionDefinition 
-                | ImportStatement 
-                | TryCatchBlock 
+Statement       = PrincipalBlock
+                | ArrayDeclaration
+                | Declaration
+                | ArrayAssignment
+                | Assignment
+                | TypeCast
+                | PrintStatement
+                | InputStatement
+                | Conditional
+                | Switch
+                | Loop
+                | FunctionDefinition
+                | ImportStatement
+                | TryCatchBlock
                 | ExpressionStatement ;
 
 (*----------------------------------------------------------------------------*)
 (* Declarations & Assignments                                                 *)
 (*----------------------------------------------------------------------------*)
-PrincipalBlock  = "PRINCIPALS", { Declaration }, "THE CURTAIN RISES." ;
+PrincipalBlock  = "PRINCIPALS", { Declaration | ArrayDeclaration }, "THE CURTAIN RISES." ;
 
-Declaration     = "PRAY WELCOME", Identifier, "AS A", Type, [ "BEING", Expression ] ;
+Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], ScalarType, [ "BEING", Expression ] ;
 
-Type            = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "LITTLE LIST OF", [ Integer ], ScalarType,
+                      [ "BEING", Expression, { "AND", Expression }, "IF YOU PLEASE." ] ;
+(* Note: "AS A LITTLE LIST OF" is the user-visible phrase; the parser consumes "AS A" first,
+   leaving "LITTLE LIST OF" as the array-type marker.  The "A" is shared between the two tokens.
+   The optional Integer pre-allocates that many NAUGHT elements; mutually exclusive with the BEING clause
+   (providing both is a runtime error).  A negative Integer is also a runtime error. *)
+
+MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
+
+ScalarType      = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+
+ArrayType       = "LITTLE LIST OF", ScalarType ;
+(* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
+
+Type            = ScalarType | ArrayType ;
 
 Assignment      = Identifier, "IS APPOINTED", Expression ;
 
-TypeCast        = ( Identifier, "IS HENCEFORTH A", Type )
-                | ( "AS IT WERE", Expression, "AS A", Type ) ;
+ArrayAssignment = "VICTIM", Expression, "ON", Identifier, "IS APPOINTED", Expression ;
+
+TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
 (*----------------------------------------------------------------------------*)
-Expression      = PrefixExpression 
-                | StringLiteral 
-                | BooleanLit 
-                | NullLit 
-                | Integer 
-                | Float 
+Expression      = CastExpression
+                | ArrayIndexExpression
+                | ArrayLengthExpression
+                | PrefixExpression
+                | StringLiteral
+                | BooleanLit
+                | NullLit
+                | Integer
+                | Float
                 | Identifier ;
+
+ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
+
+ArrayLengthExpression = "RECKONING OF", Identifier ;
+
+CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 
 PrefixExpression = FixedOpExpression | VariadicExpression ;
 
@@ -118,9 +144,9 @@ FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
 ImportStatement    = "PRAY ADMIT", StringLiteral ;
 
-TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression, 
-                    "WITH GRATITUDE", StatementList, 
-                    "MODIFIED RAPTURE", StatementList, 
+TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression,
+                    "WITH GRATITUDE", StatementList,
+                    "MODIFIED RAPTURE", [ ",", Identifier ], StatementList,
                     "THAT CONCLUDES THE MATTER." ;
 
 (*----------------------------------------------------------------------------*)
@@ -133,3 +159,47 @@ InputStatement     = "PRAY TELL", Identifier ;
 ExpressionStatement = Expression ;
 
 Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;
+
+(*----------------------------------------------------------------------------*)
+(* Documentation Comments                                                     *)
+(*----------------------------------------------------------------------------*)
+(* A documentation comment is an (ASIDE, AT SOME LENGTH: ... END OF ASIDE.)  *)
+(* block placed immediately before a Declaration or FunctionDefinition.       *)
+(* It carries no runtime semantics — it is stripped alongside all other block *)
+(* comments and its content is read by tooling from the original source.      *)
+(*                                                                             *)
+(* Each keyword tag opens a section that continues until the next tag or the  *)
+(* end of the block; any tag may therefore span multiple lines.               *)
+(*                                                                             *)
+(* A block with no recognised tags is treated as a plain block comment.       *)
+(*                                                                             *)
+DocComment         = "(ASIDE, AT SOME LENGTH:", DocCommentBody, "END OF ASIDE.)" ;
+DocCommentBody     = { DocCommentLine | AnyChar } ;
+DocCommentLine     = LegendLine | RecitativeLine | ArticleLine
+                   | ConsequenceLine | CursesLine | ChorusSection
+                   | EnsembleLine | StatutoryLine ;
+LegendLine         = "LEGEND:", { AnyChar } ;
+RecitativeLine     = "RECITATIVE:", { AnyChar } ;
+ArticleLine        = "ARTICLE", Identifier, "(", Identifier, "):", { AnyChar } ;
+ConsequenceLine    = "CONSEQUENCE", "(", Identifier, "):", { AnyChar } ;
+CursesLine         = "CURSES", Identifier, "(", Identifier, "):", { AnyChar } ;
+ChorusSection      = "CHORUS:", { AnyChar } ;
+EnsembleLine       = "ENSEMBLE:", { AnyChar } ;
+StatutoryLine      = "STATUTORY:", { AnyChar } ;
+
+(*----------------------------------------------------------------------------*)
+(* Runtime-Injected Built-In Variables                                        *)
+(*----------------------------------------------------------------------------*)
+(* The following identifiers are not grammar productions — they are injected  *)
+(* by the interpreter before execution begins and are always present.         *)
+(*                                                                             *)
+(* JUST SO    : implicit variable; receives any expression result not         *)
+(*              explicitly assigned.                                           *)
+(* THE PROPS  : CONSERVATIVE LITTLE LIST OF YARN; contains the arguments      *)
+(*              passed to the programme at invocation.  Empty array when none  *)
+(*              are supplied.  1-based indexing; elements are always YARN.     *)
+(*              Inaccessible inside functions per Invariant I7.                *)
+(*                                                                             *)
+(* Neither identifier may be re-declared with PRAY WELCOME; doing so is a    *)
+(* runtime error.                                                              *)
+(*----------------------------------------------------------------------------*)

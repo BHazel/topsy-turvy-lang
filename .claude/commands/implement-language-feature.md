@@ -61,6 +61,8 @@ implementation and produce a brief delta summary:
 Work through only the layers that are actually affected. Each layer depends
 on the one above it, so do not skip ahead.
 
+**XML documentation comments are required on every new or modified public type and member throughout all steps below.** `<summary>` must be a single sentence; use `<remarks>` for multi-sentence elaboration or non-obvious constraints. This applies to AST node types, parser fields, runtime methods, analysis types, and LSP handlers alike. Do not defer XML docs to the end: write them as you add each type or member.
+
 ### 3a. `GRAMMAR.ebnf`
 
 Add or update the production rules. Keep the style consistent with what is
@@ -178,8 +180,7 @@ Cover at minimum:
 dotnet test interpreter/BWHazel.TopsyTurvy.Tests
 dotnet test interpreter/BWHazel.TopsyTurvy.Cli.E2ETests
 ```
-The baseline is 458 unit tests + 50 E2E tests. New tests should push these
-numbers up, never down.
+Check `DEVELOPMENT.md` for the current baseline — it is updated after each session. New tests should push the numbers up, never down.
 
 ---
 
@@ -201,6 +202,20 @@ This is the last step, after everything else is green:
 * **Header** — update the "Last Updated" date and summarise the new feature in one clause.
 * **§1 File Inventory** — add or update rows for any new or significantly changed files.
 * **§2 Non-Obvious Constraints** — add an entry if the feature introduced a new non-obvious behaviour (e.g. a new skip range, a new signal exception, a new ordering constraint).
-* **§4 Known Gaps** — record anything intentionally deferred (e.g. LSP inlay hints for the new construct).
+* **§4 Known Gaps** — record anything intentionally deferred (e.g. LSP inlay hints for the new construct); remove any Known Gap that this feature resolves.
 * **§5 Next Steps** — update or remove items that this feature resolves; add follow-on work.
 * **Baseline counts** at the top — update test numbers to reflect the new passing total.
+
+---
+
+## Step 7: Update documentation
+
+### XML documentation comments
+
+Review the `<summary>` and `<remarks>` blocks on every public type or member that was added or modified during this implementation — not just the new ones. Stale descriptions on existing members are as harmful as missing ones because they are the source of truth for the generated API reference.
+
+### Docusaurus concepts pages (`docs/topsy-turvy/docs/concepts/`)
+
+Update a concepts page only if the feature materially changes what a toolchain component does at a high level, for example, if the parser now handles a new category of construct, or the runtime introduces a new execution mechanism.
+
+Do **not** add language-spec detail to a concepts page. Keyword syntax, example programs, operator rules, type cast behaviour — anything that describes what the language does rather than how the component works — belongs in `SPEC.md` only, not in a concepts page.

@@ -148,4 +148,45 @@ public sealed class PerformCommandTests(CliFixture fixture)
         exitCode.ShouldBe(0);
         stdout.ShouldContain("OK");
     }
+
+    /// <summary>
+    /// Tests that the perform command exposes the provided arguments as the first element of THE PROPS.
+    /// </summary>
+    [Fact]
+    public async Task Perform_WithCommandLineArguments_PrintsCorrectArg()
+    {
+        const string source =
+            """
+            HARK! "THE PROPS"
+            BEHOLD VICTIM 1 ON THE PROPS
+            FINALE.
+            """;
+        
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), source);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("perform prog.topsy --tiptoe -- Ko-Ko");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("Ko-Ko");
+    }
+
+    /// <summary>
+    /// Tests that the perform command presents THE PROPS as an empty array when no arguments are passed.
+    /// </summary>
+    [Fact]
+    public async Task Perform_WithNoCommandLineArguments_ThePropIsEmpty()
+    {
+        const string source =
+            """
+            HARK! "THE PROPS"
+            BEHOLD THE PROPS
+            FINALE.
+            """;
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), source);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("perform prog.topsy --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("[]");
+    }
 }

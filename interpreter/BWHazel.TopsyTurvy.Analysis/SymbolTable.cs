@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Analysis;
@@ -51,6 +52,14 @@ public class SymbolTable
             Name = Keywords.SpecialNames.JustSo,
             Kind = SymbolKind.Variable,
             TypeDisplayName = "implicit variable"
+        };
+
+        collectedSymbols[Keywords.SpecialNames.TheProps] = new SymbolInfo()
+        {
+            Name = Keywords.SpecialNames.TheProps,
+            Kind = SymbolKind.Variable,
+            IsConstant = true,
+            TypeDisplayName = $"CONSERVATIVE {Keywords.TypeNames.LittleListOf} {Keywords.TypeNames.Yarn}"
         };
 
         CollectFromStatements(program.Statements, collectedSymbols, sourceLines);
@@ -179,14 +188,24 @@ public class SymbolTable
         switch (statement)
         {
             case PrincipalBlockNode principals:
-                foreach (DeclarationNode declaration in principals.Declarations)
+                foreach (Statement declaration in principals.Declarations)
                 {
-                    AddVariable(declaration, collectedSymbols, sourceLines);
+                    if (declaration is DeclarationNode scalarDeclaration)
+                    {
+                        AddVariable(scalarDeclaration, collectedSymbols, sourceLines);
+                    }
+                    else if (declaration is ArrayDeclarationNode arrayDecl)
+                    {
+                        AddArrayVariable(arrayDecl, collectedSymbols, sourceLines);
+                    }
                 }
 
                 break;
             case DeclarationNode declaration:
                 AddVariable(declaration, collectedSymbols, sourceLines);
+                break;
+            case ArrayDeclarationNode arrayDeclaration:
+                AddArrayVariable(arrayDeclaration, collectedSymbols, sourceLines);
                 break;
             case FunctionDefinitionNode function:
                 AddFunction(function, collectedSymbols, sourceLines);
@@ -239,9 +258,42 @@ public class SymbolTable
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
+            IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
             DefinitionLine = definition.Line,
-            DefinitionColumn = definition.Column
+            DefinitionColumn = definition.Column,
+            Documentation = FindDocumentationComment(sourceLines, definition.Line)
+        };
+    }
+
+    /// <summary>
+    /// Adds an array variable to the collected symbol information.
+    /// </summary>
+    /// <remarks>
+    /// If the variable name already exists, it is not added again.
+    /// </remarks>
+    /// <param name="declaration">The array declaration node representing the variable.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="sourceLines">The original source lines.</param>
+    private static void AddArrayVariable(ArrayDeclarationNode declaration, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    {
+        if (collectedSymbols.ContainsKey(declaration.Name))
+        {
+            return;
+        }
+
+        SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
+        collectedSymbols[declaration.Name] = new SymbolInfo()
+        {
+            Name = declaration.Name,
+            Kind = SymbolKind.Variable,
+            IsConstant = declaration.IsConstant,
+            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
+                ? $"{declaration.Size.Value} "
+                : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
+            DefinitionLine = definition.Line,
+            DefinitionColumn = definition.Column,
+            Documentation = FindDocumentationComment(sourceLines, definition.Line)
         };
     }
 
@@ -266,7 +318,8 @@ public class SymbolTable
                 Kind = SymbolKind.Function,
                 Parameters = function.Parameters,
                 DefinitionLine = functionDefinition.Line,
-                DefinitionColumn = functionDefinition.Column
+                DefinitionColumn = functionDefinition.Column,
+                Documentation = FindDocumentationComment(sourceLines, functionDefinition.Line)
             };
         }
 
@@ -285,6 +338,76 @@ public class SymbolTable
         }
 
         CollectFromStatements(function.Body, collectedSymbols, sourceLines);
+    }
+
+    /// <summary>
+    /// Finds and parses a documentation comment block immediately preceding a symbol definition line.
+    /// </summary>
+    /// <param name="sourceLines">The original source lines.</param>
+    /// <param name="definitionLine">The 1-indexed line number of the symbol definition.</param>
+    /// <remarks>
+    /// Scans backwards from the line above the declaration, skipping blank lines, looking for an
+    /// <c>END OF ASIDE.)</c> marker.  If found, continues scanning to find the matching
+    /// <c>(ASIDE, AT SOME LENGTH:</c> opener and extracts the block content for parsing.  Any intervening
+    /// non-blank, non-comment line breaks the association and <c>null</c> is returned.
+    /// </remarks>
+    /// <returns>
+    /// A <see cref="DocumentationComment"/> if a documentation block with recognised tags is found
+    /// immediately before the definition, otherwise <c>null</c>.
+    /// </returns>
+    private static DocumentationComment? FindDocumentationComment(string[] sourceLines, int definitionLine)
+    {
+        if (definitionLine <= 1)
+        {
+            return null;
+        }
+
+        // Scan backwards from the line immediately above the declaration, skipping blank lines.
+        int searchLine = definitionLine - 2;
+        while (searchLine >= 0 && string.IsNullOrWhiteSpace(sourceLines[searchLine]))
+        {
+            searchLine--;
+        }
+
+        if (searchLine < 0)
+        {
+            return null;
+        }
+
+        // The first non-blank line above the declaration must be the `END OF ASIDE.)` closer.
+        string closerLine = sourceLines[searchLine].Trim();
+        if (!closerLine.EndsWith("END OF ASIDE.)", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        int closerLineIndex = searchLine;
+
+        // Scan further backwards to find the matching (ASIDE, AT SOME LENGTH: opener.
+        int openerLineIndex = -1;
+        for (int i = closerLineIndex - 1; i >= 0; i--)
+        {
+            string candidateLine = sourceLines[i].Trim();
+            if (candidateLine.StartsWith("(ASIDE, AT SOME LENGTH:", StringComparison.OrdinalIgnoreCase))
+            {
+                openerLineIndex = i;
+                break;
+            }
+        }
+
+        if (openerLineIndex < 0)
+        {
+            return null;
+        }
+
+        // Extract the content between the opener and closer lines.
+        StringBuilder content = new();
+        for (int i = openerLineIndex + 1; i < closerLineIndex; i++)
+        {
+            content.AppendLine(sourceLines[i]);
+        }
+
+        return DocumentationCommentParser.Parse(content.ToString());
     }
 
     /// <summary>
@@ -339,6 +462,7 @@ public class SymbolTable
         LiteralType.String => Keywords.TypeNames.Yarn,
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
+        LiteralType.Array => Keywords.TypeNames.LittleListOf,
         _ => "unknown"
     };
 }

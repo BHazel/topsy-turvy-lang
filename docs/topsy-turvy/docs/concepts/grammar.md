@@ -106,7 +106,10 @@ FINALE.
 As a second example, consider how a variable declaration is defined:
 
 ```ebnf
-Declaration = "PRAY WELCOME", Identifier, "AS A", Type, [ "BEING", Expression ] ;
+MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
+
+Declaration = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], Type,
+              [ "BEING", Expression ] ;
 ```
 
 Reading left to right:
@@ -114,8 +117,10 @@ Reading left to right:
 1. `"PRAY WELCOME"`: The variable declaration keyword.
 2. `Identifier`: The variable name.
 3. `"AS A"`: The type annotation keyword.
-4. `Type`: The type keyword: `PEER`, `FATHOM`, `YARN`, `DECREE` or `NAUGHT`.
-5. `[ "BEING", Expression ]`: Optionally `BEING` followed by an initial value.
+4. `[ MutabilityModifier ]`: Optionally `CONSERVATIVE` (constant) or `LIBERAL` (explicitly mutable).
+    * The square brackets mean the modifier may be omitted; if absent the variable is mutable by default.
+5. `Type`: The type keyword: `PEER`, `FATHOM`, `YARN`, `DECREE` or `NAUGHT`.
+6. `[ "BEING", Expression ]`: Optionally `BEING` followed by an initial value.
     * The square brackets mean the initial value clause may be omitted; if absent the variable is initialised to `NAUGHT`.
 
 Finally, alternation with grouping:

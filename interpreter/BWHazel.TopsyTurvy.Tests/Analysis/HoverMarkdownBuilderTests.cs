@@ -40,7 +40,7 @@ public class HoverMarkdownBuilderTests
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        result.ShouldBe("**implicit variable** `JUST SO` — receives the result of the last expression");
+        result.ShouldBe("**implicit variable** `JUST SO`: receives the result of the last expression");
     }
 
     /// <summary>

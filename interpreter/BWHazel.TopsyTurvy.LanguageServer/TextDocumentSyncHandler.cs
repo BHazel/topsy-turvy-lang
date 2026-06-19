@@ -11,6 +11,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
+using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Parser;
 
 using AstDiagnostic = BWHazel.TopsyTurvy.Ast.Diagnostic;
@@ -168,6 +169,35 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
                     Message = diagnostic.Message,
                     Source = LanguageServerConstants.LanguageId
                 })];
+
+            DocumentState? documentState = this.documentStateManager.Get(uri);
+            if (documentState?.SymbolTable is not null)
+            {
+                string[] sourceLines = text.Split('\n');
+                foreach (SymbolInfo deprecatedSymbol in documentState.SymbolTable.AllSymbols()
+                    .Where(symbol => symbol.Documentation?.IsDeprecated == true && !symbol.Name.Contains(' ')))
+                {
+                    string message = string.IsNullOrWhiteSpace(deprecatedSymbol.Documentation?.DeprecationMessage)
+                        ? $"'{deprecatedSymbol.Name}' is deprecated."
+                        : $"'{deprecatedSymbol.Name}' is deprecated: {deprecatedSymbol.Documentation.DeprecationMessage}";
+
+                    foreach ((int line, int character) in SourceAnalyser.FindWordOccurrences(sourceLines, deprecatedSymbol.Name))
+                    {
+                        if (line + 1 == deprecatedSymbol.DefinitionLine)
+                        {
+                            continue;
+                        }
+
+                        lspDiagnostics.Add(new()
+                        {
+                            Range = new(new(line, character), new(line, character + deprecatedSymbol.Name.Length)),
+                            Severity = DiagnosticSeverity.Warning,
+                            Message = message,
+                            Source = LanguageServerConstants.LanguageId
+                        });
+                    }
+                }
+            }
 
             this.languageServer.TextDocument.PublishDiagnostics(new()
             {

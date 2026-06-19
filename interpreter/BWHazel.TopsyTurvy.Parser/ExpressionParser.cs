@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Superpower;
 using BWHazel.TopsyTurvy.Ast;
+using static BWHazel.TopsyTurvy.Parser.ParserHelpers;
 
 namespace BWHazel.TopsyTurvy.Parser;
 
@@ -25,10 +26,17 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// source code to assign approximate spans as needed.  Once the expression parser supports accurate spans, this workaround can be removed.
 /// </para>
 /// <para>
+/// ### Type Keywords
+/// The <c>TypeKeyword</c> parser matches on type keywords, returning the corresponding <see cref="LiteralType"/> value.  As an
+/// example, the keyword <c>PEER</c> will be parsed as <see cref="LiteralType"/><c>.Integer</c>.  This parser lives in
+/// <see cref="ExpressionParser"/> (rather than <see cref="StatementParser"/>) because it is also needed by
+/// <see cref="ExpressionCast"/> at the expression layer; placing it here avoids a circular static-field initialisation dependency.
+/// </para>
+/// <para>
 /// ### Operators
 /// The <c>OperatorToken</c> parser matches on any of the operator keywords and returns the corresponding <see cref="Operator"/> value.
 /// * It uses the <c>Keyword</c> parser from the lexer to match on each operator keyword.
-/// 
+///
 /// This parser supports back-tracking on failure.
 /// </para>
 /// <para>
@@ -38,8 +46,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Identifier Expressions
-/// 2 parsers are included for identifiers, both returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> which is an <see cref="IdentifierNode"/>.
+/// 3 parsers are included for identifiers, all returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> which is an <see cref="IdentifierNode"/>.
 /// * <c>JustSoExpression</c> matches on the implicit variable keyword "JUST SO", returning an <see cref="IdentifierNode"/> with the name "JUST SO".
+/// * <c>ThePropsExpression</c> matches on the built-in arguments array "THE PROPS", returning an <see cref="IdentifierNode"/> with the name "THE PROPS".
 /// * <c>IdentifierExpression</c> matches on any other identifier, returning an <see cref="IdentifierNode"/> with the corresponding name.
 /// </para>
 /// <para>
@@ -151,14 +160,76 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Two arguments, an <see cref="IdentifierNode"/> each for <c>Conservatives</c> and <c>Liberals</c>.
 /// </para>
 /// <para>
+/// ### Array Index Expressions
+/// The <c>ArrayIndexExpression</c> parser matches on array element access, returning an <see cref="ArrayIndexNode"/>
+/// that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> is expected.  The index is 1-based:
+/// <c>VICTIM 1</c> is the first element.
+/// * It first matches the <c>VICTIM</c> keyword.
+/// * It then matches required whitespace followed by a recursive <see cref="Expression"/> call for the index: any expression that evaluates to a <c>PEER</c> is accepted.
+/// * It then matches required whitespace followed by the <c>ON</c> keyword.
+/// * Finally it matches required whitespace followed by the array name via <c>ArrayNameParser</c>, which tries the
+///   built-in <c>THE PROPS</c> keyword first and falls back to a plain identifier.
+///
+/// This parser supports back-tracking on failure.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// BEHOLD VICTIM 1 ON miscreants
+/// PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
+/// BEHOLD VICTIM 1 ON THE PROPS
+/// </code>
+/// the first two would return an <see cref="ArrayIndexNode"/> with the index expression set to a <see cref="LiteralNode"/> of
+/// integer 1 and the array name set to <c>miscreants</c>; the third sets the array name to <c>THE PROPS</c>.
+/// </para>
+/// <para>
+/// This parser must appear in the <c>Expression</c> alternatives before <c>IdentifierExpression</c> so that the
+/// <c>VICTIM</c> keyword is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
+/// ### Array Length Expressions
+/// The <c>ArrayLengthExpression</c> parser matches on <c>RECKONING OF &lt;array&gt;</c>, returning an
+/// <see cref="ArrayLengthNode"/> that evaluates to the number of elements in the array as a <c>PEER</c> (integer).
+/// * It first matches the <c>RECKONING OF</c> keyword.
+/// * It then matches required whitespace followed by the array name via <c>ArrayNameParser</c>, which tries the built-in <c>THE PROPS</c> keyword first and falls back to a plain identifier.
+///
+/// This parser supports back-tracking on failure and must appear before <c>IdentifierExpression</c> so that
+/// <c>RECKONING</c> is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// BEHOLD RECKONING OF miscreants
+/// length IS APPOINTED RECKONING OF miscreants
+/// BEHOLD RECKONING OF THE PROPS
+/// </code>
+/// all three return an <see cref="ArrayLengthNode"/> with the array name set to <c>miscreants</c> on the first 2
+/// and <c>THE PROPS</c> respectively.
+/// </para>
+/// <para>
+/// ### Cast Expressions
+/// The <c>ExpressionCast</c> parser matches on a non-mutating type cast in the form
+/// <c>AS IT WERE &lt;expression&gt; AS A &lt;type&gt;</c>, returning an
+/// <see cref="ExpressionCastNode"/> that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> is expected.
+/// When used as a standalone statement the result is stored in the implicit <c>JUST SO</c> variable via the
+/// <c>ExpressionStatement</c> path.
+/// </para>
+/// <para>
 /// ### Expression Parser
 /// The <c>Expression</c> parser is the main entry point for parsing any Topsy Turvy expression, matching on any of the above
 /// expression types, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> in the order they are tried as follows:
 /// * SUMMON Expression (<c>SummonExpression</c>)
 ///     * This is checked first as <c>SUMMON</c> is a keyword and could be confused with an identifier if checked later.
+/// * Cast Expression (<c>ExpressionCast</c>)
+/// * Array Index Expression (<c>ArrayIndexExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>VICTIM</c> is matched as a keyword.
+/// * Array Length Expression (<c>ArrayLengthExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>RECKONING</c> is matched as a keyword.
 /// * Prefix Expression (<c>PrefixExpression</c>)
 /// * Literal Expression (<c>LiteralExpression</c>)
 /// * Just So Expression (<c>JustSoExpression</c>)
+/// * The Props Expression (<c>ThePropsExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so "THE" is not consumed as a plain identifier.
 /// * Identifier Expression (<c>IdentifierExpression</c>)
 /// </para>
 /// </remarks>
@@ -215,6 +286,19 @@ public static class ExpressionParser
         ).Select(literalNode => (Expression)literalNode);
 
     /// <summary>
+    /// Matches an array name: either the built-in <c>THE PROPS</c> or any single-word identifier.
+    /// </summary>
+    /// <remarks>
+    /// Used in both <see cref="ArrayIndexExpression"/> and <see cref="StatementParser.ArrayElementAssignment"/>
+    /// so that <c>THE PROPS</c> can appear as an array target without being split into two identifier tokens.
+    /// </remarks>
+    public static readonly TextParser<string> ArrayNameParser =
+        Lexer.Keyword("THE PROPS")
+            .Select(_ => Keywords.SpecialNames.TheProps)
+            .Try()
+            .Or(Lexer.Identifier);
+
+    /// <summary>
     /// Parses the implicit variable.
     /// </summary>
     public static readonly TextParser<Expression> JustSoExpression =
@@ -222,6 +306,17 @@ public static class ExpressionParser
             .Select(_ => (Expression)new IdentifierNode()
                 {
                     Name = "JUST SO",
+                    Span = PlaceholderSpan
+                });
+
+    /// <summary>
+    /// Parses the built-in programme arguments array.
+    /// </summary>
+    public static readonly TextParser<Expression> ThePropsExpression =
+        Lexer.Keyword("THE PROPS")
+            .Select(_ => (Expression)new IdentifierNode()
+                {
+                    Name = Keywords.SpecialNames.TheProps,
                     Span = PlaceholderSpan
                 });
 
@@ -312,13 +407,90 @@ public static class ExpressionParser
          }).Try();
 
     /// <summary>
+    /// Parses a Topsy Turvy type keyword and returns the corresponding <see cref="LiteralType"/> value.
+    /// </summary>
+    public static readonly TextParser<LiteralType> TypeKeyword =
+        Lexer.Keyword(Keywords.TypeNames.Peer)
+            .Value(LiteralType.Integer)
+            .Or(Lexer.Keyword(Keywords.TypeNames.Fathom)
+                .Value(LiteralType.Float))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Yarn)
+                .Value(LiteralType.String))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Decree)
+                .Value(LiteralType.Boolean))
+            .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
+                .Value(LiteralType.Null));
+
+    /// <summary>
+    /// Parses an array element access expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>VICTIM &lt;index&gt; ON &lt;array&gt;</c> and returns an <see cref="ArrayIndexNode"/>.
+    /// The index is 1-based.  This parser must appear in the <see cref="Expression"/> alternatives before
+    /// <see cref="IdentifierExpression"/> so that the <c>VICTIM</c> keyword is matched as a keyword rather than
+    /// consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> ArrayIndexExpression =
+        (from victimKeyword in Lexer.Keyword("VICTIM")
+         from index in Lexer.WhitespaceRequired
+            .IgnoreThen(Parse.Ref(() => Expression!))
+         from onKeyword in Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("ON"))
+         from arrayName in Lexer.WhitespaceRequired
+            .IgnoreThen(ArrayNameParser)
+         select (Expression)new ArrayIndexNode()
+         {
+             Index = index,
+             ArrayName = arrayName,
+             Span = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
+    /// Parses an array length expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>RECKONING OF &lt;array&gt;</c> and returns an <see cref="ArrayLengthNode"/>.
+    /// This parser must appear in the <see cref="Expression"/> alternatives before
+    /// <see cref="IdentifierExpression"/> so that <c>RECKONING</c> is matched as a keyword rather than
+    /// consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> ArrayLengthExpression =
+        (from reckoningKeyword in Lexer.Keyword("RECKONING OF")
+         from arrayName in Lexer.WhitespaceRequired
+            .IgnoreThen(ArrayNameParser)
+         select (Expression)new ArrayLengthNode()
+         {
+             ArrayName = arrayName,
+             Span = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
+    /// Parses a non-mutating expression cast.
+    /// </summary>
+    public static readonly TextParser<Expression> ExpressionCast =
+        from asItWwereKeyword in Lexer.Keyword("AS IT WERE")
+        from expression in Ws(Parse.Ref(() => Expression!))
+        from asAKeyword in Ws(Lexer.Keyword("AS A"))
+        from newType in Ws(TypeKeyword)
+        select (Expression)new ExpressionCastNode()
+        {
+            Expression = expression,
+            NewType = newType,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
     /// Parses any valid Topsy Turvy expression.
     /// </summary>
     public static readonly TextParser<Expression> Expression =
         SummonExpression
+            .Or(ExpressionCast)
+            .Or(ArrayIndexExpression)
+            .Or(ArrayLengthExpression)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)
+            .Or(ThePropsExpression)
             .Or(Parse.Ref(() => IdentifierExpression));
 
     /// <summary>

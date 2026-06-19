@@ -103,15 +103,18 @@ html, body {
  * Panes container.
  * @remarks CSS Grid so heights always fill the remaining space
  *          regardless of toolbar height, without any calc() magic.
+ *          The middle column/row is reserved for the drag divider.
+ *          JS overrides grid-template-columns/rows inline to apply the
+ *          user's chosen split ratio; the defaults here are the 50/50 fallback.
  */
 .panes-container {
     flex: 1;
     min-height: 0;
     overflow: hidden;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 6px 1fr;
     grid-template-rows: 1fr;
-    gap: 4px;
+    gap: 0;
     padding: 4px;
 }
 
@@ -121,7 +124,70 @@ html, body {
 @media (max-width: 959px) {
     .panes-container {
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-rows: 1fr 6px 1fr;
+    }
+}
+
+/**
+ * The drag handle between the editor and output panes.
+ * @remarks Highlights on hover and shows a dotted grip indicator in its centre.
+ *          The cursor switches to row-resize on mobile where the split is vertical.
+ */
+.pane-divider {
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.15s;
+    user-select: none;
+    touch-action: none;
+}
+
+.pane-divider:hover {
+    background: var(--mud-palette-divider);
+}
+
+/**
+ * Dotted grip indicator: vertical on desktop
+ */
+.pane-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 32px;
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--mud-palette-text-disabled) 0,
+        var(--mud-palette-text-disabled) 2px,
+        transparent 2px,
+        transparent 6px
+    );
+    border-radius: 1px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@media (max-width: 959px) {
+    .pane-divider {
+        cursor: row-resize;
+    }
+
+    /**
+     * Dotted grip indicator: horizontal on mobile
+     */
+    .pane-divider::after {
+        width: 32px;
+        height: 2px;
+        background: repeating-linear-gradient(
+            to right,
+            var(--mud-palette-text-disabled) 0,
+            var(--mud-palette-text-disabled) 2px,
+            transparent 2px,
+            transparent 6px
+        );
     }
 }
 
@@ -253,3 +319,4 @@ html, body {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+

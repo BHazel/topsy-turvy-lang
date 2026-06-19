@@ -3,7 +3,7 @@
   "publisher": "bwhazel",
   "displayName": "Topsy Turvy",
   "description": "Rich language support for Topsy Turvy (.topsy) files, including syntax highlighting, completions and more.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/bhazel/topsy-turvy-lang.git"
@@ -66,6 +66,11 @@
         "title": "Interrupt Topsy Turvy File",
         "icon": "$(debug-stop)",
         "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.setCommandLineArgs",
+        "title": "Set Command-Line Arguments",
+        "category": "Topsy Turvy"
       }
     ],
     "keybindings": [
@@ -114,6 +119,9 @@
         "scopes": {
           "variable": [
             "variable.other.readwrite"
+          ],
+          "variable.readonly": [
+            "variable.other.constant"
           ],
           "parameter": [
             "variable.parameter"

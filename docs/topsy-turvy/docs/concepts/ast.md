@@ -28,7 +28,7 @@ The concrete node types, grouped by their base class, are listed below.
 |`BreakNode`|Break|Exits a loop or switch block immediately: `THAT WILL DO.`|
 |`ConditionalNode`|Conditional|An if/else-if/else conditional: `SHOULD IT TRANSPIRE THAT` ... `SO MUCH FOR THAT.`|
 |`ContinueNode`|Continue|Skips to the next loop iteration: `ONCE MORE.`|
-|`DeclarationNode`|Variable Declaration|Declares a variable with a type and optional initial value: `PRAY WELCOME`.|
+|`DeclarationNode`|Variable Declaration|Declares a variable with a type, optional mutability modifier (`CONSERVATIVE` / `LIBERAL`), and optional initial value: `PRAY WELCOME`.  Carries an `IsConstant` flag: `true` when the `CONSERVATIVE` modifier is present.|
 |`ExpressionCastNode`|Expression Cast|Casts an expression to a new type, storing the result in the implicit `JUST SO` variable: `AS IT WERE` ... `AS A`.|
 |`ExpressionStatement`|Expression Statement|Wraps a standalone expression used as a statement, such as a discarded function call.|
 |`FunctionDefinitionNode`|Function Definition|Defines a named function with parameters and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`|

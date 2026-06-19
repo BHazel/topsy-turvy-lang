@@ -127,6 +127,104 @@ public class TopsyTurvyInterpreterExceptionTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method makes the caught value accessible via the bound name inside MODIFIED RAPTURE.
+    /// </summary>
+    [Fact]
+    public void Execute_TryCatch_WithCaughtBinding_NameAccessibleInBlock()
+    {
+        string source = """
+            HARK! "Catch Binding"
+            PRINCIPALS
+              PRAY WELCOME result AS A YARN BEING "none"
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM boom UNDER NO OBLIGATION
+              A HIDEOUS CURSE ON "calamity"
+            MY DUTY IS DISCHARGED.
+            WITH THE GREATEST RESPECT, SUMMON boom WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                result IS APPOINTED "ok"
+              MODIFIED RAPTURE, Grievance
+                result IS APPOINTED Grievance
+            THAT CONCLUDES THE MATTER.
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("calamity");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method does not expose the caught binding name outside the MODIFIED RAPTURE block.
+    /// </summary>
+    [Fact]
+    public void Execute_TryCatch_WithCaughtBinding_NameNotAccessibleOutsideBlock()
+    {
+        string source = """
+            HARK! "Catch Binding Scope"
+            PRINCIPALS
+              PRAY WELCOME result AS A YARN BEING "none"
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM boom UNDER NO OBLIGATION
+              A HIDEOUS CURSE ON "calamity"
+            MY DUTY IS DISCHARGED.
+            WITH THE GREATEST RESPECT, SUMMON boom WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                result IS APPOINTED "ok"
+              MODIFIED RAPTURE, Grievance
+                result IS APPOINTED Grievance
+            THAT CONCLUDES THE MATTER.
+            BEHOLD Grievance
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method still sets JUST SO when no caught binding is specified.
+    /// </summary>
+    [Fact]
+    public void Execute_TryCatch_WithoutCaughtBinding_JustSoStillSet()
+    {
+        string source = """
+            HARK! "Catch No Binding"
+            PRINCIPALS
+              PRAY WELCOME result AS A YARN BEING "none"
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM boom UNDER NO OBLIGATION
+              A HIDEOUS CURSE ON "calamity"
+            MY DUTY IS DISCHARGED.
+            WITH THE GREATEST RESPECT, SUMMON boom WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                result IS APPOINTED "ok"
+              MODIFIED RAPTURE
+                result IS APPOINTED JUST SO
+            THAT CONCLUDES THE MATTER.
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("calamity");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method returns an error diagnostic when the max duration elapses.
     /// </summary>
     [Fact]

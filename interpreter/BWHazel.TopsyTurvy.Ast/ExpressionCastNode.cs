@@ -5,10 +5,12 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This corresponds to the <c>AS IT WERE</c> ... <c>AS A</c> type casting statement in Topsy Turvy.  It allows converting a
-/// value from one type to another without modifying the original variable.  Every statement cast consists of an
-/// <see cref="Expression"/> to cast and a destination type, <see cref="NewType"/>.  The cast result is stored
-/// in the implicit <c>JUST SO</c> variable and must be read from there in subsequent statements.
+/// This corresponds to the <c>AS IT WERE</c> ... <c>AS A</c> type cast expression in Topsy Turvy.  It allows converting a
+/// value from one type to another without modifying the original variable and returns the cast result directly as an
+/// <see cref="Expression"/>.  Every expression cast consists of an <see cref="Expression"/> to cast and a destination
+/// type, <see cref="NewType"/>.  The cast result can be used anywhere an expression is expected.  When used as a
+/// standalone statement the result is stored in the implicit <c>JUST SO</c> variable via the
+/// <c>ExpressionStatement</c> execution path.
 /// </para>
 /// <para>
 /// For example, the following code in Topsy Turvy casts a Peer (integer) literal to a Fathom (float) and then prints it:
@@ -123,7 +125,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// Please note examples have commented out sections for brevity.
 /// </para>
 /// </remarks>
-public class ExpressionCastNode : TypeCastNode
+public class ExpressionCastNode : Expression
 {
     /// <summary>
     /// Gets or initialises the expression to cast.

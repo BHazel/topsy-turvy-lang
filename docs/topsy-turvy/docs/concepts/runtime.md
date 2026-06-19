@@ -25,6 +25,12 @@ The environment, implemented in the `TopsyTurvyEnvironment` class, serves two pu
 
 Every named value, both variables and function parameters, in a Topsy Turvy programme is maintained in the environment, added on declaration and updated on assignment.  The environment also retrieves values when accessed.  These values are stored as instances of the `TopsyTurvyValue` class which wraps the underlying .NET primitive type and its equivalent Topsy Turvy literal type enumeration constant.  For example, a `PEER` of value `20` would be:
 
+Arrays are stored as a `TopsyTurvyValue` with `LiteralType.Array`, whose `RawValue` holds a `List<TopsyTurvyValue>`.  Assignment copies the list reference rather than the list contents, so two array variables assigned to each other share the same underlying `List<TopsyTurvyValue>` instance: there is no copy-on-assign.
+
+Variables declared with the `CONSERVATIVE` modifier are tracked separately as constants.  Any attempt to mutate a constant via `IS APPOINTED` (assignment), `IS HENCEFORTH A` (in-place cast), or `PRAY TELL` (input) raises a runtime error.  Variables declared with `LIBERAL`, or with no modifier (the default), remain freely mutable.
+
+When a `WITH THE GREATEST RESPECT` block catches a thrown value, the cursed value is always placed in the `JUST SO` implicit variable on entry to the `MODIFIED RAPTURE` block.  Optionally, a named binding may be written immediately after `MODIFIED RAPTURE` separated by a comma, for example `MODIFIED RAPTURE, Grievance`, and the interpreter will auto-declare `Grievance` in a nested scope covering the exception block.  The binding is scoped to the exception block only and is inaccessible after `THAT CONCLUDES THE MATTER.`
+
 ```cs
 TopsyTurvyValue value = TopsyTurvyValue.Integer(20);
 ```
@@ -45,6 +51,7 @@ _Truthy_ values for the Topsy Turvy types are outlined below:
 |`YARN` (String)|Any non-empty string.|
 |`DECREE` (Boolean)|`true`|
 |`NAUGHT` (Null)|Never `true`|
+|`LITTLE LIST OF` (Array)|Any non-empty array.|
 
 Casting between values is outlined below:
 
@@ -73,10 +80,12 @@ These are all implemented as exception types in the `BWHazel.TopsyTurvy.Runtime`
 
 ### Interpreter
 
-The interpreter is implemented in the `Interpreter` class and is an example of a tree-walking interpreter as it processes, or _walks_, the AST of the programme.  Simplistically, it is one big loop over the sequence of statements in a Topsy Turvy programme, drilling down through the AST to handle each AST type in each statement; statement handlers may call expression handlers which in turn may recursively call other expression handlers, such as when executing nested expressions.  It uses the `Parse()` method of the [Parser](./parser.md) and therefore will throw an error immediately on a parser error.
+The interpreter is implemented in the `Interpreter` class and is an example of a tree-walking interpreter as it processes, or _walks_, the AST of the programme.  Simplistically, it is one big loop over the sequence of statements in a Topsy Turvy programme, drilling down through the AST to handle each AST type in each statement; statement handlers may call expression handlers which in turn may recursively call other expression handlers, such as when executing nested expressions.  It uses the `Parse()` method of the [Parser](./parser.md) and therefore will throw an error immediately on a parser error.  Array index bounds are validated at execution time, as is element assignment on `CONSERVATIVE` arrays, both raising a `TopsyTurvyRuntimeException` via the same constant-registry check used for scalar constants.
 
 Execution of the interpreter can be configured by passing an `InterpreterExecutionOptions` object.  Currently supported configuration options include:
 
 * An execution timeout as a guard against infinite loops or excessively long-running programmes.
 * A source file path to resolve relative import paths.
 * A custom file resolver for use in contexts such as a virtual file system.
+* A list of command-line arguments, exposed inside the programme as the built-in `THE PROPS` constant array.
+
