@@ -173,6 +173,8 @@
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSemanticTokensProvider");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.enableSemanticHighlighting", "topsy-turvy-editor");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.initPaneDrag");
             await this.RestorePreferencesAsync();
@@ -342,19 +344,8 @@
             this.parsedSources[this.activeFileName] = source;
 
             string[] lines = source.Split('\n');
-            IEnumerable<object> constantRanges = symbolTable.AllSymbols()
-                .Where(symbol => symbol.Kind == SymbolKind.Variable && symbol.IsConstant && !symbol.Name.Contains(' '))
-                .SelectMany(
-                    symbol => SourceAnalyser.FindWordOccurrences(lines, symbol.Name),
-                    (symbol, occurrence) => (object)new
-                    {
-                        startLineNumber = occurrence.Line + 1,
-                        startColumn = occurrence.Character + 1,
-                        endLineNumber = occurrence.Line + 1,
-                        endColumn = occurrence.Character + symbol.Name.Length + 1,
-                    });
-
-            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setConstantDecorations", "topsy-turvy-editor", constantRanges);
+            IReadOnlyList<int> tokenData = this.ComputeSemanticTokenData(symbolTable, lines);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setSemanticTokens", tokenData);
 
             deprecatedWarningMarkers = symbolTable.AllSymbols()
                 .Where(symbol => symbol.Documentation?.IsDeprecated == true && !symbol.Name.Contains(' '))
@@ -854,6 +845,73 @@
         }
 
         this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Encodes all symbol occurrences from the given symbol table as a flat delta-encoded
+    /// semantic token array compatible with the Monaco <c>DocumentSemanticTokensProvider</c>.
+    /// </summary>
+    /// <param name="symbolTable">The symbol table for the current source file.</param>
+    /// <param name="lines">The source file split into lines.</param>
+    /// <returns>A flat list of integers in the Monaco 5-int-per-token delta encoding.</returns>
+    private IReadOnlyList<int> ComputeSemanticTokenData(SymbolTable symbolTable, string[] lines)
+    {
+        List<(int Line, int Char, int Length, int TokenType, int Modifiers)> tokens = [];
+
+        foreach (SymbolInfo symbol in symbolTable.AllSymbols())
+        {
+            if (symbol.Name.Contains(' '))
+            {
+                continue;
+            }
+
+            int tokenType = symbol.Kind switch
+            {
+                SymbolKind.Function => 2,
+                SymbolKind.Parameter => 1,
+                _ => 0,
+            };
+
+            int modifiers = 0;
+            if (symbol.IsConstant)
+            {
+                modifiers |= 1;
+            }
+
+            if (symbol.Documentation?.IsDeprecated == true)
+            {
+                modifiers |= 2;
+            }
+
+            foreach ((int line, int character) in SourceAnalyser.FindWordOccurrences(lines, symbol.Name))
+            {
+                tokens.Add((line, character, symbol.Name.Length, tokenType, modifiers));
+            }
+        }
+
+        tokens.Sort((a, b) => a.Line != b.Line
+            ? a.Line.CompareTo(b.Line)
+            : a.Char.CompareTo(b.Char));
+
+        List<int> data = new(tokens.Count * 5);
+        int previousLine = 0;
+        int previousCharacter = 0;
+
+        foreach ((int line, int character, int length, int tokenType, int modifiers) in tokens)
+        {
+            int deltaLine = line - previousLine;
+            data.Add(deltaLine);
+            data.Add(deltaLine == 0
+                ? character - previousCharacter
+                : character);
+            data.Add(length);
+            data.Add(tokenType);
+            data.Add(modifiers);
+            previousLine = line;
+            previousCharacter = character;
+        }
+
+        return data;
     }
 
     /// <summary>

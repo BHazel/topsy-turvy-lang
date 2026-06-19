@@ -64,30 +64,106 @@ Object.assign(window.topsyTurvy, {
         editorHolder.editor.updateOptions({ autoIndent: 'full' });
     },
 
+    semanticTokensData: null,
+    semanticTokensListeners: [],
+
     /**
-     * Applies inline decorations to all constant identifier occurrences.
-     * @description Called from Blazor after each analysis pass. Replaces the previous
-     *              decoration set so stale ranges are cleared automatically.
-     * @param {string} editorId The `BlazorMonaco` editor element ID.
-     * @param {object[]} ranges The ranges of constant identifiers to decorate.
+     * Stores the latest encoded semantic token array and notifies Monaco to re-request tokens.
+     * @description Called from Blazor after each analysis pass with the delta-encoded token data.
+     * @param {number[]} data Flat delta-encoded token array (5 integers per token).
      */
-    setConstantDecorations(editorId, ranges) {
-        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
-        if (!editorHolder) {
-            return;
+    setSemanticTokens(data) {
+        this.semanticTokensData = data;
+        if (data?.length) {
+            const legend = ['variable', 'variable.parameter', 'variable.function'];
         }
 
-        const decorations = ranges.map(range => ({
-            range,
-            options: {
-                inlineClassName: 'topsy-constant-var'
-            },
-        }));
+        this.semanticTokensListeners.forEach(listener => listener());
+    },
 
-        if (this._constantDecorations) {
-            this._constantDecorations.set(decorations);
-        } else {
-            this._constantDecorations = editorHolder.editor.createDecorationsCollection(decorations);
+    /**
+     * Registers a Monaco `DocumentSemanticTokensProvider` for the Topsy Turvy language.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              The provider uses a push model: C# pushes encoded token data after each
+     *              analysis pass via {@link setSemanticTokens}, and the `onDidChange` event
+     *              notifies Monaco to re-request tokens immediately.
+     */
+    registerSemanticTokensProvider() {
+        const self = this;
+        const legend = {
+            tokenTypes: ['variable', 'variable.parameter', 'variable.function'],
+            tokenModifiers: ['readonly', 'deprecated']
+        };
+
+        monaco.languages.registerDocumentSemanticTokensProvider('topsy-turvy', {
+            onDidChange(listener) {
+                self.semanticTokensListeners.push(listener);
+                return {
+                    dispose() {
+                        const index = self.semanticTokensListeners.indexOf(listener);
+                        if (index >= 0) {
+                            self.semanticTokensListeners.splice(index, 1);
+                        }
+                    }
+                };
+            },
+
+            getLegend() {
+                return legend;
+            },
+
+            provideDocumentSemanticTokens(model, lastResultId, token) {
+                if (!self.semanticTokensData) {
+                    return null;
+                }
+
+                return {
+                    data: new Uint32Array(self.semanticTokensData),
+                    resultId: null
+                };
+            },
+
+            releaseDocumentSemanticTokens(resultId) {}
+        });
+    },
+
+    /**
+     * Enables semantic highlighting on the given Monaco editor instance and patches
+     * both custom themes with the semantic token colour rules.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              Semantic token colour rules are applied here, not in registerThemes,
+     *              so they are always loaded from this file, avoiding stale-cache issues
+     *              with topsy-turvy-language.js.  Calling defineTheme for an already-defined
+     *              theme also invalidates the Monaco internal _tokenTheme cache, ensuring the
+     *              new rules take effect immediately.
+     * @param {string} editorId The `BlazorMonaco` editor element ID.
+     */
+    enableSemanticHighlighting(editorId) {
+        monaco.editor.defineTheme('topsy-turvy-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'variable',          foreground: 'D4D4D4' },
+                { token: 'variable.function', foreground: 'DCDCAA' },
+                { token: 'variable.readonly', foreground: '4FC1FF' },
+            ],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('topsy-turvy-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [
+                { token: 'variable',          foreground: '000000' },
+                { token: 'variable.function', foreground: '795E26' },
+                { token: 'variable.readonly', foreground: '0070C1' },
+            ],
+            colors: {},
+        });
+
+        const editorHolder = window.blazorMonaco.editor.getEditorHolder(editorId, true);
+        if (editorHolder) {
+            editorHolder.editor.updateOptions({ 'semanticHighlighting.enabled': true });
         }
     },
 

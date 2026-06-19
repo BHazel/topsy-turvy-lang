@@ -340,6 +340,9 @@ window.topsyTurvy = {
 
     /**
      * Registers custom Monaco themes that extend the built-in vs-dark and vs themes.
+     * @remarks Semantic token colour rules (`variable.function`, `variable.readonly`) are
+     *          applied later by `enableSemanticHighlighting` in `web-editor.js` so that
+     *          they are always loaded from that file and never stale-cached from this one.
      */
     registerThemes() {
         monaco.editor.defineTheme('topsy-turvy-dark', {
