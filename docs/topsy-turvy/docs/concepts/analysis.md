@@ -18,6 +18,7 @@ In the _Operetta Toolchain_ the Analysis layer is implemented in the `BWHazel.To
 * **`SourceAnalyser`:** Finds occurrences of a symbol by scanning source text.
     * This is used as a workaround for missing AST position information as outlined in the Known Limitations section on the [Language Server](./language-server.md) page.
 * **`KeywordData`:** The authoritative list of all Topsy Turvy keywords, used for completions and formatting.
+* **`DocumentationCommentParser`:** Parses documentation comments associated with variables and functions for display in editors.
 
 ### Symbol Table
 
@@ -37,6 +38,7 @@ Each entry in the table is a `SymbolInfo` object, which records the following pr
 |`Parameters`|`IReadOnlyList<string>?`|The list of parameter names for function symbols.|
 |`DefinitionLine`|`int`|The 1-indexed source line where the symbol is declared.  `0` means the position could not be determined.|
 |`DefinitionColumn`|`int`|The 1-indexed source column where the symbol name begins.  `0` means the position could not be determined.|
+|`Documentation`|`DocumentationComment?`|The documentation associated with the symbol.|
 
 The `SymbolKind` enum classifies what type of named entity a symbol represents:
 
@@ -156,6 +158,12 @@ in that priority order, so that a block comment containing a string literal is t
 
 This list is consumed by the `CompletionHandler` in the Language Server to offer keyword completions as the user types and by `SourceFormatter` as the `CanonicalKeywords` array for normalisation.  Keeping all keyword definitions in one place ensures both consumers stay in sync.
 
+### Documentation Comments
+
+Variables and functions in Topsy Turvy can have in-line documentation applied above their declarations.  Documentation comments are based on the standard `(ASIDE, AT SOME LENGTH:` ... `END OF ASIDE.)` block comments, using tags within the comments to provide documentation, such as a summary, parameters, etc..  The comments are parsed by the `DocumentationCommentParser` and added as a `DocumentationComment` to the symbol in the symbol table.  While building the symbol table, the source is scanned from each declaration to find an immediately preceding block comment which is then passed to `DocumentationCommentParser` to extract content from any recognised tags.  Any non-block comment code between the declaration and block comment breaks the association and the documentation will just be treated as a regular block comment.
+
 ### Hover Markdown Builder
 
 `HoverMarkdownBuilder` produces the Markdown string displayed in a hover tooltip when the cursor rests over a symbol.  It has a single entry point, `Build(symbolInfo)`, which switches on the symbol kind.  The output is passed directly to the Language Server `HoverHandler`, which wraps it in an LSP `MarkupContent` response for the editor to display.
+
+When present on a symbol, any documentation is appended to the Markdown string for display in the hover tooltip.

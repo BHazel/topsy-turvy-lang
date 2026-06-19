@@ -59,7 +59,63 @@ namespace BWHazel.TopsyTurvy.Analysis;
 ///     Kind = SymbolKind.Parameter,
 ///     DefinitionLine = 2,
 ///     DefinitionColumn = 52
-/// };x
+/// };
+/// </code>
+/// <para>
+/// Any associated documentation comments for a variable or function symbol are parsed by the
+/// <see cref="DocumentationCommentParser"/> and stored in the <see cref="Documentation"/> property.
+/// Applying documentation comments to the examples above, although it should be noted that this is
+/// not an exharustive example of the documentation comment syntax:
+/// </para>
+/// <code>
+/// (ASIDE, AT SOME LENGTH:
+///     LEGEND: Holds the numbers.
+/// END OF ASIDE.)
+/// PRAY WELCOME AllLords AS A PEER
+/// 
+/// (ASIDE, AT SOME LENGTH:
+///     LEGEND: Adds the total number of Lords.
+///     ARTICLE Conservatives (PEER): The number of Conservative Lords.
+///     ARTICLE Liberals (PEER): The number of Liberal Lords.
+///     CONSEQUENCE (PEER): The total number of Lords.
+/// END OF ASIDE.)
+/// IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AND Liberals
+///     AND SO I FIND SUM OF Conservatives AND Liberals
+/// MY DUTY IS DISCHARGED.
+/// </code>
+/// the <see cref="SymbolInfo"/> instances associated with the <c>AllLords</c> and <c>TotalLords</c> symbols would have their <see cref="Documentation"/> property populated:
+/// <code>
+/// SymbolInfo allLordsSymbol = new()
+/// {
+///     Name = "AllLords",
+///     Kind = SymbolKind.Variable,
+///     TypeDisplayName = "PEER",
+///     DefinitionLine = 1,
+///     DefinitionColumn = 1,
+///     Documentation = new DocumentationComment
+///     {
+///         Summary = "Holds the numbers."
+///     }
+/// };
+///
+/// SymbolInfo totalLordsSymbol = new()
+/// {
+///     Name = "TotalLords",
+///     Kind = SymbolKind.Function,
+///     Parameters = ["Conservatives", "Liberals"],
+///     DefinitionLine = 2,
+///     DefinitionColumn = 1,
+///     Documentation = new DocumentationComment
+///     {
+///         Summary = "Adds the total number of Lords.",
+///         Parameters = new Dictionary&lt;string, (string Type, string Description)&gt;
+///         {
+///             ["Conservatives"] = ("PEER", "The number of Conservative Lords."),
+///             ["Liberals"] = ("PEER", "The number of Liberal Lords.")
+///         },
+///         ReturnValue = ("PEER", "The total number of Lords.")
+///     }
+/// };
 /// </code>
 /// </remarks>
 public class SymbolInfo
@@ -114,4 +170,12 @@ public class SymbolInfo
     /// Zero indicates the position could not be determined.
     /// </remarks>
     public int DefinitionColumn { get; init; }
+
+    /// <summary>
+    /// Gets or initialises the parsed documentation comment for this symbol.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> when no documentation comment block was found immediately before the symbol declaration.
+    /// </remarks>
+    public DocumentationComment? Documentation { get; init; }
 }

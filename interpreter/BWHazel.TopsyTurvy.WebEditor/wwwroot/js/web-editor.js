@@ -131,12 +131,10 @@ Object.assign(window.topsyTurvy, {
                 }
 
                 return {
-                    contents: [
-                        {
-                            value: markdown,
-                            isTrusted: true
-                        }
-                    ]
+                    contents: markdown.split('\n\n---\n\n').map(part => ({
+                        value: part,
+                        isTrusted: true
+                    }))
                 };
             }
         });

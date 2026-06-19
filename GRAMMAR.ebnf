@@ -158,6 +158,33 @@ ExpressionStatement = Expression ;
 Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;
 
 (*----------------------------------------------------------------------------*)
+(* Documentation Comments                                                     *)
+(*----------------------------------------------------------------------------*)
+(* A documentation comment is an (ASIDE, AT SOME LENGTH: ... END OF ASIDE.)  *)
+(* block placed immediately before a Declaration or FunctionDefinition.       *)
+(* It carries no runtime semantics — it is stripped alongside all other block *)
+(* comments and its content is read by tooling from the original source.      *)
+(*                                                                             *)
+(* Each keyword tag opens a section that continues until the next tag or the  *)
+(* end of the block; any tag may therefore span multiple lines.               *)
+(*                                                                             *)
+(* A block with no recognised tags is treated as a plain block comment.       *)
+(*                                                                             *)
+DocComment         = "(ASIDE, AT SOME LENGTH:", DocCommentBody, "END OF ASIDE.)" ;
+DocCommentBody     = { DocCommentLine | AnyChar } ;
+DocCommentLine     = LegendLine | RecitativeLine | ArticleLine
+                   | ConsequenceLine | CursesLine | ChorusSection
+                   | EnsembleLine | StatutoryLine ;
+LegendLine         = "LEGEND:", { AnyChar } ;
+RecitativeLine     = "RECITATIVE:", { AnyChar } ;
+ArticleLine        = "ARTICLE", Identifier, "(", Identifier, "):", { AnyChar } ;
+ConsequenceLine    = "CONSEQUENCE", "(", Identifier, "):", { AnyChar } ;
+CursesLine         = "CURSES", Identifier, "(", Identifier, "):", { AnyChar } ;
+ChorusSection      = "CHORUS:", { AnyChar } ;
+EnsembleLine       = "ENSEMBLE:", { AnyChar } ;
+StatutoryLine      = "STATUTORY:", { AnyChar } ;
+
+(*----------------------------------------------------------------------------*)
 (* Runtime-Injected Built-In Variables                                        *)
 (*----------------------------------------------------------------------------*)
 (* The following identifiers are not grammar productions — they are injected  *)

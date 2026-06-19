@@ -754,7 +754,76 @@ Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 
 
 ---
 
-## 15. Complete Keyword Reference
+## 15. Documentation Comments
+
+A **documentation comment** is an `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block placed immediately before a `PRAY WELCOME` declaration or an `IT IS MY DUTY TO PERFORM` function declaration. Blank lines between the block and the declaration are allowed; any intervening non-blank line breaks the association and the block is treated as a plain comment with no special meaning.
+
+Documentation comments are not executed. They annotate the programme for human readers and tooling that can display rich descriptions when hovering over a symbol in an editor.
+
+### 15.1 Tags
+
+Within a documentation comment, content is organised by **keyword tags**. Each tag opens a section that continues across as many lines as needed, until the next tag or the end of the block. Tags are case-insensitive.
+
+| Tag | Purpose | Occurrences |
+|---|---|---|
+| `LEGEND: <text>` | One-line summary of the symbol | Once |
+| `RECITATIVE: <text>` | Additional remarks; may span multiple lines | Once |
+| `ARTICLE <name> (<type>): <text>` | Description of a function parameter; `<name>` is the parameter name, `<type>` is its declared type | Once per parameter |
+| `CONSEQUENCE (<type>): <text>` | Description of the return value; `<type>` is the declared return type | Once |
+| `CURSES <name> (<type>): <text>` | Description of a thrown value; `<name>` is the identifier passed to `A HIDEOUS CURSE ON`, `<type>` is its type | Once per thrown value |
+| `CHORUS: <text>` | Code example; all lines following until the next tag form a code block | Multiple |
+| `ENSEMBLE: <text>` | See-also reference | Multiple |
+| `STATUTORY: <text>` | Deprecation notice; marks the symbol as deprecated | Once |
+
+A block with no recognised tags is treated as a plain comment.
+
+### 15.2 Examples
+
+**Documented variable:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Holds the numbers for the range calculation.
+END OF ASIDE.)
+PRAY WELCOME Numbers AS A PEER
+```
+
+**Documented function:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Sums the numbers in a range.
+  RECITATIVE: Any additional remarks.
+    Further elaboration on the second line.
+  ARTICLE Start (PEER): The starting number.
+  ARTICLE End (PEER): The ending number.
+  CONSEQUENCE (PEER): The total sum.
+  CURSES SameValues (DECREE): Thrown if Start and End are the same.
+  CHORUS:
+  SUMMON SumRange WITH 1 AND 10 IF YOU PLEASE.
+  ENSEMBLE: AnotherFunc
+END OF ASIDE.)
+IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+  PRAY WELCOME Total AS A PEER BEING 0
+  ASIDE: Code logic...
+  A HIDEOUS CURSE ON SameValues
+  AND SO I FIND Total
+MY DUTY IS DISCHARGED.
+```
+
+**Deprecated symbol:**
+
+```topsy
+(ASIDE, AT SOME LENGTH:
+  LEGEND: Old sum variable. Use SumRange instead.
+  STATUTORY: Use SumRange, which supports all range sizes.
+END OF ASIDE.)
+PRAY WELCOME OldSum AS A PEER
+```
+
+---
+
+## 16. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -776,6 +845,14 @@ Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 
 | `ASIDE:`                                         | Single-line comment         | Stage direction throughout every G&S libretto — heard by the audience, not the characters |
 | `(ASIDE, AT SOME LENGTH:`                        | Multi-line comment (open)   | Gilbert's own parenthetical stage direction style                                 |
 | `END OF ASIDE.)`                                 | Multi-line comment (close)  | Closes the parenthetical aside                                                    |
+| `LEGEND:`                                        | Documentation — summary     | Placed inside a documentation comment block; one-line summary of the symbol       |
+| `RECITATIVE:`                                    | Documentation — remarks     | Placed inside a documentation comment block; additional remarks, may span multiple lines |
+| `ARTICLE <name> (<type>):`                       | Documentation — parameter   | Placed inside a documentation comment block; describes a function parameter       |
+| `CONSEQUENCE (<type>):`                          | Documentation — return      | Placed inside a documentation comment block; describes the return value           |
+| `CURSES <name> (<type>):`                        | Documentation — thrown      | Placed inside a documentation comment block; describes a thrown value             |
+| `CHORUS:`                                        | Documentation — example     | Placed inside a documentation comment block; introduces a code example            |
+| `ENSEMBLE:`                                      | Documentation — see also    | Placed inside a documentation comment block; see-also reference                   |
+| `STATUTORY:`                                     | Documentation — deprecated  | Placed inside a documentation comment block; marks the symbol as deprecated       |
 | `SUM OF ... AND ...`                             | Addition                    | —                                                                                 |
 | `DIFFERENCE OF ... AND ...`                      | Subtraction                 | —                                                                                 |
 | `PRODUCT OF ... AND ...`                         | Multiplication              | —                                                                                 |
@@ -834,7 +911,7 @@ Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 
 
 ---
 
-## 16. Type Reference
+## 17. Type Reference
 
 | Keyword                 | Type         | Values                                      |
 |-------------------------|--------------|---------------------------------------------|
@@ -847,7 +924,7 @@ Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 
 
 ---
 
-## 17. Operator Precedence
+## 18. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -860,7 +937,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 18. Scoping
+## 19. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -869,7 +946,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 19. Line Structure
+## 20. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -906,7 +983,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 20. A Note on Style
+## 21. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -921,7 +998,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 21. Complete Example
+## 22. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"

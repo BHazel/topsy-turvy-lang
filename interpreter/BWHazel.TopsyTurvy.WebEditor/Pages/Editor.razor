@@ -333,6 +333,7 @@
     {
         TopsyTurvyParser parser = new();
         ParseResult result = parser.TryParse(source);
+        IEnumerable<object> deprecatedWarningMarkers = [];
 
         if (result.Program is not null)
         {
@@ -354,6 +355,23 @@
                     });
 
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setConstantDecorations", "topsy-turvy-editor", constantRanges);
+
+            deprecatedWarningMarkers = symbolTable.AllSymbols()
+                .Where(symbol => symbol.Documentation?.IsDeprecated == true && !symbol.Name.Contains(' '))
+                .SelectMany(
+                    symbol => SourceAnalyser.FindWordOccurrences(lines, symbol.Name)
+                        .Where(occurrence => occurrence.Line + 1 != symbol.DefinitionLine),
+                    (symbol, occurrence) => (object)new
+                    {
+                        startLineNumber = occurrence.Line + 1,
+                        startColumn = occurrence.Character + 1,
+                        endLineNumber = occurrence.Line + 1,
+                        endColumn = occurrence.Character + symbol.Name.Length + 1,
+                        message = string.IsNullOrWhiteSpace(symbol.Documentation?.DeprecationMessage)
+                            ? $"'{symbol.Name}' is deprecated."
+                            : $"'{symbol.Name}' is deprecated: {symbol.Documentation.DeprecationMessage}",
+                        severity = 4,
+                    });
         }
 
         IEnumerable<object> markers = result.Diagnostics
@@ -366,7 +384,8 @@
                 endColumn = diagnostic.Span.End.Column,
                 message = diagnostic.Message,
                 severity = 8,
-            });
+            })
+            .Concat(deprecatedWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }

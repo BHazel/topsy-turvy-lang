@@ -38,7 +38,7 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
     private static readonly SemanticTokensLegend Legend = new()
     {
         TokenTypes = new("variable", "parameter", "function"),
-        TokenModifiers = new("readonly")
+        TokenModifiers = new("readonly", "deprecated")
     };
 
     /// <summary>
@@ -87,6 +87,7 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * The document state is retrieved from the document state manager.  If <c>null</c>, the symbol table is <c>null</c>, or the source is empty, no tokens are pushed and the task completes immediately.
     /// * Symbols with spaces in their name are skipped: these are multi-word language keywords whose colouring is handled by the TextMate grammar, not semantic tokens.
+    /// * For each remaining symbol the token type is derived from its <see cref="SymbolInfo.Kind"/>: function, parameter or variable; modifiers are accumulated independently: readonly is added when <see cref="SymbolInfo.IsConstant"/> is <c>true</c> and deprecated is added when the symbol carries a <c>STATUTORY:</c> documentation tag.
     /// * All occurrences of each single-word symbol are located using <see cref="SourceAnalyser.FindWordOccurrences"/>, including functions imported from other open documents via <see cref="DocumentStateManager.GetImportedFunctionSymbols"/>.
     /// * Tokens are sorted by ascending line then character before being pushed, as LSP semantic tokens encode positions relative to the previous token and must therefore be delivered in document order.
     /// * Any exception is silently caught to prevent the language server from crashing.
@@ -123,7 +124,18 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
                     _ => "variable"
                 };
 
-                string[] modifiers = symbol.IsConstant ? ["readonly"] : [];
+                List<string> modifierList = [];
+                if (symbol.IsConstant)
+                {
+                    modifierList.Add("readonly");
+                }
+
+                if (symbol.Documentation?.IsDeprecated == true)
+                {
+                    modifierList.Add("deprecated");
+                }
+
+                string[] modifiers = [.. modifierList];
 
                 foreach ((int lineIndex, int foundAtIndex) in SourceAnalyser.FindWordOccurrences(lines, symbol.Name))
                 {
