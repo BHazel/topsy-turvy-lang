@@ -169,12 +169,12 @@
         {
             this.dotNetRef = DotNetObjectReference.Create(this);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.applyLanguageToEditor", "topsy-turvy-editor");
-            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSemanticTokensProvider");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.enableSemanticHighlighting", "topsy-turvy-editor");
+            await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.initPaneDrag");
             await this.RestorePreferencesAsync();

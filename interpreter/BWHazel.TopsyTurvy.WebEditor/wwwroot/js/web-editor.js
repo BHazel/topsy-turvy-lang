@@ -74,10 +74,6 @@ Object.assign(window.topsyTurvy, {
      */
     setSemanticTokens(data) {
         this.semanticTokensData = data;
-        if (data?.length) {
-            const legend = ['variable', 'variable.parameter', 'variable.function'];
-        }
-
         this.semanticTokensListeners.forEach(listener => listener());
     },
 
