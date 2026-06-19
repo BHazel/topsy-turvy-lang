@@ -1,0 +1,30 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">About</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="1" AlignItems="AlignItems.Center" Class="py-2">
+            <MudText Typo="Typo.h5">Topsy Turvy Web Editor</MudText>
+            <MudText Typo="Typo.body1">Version @AppVersion</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Language Spec Version @SpecVersion</MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="this.Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string AppVersion = "0.2.0";
+    private const string SpecVersion = "0.3.0";
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>
+    /// Closes the dialog.
+    /// </summary>
+    private void Close() => this.MudDialog.Close();
+}
