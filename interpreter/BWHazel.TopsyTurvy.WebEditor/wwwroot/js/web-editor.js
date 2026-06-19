@@ -228,6 +228,178 @@ Object.assign(window.topsyTurvy, {
     },
 
     /**
+     * Reads the persisted editor preferences from Local Storage.
+     * @returns {object} The preferences object or an empty object if none is stored.
+     */
+    loadPreferences() {
+        try {
+            return JSON.parse(localStorage.getItem('topsy-turvy-editor')) ?? {};
+        } catch {
+            return {};
+        }
+    },
+
+    /**
+     * Saves the editor preferences to Local Storage.
+     * @description Existing keys not present in `preferences` are preserved,
+     *              so JS-managed keys, such as split ratios, and Blazor-managed keys,
+     *              such as files and dark theme, can be written independently without
+     *              affecting each other.
+     * @param {object} preferences Editor preferences to persist.
+     */
+    savePreferences(preferences) {
+        const combinedPreferences = {
+            ...this.loadPreferences(),
+            ...preferences
+        };
+
+        localStorage.setItem('topsy-turvy-editor', JSON.stringify(combinedPreferences));
+    },
+
+    /**
+     * Links up the drag handle between the editor and output panes.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render.
+     *              Restores a persisted split from Local Storage and attaches
+     *              mouse and touch listeners so the user can drag the divider to
+     *              resize the two panes.  The Monaco `automaticLayout` and the
+     *              terminal `ResizeObserver` handle relayout automatically.
+     */
+    initPaneDrag() {
+        const self = this;
+        const panesContainer = document.querySelector('.panes-container');
+        const paneDivider = document.querySelector('.pane-divider');
+        if (!panesContainer || !paneDivider) {
+            return;
+        }
+
+        const mobileQuery = window.matchMedia('(max-width: 959px)');
+        const DIVIDER_PIXELS = 6;
+        const MIN_SPLIT_RATIO = 0.15;
+        const MAX_SPLIT_RATIO = 0.85;
+        const dragConfig = {
+            isActive: false,
+            pointerStart: 0,
+            ratioStart: 0
+        };
+
+        // Determines if the current layout is mobile.
+        const isMobile = () => mobileQuery.matches;
+
+        // Gets the size of the container along the axis of the split.
+        const getContainerAxisSize = () => {
+            const containerBoundingClientRectangle = panesContainer.getBoundingClientRect();
+            return isMobile()
+                ? containerBoundingClientRectangle.height
+                : containerBoundingClientRectangle.width;
+        };
+
+        // Gets the current split ratio of the two panes.
+        const getCurrentSplitRatio = () => {
+            const computedStyle = window.getComputedStyle(panesContainer);
+            const gridTemplate = isMobile()
+                ? computedStyle.gridTemplateRows
+                : computedStyle.gridTemplateColumns;
+            
+            return parseFloat(gridTemplate) / getContainerAxisSize();
+        };
+
+        // Gets the pointer position along the axis of the split, supporting both mouse and touch events.
+        const getPointerAxisPosition = (event) => {
+            const firstTouch = event.touches?.[0];
+            return isMobile()
+                ? (firstTouch?.clientY ?? event.clientY)
+                : (firstTouch?.clientX ?? event.clientX);
+        };
+
+        // Applies the given split ratio to the panes container clamping it within the allowed range.
+        const applyPaneSplit = (splitRatio) => {
+            const clampedSplitRatio = Math.max(MIN_SPLIT_RATIO, Math.min(MAX_SPLIT_RATIO, splitRatio));
+            const firstPaneSplitPercentage = (clampedSplitRatio * 100).toFixed(3) + '%';
+            if (isMobile()) {
+                panesContainer.style.gridTemplateColumns = '';
+                panesContainer.style.gridTemplateRows = `${firstPaneSplitPercentage} ${DIVIDER_PIXELS}px 1fr`;
+            } else {
+                panesContainer.style.gridTemplateRows = '';
+                panesContainer.style.gridTemplateColumns = `${firstPaneSplitPercentage} ${DIVIDER_PIXELS}px 1fr`;
+            }
+        };
+
+        // Restores the split ratio from Local Storage or defaults to 50/50 if none is stored.
+        const restoreSplit = () => {
+            const preferences = self.loadPreferences();
+            const savedRatio = isMobile()
+                ? preferences.verticalSplit
+                : preferences.horizontalSplit;
+            
+            applyPaneSplit(typeof savedRatio === 'number'
+                ? savedRatio
+                : 0.5
+            );
+        };
+
+        // Handles the start of a drag operation, storing the initial pointer position and split ratio.
+        const onDragStart = (event) => {
+            dragConfig.ratioStart = getCurrentSplitRatio();
+            dragConfig.pointerStart = getPointerAxisPosition(event);
+            dragConfig.isActive = true;
+            event.preventDefault();
+        };
+
+        // Handles the movement of the pointer during a drag operation, updating the split ratio accordingly.
+        const onDragMove = (event) => {
+            if (!dragConfig.isActive) {
+                return;
+            }
+
+            const pointerDelta = getPointerAxisPosition(event) - dragConfig.pointerStart;
+            applyPaneSplit(dragConfig.ratioStart + pointerDelta / getContainerAxisSize());
+            event.preventDefault();
+        };
+
+        // Handles the end of a drag operation saving the final split ratio to Local Storage.
+        const onDragEnd = () => {
+            if (!dragConfig.isActive) {
+                return;
+            }
+
+            dragConfig.isActive = false;
+            self.savePreferences(isMobile()
+                ? { verticalSplit: getCurrentSplitRatio() }
+                : { horizontalSplit: getCurrentSplitRatio() }
+            );
+        };
+
+        restoreSplit();
+        mobileQuery.addEventListener('change', restoreSplit);
+
+        paneDivider.addEventListener('mousedown', onDragStart);
+        paneDivider.addEventListener('touchstart', onDragStart, { passive: false });
+        window.addEventListener('mousemove', onDragMove);
+        window.addEventListener('touchmove', onDragMove, { passive: false });
+        window.addEventListener('mouseup', onDragEnd);
+        window.addEventListener('touchend', onDragEnd);
+    },
+
+    /**
+     * Updates the xterm terminal colour theme to match the current light or dark mode of the editor.
+     * @description Called from Blazor in `OnParametersSetAsync` whenever the theme changes.
+     *              XtermBlazor does not re-apply `Options` after initialisation, so the theme
+     *              must be updated directly on the xterm instance via this method.
+     * @param {boolean} isDarkMode Whether dark mode is active.
+     */
+    setTerminalTheme(isDarkMode) {
+        const entries = [...XtermBlazor._terminals.entries()];
+        if (!entries.length) {
+            return;
+        }
+
+        const term = entries[0][1].terminal;
+        term.options.theme = isDarkMode
+            ? { background: '#1e1e1e', foreground: '#d4d4d4' }
+            : { background: '#f5f5f5', foreground: '#1e1e1e' };
+    },
+
+    /**
      * Attaches a `ResizeObserver` to the `terminal-wrapper` CSS class so that
      * {@link fitTerminal} is called automatically whenever the pane resizes.
      * @description This is idempotent so repeated calls are ignored.

@@ -40,7 +40,8 @@
                        StartIcon="@(IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
                        OnClick="this.OnToggleDarkMode">@(IsDarkMode ? "Light Mode" : "Dark Mode")</MudButton>
             <MudSwitch T="bool"
-                       @bind-Value="areGsLabelsEnabled"
+                       Value="this.areGsLabelsEnabled"
+                       ValueChanged="this.OnGsLabelsToggledAsync"
                        Label="G&amp;S Labels"
                        Color="Color.Primary"
                        Class="mr-1" />
@@ -79,18 +80,21 @@
                                   ConstructionOptions="GetEditorOptions"
                                   OnDidChangeModelContent="OnContentChangedAsync" />
         </div>
+        <div class="pane-divider"></div>
         <div class="output-pane">
             <div class="terminal-wrapper">
-                <Xterm @ref="terminal" Options="terminalOptions" />
+                <Xterm @ref="terminal" Options="this.terminalOptions" />
             </div>
             <MudTextField T="string"
-                          @bind-Value="commandLineArgumentsText"
+                          @bind-Value="this.commandLineArgumentsText"
+                          @bind-Value:after="this.SavePreferencesAsync"
                           Label="Command-Line Arguments"
                           HelperText="Space-separated"
                           Variant="Variant.Outlined"
                           Class="ma-2" />
             <MudTextField T="string"
-                          @bind-Value="stdinText"
+                          @bind-Value="this.stdinText"
+                          @bind-Value:after="this.SavePreferencesAsync"
                           Label="Standard Input"
                           HelperText="One value per line"
                           Lines="2"
@@ -132,14 +136,14 @@
     private List<VirtualFile> files = [new(DefaultFileName)];
     private string activeFileName = DefaultFileName;
 
-    private readonly TerminalOptions terminalOptions = new()
+    private TerminalOptions terminalOptions => new()
     {
         CursorBlink = false,
         ConvertEOL = true,
         Theme = new Theme
         {
-            Background = "#1e1e1e",
-            Foreground = "#d4d4d4",
+            Background = this.IsDarkMode ? "#1e1e1e" : "#f5f5f5",
+            Foreground = this.IsDarkMode ? "#d4d4d4" : "#1e1e1e",
         },
     };
 
@@ -170,9 +174,68 @@
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setupTerminalFit");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.initPaneDrag");
+            await this.RestorePreferencesAsync();
+
             this.editorReady = true;
             this.previousIsDarkMode = IsDarkMode;
         }
+    }
+
+    /// <summary>
+    /// Restores editor state from Local Storage on the initial render.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task RestorePreferencesAsync()
+    {
+        EditorPreferences? savedPreferences = await this.JSRuntime.InvokeAsync<EditorPreferences>("topsyTurvy.loadPreferences");
+        if (savedPreferences is null)
+        {
+            return;
+        }
+
+        if (savedPreferences.AreGsLabelsEnabled.HasValue)
+        {
+            this.areGsLabelsEnabled = savedPreferences.AreGsLabelsEnabled.Value;
+        }
+
+        this.commandLineArgumentsText = savedPreferences.CommandLineArguments ?? string.Empty;
+        this.stdinText = savedPreferences.StandardInput ?? string.Empty;
+
+        if (savedPreferences.Files is { Count: > 0 })
+        {
+            this.files.Clear();
+            foreach (VirtualFile file in savedPreferences.Files)
+            {
+                this.files.Add(file);
+                this.BuildSymbolTableForFile(file.Name, file.Content);
+            }
+
+            this.activeFileName = savedPreferences.ActiveFile is not null
+                && this.files.Any(file => file.Name == savedPreferences.ActiveFile)
+                    ? savedPreferences.ActiveFile
+                    : this.files[0].Name;
+
+            VirtualFile activeFile = this.files.First(file => file.Name == this.activeFileName);
+            await this.monacoEditor!.SetValue(activeFile.Content);
+        }
+
+        if (!string.IsNullOrEmpty(savedPreferences.TerminalOutput))
+        {
+            foreach (string line in savedPreferences.TerminalOutput.Split('\n'))
+            {
+                await this.terminal!.WriteLine(line);
+            }
+
+            this.lastRunOutput = savedPreferences.TerminalOutput;
+        }
+
+        if (savedPreferences.IsDarkMode.HasValue && savedPreferences.IsDarkMode.Value != this.IsDarkMode)
+        {
+            this.ToggleDarkMode?.Invoke();
+        }
+
+        this.StateHasChanged();
     }
 
     /// <inheritdoc />
@@ -182,6 +245,8 @@
         {
             previousIsDarkMode = this.IsDarkMode;
             await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setTerminalTheme", this.IsDarkMode);
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -244,7 +309,15 @@
         {
             await Task.Delay(400, token);
             string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+
+            VirtualFile? activeFile = this.files.Find(file => file.Name == this.activeFileName);
+            if (activeFile is not null)
+            {
+                activeFile.Content = source;
+            }
+
             await this.UpdateDiagnosticsAsync(source);
+            await this.SavePreferencesAsync();
         }
         catch (OperationCanceledException)
         {
@@ -477,6 +550,7 @@
         finally
         {
             this.isRunning = false;
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -487,6 +561,7 @@
     private async Task RunProgramCoreAsync()
     {
         await this.terminal!.Clear();
+        this.lastRunOutput = string.Empty;
         await this.SyncActiveFileContentAsync();
 
         Dictionary<string, string> currentFileContents = this.files.ToDictionary(file => file.Name, file => file.Content);
@@ -661,6 +736,7 @@
         {
             await this.terminal!.Clear();
             this.lastRunOutput = string.Empty;
+            await this.SavePreferencesAsync();
         }
     }
 
@@ -790,5 +866,36 @@
             activeFile.Content = await this.JSRuntime.InvokeAsync<string>(
                 "blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
         }
+    }
+
+    /// <summary>
+    /// Persists the current editor state to Local Storage.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task SavePreferencesAsync()
+    {
+        EditorPreferences preferences = new()
+        {
+            Files = [.. this.files],
+            ActiveFile = this.activeFileName,
+            CommandLineArguments = this.commandLineArgumentsText,
+            StandardInput = this.stdinText,
+            AreGsLabelsEnabled = this.areGsLabelsEnabled,
+            IsDarkMode = this.IsDarkMode,
+            TerminalOutput = this.lastRunOutput,
+        };
+
+        await this.JSRuntime.InvokeVoidAsync("topsyTurvy.savePreferences", preferences);
+    }
+
+    /// <summary>
+    /// Handles the G&amp;S labels toggle, updating state and persisting the preference.
+    /// </summary>
+    /// <param name="value">The new toggle value.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnGsLabelsToggledAsync(bool value)
+    {
+        this.areGsLabelsEnabled = value;
+        await this.SavePreferencesAsync();
     }
 }
