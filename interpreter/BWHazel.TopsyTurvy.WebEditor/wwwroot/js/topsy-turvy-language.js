@@ -90,6 +90,7 @@ window.topsyTurvy = {
             ["A LITTLE LIST OF",                    "array type annotation"],
             ["VICTIM",                              "array element access / assignment"],
             ["ON",                                  "array index separator"],
+            ["RECKONING OF",                        "array length expression"],
         ];
 
         monaco.languages.registerCompletionItemProvider('topsy-turvy', {
@@ -278,7 +279,7 @@ window.topsyTurvy = {
                     [/\bPRAY\s+WELCOME\b/, 'keyword'],
 
                     // Remaining multi-word operators and keywords
-                    [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER)\s+OF\b/, 'keyword'],
+                    [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|RECKONING)\s+OF\b/, 'keyword'],
                     [/\bWOVEN\s+OF\b/, 'keyword'],
                     [/\bHARDLY\s+EVER\b/, 'keyword'],
                     [/\bLOWER\s+DEGREE\b/, 'keyword'],

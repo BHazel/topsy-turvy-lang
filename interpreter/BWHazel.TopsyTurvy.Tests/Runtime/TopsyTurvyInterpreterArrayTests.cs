@@ -412,4 +412,91 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
 
         diagnostics.HasErrors.ShouldBeTrue();
     }
+
+    /// <summary>
+    /// Tests that <c>RECKONING OF</c> returns the correct element count for a populated array.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayLength_PopulatedArray_ReturnsCorrectCount()
+    {
+        string source = """
+            HARK! "Array Length"
+            PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AND "Pish-Tush" IF YOU PLEASE.
+            BEHOLD RECKONING OF miscreants
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("3");
+    }
+
+    /// <summary>
+    /// Tests that <c>RECKONING OF</c> returns <c>0</c> for an empty array.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayLength_EmptyArray_ReturnsZero()
+    {
+        string source = """
+            HARK! "Array Length"
+            PRAY WELCOME miscreants AS A LITTLE LIST OF YARN
+            BEHOLD RECKONING OF miscreants
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("0");
+    }
+
+    /// <summary>
+    /// Tests that <c>RECKONING OF</c> on a non-array variable produces a runtime error.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayLength_NonArray_ProducesRuntimeError()
+    {
+        string source = """
+            HARK! "Array Length"
+            PRAY WELCOME name AS A YARN BEING "Ko-Ko"
+            BEHOLD RECKONING OF name
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that <c>RECKONING OF</c> composes correctly as a sub-expression inside arithmetic.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayLength_UsableInExpression_ComposesCorrectly()
+    {
+        string source = """
+            HARK! "Array Length"
+            PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AND "Pish-Tush" IF YOU PLEASE.
+            BEHOLD SUM OF RECKONING OF miscreants AND 1
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("4");
+    }
 }

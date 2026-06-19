@@ -158,6 +158,30 @@ public class TopsyTurvyParserArrayTests
     }
 
     /// <summary>
+    /// Tests that a <c>RECKONING OF</c> expression on an identifier parses into an <see cref="ArrayLengthNode"/> with the array name set correctly.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayLengthExpression_ValidSyntax_ParsesCorrectly()
+    {
+        ArrayLengthNode node = this.ParseFirstExpressionStatement<ArrayLengthNode>(
+            "RECKONING OF miscreants");
+
+        node.ArrayName.ShouldBe("miscreants");
+    }
+
+    /// <summary>
+    /// Tests that a <c>RECKONING OF THE PROPS</c> expression parses into an <see cref="ArrayLengthNode"/> with the array name set to the <c>THE PROPS</c> built-in.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayLengthExpression_TheProps_ParsesCorrectly()
+    {
+        ArrayLengthNode node = this.ParseFirstExpressionStatement<ArrayLengthNode>(
+            "RECKONING OF THE PROPS");
+
+        node.ArrayName.ShouldBe("THE PROPS");
+    }
+
+    /// <summary>
     /// Parses a single statement of a specific type from a source string.
     /// </summary>
     /// <typeparam name="T">The type of statement to parse.</typeparam>

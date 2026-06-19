@@ -100,5 +100,6 @@ public static class KeywordData
         ("A LITTLE LIST OF",                         "array type annotation"),
         ("VICTIM",                                   "array element access / assignment"),
         ("ON",                                       "array index separator"),
+        ("RECKONING OF",                             "array length expression"),
     ];
 }

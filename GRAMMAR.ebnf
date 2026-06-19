@@ -69,6 +69,7 @@ TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 (*----------------------------------------------------------------------------*)
 Expression      = CastExpression
                 | ArrayIndexExpression
+                | ArrayLengthExpression
                 | PrefixExpression
                 | StringLiteral
                 | BooleanLit
@@ -78,6 +79,8 @@ Expression      = CastExpression
                 | Identifier ;
 
 ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
+
+ArrayLengthExpression = "RECKONING OF", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 

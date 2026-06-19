@@ -693,6 +693,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         PrefixExpressionNode prefix => EvaluatePrefix(prefix, environment),
         ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
         ArrayIndexNode arrayIndex => this.EvaluateArrayIndex(arrayIndex, environment),
+        ArrayLengthNode arrayLength => this.EvaluateArrayLength(arrayLength, environment),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
             expression.Span)
@@ -709,6 +710,27 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     {
         (int index, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
         return elements[index - 1];
+    }
+
+    /// <summary>
+    /// Evaluates an array length expression and returns the number of elements as a <c>PEER</c>.
+    /// </summary>
+    /// <param name="node">The array length node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The element count as an integer value.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the named variable is not an array.</exception>
+    private TopsyTurvyValue EvaluateArrayLength(ArrayLengthNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue arrayValue = environment.Get(node.ArrayName);
+        if (arrayValue.LiteralType != LiteralType.Array)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{node.ArrayName}' is not an array.",
+                node.Span);
+        }
+
+        List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)arrayValue.RawValue!;
+        return TopsyTurvyValue.Integer(elements.Count);
     }
 
     /// <summary>

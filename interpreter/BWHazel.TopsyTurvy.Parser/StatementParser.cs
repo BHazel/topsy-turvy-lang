@@ -387,12 +387,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The <c>ExpressionStatementParser</c> parser matches on a standalone expression used as a statement, wrapping it in an
 /// <see cref="ExpressionStatement"/> node.  It tries each expression type in order:
 /// * <see cref="ExpressionParser.SummonExpression"/>: a function call.
+/// * <see cref="ExpressionParser.ArrayIndexExpression"/>: an array element access (<c>VICTIM n ON arr</c>).
+/// * <see cref="ExpressionParser.ArrayLengthExpression"/>: an array length expression (<c>RECKONING OF arr</c>).
 /// * <see cref="ExpressionParser.PrefixExpression"/>: a prefix operator expression.
 /// * <see cref="ExpressionParser.LiteralExpression"/>: a literal value.
 /// * <see cref="ExpressionParser.JustSoExpression"/>: the <c>JUST SO</c> implicit variable.
 /// * <see cref="ExpressionParser.ExpressionCast"/>: a non-mutating type cast (<c>AS IT WERE ... AS A</c>).
 ///
-/// It should be noted <see cref="ExpressionParser.IdentifierExpression"/> is intentionally excluded: a bare identifier would be ambiguous
+/// It should be noted that <see cref="ExpressionParser.IdentifierExpression"/> is intentionally excluded: a bare identifier would be ambiguous
 /// with the start of an <c>Assignment</c> or <c>InPlaceCast</c> statement, both of which also begin with an identifier.
 /// </para>
 /// <para>
@@ -947,6 +949,7 @@ public static class StatementParser
     public static readonly TextParser<Statement> ExpressionStatementParser =
         ExpressionParser.SummonExpression
             .Or(ExpressionParser.ArrayIndexExpression)
+            .Or(ExpressionParser.ArrayLengthExpression)
             .Or(ExpressionParser.PrefixExpression)
             .Or(ExpressionParser.LiteralExpression)
             .Or(ExpressionParser.JustSoExpression)

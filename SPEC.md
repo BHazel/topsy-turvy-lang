@@ -721,6 +721,22 @@ PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
 
 *`VICTIM` — Ko-Ko's little list consists of intended victims; every item retrieved from the list is, necessarily, a victim.*
 
+### Array Length
+
+```topsy
+RECKONING OF <array>
+```
+
+```topsy
+RECKONING OF miscreants                            ASIDE: evaluates to 3 (for a 3-element array)
+length IS APPOINTED RECKONING OF miscreants
+BEHOLD SUM OF RECKONING OF miscreants AND 1        ASIDE: prints 4
+```
+
+`RECKONING OF <array>` is an **expression** that evaluates to the number of elements in `<array>` as a `PEER` (integer). The result is always ≥ 0. Applying it to a variable that is not an array is a runtime error.
+
+*`RECKONING OF` — Ko-Ko keeps a careful reckoning of his little list; every tally is a formal accounting of what is owed.*
+
 ### Setting an Element
 
 ```topsy

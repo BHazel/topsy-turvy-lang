@@ -374,6 +374,10 @@
         },
         {
           "name": "keyword.operator.topsy",
+          "match": "(?i)\\bRECKONING\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
           "match": "(?i)\\bWITH\\s+NOTHING\\b"
         },
         {

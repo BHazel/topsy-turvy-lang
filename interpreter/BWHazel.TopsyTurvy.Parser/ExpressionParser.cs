@@ -187,6 +187,26 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <c>VICTIM</c> keyword is recognised as a keyword rather than consumed as an identifier.
 /// </para>
 /// <para>
+/// ### Array Length Expressions
+/// The <c>ArrayLengthExpression</c> parser matches on <c>RECKONING OF &lt;array&gt;</c>, returning an
+/// <see cref="ArrayLengthNode"/> that evaluates to the number of elements in the array as a <c>PEER</c> (integer).
+/// * It first matches the <c>RECKONING OF</c> keyword.
+/// * It then matches required whitespace followed by the array name via <c>ArrayNameParser</c>, which tries the built-in <c>THE PROPS</c> keyword first and falls back to a plain identifier.
+///
+/// This parser supports back-tracking on failure and must appear before <c>IdentifierExpression</c> so that
+/// <c>RECKONING</c> is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// BEHOLD RECKONING OF miscreants
+/// length IS APPOINTED RECKONING OF miscreants
+/// BEHOLD RECKONING OF THE PROPS
+/// </code>
+/// all three return an <see cref="ArrayLengthNode"/> with the array name set to <c>miscreants</c> on the first 2
+/// and <c>THE PROPS</c> respectively.
+/// </para>
+/// <para>
 /// ### Cast Expressions
 /// The <c>ExpressionCast</c> parser matches on a non-mutating type cast in the form
 /// <c>AS IT WERE &lt;expression&gt; AS A &lt;type&gt;</c>, returning an
@@ -203,6 +223,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * Cast Expression (<c>ExpressionCast</c>)
 /// * Array Index Expression (<c>ArrayIndexExpression</c>)
 ///     * Checked before <c>IdentifierExpression</c> so <c>VICTIM</c> is matched as a keyword.
+/// * Array Length Expression (<c>ArrayLengthExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>RECKONING</c> is matched as a keyword.
 /// * Prefix Expression (<c>PrefixExpression</c>)
 /// * Literal Expression (<c>LiteralExpression</c>)
 /// * Just So Expression (<c>JustSoExpression</c>)
@@ -424,6 +446,25 @@ public static class ExpressionParser
          }).Try();
 
     /// <summary>
+    /// Parses an array length expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>RECKONING OF &lt;array&gt;</c> and returns an <see cref="ArrayLengthNode"/>.
+    /// This parser must appear in the <see cref="Expression"/> alternatives before
+    /// <see cref="IdentifierExpression"/> so that <c>RECKONING</c> is matched as a keyword rather than
+    /// consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> ArrayLengthExpression =
+        (from reckoningKeyword in Lexer.Keyword("RECKONING OF")
+         from arrayName in Lexer.WhitespaceRequired
+            .IgnoreThen(ArrayNameParser)
+         select (Expression)new ArrayLengthNode()
+         {
+             ArrayName = arrayName,
+             Span = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
     /// Parses a non-mutating expression cast.
     /// </summary>
     public static readonly TextParser<Expression> ExpressionCast =
@@ -445,6 +486,7 @@ public static class ExpressionParser
         SummonExpression
             .Or(ExpressionCast)
             .Or(ArrayIndexExpression)
+            .Or(ArrayLengthExpression)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)
