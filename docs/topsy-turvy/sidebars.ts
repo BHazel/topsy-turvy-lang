@@ -1,6 +1,25 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
+  gettingStartedSidebar: [
+    {
+      type: 'category',
+      label: 'Getting Started',
+      link: {type: 'doc', id: 'start/index'},
+      items: [
+        {type: 'doc', id: 'start/installation'},
+        {type: 'doc', id: 'start/quick-start'},
+        {
+          type: 'category',
+          label: 'Releases',
+          link: {type: 'doc', id: 'start/releases/index'},
+          items: [
+            {type: 'doc', id: 'start/releases/2025-06-19'},
+          ],
+        },
+      ],
+    },
+  ],
   docsSidebar: [
     {
       type: 'category',
