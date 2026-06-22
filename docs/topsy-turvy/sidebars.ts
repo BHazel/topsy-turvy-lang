@@ -39,7 +39,7 @@ const sidebars: SidebarsConfig = {
   conceptsSidebar: [
     {
       type: 'category',
-      label: 'Concepts',
+      label: 'Language Design',
       link: {type: 'doc', id: 'concepts/index'},
       items: [
         {type: 'doc', id: 'concepts/grammar'},
@@ -49,6 +49,14 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'concepts/runtime'},
         {type: 'doc', id: 'concepts/analysis'},
         {type: 'doc', id: 'concepts/language-server'},
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Tooling',
+      link: {type: 'doc', id: 'tooling/index'},
+      items: [
+        {type: 'doc', id: 'tooling/cli-repl'},
       ],
     },
   ],

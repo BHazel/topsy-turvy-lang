@@ -183,6 +183,51 @@ The Docusaurus site under `docs/topsy-turvy/` is structured into three content a
 * **Guide (`docs/guide/`):** Task-oriented how-to pages for users of the language and toolchain.
 * **API Reference (`docs/api/`):** Auto-generated from XML documentation comments; do not edit generated files by hand.
 
+## Synchronisation Points
+
+Several areas of the codebase must be kept consistent whenever related changes are made.  Failing to update all files in a group leaves the tooling in an inconsistent state, for example, a new keyword that highlights in the VS Code extension but not in the REPL, or a class whose XML documentation no longer matches its implementation.
+
+### New Language Keyword or Construct
+
+Use the `/implement-language-feature` skill as it is the single source of truth for layer order, build checkpoints and per-layer constraints.  Do not attempt a language change without it: the change touches at least eight files across four projects and several invariants must hold simultaneously.
+
+### New REPL Command
+
+| # | File | What to Update |
+|---|---|---|
+| 1 | `Repl/ReplConstants.cs` | Add the command string constant and its alias. |
+| 2 | `Repl/ReplSession.cs` | Handle the command in the input dispatch loop. |
+| 3 | `Cli.E2ETests/CadenzaCommandTests.cs` | Add an E2E test piping the command via stdin. |
+| 4 | `docs/tooling/cli-repl.md` | Document the command in the REPL Session section. |
+| 5 | `DEVELOPMENT.md` §3 | Update the `cadenza` CLI command row. |
+
+### New CLI Command
+
+| # | File | What to Update |
+|---|---|---|
+| 1 | `Cli/CommandBuilders/` | New `*CommandBuilder.cs` class. |
+| 2 | `Cli/Program.cs` | Wire the builder into the root command. |
+| 3 | `Cli.E2ETests/` | New `*CommandTests.cs` test class. |
+| 4 | `DEVELOPMENT.md` §3 | Add a row to the CLI Commands table. |
+
+### XML Documentation
+
+All `public`, `internal` and `private` types and members require XML documentation comments.  Whenever a class or method is added or its behaviour changes its XML documentation must be updated in the same commit.  Stale XML comments are actively harmful as they are the source of truth for the generated API reference and for IntelliSense tooltips.
+
+### Docusaurus Documentation (`docs/topsy-turvy/`)
+
+| Area | Path | When to Update |
+|---|---|---|
+| Concepts / Language Design | `docs/concepts/` | A toolchain component high-level behaviour has materially changed. |
+| Concepts / Tooling | `docs/tooling/` | The CLI REPL behaviour changes, such as a new command, new editing feature, new mode. |
+| API Reference | `docs/api/dotnet/` | Auto-generated so do not edit by hand; re-run `npm run api:generate`. |
+
+The `cli-repl.md` page describes how the REPL works in detail.  It must be kept in sync with `ReplSession`, `ReplInputReader` and `ReplHighlighter`, specifically:
+
+* New REPL Commands: Update the REPL Session section and the Mermaid flowchart.
+* New Keystroke Handlers in `ReplInputReader`: Update the Input Reader section, Key Dispatch list and, if a new redraw pattern is involved, Keeping the Cursor in Sync.
+* New Token Categories or Priority Changes in `ReplHighlighter`: Update the Highlighter section, Keyword Table category/colour row, Scanning priority list, or Word Boundaries if the boundary logic changes.
+
 ## Implementing Language Features
 
 When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.

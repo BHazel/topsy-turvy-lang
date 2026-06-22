@@ -11,6 +11,7 @@ RootCommand rootCommand = new(rootDescription)
     RehearseCommandBuilder.Build(),
     PerformCommandBuilder.Build(),
     PlaybillCommandBuilder.Build(),
+    CadenzaCommandBuilder.Build(),
     SorcererCommandBuilder.Build()
 };
 

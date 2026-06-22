@@ -2,7 +2,7 @@
 sidebar_position: 0
 ---
 
-# Concepts
+# Language Design
 
 The _Operetta_ implementation of Topsy Turvy uses standard conventions in programming language design, split into stages:
 

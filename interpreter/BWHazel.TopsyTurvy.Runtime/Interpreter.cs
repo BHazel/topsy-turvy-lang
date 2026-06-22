@@ -30,7 +30,7 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// with a descriptive error message and the source span of the error and ends execution; it does not try to recover and continue
 /// after an error occurs.  It should be noted that exceptions are used for control flow within the interpreter, specifically for
 /// the break statement (<c>THAT WILL DO.</c>), continue statement (<c>ONCE MORE.</c>) and the return statement from a function
-/// (<c>AND SO I FIND</c> and <c>MY DUTY IS PREMATURELY DISCHARGED.</c>).  The throw statement (<c>A HIDEOUS CURSE UPON</c>) also
+/// (<c>AND SO I FIND</c> and <c>MY DUTY IS PREMATURELY DISCHARGED.</c>).  The throw statement (<c>A HIDEOUS CURSE ON</c>) also
 /// uses an exception, <see cref="TopsyTurvyThrowException"/>, but this is intended to be caught by a try-catch block within the
 /// Topsy Turvy programme and should not be used for control flow in the interpreter itself.
 /// </para>
@@ -86,12 +86,18 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <see cref="InterpreterExecutionOptions.ExecutionTimeout"/> property sets a deadline that is checked in addition to the
     /// cancellation token to allow timeouts to work in single-threaded environments such as Blazor WebAssembly.
     /// </para>
+    /// <para>
+    /// When executing a programme, the a pre-existing <see cref="TopsyTurvyEnvironment"/> can be provided for re-use across
+    /// multiple calls to <see cref="Execute"/>.  This enables the interpreter to be used in REPL sessions where the environment
+    /// is preserved between calls.  When provided, a new global environment is not created and <c>THE PROPS</c> is not re-declared.
+    /// </para>
     /// </remarks>
     /// <param name="program">The root node of the parsed programme.</param>
     /// <param name="cancellationToken">A token that can be used to cancel execution.</param>
     /// <param name="options">Optional execution options; pass <c>null</c> to use defaults.</param>
+    /// <param name="sessionEnvironment">An optional pre-existing environment to reuse across multiple calls.</param>
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
-    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, InterpreterExecutionOptions? options = null)
+    public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, InterpreterExecutionOptions? options = null, TopsyTurvyEnvironment? sessionEnvironment = null)
     {
         this.cancellationToken = cancellationToken;
         this.executionTimeout = options?.ExecutionTimeout.HasValue == true
@@ -105,12 +111,15 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         this.fileResolver = options?.SourceFileResolver;
 
         DiagnosticCollection diagnostics = new();
-        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
+        TopsyTurvyEnvironment environment = sessionEnvironment ?? TopsyTurvyEnvironment.CreateGlobal();
 
-        List<TopsyTurvyValue> commandLineArgElements = options?.CommandLineArguments is not null
-            ? [.. options.CommandLineArguments.Select(TopsyTurvyValue.String)]
-            : [];
-        environment.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array(commandLineArgElements), isConstant: true);
+        if (sessionEnvironment is null)
+        {
+            List<TopsyTurvyValue> commandLineArgElements = options?.CommandLineArguments is not null
+                ? [.. options.CommandLineArguments.Select(TopsyTurvyValue.String)]
+                : [];
+            environment.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array(commandLineArgElements), isConstant: true);
+        }
 
         try
         {
