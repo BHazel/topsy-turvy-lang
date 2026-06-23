@@ -703,6 +703,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
         ArrayIndexNode arrayIndex => this.EvaluateArrayIndex(arrayIndex, environment),
         ArrayLengthNode arrayLength => this.EvaluateArrayLength(arrayLength, environment),
+        TernaryExpressionNode ternary => this.EvaluateTernary(ternary, environment),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
             expression.Span)
@@ -741,6 +742,17 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)arrayValue.RawValue!;
         return TopsyTurvyValue.Integer(elements.Count);
     }
+
+    /// <summary>
+    /// Evaluates a ternary expression and returns the appropriate branch value.
+    /// </summary>
+    /// <param name="node">The ternary expression node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The <see cref="TernaryExpressionNode.TrueValue"/> when the condition is truthy; otherwise the <see cref="TernaryExpressionNode.FalseValue"/>.</returns>
+    private TopsyTurvyValue EvaluateTernary(TernaryExpressionNode node, TopsyTurvyEnvironment environment) =>
+        this.EvaluateExpression(node.Condition, environment).IsTruthy()
+            ? this.EvaluateExpression(node.TrueValue, environment)
+            : this.EvaluateExpression(node.FalseValue, environment);
 
     /// <summary>
     /// Evaluates a literal expression and returns its value.

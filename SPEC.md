@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.3.0
+### Language Specification — Version 0.4.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -510,9 +510,41 @@ IN WHICH CAPACITY? office
 NOTHING COULD BE MORE SATISFACTORY.
 ```
 
+### Ternary Expression
+
+A ternary expression is an inline conditional that evaluates to one of two values depending on a condition. It is an **expression**, not a statement, and may appear anywhere a value is expected: the right-hand side of an assignment, a function argument, a `BEHOLD` value, an array initialiser, and so on.
+
+**Syntax:**
+```
+<true-value> SHOULD IT TRANSPIRE THAT <condition> OTHERWISE, <false-value>
+```
+
+- `SHOULD IT TRANSPIRE THAT` and `OTHERWISE,` are reused from the block conditional; no new keywords are introduced.
+- `<true-value>` is the value returned when the condition is truthy. It may be any expression that is not itself a ternary (to avoid left-recursion ambiguity).
+- `<condition>` is the guard condition. It may be any expression that is not itself a ternary, to avoid `OTHERWISE,` being consumed ambiguously.
+- `<false-value>` is the value returned when the condition is falsy. It may be any expression, including a nested ternary, enabling right-chaining:
+
+```topsy
+a SHOULD IT TRANSPIRE THAT cond1 OTHERWISE, b SHOULD IT TRANSPIRE THAT cond2 OTHERWISE, c
+```
+
+When the ternary expression is used as a standalone statement and not inside an assignment or call, its result is deposited in `JUST SO` via the normal expression-statement path.
+
+**Examples:**
+```topsy
+ASIDE: Assign a label based on a condition
+label IS APPOINTED "Admiral" SHOULD IT TRANSPIRE THAT ALIKE rank AND 10 OTHERWISE, "Captain"
+
+ASIDE: Print a one-liner without an if block
+BEHOLD "Prime" SHOULD IT TRANSPIRE THAT SUMMON is_prime WITH n IF YOU PLEASE. OTHERWISE, "Not prime"
+
+ASIDE: Right-chained ternary: three-way selection
+title IS APPOINTED "Senior" SHOULD IT TRANSPIRE THAT PRE-ADAMITE age AND 60 OTHERWISE, ~
+  "Junior" SHOULD IT TRANSPIRE THAT LOWER DEGREE age AND 30 OTHERWISE, "Mid-level"
+```
+
 ---
 
-## 10. Loops
 
 ### Basic Loop (Infinite / Manual Break)
 

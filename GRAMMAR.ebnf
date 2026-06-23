@@ -1,5 +1,5 @@
-(* Topsy Turvy Formal Grammar v0.2.0 *)
-(* Based on SPEC.md v0.3.0 *)
+(* Topsy Turvy Formal Grammar v0.3.0 *)
+(* Based on SPEC.md v0.4.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -67,7 +67,8 @@ TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
 (*----------------------------------------------------------------------------*)
-Expression      = CastExpression
+Expression      = TernaryExpression
+                | CastExpression
                 | ArrayIndexExpression
                 | ArrayLengthExpression
                 | PrefixExpression
@@ -77,6 +78,24 @@ Expression      = CastExpression
                 | Integer
                 | Float
                 | Identifier ;
+
+TernaryExpression = NonTernaryExpression, "SHOULD IT TRANSPIRE THAT", NonTernaryExpression,
+                    "OTHERWISE,", Expression ;
+(* NonTernaryExpression is any Expression alternative except TernaryExpression itself.
+   TrueValue and Condition are restricted to NonTernaryExpression to avoid left-recursion
+   and to prevent OTHERWISE, being consumed by a nested ternary in the condition position.
+   FalseValue uses full Expression to allow right-chained ternaries. *)
+
+NonTernaryExpression = CastExpression
+                     | ArrayIndexExpression
+                     | ArrayLengthExpression
+                     | PrefixExpression
+                     | StringLiteral
+                     | BooleanLit
+                     | NullLit
+                     | Integer
+                     | Float
+                     | Identifier ;
 
 ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
 

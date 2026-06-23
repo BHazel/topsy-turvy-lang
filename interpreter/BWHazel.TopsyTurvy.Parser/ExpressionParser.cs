@@ -215,11 +215,57 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <c>ExpressionStatement</c> path.
 /// </para>
 /// <para>
+/// ### Non-Ternary Expressions
+/// The <c>NonTernaryExpression</c> parser matches on any valid expression that is not itself a ternary, returning an
+/// <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>.  It is identical to <c>Expression</c> minus the <c>TernaryExpression</c>
+/// alternative.  It exists solely to provide a non-left-recursive entry point for the two positions within a ternary
+/// expression that must not themselves be ternaries:
+/// * <c>TrueValue</c>: If a ternary were allowed here, parsing <c>TrueValue</c> would immediately try another
+///     ternary, which would try another, producing infinite recursion.
+/// * <c>Condition</c>: If a ternary were allowed here, the ternary own <c>OTHERWISE,</c> keyword could be consumed
+///     by the inner ternary <c>FalseValue</c> before the outer parser sees it, making the grammar ambiguous.
+///
+/// Recursive sub-expressions within the alternatives of <c>NonTernaryExpression</c> — for example, operands of a prefix
+/// operator or arguments of a <c>SUMMON</c> call — still parse via the full <see cref="Expression"/>, so nesting a
+/// ternary inside a function argument or operator operand remains valid.
+/// </para>
+/// <para>
+/// ### Ternary Expressions
+/// The <c>TernaryExpression</c> parser matches on an inline conditional expression, returning a
+/// <see cref="TernaryExpressionNode"/>:
+/// * It first matches on a <c>NonTernaryExpression</c> as the true value.
+/// * It then matches on the <c>SHOULD IT TRANSPIRE THAT</c> keyword with surrounding whitespace.
+///     * If this keyword is not found, the parser backtracks fully and yields control to the next
+///       <c>Expression</c> alternative.  This is essential because <c>TrueValue</c> may have consumed part of the input.
+/// * It then matches on a <c>NonTernaryExpression</c> as the condition with surrounding whitespace.
+/// * It then matches on the <c>OTHERWISE,</c> keyword with surrounding whitespace.
+/// * Finally, it recursively matches on the full <see cref="Expression"/> as the false value allowing right-chaining.
+///
+/// This parser must appear first in the <c>Expression</c> alternatives and must be wrapped in <c>.Try()</c>.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// label IS APPOINTED "High" SHOULD IT TRANSPIRE THAT PRE-ADAMITE score AND 90 OTHERWISE, "Low"
+/// rank IS APPOINTED "Senior" SHOULD IT TRANSPIRE THAT PRE-ADAMITE age AND 60 OTHERWISE, ~
+///   "Junior" SHOULD IT TRANSPIRE THAT LOWER DEGREE age AND 30 OTHERWISE, "Mid-level"
+/// </code>
+/// * The first example would return a <see cref="TernaryExpressionNode"/> with:
+///     * <c>TrueValue</c> as the <see cref="LiteralNode"/> <c>"High"</c>.
+///     * <c>Condition</c> as the <see cref="PrefixExpressionNode"/> <c>PRE-ADAMITE score AND 90</c>.
+///     * <c>FalseValue</c> as the <see cref="LiteralNode"/> <c>"Low"</c>.
+/// * The second example (right-chained) would return an outer <see cref="TernaryExpressionNode"/> whose
+///   <c>FalseValue</c> is itself a <see cref="TernaryExpressionNode"/>, demonstrating right-associative chaining.
+/// </para>
+/// <para>
 /// ### Expression Parser
 /// The <c>Expression</c> parser is the main entry point for parsing any Topsy Turvy expression, matching on any of the above
 /// expression types, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> in the order they are tried as follows:
+/// * Ternary Expression (<c>TernaryExpression</c>)
+///     * Tried first and parses a <c>NonTernaryExpression</c> as the true value and, if
+///       <c>SHOULD IT TRANSPIRE THAT</c> follows, completes the ternary, otherwise backtracks so the non-ternary path is tried.
 /// * SUMMON Expression (<c>SummonExpression</c>)
-///     * This is checked first as <c>SUMMON</c> is a keyword and could be confused with an identifier if checked later.
+///     * Checked early as <c>SUMMON</c> is a keyword and could be confused with an identifier if checked later.
 /// * Cast Expression (<c>ExpressionCast</c>)
 /// * Array Index Expression (<c>ArrayIndexExpression</c>)
 ///     * Checked before <c>IdentifierExpression</c> so <c>VICTIM</c> is matched as a keyword.
@@ -480,10 +526,56 @@ public static class ExpressionParser
         };
 
     /// <summary>
+    /// Parses any valid Topsy Turvy expression that is not itself a ternary.
+    /// </summary>
+    /// <remarks>
+    /// Used as the parser for <c>TrueValue</c> and <c>Condition</c> in a ternary expression to avoid left-recursion
+    /// and <c>OTHERWISE,</c> ambiguity.  Recursive sub-expressions within these alternatives, e.g. operands of a prefix
+    /// operator or arguments of a <c>SUMMON</c> call, are parsed via <see cref="Expression"/>, which includes the ternary
+    /// form so nesting is still possible inside operands.
+    /// </remarks>
+    public static readonly TextParser<Expression> NonTernaryExpression =
+        SummonExpression
+            .Or(ExpressionCast)
+            .Or(ArrayIndexExpression)
+            .Or(ArrayLengthExpression)
+            .Or(Parse.Ref(() => PrefixExpression))
+            .Or(Parse.Ref(() => LiteralExpression))
+            .Or(JustSoExpression)
+            .Or(ThePropsExpression)
+            .Or(Parse.Ref(() => IdentifierExpression));
+
+    /// <summary>
+    /// Parses a ternary (inline conditional) expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>&lt;true-value&gt; SHOULD IT TRANSPIRE THAT &lt;condition&gt; OTHERWISE, &lt;false-value&gt;</c> and
+    /// returns a <see cref="TernaryExpressionNode"/>.  <c>TrueValue</c> and <c>Condition</c> use
+    /// <see cref="NonTernaryExpression"/> to prevent left-recursion and <c>OTHERWISE,</c> ambiguity; <c>FalseValue</c>
+    /// uses the full <see cref="Expression"/> to allow right-chained ternaries.
+    /// This parser must appear first in the <see cref="Expression"/> alternatives and must be wrapped in <c>.Try()</c>
+    /// so that the parser backtracks fully when <c>SHOULD IT TRANSPIRE THAT</c> is not found after a <c>TrueValue</c>.
+    /// </remarks>
+    public static readonly TextParser<Expression> TernaryExpression =
+        (from trueValue in NonTernaryExpression
+         from shouldItTranspireThatKeyword in Ws(Lexer.Keyword("SHOULD IT TRANSPIRE THAT"))
+         from condition in Ws(NonTernaryExpression)
+         from otherwiseKeyword in Ws(Lexer.Keyword("OTHERWISE,"))
+         from falseValue in Ws(Parse.Ref(() => Expression!))
+         select (Expression)new TernaryExpressionNode()
+         {
+             TrueValue = trueValue,
+             Condition = condition,
+             FalseValue = falseValue,
+             Span = PlaceholderSpan
+         }).Try();
+
+    /// <summary>
     /// Parses any valid Topsy Turvy expression.
     /// </summary>
     public static readonly TextParser<Expression> Expression =
-        SummonExpression
+        TernaryExpression
+            .Or(SummonExpression)
             .Or(ExpressionCast)
             .Or(ArrayIndexExpression)
             .Or(ArrayLengthExpression)
