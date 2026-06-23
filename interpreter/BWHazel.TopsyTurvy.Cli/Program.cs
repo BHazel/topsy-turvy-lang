@@ -10,6 +10,8 @@ RootCommand rootCommand = new(rootDescription)
     CommissionCommandBuilder.Build(),
     RehearseCommandBuilder.Build(),
     PerformCommandBuilder.Build(),
+    PlaybillCommandBuilder.Build(),
+    CadenzaCommandBuilder.Build(),
     SorcererCommandBuilder.Build()
 };
 

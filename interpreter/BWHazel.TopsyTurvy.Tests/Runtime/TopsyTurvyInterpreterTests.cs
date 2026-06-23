@@ -378,4 +378,68 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
         diagnostics.HasErrors.ShouldBeFalse();
         output[0].ShouldBe("99");
     }
+
+    /// <summary>
+    /// Tests that a variable declared in one <see cref="Interpreter.Execute"/> call is readable in a subsequent
+    /// call when the same <see cref="TopsyTurvyEnvironment"/> is supplied as <c>sessionEnvironment</c>.
+    /// </summary>
+    [Fact]
+    public void Execute_WithSessionEnvironment_PersistsVariableAcrossCalls()
+    {
+        string declareSource = """
+            HARK! "Turn 1"
+            PRAY WELCOME x AS A PEER BEING 42
+            FINALE.
+            """;
+
+        string readSource = """
+            HARK! "Turn 2"
+            BEHOLD x
+            FINALE.
+            """;
+
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+        TopsyTurvyEnvironment session = TopsyTurvyEnvironment.CreateGlobal();
+        session.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array([]), isConstant: true);
+
+        interpreter.Execute(this.parser.Parse(declareSource), sessionEnvironment: session);
+        DiagnosticCollection diagnostics = interpreter.Execute(this.parser.Parse(readSource), sessionEnvironment: session);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("42");
+    }
+
+    /// <summary>
+    /// Tests that a function defined in one <see cref="Interpreter.Execute"/> call is callable in a subsequent
+    /// call when the same <see cref="Interpreter"/> instance and <see cref="TopsyTurvyEnvironment"/> are reused.
+    /// </summary>
+    [Fact]
+    public void Execute_WithSessionEnvironment_PreservesFunctionDefinitionAcrossCalls()
+    {
+        string defineSource = """
+            HARK! "Turn 1"
+            IT IS MY DUTY TO PERFORM Double UNDER THE TERMS OF n
+                AND SO I FIND SUM OF n AND n
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string callSource = """
+            HARK! "Turn 2"
+            BEHOLD SUMMON Double WITH 21 IF YOU PLEASE.
+            FINALE.
+            """;
+
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+        TopsyTurvyEnvironment session = TopsyTurvyEnvironment.CreateGlobal();
+        session.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array([]), isConstant: true);
+
+        interpreter.Execute(this.parser.Parse(defineSource), sessionEnvironment: session);
+        DiagnosticCollection diagnostics = interpreter.Execute(this.parser.Parse(callSource), sessionEnvironment: session);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("42");
+    }
 }

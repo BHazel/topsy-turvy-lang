@@ -1,26 +1,34 @@
 ---
 name: implement-language-feature
 description: >
-  Guides the complete, full-stack implementation of a new Topsy Turvy language
-  feature — from grammar through parser, runtime, LSP, Monaco/TextMate syntax
-  highlighting, and tests. Use this skill whenever a new keyword, operator,
-  construct, or language change has been added to SPEC.md and needs to be
-  propagated throughout the codebase. Also invoke it when asked to "add a
-  feature to Topsy Turvy", "implement [keyword/construct] in the language",
-  "extend the language with X", or "sync the grammar files after a spec
-  change". This skill knows the full layer order and all project constraints —
-  always use it rather than attempting a language change freehand, because the
-  change touches at least seven files across four projects and several
-  invariants must hold simultaneously.
+  Guides the complete, full-stack implementation or modification of a Topsy
+  Turvy language feature — from grammar through parser, runtime, LSP,
+  Monaco/TextMate syntax highlighting, REPL highlighting, and tests. Use this
+  skill whenever a keyword, operator, or construct is being added, changed, or
+  removed in SPEC.md and needs to be propagated throughout the codebase. Invoke
+  it when asked to "add a feature to Topsy Turvy", "implement
+  [keyword/construct] in the language", "extend the language with X", "change
+  the syntax/behaviour of [keyword]", "remove [keyword] from the language",
+  "rename [keyword]", or "sync the grammar files after a spec change". This
+  skill knows the full layer order and all project constraints — always use it
+  rather than attempting a language change freehand, because the change touches
+  at least seven files across four projects and several invariants must hold
+  simultaneously.
 ---
 
-# Topsy Turvy: Implement Language Feature
+# Topsy Turvy: Implement or Modify Language Feature
 
-You are about to implement a new feature in the Topsy Turvy programming
-language. This codebase spans a .NET interpreter, an LSP server, a Blazor
-WASM web editor, a VS Code extension, and two grammar file formats. A change
-to the language must land consistently in all of them or the tooling will
-silently disagree with the runtime.
+You are about to add, change, or remove a feature in the Topsy Turvy
+programming language. This codebase spans a .NET interpreter, an LSP server,
+a Blazor WASM web editor, a VS Code extension, and two grammar file formats.
+A change to the language must land consistently in all of them or the tooling
+will silently disagree with the runtime.
+
+This applies equally to **new** constructs and to **modifications** of existing
+ones — changing a keyword's syntax, making an optional clause mandatory,
+renaming a keyword, or removing a construct entirely. The layer order and
+verification steps are the same in all cases; the only difference is whether
+each layer needs an addition, an edit, or a deletion.
 
 This skill walks you through every layer in the correct order and tells you
 what to verify at each step.
@@ -153,6 +161,25 @@ cd extensions/vscode/topsy-turvy && npm run test:grammar
 ```
 All four snapshot files must pass. If a snapshot changes legitimately, update
 it with `vscode-tmgrammar-test --updateSnapshot`.
+
+### 3i. REPL highlighter: `Repl/ReplHighlighter.cs`
+
+Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
+constructor. Place each entry in the appropriate colour category (programme
+structure, control flow, declarations, type names, operators, I/O and functions,
+boolean literals, null literal, or special variables). The table is sorted by
+length descending at class-load time, so manual ordering is not required, but
+group new entries with their semantic neighbours to keep the list readable.
+
+If the feature introduces a construct that belongs to a brand-new colour
+category, add a new comment block and choose a colour from the established
+Spectre.Console CLI palette — do not reuse an existing category colour for a
+semantically unrelated group.
+
+There are no automated tests for the highlighter keyword table. After editing,
+run `operetta cadenza` and type a line that exercises the new keyword to verify
+it is highlighted correctly in Aesthetic Mode. Tiptoe Mode requires no change —
+no highlighting is applied there.
 
 ---
 
