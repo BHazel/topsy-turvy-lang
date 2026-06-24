@@ -95,6 +95,30 @@ public class CadenzaHighlighterTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="ReplHighlighter.Highlight"/> method wraps a character literal in <c>sandybrown</c> markup,
+    /// matching the colour used for string literals.
+    /// </summary>
+    [Fact]
+    public void Highlight_CharLiteral_AppliesSandybrownMarkup()
+    {
+        string result = ReplHighlighter.Highlight("'G'");
+
+        result.ShouldBe("[sandybrown]'G'[/]");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="ReplHighlighter.Highlight"/> method consumes a character literal containing a tilde-escaped
+    /// sequence in full, not split at the escape character.
+    /// </summary>
+    [Fact]
+    public void Highlight_CharLiteralWithEscapeSequence_ConsumesFullLiteral()
+    {
+        string result = ReplHighlighter.Highlight("'~n'");
+
+        result.ShouldBe("[sandybrown]'~n'[/]");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="ReplHighlighter.Highlight"/> method wraps an integer numeric literal in <c>cornsilk1</c> markup.
     /// </summary>
     [Fact]

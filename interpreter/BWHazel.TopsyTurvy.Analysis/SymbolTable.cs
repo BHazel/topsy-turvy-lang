@@ -455,11 +455,20 @@ public class SymbolTable
     /// </summary>
     /// <param name="type">The type.</param>
     /// <returns>The user-friendly display name.</returns>
-    private static string LiteralTypeToDisplayName(LiteralType type) => type switch
+    public static string LiteralTypeToDisplayName(LiteralType type) => type switch
     {
         LiteralType.Integer => Keywords.TypeNames.Peer,
-        LiteralType.Float => Keywords.TypeNames.Fathom,
+        LiteralType.Long => Keywords.TypeNames.Chancellor,
+        LiteralType.Short => Keywords.TypeNames.Pirate,
+        LiteralType.SignedByte => Keywords.TypeNames.SausageRoll,
+        LiteralType.UnsignedInteger => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Peer}",
+        LiteralType.UnsignedLong => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Chancellor}",
+        LiteralType.UnsignedShort => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Pirate}",
+        LiteralType.Byte => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.SausageRoll}",
+        LiteralType.Double => Keywords.TypeNames.Fathom,
+        LiteralType.Single => Keywords.TypeNames.Foot,
         LiteralType.String => Keywords.TypeNames.Yarn,
+        LiteralType.Char => Keywords.TypeNames.Stitch,
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,

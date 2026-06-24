@@ -118,7 +118,59 @@ PRAY WELCOME Ko-Ko            AS A PEER         BEING  0
 
 `CONSERVATIVE` draws from the G&S tradition of immovable institutional authority — the House of Lords in *Iolanthe*, the Lord Chancellor, the ancestral portraits in *Ruddigore*: things that, by long-established rule, simply *cannot* be changed. *"I often think it's comical / Fal lal la! / How Nature always does contrive / Fal lal la! / That every boy and every gal / That's born into the world alive / Is either a little Liberal / Or else a little Conservative! / Fal lal la!"* — *Iolanthe*, Act II. The modifier restores Gilbert's own distinction to the language: those values that are fixed by decree, and those that may yet be persuaded.
 
-### 3.2 Dynamic Typing
+### 3.2 Unsigned Integer Types — The `STANDING` Modifier
+
+The `STANDING` keyword may appear between the mutability modifier and any **integer** type keyword to declare an unsigned variant of that type:
+
+| Declaration form | Width | Range |
+|---|---|---|
+| `STANDING PEER` | 32-bit unsigned | 0 to 4 294 967 295 |
+| `STANDING CHANCELLOR` | 64-bit unsigned | 0 to 18 446 744 073 709 551 615 |
+| `STANDING PIRATE` | 16-bit unsigned | 0 to 65 535 |
+| `STANDING SAUSAGE-ROLL` | 8-bit unsigned | 0 to 255 |
+
+`STANDING` is a **type modifier**, not a mutability modifier. The full declaration order is:
+
+```
+PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] [STANDING] <integer-type> [BEING <value>]
+```
+
+```topsy
+PRAY WELCOME height    AS A STANDING PEER                ASIDE: unsigned 32-bit integer
+PRAY WELCOME BigCount  AS A CONSERVATIVE STANDING CHANCELLOR BEING 0  ASIDE: constant unsigned 64-bit
+PRAY WELCOME flags     AS A STANDING SAUSAGE-ROLL BEING 255  ASIDE: maximum unsigned byte
+```
+
+`STANDING` may **only** precede an integer type keyword (`PEER`, `CHANCELLOR`, `PIRATE`, `SAUSAGE-ROLL`). Combining it with `FATHOM`, `FOOT`, `YARN`, `STITCH`, `DECREE`, or `NAUGHT` is a parse error.
+
+`STANDING` is drawn from the military standing of the regiment — a soldier placed in a *standing* capacity is confirmed in post, assigned a definite and unambiguous position; so too an unsigned integer occupies a definite, non-negative position on the number line.
+
+### 3.3 Character Literals
+
+A `STITCH` value is written as a **single-quoted character literal**:
+
+```topsy
+PRAY WELCOME LetterA  AS A STITCH BEING 'A'
+PRAY WELCOME Space    AS A STITCH BEING ' '
+PRAY WELCOME Newline  AS A STITCH BEING '~n'
+PRAY WELCOME Quote    AS A STITCH BEING '~''
+PRAY WELCOME Tilde    AS A STITCH BEING '~~'
+```
+
+A character literal opens with `'`, contains exactly one character (or one escape sequence), and closes with `'`. Placing more than one character between the quotes is a syntax error.
+
+The escape sequences inside a character literal use the same Victorian flourish `~` prefix as `YARN`, with `~'` used for a literal single quote in place of the string's `~"`:
+
+| Sequence | Meaning |
+|---|---|
+| `~n` | Newline |
+| `~t` | Tab |
+| `~'` | Literal single quote |
+| `~~` | Literal tilde |
+
+`STITCH` values may also be produced at runtime by indexing into a `YARN` variable — see §16.
+
+### 3.4 Dynamic Typing
 
 Topsy Turvy is a **dynamically typed** language in the Python tradition: type annotations are **advisory**, not enforced.
 
@@ -164,13 +216,18 @@ ASIDE: prints 1
 
 ### Types
 
-| Type keyword  | Equivalent | Description |
-|---------------|------------|-------------|
-| `PEER`        | integer    | A Peer of the Realm — a whole number, positive or negative. *From Iolanthe.* |
-| `FATHOM`      | float      | A nautical measure — a number of real precision. *From H.M.S. Pinafore.* |
-| `YARN`        | string     | A wandering minstrel's stock-in-trade — a sequence of characters. *From The Mikado.* |
-| `DECREE`      | boolean    | A ruling that stands or does not stand — either `VERITY` or `NAY`. *The Mikado*, Act I: "So he decreed, in words succinct..." |
-| `NAUGHT`      | null       | Nothing. Not even that. |
+| Type keyword    | Equivalent         | Description |
+|-----------------|--------------------|-------------|
+| `PEER`          | int32              | A Peer of the Realm — a whole number, positive or negative. *From Iolanthe.* |
+| `CHANCELLOR`    | int64              | A Lord High Chancellor — the 64-bit integer that governs when PEER's mandate is insufficient. *From Iolanthe.* |
+| `PIRATE`        | int16              | A Pirate of Penzance — compact, nimble, and operating on reduced rations. *From The Pirates of Penzance.* |
+| `SAUSAGE-ROLL`  | int8               | A morsel of modest proportion — the smallest signed whole number; unpretentious and compact, it asks no more of the stage than the occasion requires. |
+| `FATHOM`        | float64            | A nautical measure — a number of real precision. *From H.M.S. Pinafore.* |
+| `FOOT`          | float32            | A measure of shorter range — single-precision to FATHOM's double-precision; close enough for most calculations, and rather lighter on the feet. *From H.M.S. Pinafore.* |
+| `YARN`          | string             | A wandering minstrel's stock-in-trade — a sequence of characters. *From The Mikado.* |
+| `STITCH`        | character          | A single thread of a stitch — the atomic unit of YARN; one character, neither more nor less. *From The Mikado.* |
+| `DECREE`        | boolean            | A ruling that stands or does not stand — either `VERITY` or `NAY`. *The Mikado*, Act I: "So he decreed, in words succinct..." |
+| `NAUGHT`        | null               | Nothing. Not even that. |
 
 **Boolean literals:**
 - `VERITY` — true; *Utopia, Limited* — "Henceforward, **of a verity**, with Fame ourselves we link" — King Paramount
@@ -827,14 +884,14 @@ BEHOLD VICTIM 1 ON miscreants         ASIDE: prints Pooh-Bah
 PRAY WELCOME first AS A YARN BEING VICTIM 1 ON miscreants
 ```
 
-`VICTIM <index> ON <array>` is an **expression** that evaluates to the element at position `<index>`. `<index>` is 1-based — `VICTIM 1` is the first element. `<index>` may be any expression that evaluates to a `PEER`. Accessing an out-of-range index is a runtime error.
+`VICTIM <index> ON <array-or-yarn>` is an **expression** that evaluates to the element at position `<index>`. `<index>` is 1-based — `VICTIM 1` is the first element. `<index>` may be any expression that evaluates to a `PEER`. When applied to a `YARN` variable, it evaluates to the `STITCH` (character) at that position. Accessing an out-of-range index is a runtime error.
 
 *`VICTIM` — Ko-Ko's little list consists of intended victims; every item retrieved from the list is, necessarily, a victim.*
 
 ### Array Length
 
 ```topsy
-RECKONING OF <array>
+RECKONING OF <array-or-yarn>
 ```
 
 ```topsy
@@ -843,7 +900,7 @@ length IS APPOINTED RECKONING OF miscreants
 BEHOLD SUM OF RECKONING OF miscreants AND 1        ASIDE: prints 4
 ```
 
-`RECKONING OF <array>` is an **expression** that evaluates to the number of elements in `<array>` as a `PEER` (integer). The result is always ≥ 0. Applying it to a variable that is not an array is a runtime error.
+`RECKONING OF <array-or-yarn>` is an **expression** that evaluates to the number of elements in `<array>` as a `PEER` (integer), or the number of characters in a `YARN` variable. The result is always ≥ 0. Applying it to a variable that is neither an array nor a string is a runtime error.
 
 *`RECKONING OF` — Ko-Ko keeps a careful reckoning of his little list; every tally is a formal accounting of what is owed.*
 
@@ -876,7 +933,40 @@ BEHOLD miscreants   ASIDE: prints ["Pooh-Bah", "Ko-Ko", "Pish-Tush"]
 
 ### Note on Element-Type Enforcement
 
-Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 42` is valid even if `arr` was declared `A LITTLE LIST OF YARN` — no runtime error will be raised. This matches the general dynamic-typing philosophy of the language.
+Per §3.4, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 42` is valid even if `arr` was declared `A LITTLE LIST OF YARN` — no runtime error will be raised. This matches the general dynamic-typing philosophy of the language.
+
+### Strings as Character Sequences
+
+A `YARN` variable may be used with `VICTIM` and `RECKONING OF` as if it were a `LITTLE LIST OF STITCH`:
+
+**Reading a character:**
+
+```topsy
+VICTIM <index> ON <yarn-variable>
+```
+
+```topsy
+PRAY WELCOME word AS A YARN BEING "Mikado"
+BEHOLD VICTIM 1 ON word          ASIDE: prints M
+BEHOLD VICTIM 6 ON word          ASIDE: prints o
+PRAY WELCOME ch AS A STITCH BEING VICTIM 3 ON word   ASIDE: ch = 'k'
+```
+
+`VICTIM n ON <yarn>` evaluates to a `STITCH` value — the character at 1-based position `n`. Accessing a position less than 1 or greater than the string's length is a runtime error.
+
+**String length:**
+
+```topsy
+RECKONING OF <yarn-variable>
+```
+
+```topsy
+length IS APPOINTED RECKONING OF word    ASIDE: evaluates to 6
+```
+
+`RECKONING OF <yarn>` evaluates to a `PEER` (integer) equal to the number of characters in the string.
+
+**Strings are immutable:** `VICTIM n ON <yarn> IS APPOINTED val` is a runtime error — individual characters in a `YARN` cannot be replaced. Use `WOVEN OF` to build a new string.
 
 ---
 
@@ -1036,21 +1126,32 @@ PRAY WELCOME OldSum AS A PEER
 | `THAT`                                           | Assert separator            | Structural separator between condition and error message within `THE LAW IS`; not in the keyword completion list |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
 | `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
-| `VICTIM <index> ON <array>`                      | Array element access        | The item at position `<index>` (1-based) on Ko-Ko's list                          |
-| `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`                            |
+| `VICTIM <index> ON <array-or-yarn>`              | Array element / character access | The item at position `<index>` (1-based) on Ko-Ko's list; on a YARN, returns the STITCH at that position |
+| `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`; not valid on YARN (strings are immutable) |
+| `RECKONING OF <array-or-yarn>`                   | Array / string length       | Ko-Ko's careful reckoning of his list; on a YARN, evaluates to the number of characters |
+| `STANDING`                                       | Unsigned integer modifier   | Makes an integer type unsigned; placed between the mutability modifier and the integer type keyword (`STANDING PEER`, `STANDING CHANCELLOR`, `STANDING PIRATE`, `STANDING SAUSAGE-ROLL`) |
 
 ---
 
 ## 18. Type Reference
 
-| Keyword                 | Type         | Values                                      |
-|-------------------------|--------------|---------------------------------------------|
-| `PEER`                  | Integer      | Any whole number                            |
-| `FATHOM`                | Float        | Any real number                             |
-| `YARN`                  | String       | Any sequence of characters in `""`          |
-| `DECREE`                | Boolean      | `VERITY` or `NAY`                           |
-| `NAUGHT`                | Null         | `NAUGHT`                                    |
-| `A LITTLE LIST OF <T>`  | Array of `T` | Ordered 1-based collection; element type advisory (see §3.2) |
+| Keyword                    | Width                        | Values / Range |
+|----------------------------|------------------------------|----------------|
+| `PEER`                     | 32-bit signed integer        | −2 147 483 648 to 2 147 483 647 |
+| `STANDING PEER`            | 32-bit unsigned integer      | 0 to 4 294 967 295 |
+| `CHANCELLOR`               | 64-bit signed integer        | −9 223 372 036 854 775 808 to 9 223 372 036 854 775 807 |
+| `STANDING CHANCELLOR`      | 64-bit unsigned integer      | 0 to 18 446 744 073 709 551 615 |
+| `PIRATE`                   | 16-bit signed integer        | −32 768 to 32 767 |
+| `STANDING PIRATE`          | 16-bit unsigned integer      | 0 to 65 535 |
+| `SAUSAGE-ROLL`             | 8-bit signed integer         | −128 to 127 |
+| `STANDING SAUSAGE-ROLL`    | 8-bit unsigned integer       | 0 to 255 |
+| `FATHOM`                   | 64-bit float (double)        | Double-precision floating-point |
+| `FOOT`                     | 32-bit float (single)        | Single-precision floating-point |
+| `YARN`                     | string                       | Any sequence of characters in `""`; also supports `VICTIM` and `RECKONING OF` (see §15) |
+| `STITCH`                   | character                    | Any single character; literal form `'A'` (see §3.3) |
+| `DECREE`                   | boolean                      | `VERITY` or `NAY` |
+| `NAUGHT`                   | —                            | `NAUGHT` |
+| `A LITTLE LIST OF <T>`     | ordered list                 | Ordered 1-based collection; element type advisory (see §3.4) |
 
 ---
 

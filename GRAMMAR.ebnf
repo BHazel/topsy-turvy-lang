@@ -6,6 +6,10 @@
 (*----------------------------------------------------------------------------*)
 Identifier    = [a-zA-Z], { [a-zA-Z0-9_-] } ;
 StringLiteral = '"', { AnyCharExceptQuoteOrTilde | '~' AnyChar }, '"' ;
+CharLit       = "'", ( AnyCharExceptSingleQuoteOrTilde | '~' AnyChar ), "'" ;
+(* CharLit contains exactly one character or one escape sequence.  Escape sequences within
+   a CharLit use the same ~ prefix as StringLiteral, except ~' for a literal single quote
+   replaces ~" (which has no special meaning inside single quotes). *)
 Integer       = [ "-" ], Digit, { Digit } ;
 Float         = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
 BooleanLit    = "VERITY" | "NAY" ;
@@ -53,7 +57,15 @@ ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ]
 
 MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
 
-ScalarType      = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+BaseIntegerType = "PEER" | "CHANCELLOR" | "PIRATE" | "SAUSAGE-ROLL" ;
+
+ScalarType      = BaseIntegerType
+                | "STANDING", BaseIntegerType
+                | "FATHOM" | "FOOT"
+                | "YARN" | "STITCH"
+                | "DECREE" | "NAUGHT" ;
+(* "STANDING" may only precede a BaseIntegerType.  Combining it with FATHOM, FOOT, YARN,
+   STITCH, DECREE, or NAUGHT is a parse error. *)
 
 ArrayType       = "LITTLE LIST OF", ScalarType ;
 (* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
@@ -75,6 +87,7 @@ Expression      = TernaryExpression
                 | ArrayLengthExpression
                 | PrefixExpression
                 | StringLiteral
+                | CharLit
                 | BooleanLit
                 | NullLit
                 | Integer
@@ -93,6 +106,7 @@ NonTernaryExpression = CastExpression
                      | ArrayLengthExpression
                      | PrefixExpression
                      | StringLiteral
+                     | CharLit
                      | BooleanLit
                      | NullLit
                      | Integer
@@ -189,7 +203,7 @@ InputStatement     = "PRAY TELL", Identifier ;
 
 ExpressionStatement = Expression ;
 
-Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;
+Literal            = StringLiteral | CharLit | Integer | Float | BooleanLit | NullLit ;
 
 (*----------------------------------------------------------------------------*)
 (* Documentation Comments                                                     *)

@@ -27,10 +27,15 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Type Keywords
-/// The <c>TypeKeyword</c> parser matches on type keywords, returning the corresponding <see cref="LiteralType"/> value.  As an
-/// example, the keyword <c>PEER</c> will be parsed as <see cref="LiteralType"/><c>.Integer</c>.  This parser lives in
-/// <see cref="ExpressionParser"/> (rather than <see cref="StatementParser"/>) because it is also needed by
-/// <see cref="ExpressionCast"/> at the expression layer; placing it here avoids a circular static-field initialisation dependency.
+/// The <c>TypeKeyword</c> parser matches on type keywords, returning the corresponding <see cref="LiteralType"/> value.
+/// For example, <c>PEER</c> returns <see cref="LiteralType"/><c>.Integer</c> and <c>STANDING PEER</c> returns
+/// <see cref="LiteralType"/><c>.UnsignedInteger</c>.  This parser lives in <see cref="ExpressionParser"/>
+/// (rather than <see cref="StatementParser"/>) because it is also needed by <see cref="ExpressionCast"/> at the
+/// expression layer; placing it here avoids a circular static-field initialisation dependency.
+/// </para>
+/// <para>
+/// The <c>STANDING</c> modifier is tried first as a two-token sequence (<c>STANDING &lt;integer-type&gt;</c>).  If the token following <c>STANDING</c> is not an integer type keyword, the combinator backtracks
+/// and the match fails as <c>STANDING</c> on its own is not a valid type keyword.
 /// </para>
 /// <para>
 /// ### Operators
@@ -317,14 +322,20 @@ public static class ExpressionParser
     /// <summary>
     /// Parses a literal value into a <see cref="LiteralNode"/>.
     /// </summary>
+    /// <remarks>
+    /// Character literals (<c>'A'</c>) are tried before string literals so that the leading <c>'</c> is not
+    /// accidentally consumed by another combinator.
+    /// </remarks>
     public static readonly TextParser<Expression> LiteralExpression =
         (
             Lexer.NullLiteral
                 .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Null, Span = PlaceholderSpan })
                 .Or(Lexer.BooleanLiteral
                     .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Boolean, Span = PlaceholderSpan }))
+                .Or(Lexer.CharacterLiteral
+                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Char, Span = PlaceholderSpan }))
                 .Or(Lexer.FloatLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Float, Span = PlaceholderSpan }))
+                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Double, Span = PlaceholderSpan }))
                 .Or(Lexer.IntegerLiteral
                     .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Integer, Span = PlaceholderSpan }))
                 .Or(Lexer.StringLiteral
@@ -455,17 +466,47 @@ public static class ExpressionParser
     /// <summary>
     /// Parses a Topsy Turvy type keyword and returns the corresponding <see cref="LiteralType"/> value.
     /// </summary>
+    /// <remarks>
+    /// The <c>STANDING &lt;integer-type&gt;</c> two-token sequence is tried first and on failure the
+    /// combinator backtracks to the start of the type position.
+    /// </remarks>
     public static readonly TextParser<LiteralType> TypeKeyword =
-        Lexer.Keyword(Keywords.TypeNames.Peer)
-            .Value(LiteralType.Integer)
-            .Or(Lexer.Keyword(Keywords.TypeNames.Fathom)
-                .Value(LiteralType.Float))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Yarn)
-                .Value(LiteralType.String))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Decree)
-                .Value(LiteralType.Boolean))
-            .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
-                .Value(LiteralType.Null));
+        // Unsigned integer types.
+        (from _ in Lexer.Keyword(Keywords.TypeNames.Standing)
+         from baseType in Ws(
+             Lexer.Keyword(Keywords.TypeNames.Peer)
+                .Value(LiteralType.UnsignedInteger)
+                .Or(Lexer.Keyword(Keywords.TypeNames.Chancellor)
+                    .Value(LiteralType.UnsignedLong))
+                .Or(Lexer.Keyword(Keywords.TypeNames.Pirate)
+                    .Value(LiteralType.UnsignedShort))
+                .Or(Lexer.Keyword(Keywords.TypeNames.SausageRoll)
+                    .Value(LiteralType.Byte)))
+         select baseType).Try()
+        // Signed integer types.
+        .Or(Lexer.Keyword(Keywords.TypeNames.Peer)
+            .Value(LiteralType.Integer))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Chancellor)
+            .Value(LiteralType.Long))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Pirate)
+            .Value(LiteralType.Short))
+        .Or(Lexer.Keyword(Keywords.TypeNames.SausageRoll)
+            .Value(LiteralType.SignedByte))
+        // Floating-point types.
+        .Or(Lexer.Keyword(Keywords.TypeNames.Fathom)
+            .Value(LiteralType.Double))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Foot)
+            .Value(LiteralType.Single))
+        // String and character types.
+        .Or(Lexer.Keyword(Keywords.TypeNames.Yarn)
+            .Value(LiteralType.String))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Stitch)
+            .Value(LiteralType.Char))
+        // Boolean and null types.
+        .Or(Lexer.Keyword(Keywords.TypeNames.Decree)
+            .Value(LiteralType.Boolean))
+        .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
+            .Value(LiteralType.Null));
 
     /// <summary>
     /// Parses an array element access expression.

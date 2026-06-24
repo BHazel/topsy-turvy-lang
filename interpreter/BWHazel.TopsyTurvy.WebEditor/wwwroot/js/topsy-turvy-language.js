@@ -86,9 +86,15 @@ window.topsyTurvy = {
             ["NAUGHT",                              "null"],
             ["JUST SO",                             "implicit variable"],
             ["THE PROPS",                           "built-in programme arguments"],
-            ["PEER",                                "integer type"],
-            ["FATHOM",                              "float type"],
+            ["PEER",                                "32-bit signed integer type"],
+            ["CHANCELLOR",                          "64-bit signed integer type"],
+            ["PIRATE",                              "16-bit signed integer type"],
+            ["SAUSAGE-ROLL",                        "8-bit signed integer type"],
+            ["STANDING",                            "unsigned integer modifier"],
+            ["FATHOM",                              "64-bit double-precision float type"],
+            ["FOOT",                                "32-bit single-precision float type"],
             ["YARN",                                "string type"],
+            ["STITCH",                              "single character type"],
             ["DECREE",                              "boolean type"],
             ["A LITTLE LIST OF",                    "array type annotation"],
             ["VICTIM",                              "array element access / assignment"],
@@ -327,10 +333,19 @@ window.topsyTurvy = {
                     [/\bNAUGHT\b/, 'keyword'],
 
                     // Type names
+                    [/\bSTANDING\b/, 'keyword.other'],
                     [/\bPEER\b/, 'type'],
+                    [/\bCHANCELLOR\b/, 'type'],
+                    [/\bPIRATE\b/, 'type'],
+                    [/\bSAUSAGE-ROLL\b/, 'type'],
                     [/\bFATHOM\b/, 'type'],
+                    [/\bFOOT\b/, 'type'],
                     [/\bYARN\b/, 'type'],
+                    [/\bSTITCH\b/, 'type'],
                     [/\bDECREE\b/, 'type'],
+
+                    // Character literals
+                    [/'(~[nt'~]|[^'])'/, 'string'],
 
                     // Identifiers (after all keyword rules)
                     [/[A-Za-z][A-Za-z0-9_-]*/, ''],

@@ -39,6 +39,19 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// be used.
 /// </para>
 /// <para>
+/// During execution, the interpreter can work with the 6 literal types that the lexer can produce:
+/// * <see cref="LiteralType.Integer"/> (PEER)
+/// * <see cref="LiteralType.Double"/> (FATHOM)
+/// * <see cref="LiteralType.String"/> (YARN)
+/// * <see cref="LiteralType.Char"/> (STITCH)
+/// * <see cref="LiteralType.Boolean"/> (DECREE)
+/// * <see cref="LiteralType.Null"/> (NAUGHT)
+/// 
+/// The remaining <see cref="LiteralType"/> members are runtime-only types that arise from
+/// arithmetic widening or explicit casts: they are never produced as <see cref="LiteralNode"/>
+/// instances by the parser.
+/// </para>
+/// <para>
 /// The interpreter is initialised using an <see cref="ITopsyTurvyIO"/> implementation that handles all input and output operations.
 /// This allows the interpreter to be used in different environments where input and output may be handled differently.  Once
 /// initialised, a programme can be executed by calling the <see cref="Execute"/> method with a parsed <see cref="ProgramNode"/>.
@@ -68,6 +81,14 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     private DateTime executionTimeout = DateTime.MinValue;
     private string? sourceDirectory;
     private Func<string, string?>? fileResolver;
+
+    /// <summary>
+    /// Gets a read-only view of all functions defined in this interpreter instance.
+    /// </summary>
+    /// <remarks>
+    /// The dictionary is keyed by the function name.
+    /// </remarks>
+    public IReadOnlyDictionary<string, FunctionDefinitionNode> Functions => this.functions;
 
     /// <summary>
     /// Executes a parsed programme and returns a collection of runtime diagnostics.
@@ -298,9 +319,17 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// </summary>
     /// <param name="node">The array element assignment node.</param>
     /// <param name="environment">The environment.</param>
-    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array, the array is CONSERVATIVE, or the index is out of range.</exception>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is a YARN (immutable by-position), the variable is not an array, the array is CONSERVATIVE, or the index is out of range.</exception>
     private void ExecuteArrayElementAssignment(ArrayElementAssignmentNode node, TopsyTurvyEnvironment environment)
     {
+        TopsyTurvyValue target = environment.Get(node.ArrayName);
+        if (target.LiteralType == LiteralType.String)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{node.ArrayName}' is a YARN: its characters cannot be reassigned individually.",
+                node.Span);
+        }
+
         (int index, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
 
         if (environment.IsConstantInChain(node.ArrayName))
@@ -750,26 +779,80 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <summary>
     /// Evaluates an array index expression and returns the element at the given 1-based position.
     /// </summary>
+    /// <remarks>
+    /// When the named variable is a <c>YARN</c> string, the expression performs 1-based character indexing and returns the
+    /// character as a <c>STITCH</c>.
+    /// </remarks>
     /// <param name="node">The array index node.</param>
     /// <param name="environment">The environment.</param>
-    /// <returns>The element at the specified index.</returns>
-    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array, or the index is out of range.</exception>
+    /// <returns>The element at the specified index, or the character at the given position for a <c>YARN</c>.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not an integer, the variable is not an array or string, or the index is out of range.</exception>
     private TopsyTurvyValue EvaluateArrayIndex(ArrayIndexNode node, TopsyTurvyEnvironment environment)
     {
-        (int index, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
-        return elements[index - 1];
+        TopsyTurvyValue target = environment.Get(node.ArrayName);
+        if (target.LiteralType == LiteralType.String)
+        {
+            (int charIndex, string str) = this.ResolveStringCharacter(node.Index, node.ArrayName, node.Span, environment);
+            return TopsyTurvyValue.Char(str[charIndex - 1]);
+        }
+
+        (int arrayIndex, List<TopsyTurvyValue> elements) = this.ResolveArrayElement(node.Index, node.ArrayName, node.Span, environment);
+        return elements[arrayIndex - 1];
+    }
+
+    /// <summary>
+    /// Resolves a 1-based character position within a <c>YARN</c> string, validating the index type and bounds.
+    /// </summary>
+    /// <param name="indexExpression">The expression producing the 1-based character index.</param>
+    /// <param name="yarnName">The name of the <c>YARN</c> variable.</param>
+    /// <param name="span">The source span of the operation, used in error messages.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>A tuple of the validated 1-based index and the string value.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the index is not a <c>PEER</c> or is out of range.</exception>
+    private (int Index, string Value) ResolveStringCharacter(
+        Expression indexExpression,
+        string yarnName,
+        SourceSpan span,
+        TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue indexValue = this.EvaluateExpression(indexExpression, environment);
+        if (indexValue.LiteralType != LiteralType.Integer)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"YARN index must be a PEER (integer), got {indexValue.LiteralType}.",
+                span);
+        }
+
+        string targetString = (string)environment.Get(yarnName).RawValue!;
+        int index = (int)indexValue.RawValue!;
+        if (index < 1 || index > targetString.Length)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"YARN index {index} is out of range for '{yarnName}' (length {targetString.Length}).",
+                span);
+        }
+
+        return (index, targetString);
     }
 
     /// <summary>
     /// Evaluates an array length expression and returns the number of elements as a <c>PEER</c>.
     /// </summary>
+    /// <remarks>
+    /// When the named variable is a <c>YARN</c> string, returns the number of characters in the string.
+    /// </remarks>
     /// <param name="node">The array length node.</param>
     /// <param name="environment">The environment.</param>
-    /// <returns>The element count as an integer value.</returns>
-    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the named variable is not an array.</exception>
+    /// <returns>The element count (or character count for <c>YARN</c>) as an integer value.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the named variable is neither an array nor a string.</exception>
     private TopsyTurvyValue EvaluateArrayLength(ArrayLengthNode node, TopsyTurvyEnvironment environment)
     {
         TopsyTurvyValue arrayValue = environment.Get(node.ArrayName);
+        if (arrayValue.LiteralType == LiteralType.String)
+        {
+            return TopsyTurvyValue.Integer(((string)arrayValue.RawValue!).Length);
+        }
+
         if (arrayValue.LiteralType != LiteralType.Array)
         {
             throw new TopsyTurvyRuntimeException(
@@ -801,8 +884,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     private static TopsyTurvyValue EvaluateLiteral(LiteralNode node) => node.Type switch
     {
         LiteralType.Integer => TopsyTurvyValue.Integer((int)node.Value!),
-        LiteralType.Float => TopsyTurvyValue.Float((double)node.Value!),
+        LiteralType.Double => TopsyTurvyValue.Double((double)node.Value!),
         LiteralType.String => TopsyTurvyValue.String((string)node.Value!),
+        LiteralType.Char => TopsyTurvyValue.Char((char)node.Value!),
         LiteralType.Boolean => TopsyTurvyValue.Boolean((bool)node.Value!),
         LiteralType.Null => TopsyTurvyValue.Null(),
         _ => throw new TopsyTurvyRuntimeException($"Unknown literal type: {node.Type}")
@@ -904,43 +988,52 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
-    /// Applies an arithmetic operation to two operands.
+    /// Applies an arithmetic operation to two operands using numeric widening rules.
     /// </summary>
     /// <remarks>
-    /// If both operands are integers, the integer operation is applied and an
-    /// integer result is returned.  If at least one operand is floating-point, both
-    /// operands are converted to floats, the float operation is applied, and a
-    /// floating-point result is returned.
+    /// <para>
+    /// The widening hierarchy is outlined in <see cref="LiteralType"/>.  If either operand is <see cref="LiteralType.Double"/>,
+    /// the result is <see cref="LiteralType.Double"/>; otherwise, if either operand is <see cref="LiteralType.Single"/>, the
+    /// result is <see cref="LiteralType.Single"/>.  When both operands are integers, the result type is the wider of the two
+    /// integer types.
+    /// </para>
     /// </remarks>
     /// <param name="leftOperand">The left operand.</param>
     /// <param name="rightOperand">The right operand.</param>
-    /// <param name="integerOperation">The operation to apply if both operands are integers.</param>
-    /// <param name="floatingPointOperation">The operation to apply if at least one operand is a float.</param>
+    /// <param name="integerOperation">The operation to apply when both operands are integers (receives values as <c>long</c>).</param>
+    /// <param name="floatingPointOperation">The operation to apply when either operand is floating-point.</param>
     /// <param name="span">The source span of the operation.</param>
     /// <param name="operatorName">The Topsy Turvy keyword for the operator, used in error messages.</param>
-    /// <returns>The result of the arithmetic operation.</returns>
+    /// <returns>The result of the arithmetic operation in the widened result type.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operands are not numeric.</exception>
     private static TopsyTurvyValue ApplyArithmetic(
         TopsyTurvyValue leftOperand,
         TopsyTurvyValue rightOperand,
-        Func<int, int, int> integerOperation,
+        Func<long, long, long> integerOperation,
         Func<double, double, double> floatingPointOperation,
         SourceSpan span,
         string operatorName)
     {
-        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
+        if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
         {
-            return TopsyTurvyValue.Integer(integerOperation((int)leftOperand.RawValue!, (int)rightOperand.RawValue!));
+            throw new TopsyTurvyRuntimeException(
+                $"{operatorName} requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
+                span);
         }
 
-        if (IsNumeric(leftOperand) && IsNumeric(rightOperand))
+        if (leftOperand.LiteralType == LiteralType.Double || rightOperand.LiteralType == LiteralType.Double)
         {
-            return TopsyTurvyValue.Float(floatingPointOperation(ToDouble(leftOperand), ToDouble(rightOperand)));
+            return TopsyTurvyValue.Double(floatingPointOperation(ToDouble(leftOperand), ToDouble(rightOperand)));
         }
 
-        throw new TopsyTurvyRuntimeException(
-            $"{operatorName} requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
-            span);
+        if (leftOperand.LiteralType == LiteralType.Single || rightOperand.LiteralType == LiteralType.Single)
+        {
+            return TopsyTurvyValue.Single((float)floatingPointOperation(ToDouble(leftOperand), ToDouble(rightOperand)));
+        }
+
+        LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
+        long result = integerOperation(ToLong(leftOperand), ToLong(rightOperand));
+        return CreateIntegerFromLong(resultType, result);
     }
 
     /// <summary>
@@ -956,31 +1049,43 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when division by zero occurs or operands are not numeric.</exception>
     private static TopsyTurvyValue ApplyQuotient(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
+        if (!IsNumeric(leftOperand) || !IsNumeric(rightOperand))
         {
-            int divisor = (int)rightOperand.RawValue!;
-            if (divisor == 0)
-            {
-                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
-            }
-
-            return TopsyTurvyValue.Integer((int)leftOperand.RawValue! / divisor);
+            throw new TopsyTurvyRuntimeException(
+                $"QUOTIENT OF requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
+                span);
         }
 
-        if (IsNumeric(leftOperand) && IsNumeric(rightOperand))
+        if (leftOperand.LiteralType == LiteralType.Double || rightOperand.LiteralType == LiteralType.Double)
         {
             double divisor = ToDouble(rightOperand);
             if (divisor == 0.0)
             {
-                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);                
+                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
             }
 
-            return TopsyTurvyValue.Float(ToDouble(leftOperand) / divisor);
+            return TopsyTurvyValue.Double(ToDouble(leftOperand) / divisor);
         }
 
-        throw new TopsyTurvyRuntimeException(
-            $"QUOTIENT OF requires numeric operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
-            span);
+        if (leftOperand.LiteralType == LiteralType.Single || rightOperand.LiteralType == LiteralType.Single)
+        {
+            double divisor = ToDouble(rightOperand);
+            if (divisor == 0.0)
+            {
+                throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
+            }
+
+            return TopsyTurvyValue.Single((float)(ToDouble(leftOperand) / divisor));
+        }
+
+        long divisorLong = ToLong(rightOperand);
+        if (divisorLong == 0L)
+        {
+            throw new TopsyTurvyRuntimeException("Division by zero in QUOTIENT OF.", span);
+        }
+
+        LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
+        return CreateIntegerFromLong(resultType, ToLong(leftOperand) / divisorLong);
     }
 
     /// <summary>
@@ -993,20 +1098,21 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <exception cref="TopsyTurvyRuntimeException">Exception thrown when division by zero occurs or operands are not integers.</exception>
     private static TopsyTurvyValue ApplyRemainder(TopsyTurvyValue leftOperand, TopsyTurvyValue rightOperand, SourceSpan span)
     {
-        if (leftOperand.LiteralType == LiteralType.Integer && rightOperand.LiteralType == LiteralType.Integer)
+        if (!IsIntegerType(leftOperand) || !IsIntegerType(rightOperand))
         {
-            int divisor = (int)rightOperand.RawValue!;
-            if (divisor == 0)
-            {
-                throw new TopsyTurvyRuntimeException("Division by zero in REMAINDER OF.", span);                
-            }
-
-            return TopsyTurvyValue.Integer((int)leftOperand.RawValue! % divisor);
+            throw new TopsyTurvyRuntimeException(
+                $"REMAINDER OF requires integer operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
+                span);
         }
 
-        throw new TopsyTurvyRuntimeException(
-            $"REMAINDER OF requires integer operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
-            span);
+        long divisor = ToLong(rightOperand);
+        if (divisor == 0L)
+        {
+            throw new TopsyTurvyRuntimeException("Division by zero in REMAINDER OF.", span);
+        }
+
+        LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
+        return CreateIntegerFromLong(resultType, ToLong(leftOperand) % divisor);
     }
 
     /// <summary>
@@ -1060,11 +1166,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         return leftOperand.LiteralType switch
         {
             LiteralType.Integer => (int)leftOperand.RawValue! == (int)rightOperand.RawValue!,
-            LiteralType.Float => (double)leftOperand.RawValue! == (double)rightOperand.RawValue!,
+            LiteralType.Double => (double)leftOperand.RawValue! == (double)rightOperand.RawValue!,
             LiteralType.String => string.Equals((string)leftOperand.RawValue!, (string)rightOperand.RawValue!, StringComparison.Ordinal),
+            LiteralType.Char => (char)leftOperand.RawValue! == (char)rightOperand.RawValue!,
             LiteralType.Boolean => (bool)leftOperand.RawValue! == (bool)rightOperand.RawValue!,
             LiteralType.Null => true,
-            _ => false
+            _ => Equals(leftOperand.RawValue, rightOperand.RawValue)
         };
     }
 
@@ -1233,8 +1340,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         return literal switch
         {
             int integerLiteral => value.LiteralType == LiteralType.Integer && (int)value.RawValue! == integerLiteral,
-            double doubleLiteral => value.LiteralType == LiteralType.Float && (double)value.RawValue! == doubleLiteral,
+            double doubleLiteral => value.LiteralType == LiteralType.Double && (double)value.RawValue! == doubleLiteral,
             string stringLiteral => value.LiteralType == LiteralType.String && string.Equals((string)value.RawValue!, stringLiteral, StringComparison.Ordinal),
+            char charLiteral => value.LiteralType == LiteralType.Char && (char)value.RawValue! == charLiteral,
             bool boolLiteral => value.LiteralType == LiteralType.Boolean && (bool)value.RawValue! == boolLiteral,
             _ => false
         };
@@ -1267,23 +1375,127 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
-    /// Determines whether the given value is numeric.
+    /// Determines whether the given value is numeric (any integer or floating-point type).
     /// </summary>
     /// <param name="value">The value to check.</param>
     /// <returns><c>true</c> if the value is numeric, otherwise <c>false</c>.</returns>
     private static bool IsNumeric(TopsyTurvyValue value) =>
-        value.LiteralType is LiteralType.Integer or LiteralType.Float;
+        value.LiteralType is LiteralType.Long
+            or LiteralType.UnsignedLong
+            or LiteralType.Integer
+            or LiteralType.UnsignedInteger
+            or LiteralType.Short
+            or LiteralType.UnsignedShort
+            or LiteralType.SignedByte
+            or LiteralType.Byte
+            or LiteralType.Double
+            or LiteralType.Single;
 
     /// <summary>
-    /// Converts a numeric value to a double.
+    /// Determines whether the given value is an integer type (any signed or unsigned integer type).
+    /// </summary>
+    /// <param name="value">The value to check.</param>
+    /// <returns><c>true</c> if the value is an integer type, otherwise <c>false</c>.</returns>
+    private static bool IsIntegerType(TopsyTurvyValue value) =>
+        value.LiteralType is LiteralType.Long
+            or LiteralType.UnsignedLong
+            or LiteralType.Integer
+            or LiteralType.UnsignedInteger
+            or LiteralType.Short
+            or LiteralType.UnsignedShort
+            or LiteralType.SignedByte
+            or LiteralType.Byte;
+
+    /// <summary>
+    /// Converts a numeric value to a <see cref="double"/> for floating-point arithmetic and comparisons.
     /// </summary>
     /// <param name="value">The numeric value to convert.</param>
-    /// <returns>The converted double value.</returns>
+    /// <returns>The converted <see cref="double"/> value.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the value is not numeric.</exception>
     private static double ToDouble(TopsyTurvyValue value) => value.LiteralType switch
     {
         LiteralType.Integer => (double)(int)value.RawValue!,
-        LiteralType.Float => (double)value.RawValue!,
+        LiteralType.Long => (double)(long)value.RawValue!,
+        LiteralType.Short => (double)(short)value.RawValue!,
+        LiteralType.SignedByte => (double)(sbyte)value.RawValue!,
+        LiteralType.UnsignedInteger => (double)(uint)value.RawValue!,
+        LiteralType.UnsignedLong => (double)(ulong)value.RawValue!,
+        LiteralType.UnsignedShort => (double)(ushort)value.RawValue!,
+        LiteralType.Byte => (double)(byte)value.RawValue!,
+        LiteralType.Double => (double)value.RawValue!,
+        LiteralType.Single => (double)(float)value.RawValue!,
         _ => throw new InvalidOperationException("Value is not numeric.")
+    };
+
+    /// <summary>
+    /// Converts an integer type value to a <see cref="long"/> for integer arithmetic.
+    /// </summary>
+    /// <param name="value">The integer type value to convert.</param>
+    /// <returns>The value represented as a <see cref="long"/>.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the value is not an integer type.</exception>
+    private static long ToLong(TopsyTurvyValue value) => value.LiteralType switch
+    {
+        LiteralType.Integer => (long)(int)value.RawValue!,
+        LiteralType.Long => (long)value.RawValue!,
+        LiteralType.Short => (long)(short)value.RawValue!,
+        LiteralType.SignedByte => (long)(sbyte)value.RawValue!,
+        LiteralType.UnsignedInteger => (long)(uint)value.RawValue!,
+        LiteralType.UnsignedLong => (long)(ulong)value.RawValue!,
+        LiteralType.UnsignedShort => (long)(ushort)value.RawValue!,
+        LiteralType.Byte => (long)(byte)value.RawValue!,
+        _ => throw new InvalidOperationException("Value is not an integer type.")
+    };
+
+    /// <summary>
+    /// Returns the wider of two integer-family <see cref="LiteralType"/> values according to the arithmetic widening hierarchy.
+    /// </summary>
+    /// <remarks>
+    /// The widening rank from widest to narrowest is outlined in <see cref="LiteralType"/>.
+    /// </remarks>
+    /// <param name="a">The first integer type.</param>
+    /// <param name="b">The second integer type.</param>
+    /// <returns>The wider of the two types.</returns>
+    private static LiteralType GetWidestIntegerType(LiteralType a, LiteralType b) =>
+        IntegerTypeRank(a) >= IntegerTypeRank(b) ? a : b;
+
+    /// <summary>
+    /// Returns the widening rank of an integer <see cref="LiteralType"/>, with higher values indicating a wider type.
+    /// </summary>
+    /// <remarks>
+    /// The full ordering is outlined in <see cref="LiteralType"/>.  Non-integer types fall back to the rank of
+    /// <see cref="LiteralType.Integer"/> so that <see cref="GetWidestIntegerType"/> degrades gracefully if
+    /// called with a non-integer type.
+    /// </remarks>
+    /// <param name="type">The integer literal type.</param>
+    /// <returns>The numeric rank of the type in the widening hierarchy.</returns>
+    private static int IntegerTypeRank(LiteralType type) => type switch
+    {
+        LiteralType.SignedByte => 0,
+        LiteralType.Byte => 1,
+        LiteralType.Short => 2,
+        LiteralType.UnsignedShort => 3,
+        LiteralType.Integer => 4,
+        LiteralType.UnsignedInteger => 5,
+        LiteralType.Long => 6,
+        LiteralType.UnsignedLong => 7,
+        _ => 4
+    };
+
+    /// <summary>
+    /// Creates a <see cref="TopsyTurvyValue"/> of the specified integer type from a <see cref="long"/> result.
+    /// </summary>
+    /// <param name="type">The target integer literal type.</param>
+    /// <param name="value">The computed result as a <see cref="long"/>.</param>
+    /// <returns>A new <see cref="TopsyTurvyValue"/> of the specified type.</returns>
+    private static TopsyTurvyValue CreateIntegerFromLong(LiteralType type, long value) => type switch
+    {
+        LiteralType.Long => TopsyTurvyValue.Long(value),
+        LiteralType.Short => TopsyTurvyValue.Short((short)value),
+        LiteralType.SignedByte => TopsyTurvyValue.SignedByte((sbyte)value),
+        LiteralType.UnsignedInteger => TopsyTurvyValue.UnsignedInteger((uint)value),
+        LiteralType.UnsignedLong => TopsyTurvyValue.UnsignedLong((ulong)value),
+        LiteralType.UnsignedShort => TopsyTurvyValue.UnsignedShort((ushort)value),
+        LiteralType.Byte => TopsyTurvyValue.Byte((byte)value),
+        _ => TopsyTurvyValue.Integer((int)value)
     };
 }

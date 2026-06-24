@@ -458,15 +458,15 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
-    /// Tests that <c>RECKONING OF</c> on a non-array variable produces a runtime error.
+    /// Tests that <c>RECKONING OF</c> on a non-array, non-string variable produces a runtime error.
     /// </summary>
     [Fact]
     public void Execute_ArrayLength_NonArray_ProducesRuntimeError()
     {
         string source = """
             HARK! "Array Length"
-            PRAY WELCOME name AS A YARN BEING "Ko-Ko"
-            BEHOLD RECKONING OF name
+            PRAY WELCOME count AS A PEER BEING 42
+            BEHOLD RECKONING OF count
             FINALE.
             """;
 

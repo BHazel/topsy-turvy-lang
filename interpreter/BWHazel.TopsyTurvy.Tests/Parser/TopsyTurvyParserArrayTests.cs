@@ -58,7 +58,7 @@ public class TopsyTurvyParserArrayTests
     /// <param name="expectedType">The expected element <see cref="LiteralType"/>.</param>
     [Theory]
     [InlineData("PEER",   LiteralType.Integer)]
-    [InlineData("FATHOM", LiteralType.Float)]
+    [InlineData("FATHOM", LiteralType.Double)]
     [InlineData("YARN",   LiteralType.String)]
     [InlineData("DECREE", LiteralType.Boolean)]
     [InlineData("NAUGHT", LiteralType.Null)]

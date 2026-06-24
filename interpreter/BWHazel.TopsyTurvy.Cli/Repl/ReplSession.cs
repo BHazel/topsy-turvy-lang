@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
@@ -110,6 +111,15 @@ public sealed class ReplSession
                     AnsiConsole.MarkupLine("[dim]Switched to single-line mode.[/]");
                 }
 
+                continue;
+            }
+
+            if (userInput.StartsWith(ReplConstants.Armoury, StringComparison.OrdinalIgnoreCase)
+                || userInput.StartsWith(ReplConstants.Env, StringComparison.OrdinalIgnoreCase))
+            {
+                string[] parts = userInput.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                string kind = parts.Length > 1 ? parts[1].ToLowerInvariant() : "all";
+                WriteArmoury(kind, this.sessionEnvironment, interpreter, tiptoe || !isInteractive);
                 continue;
             }
 
@@ -342,6 +352,117 @@ public sealed class ReplSession
     }
 
     /// <summary>
+    /// Writes the environment tables for declared variables and/or functions.
+    /// </summary>
+    /// <param name="kind">
+    /// Which tables to display; values can be <c>"variables"</c>, <c>"functions"</c> or <c>"all"</c>, which prints both
+    /// variables and functions and is the default.  Any unrecognised value falls back to <c>"all"</c>.
+    /// </param>
+    /// <param name="environment">The session environment holding declared variables.</param>
+    /// <param name="interpreter">The interpreter holding registered functions.</param>
+    /// <param name="plainText">When <c>true</c>, emits plain-text output instead of styled tables.</param>
+    private static void WriteArmoury(
+        string kind,
+        TopsyTurvyEnvironment environment,
+        Interpreter interpreter,
+        bool plainText)
+    {
+        bool showVariables = kind is "all" or "variables";
+        bool showFunctions = kind is "all" or "functions";
+
+        IEnumerable<KeyValuePair<string, TopsyTurvyValue>> variables = environment
+            .GetVariables()
+            .Where(variable => variable.Key != Keywords.SpecialNames.TheProps);
+
+        IReadOnlyDictionary<string, FunctionDefinitionNode> functions = interpreter.Functions;
+
+        if (plainText)
+        {
+            if (showVariables)
+            {
+                Console.WriteLine("VARIABLES:");
+                Console.WriteLine($"  {"IDENTIFIER",-24} {"TYPE",-24} {"CONSTANT",-10} VALUE");
+                foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
+                {
+                    string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                    string constant = environment.IsConstant(variable.Key) ? "✓" : "✗";
+                    Console.WriteLine($"  {variable.Key,-24} {typeName,-24} {constant,-10} {variable.Value}");
+                }
+            }
+
+            if (showVariables && showFunctions)
+            {
+                Console.WriteLine();
+            }
+
+            if (showFunctions)
+            {
+                Console.WriteLine("FUNCTIONS:");
+                Console.WriteLine($"  {"IDENTIFIER",-24} PARAMETERS");
+                foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+                {
+                    string parameters = string.Join(", ", function.Value.Parameters);
+                    Console.WriteLine($"  {function.Key,-24} {parameters}");
+                }
+            }
+
+            return;
+        }
+
+        if (showVariables)
+        {
+            Table variablesTable = new()
+            {
+                Border = TableBorder.Rounded,
+                BorderStyle = new(Color.MediumPurple1),
+                Caption = new("Variables")
+            };
+
+            variablesTable.AddColumn(new("[bold]Identifier[/]"));
+            variablesTable.AddColumn(new("[bold]Type[/]"));
+            variablesTable.AddColumn(new("[bold]Value[/]"));
+            variablesTable.AddColumn(new("[bold]Constant[/]"));
+
+            foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
+            {
+                string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                bool isConstant = environment.IsConstant(variable.Key);
+                variablesTable.AddRow(
+                    Markup.Escape(variable.Key),
+                    $"[cyan]{Markup.Escape(typeName)}[/]",
+                    $"[lightgreen_1]{Markup.Escape(variable.Value.ToString() ?? string.Empty)}[/]",
+                    isConstant ? "[green]✓[/]" : "[red]✗[/]");
+            }
+
+            AnsiConsole.Write(variablesTable);
+        }
+
+        if (showFunctions)
+        {
+            Table functionsTable = new()
+            {
+                Border = TableBorder.Rounded,
+                BorderStyle = new(Color.MediumPurple1),
+                Caption = new("Functions")
+            };
+
+            functionsTable.AddColumn(new("[bold]Identifier[/]"));
+            functionsTable.AddColumn(new("[bold]Parameters[/]"));
+
+            foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+            {
+                string parameters = function.Value.Parameters.Count == 0
+                    ? "[dim](none)[/]"
+                    : Markup.Escape(string.Join(", ", function.Value.Parameters));
+                
+                functionsTable.AddRow(Markup.Escape(function.Key), parameters);
+            }
+
+            AnsiConsole.Write(functionsTable);
+        }
+    }
+
+    /// <summary>
     /// Writes the REPL command help table.
     /// </summary>
     private static void WriteHelpTable(bool plainText)
@@ -353,6 +474,7 @@ public sealed class ReplSession
             Console.WriteLine($"{ReplConstants.Madrigal} / {ReplConstants.MultiLine}   Switch to multi-line mode");
             Console.WriteLine($"{ReplConstants.Patter} / {ReplConstants.SingleLine}    Switch to single-line mode");
             Console.WriteLine($"{ReplConstants.Entracte} / {ReplConstants.Help}        Show this help");
+            Console.WriteLine($"{ReplConstants.Armoury} / {ReplConstants.Env}          Show declared variables and functions");
             return;
         }
 
@@ -371,6 +493,7 @@ public sealed class ReplSession
         table.AddRow(ReplConstants.Madrigal, ReplConstants.MultiLine, "Switch to multi-line mode (blank line executes)");
         table.AddRow(ReplConstants.Patter, ReplConstants.SingleLine, "Switch to single-line mode (Enter executes)");
         table.AddRow(ReplConstants.Entracte, ReplConstants.Help, "Show this help table");
+        table.AddRow($"{ReplConstants.Armoury} {Markup.Escape("[all|variables|functions]")}", ReplConstants.Env, "Show declared variables and functions");
 
         AnsiConsole.Write(table);
     }

@@ -23,14 +23,14 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
-    /// Tests that a floating-point literal produces a <see cref="LiteralNode"/> with type <see cref="LiteralType.Float"/> and the correct value.
+    /// Tests that a floating-point literal produces a <see cref="LiteralNode"/> with type <see cref="LiteralType.Double"/> and the correct value.
     /// </summary>
     [Fact]
     public void Parse_WithFloatLiteral_ProducesLiteralNodeWithCorrectValue()
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("3.14");
 
-        node.Type.ShouldBe(LiteralType.Float);
+        node.Type.ShouldBe(LiteralType.Double);
         ((double)node.Value!).ShouldBe(3.14, tolerance: 1e-10);
     }
 
