@@ -46,22 +46,24 @@ _Truthy_ values for the Topsy Turvy types are outlined below:
 
 |Type|Truthy Values|
 |-|-|
-|`PEER` (Integer)|Any non-zero number.|
-|`FATHOM` (Floating-Point)|Any non-zero number.|
+|All Integer Types|Any non-zero number.|
+|All Floating-Point Types|Any non-zero number.|
 |`YARN` (String)|Any non-empty string.|
-|`DECREE` (Boolean)|`true`|
-|`NAUGHT` (Null)|Never `true`|
+|`STITCH` (Character)|Any character except the null character (`\0`).|
+|`DECREE` (Boolean)|`VERITY`|
+|`NAUGHT` (Null)|Never truthy.|
 |`LITTLE LIST OF` (Array)|Any non-empty array.|
 
 Casting between values is outlined below:
 
-||To `PEER`|To `FATHOM`|To `YARN`|To `DECREE`|To `NAUGHT`|
-|-|-|-|-|-|-|
-|From `PEER`||Cast to `double`|Call `ToString()`|Call `IsTruthy()`|Set as `null`|
-|From `FATHOM`|Cast to `int` truncating to integer||Call `ToString()`|Call `IsTruthy()`|Set as `null`|
-|From `YARN`|Call `TryParse()` and throw if not an integer.|Call `TryParse()` and throw if not numeric.||Call `IsTruthy()`|Set as `null`|
-|From `DECREE`|`VERITY` => `1`; `NAY` => `0`|`VERITY` => `1.0`; `NAY` => `0.0`|Topsy Turvy Literal as `string`||Set as `null`|
-|From `NAUGHT`|`0`|`0.0`|Topsy Turvy Literal as `string`|`false`||
+||To Integer|To Floating-Point|To `YARN`|To `STITCH`|To `DECREE`|To `NAUGHT`|
+|-|-|-|-|-|-|-|
+|From Integer||Widening or narrowing numeric conversion.|Call `ToString()`.|Cast code point to `char`.|Call `IsTruthy()`.|Set as `null`.|
+|From Floating-Point|Truncating numeric conversion.||Call `ToString()`.|Truncate to integer then cast to `char`.|Call `IsTruthy()`.|Set as `null`.|
+|From `YARN`|Call `TryParse()` and throw if not an integer.|Call `TryParse()` and throw if not numeric.||First character; throws if empty string.|Call `IsTruthy()`.|Set as `null`.|
+|From `STITCH`|Unicode code point.|Unicode code point.|Single-character string.||Call `IsTruthy()`.|Set as `null`.|
+|From `DECREE`|`VERITY` => `1`; `NAY` => `0`|`VERITY` => `1.0`; `NAY` => `0.0`|Topsy Turvy Literal as `string`.|`VERITY` => `\x01`; `NAY` => `\0`.||Set as `null`.|
+|From `NAUGHT`|`0`|`0.0`|Topsy Turvy Literal as `string`.|`\0` (null character).|`false`||
 
 
 Scopes are managed by creating nested environments or function environments.  Value access is upward: nested environments can access values in enclosing environments but not vice versa.  Additionally, function environments are isolated and are therefore unable to access values outside their own environment.

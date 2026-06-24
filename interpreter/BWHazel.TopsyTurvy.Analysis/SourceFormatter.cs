@@ -39,6 +39,7 @@ public static class SourceFormatter
     public static readonly string[] PostIncrease2Keywords =
     [
         "IN WHICH CAPACITY?",
+        "YEOMAN",
     ];
 
     /// <summary>
@@ -59,6 +60,7 @@ public static class SourceFormatter
     [
         "SO MUCH FOR THAT.",
         "NOTHING COULD BE MORE SATISFACTORY.",
+        "UNDER ORDERS.",
     ];
 
     /// <summary>
@@ -150,6 +152,9 @@ public static class SourceFormatter
         "PRINCIPALS",
         "AS A",
         "JUST SO",
+        "THE LAW IS",
+        "YEOMAN",
+        "UNDER ORDERS.",
         "or,",
         "END OF ASIDE.)",
     ];

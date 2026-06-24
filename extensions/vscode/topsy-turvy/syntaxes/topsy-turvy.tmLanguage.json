@@ -7,6 +7,7 @@
     { "include": "#block-comments" },
     { "include": "#line-comments" },
     { "include": "#strings" },
+    { "include": "#char-literals" },
     { "include": "#numbers" },
     { "include": "#boolean-literals" },
     { "include": "#null-literal" },
@@ -42,6 +43,10 @@
     "line-comments": {
       "name": "comment.line.topsy",
       "match": "(?i)ASIDE:.*$"
+    },
+    "char-literals": {
+      "name": "string.quoted.single.topsy",
+      "match": "'(~[nt'~]|[^'])'"
     },
     "strings": {
       "name": "string.quoted.double.topsy",
@@ -127,6 +132,14 @@
         {
           "name": "keyword.control.topsy",
           "match": "(?i)\\bSO\\s+MUCH\\s+FOR\\s+THAT\\."
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "(?i)\\bYEOMAN\\b"
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "(?i)\\bUNDER\\s+ORDERS\\."
         }
       ]
     },
@@ -194,6 +207,10 @@
       "patterns": [
         {
           "name": "keyword.control.exception.topsy",
+          "match": "(?i)\\bTHE\\s+LAW\\s+IS\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
           "match": "(?i)\\bA\\s+HIDEOUS\\s+CURSE\\s+ON\\b"
         },
         {
@@ -211,6 +228,10 @@
         {
           "name": "keyword.control.exception.topsy",
           "match": "(?i)\\bTHAT\\s+CONCLUDES\\s+THE\\s+MATTER\\."
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "(?i)\\bTHAT\\b"
         }
       ]
     },
@@ -303,6 +324,10 @@
         {
           "name": "keyword.other.declaration.topsy",
           "match": "(?i)\\bLIBERAL\\b"
+        },
+        {
+          "name": "keyword.other.declaration.topsy",
+          "match": "(?i)\\bSTANDING\\b"
         }
       ]
     },
@@ -318,7 +343,7 @@
         },
         {
           "name": "storage.type.topsy",
-          "match": "(?i)\\b(PEER|FATHOM|YARN|DECREE)\\b"
+          "match": "(?i)\\b(PEER|CHANCELLOR|PIRATE|SAUSAGE-ROLL|FATHOM|FOOT|YARN|STITCH|DECREE)\\b"
         }
       ]
     },
@@ -359,6 +384,14 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\b(ALIKE|UNLIKE|PRE-ADAMITE)\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\b(CHORD|HARMONY|DISCORD|INVERSION)\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bTRANSPOSITION\\s+(UP|DOWN)\\b"
         },
         {
           "name": "keyword.operator.topsy",

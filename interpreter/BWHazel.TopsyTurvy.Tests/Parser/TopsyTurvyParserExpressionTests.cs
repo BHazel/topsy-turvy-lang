@@ -23,14 +23,14 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
-    /// Tests that a floating-point literal produces a <see cref="LiteralNode"/> with type <see cref="LiteralType.Float"/> and the correct value.
+    /// Tests that a floating-point literal produces a <see cref="LiteralNode"/> with type <see cref="LiteralType.Double"/> and the correct value.
     /// </summary>
     [Fact]
     public void Parse_WithFloatLiteral_ProducesLiteralNodeWithCorrectValue()
     {
         LiteralNode node = this.ParsePrintExpression<LiteralNode>("3.14");
 
-        node.Type.ShouldBe(LiteralType.Float);
+        node.Type.ShouldBe(LiteralType.Double);
         ((double)node.Value!).ShouldBe(3.14, tolerance: 1e-10);
     }
 
@@ -149,6 +149,9 @@ public class TopsyTurvyParserExpressionTests
     [InlineData("UNLIKE 1 AND 2",           Operator.Unlike)]
     [InlineData("PRE-ADAMITE 5 AND 3",      Operator.PreAdamite)]
     [InlineData("LOWER DEGREE 3 AND 5",     Operator.LowerDegree)]
+    [InlineData("CHORD OF 5 AND 3",         Operator.ChordOf)]
+    [InlineData("HARMONY OF 5 AND 3",       Operator.HarmonyOf)]
+    [InlineData("DISCORD OF 5 AND 3",       Operator.DiscordOf)]
     public void Parse_WithBinaryPrefixOperator_ProducesCorrectOperatorWithTwoArguments(
         string expressionSource,
         Operator expectedOperator)
@@ -160,17 +163,24 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
-    /// Tests that HARDLY EVER produces a <see cref="PrefixExpressionNode"/> with operator <see cref="Operator.HardlyEver"/> and one argument.
+    /// Tests that each unary prefix operator produces a <see cref="PrefixExpressionNode"/> with the correct
+    /// <see cref="Operator"/> value and one argument.
     /// </summary>
-    [Fact]
-    public void Parse_WithHardlyEver_ProducesUnaryOperatorWithOneArgument()
+    /// <param name="expressionSource">The source code of the expression to parse.</param>
+    /// <param name="expectedOperator">The expected operator enum value.</param>
+    [Theory]
+    [InlineData("HARDLY EVER VERITY",   Operator.HardlyEver)]
+    [InlineData("INVERSION OF 5",       Operator.InversionOf)]
+    [InlineData("TRANSPOSITION UP 4",   Operator.TranspositionUp)]
+    [InlineData("TRANSPOSITION DOWN 8", Operator.TranspositionDown)]
+    public void Parse_WithUnaryPrefixOperator_ProducesCorrectOperatorWithOneArgument(string expressionSource, Operator expectedOperator)
     {
-        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>("HARDLY EVER VERITY");
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(expressionSource);
 
-        node.Operator.ShouldBe(Operator.HardlyEver);
+        node.Operator.ShouldBe(expectedOperator);
         node.Arguments.ShouldHaveSingleItem();
     }
-    
+
     /// <summary>
     /// Tests that WOVEN OF with three arguments produces a <see cref="PrefixExpressionNode"/> with three arguments.
     /// </summary>

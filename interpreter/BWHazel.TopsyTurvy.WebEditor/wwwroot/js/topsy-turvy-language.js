@@ -55,6 +55,9 @@ window.topsyTurvy = {
             ["SUMMON",                              "function call"],
             ["WITH",                                "function call arguments"],
             ["IF YOU PLEASE.",                      "end expression list"],
+            ["YEOMAN",                              "guard clause"],
+            ["UNDER ORDERS.",                       "end guard"],
+            ["THE LAW IS",                          "assert statement"],
             ["A HIDEOUS CURSE ON",                  "throw"],
             ["WITH THE GREATEST RESPECT,",          "try block"],
             ["WITH GRATITUDE",                      "success handler"],
@@ -78,14 +81,26 @@ window.topsyTurvy = {
             ["LOWER DEGREE",                        "less than (<)"],
             ["ALL OF",                              "all-true (variadic AND)"],
             ["ANY OF",                              "any-true (variadic OR)"],
+            ["CHORD OF",                            "bitwise AND"],
+            ["HARMONY OF",                          "bitwise OR"],
+            ["DISCORD OF",                          "bitwise XOR"],
+            ["INVERSION OF",                        "bitwise NOT (unary)"],
+            ["TRANSPOSITION UP",                    "left shift by 1 (unary)"],
+            ["TRANSPOSITION DOWN",                  "right shift by 1 (unary)"],
             ["VERITY",                              "boolean true"],
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
             ["JUST SO",                             "implicit variable"],
             ["THE PROPS",                           "built-in programme arguments"],
-            ["PEER",                                "integer type"],
-            ["FATHOM",                              "float type"],
+            ["PEER",                                "32-bit signed integer type"],
+            ["CHANCELLOR",                          "64-bit signed integer type"],
+            ["PIRATE",                              "16-bit signed integer type"],
+            ["SAUSAGE-ROLL",                        "8-bit signed integer type"],
+            ["STANDING",                            "unsigned integer modifier"],
+            ["FATHOM",                              "64-bit double-precision float type"],
+            ["FOOT",                                "32-bit single-precision float type"],
             ["YARN",                                "string type"],
+            ["STITCH",                              "single character type"],
             ["DECREE",                              "boolean type"],
             ["A LITTLE LIST OF",                    "array type annotation"],
             ["VICTIM",                              "array element access / assignment"],
@@ -225,6 +240,9 @@ window.topsyTurvy = {
 
                     // A LITTLE LIST OF: after "AS A" consumes the leading A, only "LITTLE LIST OF" remains in the token stream
                     [/\bLITTLE\s+LIST\s+OF\b/, 'type'],
+                    [/\bYEOMAN\b/, 'keyword'],
+                    [/\bUNDER\s+ORDERS\./, 'keyword'],
+                    [/\bTHE\s+LAW\s+IS\b/, 'keyword'],
                     [/\bA\s+HIDEOUS\s+CURSE\s+ON\b/, 'keyword'],
                     [/\bBY\s+A\s+LEGAL\s+FICTION\b/, 'keyword'],
                     [/\bSO\s+MUCH\s+FOR\s+THAT\./, 'keyword'],
@@ -256,6 +274,9 @@ window.topsyTurvy = {
                     // THAT WILL DO and THAT CONCLUDES (already done above)
                     [/\bTHAT\s+WILL\s+DO\./, 'keyword'],
 
+                    // Standalone THAT — assert statement separator; must follow all multi-word THAT rules
+                    [/\bTHAT\b/, 'keyword'],
+
                     // QUITE SO
                     [/\bQUITE\s+SO\./, 'keyword'],
 
@@ -280,6 +301,8 @@ window.topsyTurvy = {
 
                     // Remaining multi-word operators and keywords
                     [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|RECKONING)\s+OF\b/, 'keyword'],
+                    [/\b(CHORD|HARMONY|DISCORD|INVERSION)\s+OF\b/, 'keyword'],
+                    [/\bTRANSPOSITION\s+(UP|DOWN)\b/, 'keyword'],
                     [/\bWOVEN\s+OF\b/, 'keyword'],
                     [/\bHARDLY\s+EVER\b/, 'keyword'],
                     [/\bLOWER\s+DEGREE\b/, 'keyword'],
@@ -318,10 +341,19 @@ window.topsyTurvy = {
                     [/\bNAUGHT\b/, 'keyword'],
 
                     // Type names
+                    [/\bSTANDING\b/, 'keyword.other'],
                     [/\bPEER\b/, 'type'],
+                    [/\bCHANCELLOR\b/, 'type'],
+                    [/\bPIRATE\b/, 'type'],
+                    [/\bSAUSAGE-ROLL\b/, 'type'],
                     [/\bFATHOM\b/, 'type'],
+                    [/\bFOOT\b/, 'type'],
                     [/\bYARN\b/, 'type'],
+                    [/\bSTITCH\b/, 'type'],
                     [/\bDECREE\b/, 'type'],
+
+                    // Character literals
+                    [/'(~[nt'~]|[^'])'/, 'string'],
 
                     // Identifiers (after all keyword rules)
                     [/[A-Za-z][A-Za-z0-9_-]*/, ''],

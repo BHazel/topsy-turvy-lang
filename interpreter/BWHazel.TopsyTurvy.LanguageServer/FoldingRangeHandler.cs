@@ -42,6 +42,7 @@ public class FoldingRangeHandler(DocumentStateManager documentStateManager)
         ("SHOULD IT TRANSPIRE THAT",    FoldingRangeKind.Region),
         ("IN WHICH CAPACITY?",          FoldingRangeKind.Region),
         ("WITH THE GREATEST RESPECT,",  FoldingRangeKind.Region),
+        ("YEOMAN",                      FoldingRangeKind.Region),
         ("(ASIDE, AT SOME LENGTH:",     FoldingRangeKind.Comment),
     ];
 
@@ -57,6 +58,7 @@ public class FoldingRangeHandler(DocumentStateManager documentStateManager)
         "SO MUCH FOR THAT.",
         "NOTHING COULD BE MORE SATISFACTORY.",
         "THAT CONCLUDES THE MATTER.",
+        "UNDER ORDERS.",
         "END OF ASIDE.)",
     ];
 

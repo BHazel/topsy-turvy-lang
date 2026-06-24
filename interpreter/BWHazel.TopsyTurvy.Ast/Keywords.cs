@@ -27,16 +27,38 @@ public static class Keywords
     /// <summary>
     /// Type keywords for declarations and casts.
     /// </summary>
+    /// <remarks>
+    /// The <see cref="Standing"/> modifier (<c>STANDING</c>) precedes any of the integer type keywords to produce an unsigned
+    /// variant.
+    /// </remarks>
     public static class TypeNames
     {
-        /// <summary>Integer type (<c>PEER</c>).</summary>
+        /// <summary>32-bit signed integer type (<c>PEER</c>).</summary>
         public const string Peer = "PEER";
 
-        /// <summary>Floating-point type (<c>FATHOM</c>).</summary>
+        /// <summary>64-bit signed integer type (<c>CHANCELLOR</c>).</summary>
+        public const string Chancellor = "CHANCELLOR";
+
+        /// <summary>16-bit signed integer type (<c>PIRATE</c>).</summary>
+        public const string Pirate = "PIRATE";
+
+        /// <summary>8-bit signed integer type (<c>SAUSAGE-ROLL</c>).</summary>
+        public const string SausageRoll = "SAUSAGE-ROLL";
+
+        /// <summary>Unsigned integer modifier (<c>STANDING</c>); precedes a base integer type keyword.</summary>
+        public const string Standing = "STANDING";
+
+        /// <summary>64-bit double-precision floating-point type (<c>FATHOM</c>).</summary>
         public const string Fathom = "FATHOM";
+
+        /// <summary>32-bit single-precision floating-point type (<c>FOOT</c>).</summary>
+        public const string Foot = "FOOT";
 
         /// <summary>String type (<c>YARN</c>).</summary>
         public const string Yarn = "YARN";
+
+        /// <summary>Single-character type (<c>STITCH</c>).</summary>
+        public const string Stitch = "STITCH";
 
         /// <summary>Boolean type (<c>DECREE</c>).</summary>
         public const string Decree = "DECREE";
@@ -47,9 +69,7 @@ public static class Keywords
         /// </remarks>
         public const string Naught = Literals.Naught;
 
-        /// <summary>
-        /// Array type annotation prefix (<c>LITTLE LIST OF</c>).
-        /// </summary>
+        /// <summary>Array type annotation prefix (<c>LITTLE LIST OF</c>).</summary>
         public const string LittleListOf = "LITTLE LIST OF";
     }
 

@@ -28,7 +28,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 ///     * The <see cref="Expression"/> property set to a <see cref="LiteralNode"/>, as <c>20</c> is a literal, with:
 ///         * The <see cref="LiteralNode.Type"/> property set to <see cref="LiteralType.Integer"/>.
 ///         * The <see cref="LiteralNode.Value"/> property set to <c>20</c>.
-///     * The <see cref="NewType"/> property set to <see cref="LiteralType"/>.<c>Float</c>.
+///     * The <see cref="NewType"/> property set to <see cref="LiteralType"/>.<c>Double</c>.
 /// * The <see cref="PrintNode"/> with its <see cref="PrintNode.Expression"/> set to an <see cref="IdentifierNode"/> with
 ///   <see cref="IdentifierNode.Name"/> set to <c>JUST SO</c> (or convenience constant <see cref="Keywords"/><c>.SpecialNames.JustSo</c>).
 /// </para>
@@ -44,7 +44,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 ///         Value = 20,
 ///         Span = new() { /* ... */ }
 ///     },
-///     NewType = LiteralType.Float,
+///     NewType = LiteralType.Double,
 ///     Span = new() { /* ... */ }
 /// };
 /// 
@@ -73,10 +73,10 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// * The <see cref="ExpressionCastNode"/> with:
 ///     * The <see cref="Expression"/> property set to an <see cref="IdentifierNode"/>, as <c>ParadoxBirthday</c> is a variable, with:
 ///         * The <see cref="IdentifierNode.Name"/> property set to <c>ParadoxBirthday</c>.
-///     * The <see cref="NewType"/> property set to <see cref="LiteralType"/>.<c>Float</c>.
+///     * The <see cref="NewType"/> property set to <see cref="LiteralType"/>.<c>Double</c>.
 /// * The <see cref="DeclarationNode"/> with:
 ///     * The <see cref="DeclarationNode.Name"/> property set to <c>Years</c>.
-///     * The <see cref="DeclarationNode.Type"/> property set to <see cref="LiteralType"/>.<c>Float</c>.
+///     * The <see cref="DeclarationNode.Type"/> property set to <see cref="LiteralType"/>.<c>Double</c>.
 ///     * The <see cref="DeclarationNode.InitialValue"/> property set to a <see cref="PrefixExpressionNode"/> using the <see cref="Operator"/>.<c>Quotient</c> operator, with:
 ///         * <see cref="PrefixExpressionNode.Arguments"/> containing an <see cref="IdentifierNode"/> for <c>JUST SO</c> and a <see cref="LiteralNode"/> for <c>4</c>.
 /// </para>
@@ -91,14 +91,14 @@ namespace BWHazel.TopsyTurvy.Ast;
 ///         Name = "ParadoxBirthday",
 ///         Span = new() { /* ... */ }
 ///     },
-///     NewType = LiteralType.Float,
+///     NewType = LiteralType.Double,
 ///     Span = new() { /* ... */ }
 /// };
 /// 
 /// new DeclarationNode()
 /// {
 ///     Name = "Years",
-///     Type = LiteralType.Float,
+///     Type = LiteralType.Double,
 ///     InitialValue = new PrefixExpressionNode()
 ///     {
 ///         Operator = Operator.Quotient,

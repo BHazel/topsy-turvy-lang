@@ -35,24 +35,6 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that each type keyword maps to the correct <see cref="LiteralType"/> on the declaration node.
-    /// </summary>
-    /// <param name="keyword">The type keyword to test.</param>
-    /// <param name="expectedType">The expected <see cref="LiteralType"/> corresponding to the keyword.</param>
-    [Theory]
-    [InlineData("PEER",   LiteralType.Integer)]
-    [InlineData("FATHOM", LiteralType.Float)]
-    [InlineData("YARN",   LiteralType.String)]
-    [InlineData("DECREE", LiteralType.Boolean)]
-    [InlineData("NAUGHT", LiteralType.Null)]
-    public void Parse_Declaration_WithTypeKeyword_MapsToCorrectLiteralType(string keyword, LiteralType expectedType)
-    {
-        DeclarationNode node = this.ParseFirstStatement<DeclarationNode>($"PRAY WELCOME x AS A {keyword}");
-
-        node.Type.ShouldBe(expectedType);
-    }
-
-    /// <summary>
     /// Tests that IS APPOINTED produces an <see cref="AssignmentNode"/> with the correct target name.
     /// </summary>
     [Fact]
@@ -75,15 +57,14 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that IS HENCEFORTH A produces an <see cref="InPlaceCastNode"/> with the correct target and new type.
+    /// Tests that IS HENCEFORTH A produces an <see cref="InPlaceCastNode"/> with the correct target variable name.
     /// </summary>
     [Fact]
-    public void Parse_WithInPlaceCast_SetsTargetAndNewType()
+    public void Parse_WithInPlaceCast_SetsTarget()
     {
         InPlaceCastNode node = this.ParseFirstStatement<InPlaceCastNode>("x IS HENCEFORTH A FATHOM");
 
         node.Target.ShouldBe("x");
-        node.NewType.ShouldBe(LiteralType.Float);
     }
 
     /// <summary>

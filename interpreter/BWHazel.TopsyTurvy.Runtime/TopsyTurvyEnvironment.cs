@@ -139,6 +139,16 @@ public sealed class TopsyTurvyEnvironment
     }
 
     /// <summary>
+    /// Returns a read-only view of all variables declared directly in this environment.
+    /// </summary>
+    /// <remarks>
+    /// Only the immediate scope is returned and the enclosing chain is not walked.
+    /// </remarks>
+    /// <returns>A <see cref="IReadOnlyDictionary{TKey,TValue}"/> mapping each variable name to its current value.</returns>
+    public IReadOnlyDictionary<string, TopsyTurvyValue> GetVariables() =>
+        this.variables;
+
+    /// <summary>
     /// Determines whether a variable is declared as a constant in this environment.
     /// </summary>
     /// <param name="name">The variable name.</param>

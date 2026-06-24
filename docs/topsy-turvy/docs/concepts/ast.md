@@ -24,6 +24,9 @@ The concrete node types, grouped by their base class, are listed below.
 
 |AST Node Class|Title|Description|
 |-|-|-|
+|`ArrayDeclarationNode`|Array Declaration|Declares an array variable with a type, optional mutability modifier, optional size, and optional initialiser: `PRAY WELCOME` ... `AS A [CONSERVATIVE\|LIBERAL] LITTLE LIST OF [size] type [BEING` ... `IF YOU PLEASE.]`|
+|`ArrayElementAssignmentNode`|Array Element Assignment|Assigns a value to an element at a 1-based index: `VICTIM <index> ON <array> IS APPOINTED <value>`.|
+|`AssertNode`|Assert|Evaluates a condition and throws with a message if falsy: `THE LAW IS <condition> THAT <message>`.|
 |`AssignmentNode`|Assignment|Assigns a new value to an existing variable: `IS APPOINTED`.|
 |`BreakNode`|Break|Exits a loop or switch block immediately: `THAT WILL DO.`|
 |`ConditionalNode`|Conditional|An if/else-if/else conditional: `SHOULD IT TRANSPIRE THAT` ... `SO MUCH FOR THAT.`|
@@ -32,6 +35,7 @@ The concrete node types, grouped by their base class, are listed below.
 |`ExpressionCastNode`|Expression Cast|Casts an expression to a new type, storing the result in the implicit `JUST SO` variable: `AS IT WERE` ... `AS A`.|
 |`ExpressionStatement`|Expression Statement|Wraps a standalone expression used as a statement, such as a discarded function call.|
 |`FunctionDefinitionNode`|Function Definition|Defines a named function with parameters and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`|
+|`GuardNode`|Guard|Evaluates a condition and, if falsy, executes an else block: `YEOMAN <condition> OTHERWISE, <block> UNDER ORDERS.`|
 |`ImportNode`|Import|Imports another `.topsy` file, making its functions available: `PRAY ADMIT`.|
 |`InPlaceCastNode`|In-Place Cast|Converts a variable to a new type, mutating it in place: `IS HENCEFORTH A`.|
 |`InputNode`|Input|Reads a line from standard input into a variable as a `YARN` (string): `PRAY TELL`.|
@@ -47,9 +51,12 @@ The concrete node types, grouped by their base class, are listed below.
 
 |AST Node Class|Title|Description|
 |-|-|-|
+|`ArrayIndexNode`|Array Index|Accesses an array element or string character at a 1-based index: `VICTIM <index> ON <array>`.|
+|`ArrayLengthNode`|Array Length|Evaluates to the number of elements in an array or string: `RECKONING OF <array>`.|
 |`IdentifierNode`|Identifier|References a named variable or function, including the implicit `JUST SO` variable.|
-|`LiteralNode`|Literal|A fixed literal value: integer, float, string, boolean or null.|
-|`PrefixExpressionNode`|Prefix Expression|All prefix operations (arithmetic, logical, comparison, variadic and function calls) identified by the `Operator` enum (see below).|
+|`LiteralNode`|Literal|A fixed literal value: integer, float, string, character, boolean or null.|
+|`PrefixExpressionNode`|Prefix Expression|All prefix operations (arithmetic, bitwise, logical, comparison, variadic and function calls) identified by the `Operator` enum (see below).|
+|`TernaryExpressionNode`|Ternary Expression|Inline conditional expression: `<true-value> SHOULD IT TRANSPIRE THAT <condition> OTHERWISE, <false-value>`.  Only the false branch may itself be a ternary, enabling right-chaining.|
 
 ### Enumerations
 
@@ -98,6 +105,17 @@ The `Operator` enum identifies the operation performed by a `PrefixExpressionNod
 |`Both`|`BOTH x AND y`|Logical AND.|
 |`Either`|`EITHER x OR y`|Logical OR.|
 |`HardlyEver`|`HARDLY EVER x`|Logical NOT (unary).|
+
+**Bitwise:** Integer-only operators; applying to non-integer types is a runtime error:
+
+|Value|Keyword|Description|
+|-|-|-|
+|`ChordOf`|`CHORD OF x AND y`|Bitwise AND (`x & y`).|
+|`HarmonyOf`|`HARMONY OF x AND y`|Bitwise OR (`x \| y`).|
+|`DiscordOf`|`DISCORD OF x AND y`|Bitwise XOR (`x ^ y`).|
+|`InversionOf`|`INVERSION OF x`|Bitwise NOT, unary (`~x`).|
+|`TranspositionUp`|`TRANSPOSITION UP x`|Left shift by 1, unary (`x << 1`).|
+|`TranspositionDown`|`TRANSPOSITION DOWN x`|Right shift by 1, unary (`x >> 1`).|
 
 **Variadic:** Accept two or more operands, closed by `IF YOU PLEASE.`:
 

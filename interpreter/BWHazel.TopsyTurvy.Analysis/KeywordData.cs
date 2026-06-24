@@ -5,6 +5,9 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// </summary>
 /// <remarks>
 /// This is the authoritative source of truth for language keywords, their canonical case and their descriptions.
+/// The <see cref="Keywords"/> array is the single source of truth for the LSP completion list and the Monaco editor keyword list
+/// in the Web Editor and both must stay in sync with this file.  When adding a new language keyword, an entry must be appended
+/// here first.
 /// </remarks>
 public static class KeywordData
 {
@@ -89,17 +92,32 @@ public static class KeywordData
         ("LOWER DEGREE",                             "less than (<)"),
         ("ALL OF",                                   "all-true (variadic AND)"),
         ("ANY OF",                                   "any-true (variadic OR)"),
+        ("CHORD OF",                                 "bitwise AND"),
+        ("HARMONY OF",                               "bitwise OR"),
+        ("DISCORD OF",                               "bitwise XOR"),
+        ("INVERSION OF",                             "bitwise NOT (unary)"),
+        ("TRANSPOSITION UP",                         "left shift by 1 (unary)"),
+        ("TRANSPOSITION DOWN",                       "right shift by 1 (unary)"),
         ("VERITY",                                   "boolean true"),
         ("NAY",                                      "boolean false"),
         ("NAUGHT",                                   "null"),
         ("JUST SO",                                  "implicit variable"),
-        ("PEER",                                     "integer type"),
-        ("FATHOM",                                   "float type"),
+        ("PEER",                                     "32-bit signed integer type"),
+        ("CHANCELLOR",                               "64-bit signed integer type"),
+        ("PIRATE",                                   "16-bit signed integer type"),
+        ("SAUSAGE-ROLL",                             "8-bit signed integer type"),
+        ("STANDING",                                 "unsigned integer modifier"),
+        ("FATHOM",                                   "64-bit double-precision float type"),
+        ("FOOT",                                     "32-bit single-precision float type"),
         ("YARN",                                     "string type"),
+        ("STITCH",                                   "single character type"),
         ("DECREE",                                   "boolean type"),
         ("A LITTLE LIST OF",                         "array type annotation"),
         ("VICTIM",                                   "array element access / assignment"),
         ("ON",                                       "array index separator"),
         ("RECKONING OF",                             "array length expression"),
+        ("YEOMAN",                                   "guard clause"),
+        ("UNDER ORDERS.",                            "end guard"),
+        ("THE LAW IS",                               "assert statement"),
     ];
 }

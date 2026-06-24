@@ -1,11 +1,15 @@
-(* Topsy Turvy Formal Grammar v0.2.0 *)
-(* Based on SPEC.md v0.3.0 *)
+(* Topsy Turvy Formal Grammar v0.3.0 *)
+(* Based on SPEC.md v0.4.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
 (*----------------------------------------------------------------------------*)
 Identifier    = [a-zA-Z], { [a-zA-Z0-9_-] } ;
 StringLiteral = '"', { AnyCharExceptQuoteOrTilde | '~' AnyChar }, '"' ;
+CharLit       = "'", ( AnyCharExceptSingleQuoteOrTilde | '~' AnyChar ), "'" ;
+(* CharLit contains exactly one character or one escape sequence.  Escape sequences within
+   a CharLit use the same ~ prefix as StringLiteral, except ~' for a literal single quote
+   replaces ~" (which has no special meaning inside single quotes). *)
 Integer       = [ "-" ], Digit, { Digit } ;
 Float         = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
 BooleanLit    = "VERITY" | "NAY" ;
@@ -30,9 +34,11 @@ Statement       = PrincipalBlock
                 | Conditional
                 | Switch
                 | Loop
+                | GuardClause
                 | FunctionDefinition
                 | ImportStatement
                 | TryCatchBlock
+                | AssertStatement
                 | ExpressionStatement ;
 
 (*----------------------------------------------------------------------------*)
@@ -51,7 +57,15 @@ ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ]
 
 MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
 
-ScalarType      = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+BaseIntegerType = "PEER" | "CHANCELLOR" | "PIRATE" | "SAUSAGE-ROLL" ;
+
+ScalarType      = BaseIntegerType
+                | "STANDING", BaseIntegerType
+                | "FATHOM" | "FOOT"
+                | "YARN" | "STITCH"
+                | "DECREE" | "NAUGHT" ;
+(* "STANDING" may only precede a BaseIntegerType.  Combining it with FATHOM, FOOT, YARN,
+   STITCH, DECREE, or NAUGHT is a parse error. *)
 
 ArrayType       = "LITTLE LIST OF", ScalarType ;
 (* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
@@ -67,16 +81,37 @@ TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
 (*----------------------------------------------------------------------------*)
-Expression      = CastExpression
+Expression      = TernaryExpression
+                | CastExpression
                 | ArrayIndexExpression
                 | ArrayLengthExpression
                 | PrefixExpression
                 | StringLiteral
+                | CharLit
                 | BooleanLit
                 | NullLit
                 | Integer
                 | Float
                 | Identifier ;
+
+TernaryExpression = NonTernaryExpression, "SHOULD IT TRANSPIRE THAT", NonTernaryExpression,
+                    "OTHERWISE,", Expression ;
+(* NonTernaryExpression is any Expression alternative except TernaryExpression itself.
+   TrueValue and Condition are restricted to NonTernaryExpression to avoid left-recursion
+   and to prevent OTHERWISE, being consumed by a nested ternary in the condition position.
+   FalseValue uses full Expression to allow right-chained ternaries. *)
+
+NonTernaryExpression = CastExpression
+                     | ArrayIndexExpression
+                     | ArrayLengthExpression
+                     | PrefixExpression
+                     | StringLiteral
+                     | CharLit
+                     | BooleanLit
+                     | NullLit
+                     | Integer
+                     | Float
+                     | Identifier ;
 
 ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
 
@@ -90,14 +125,17 @@ FixedOpExpression = FixedOp, Expression, { "AND", Expression } ;
 
 VariadicExpression = VariadicOp, Expression, { "AND", Expression }, "IF YOU PLEASE." ;
 
-FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp ;
+FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp | BitwiseOp ;
 
-ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF" 
+ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF"
                 | "QUOTIENT OF" | "REMAINDER OF" | "LARGER OF" | "SMALLER OF" ;
 
 BooleanOp       = "BOTH" | "EITHER" | "HARDLY EVER" ;
 
 ComparisonOp    = "ALIKE" | "UNLIKE" | "PRE-ADAMITE" | "LOWER DEGREE" ;
+
+BitwiseOp       = "CHORD OF" | "HARMONY OF" | "DISCORD OF"
+                | "INVERSION OF" | "TRANSPOSITION UP" | "TRANSPOSITION DOWN" ;
 
 VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
 
@@ -130,6 +168,11 @@ LoopType        = ( "ASCENDING", Identifier, "UNTIL", Expression )
 
 LoopBody       = { Statement | "ONCE MORE." | "THAT WILL DO." } ;
 
+GuardClause     = "YEOMAN", Expression, "OTHERWISE,", StatementList, "UNDER ORDERS." ;
+(* Executes StatementList only when Expression is falsy.  If truthy, execution falls through.
+   YEOMAN is the guard opener; UNDER ORDERS. is the guard closer.  OTHERWISE, is the
+   required block separator; the same keyword used by Conditional and TernaryExpression. *)
+
 (*----------------------------------------------------------------------------*)
 (* Functions & Exceptions                                                     *)
 (*----------------------------------------------------------------------------*)
@@ -143,6 +186,11 @@ ParameterList      = Identifier, { "AND", Identifier } ;
 FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
 ImportStatement    = "PRAY ADMIT", StringLiteral ;
+
+AssertStatement    = "THE LAW IS", Expression, "THAT", Expression ;
+(* If Expression (condition) is falsy, throws a runtime exception with the second Expression (error message)
+   as the payload — same mechanism as A HIDEOUS CURSE ON.  THAT is a structural separator and is not
+   listed in KeywordData to avoid polluting the LSP completion list. *)
 
 TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression,
                     "WITH GRATITUDE", StatementList,
@@ -158,7 +206,7 @@ InputStatement     = "PRAY TELL", Identifier ;
 
 ExpressionStatement = Expression ;
 
-Literal            = StringLiteral | Integer | Float | BooleanLit | NullLit ;
+Literal            = StringLiteral | CharLit | Integer | Float | BooleanLit | NullLit ;
 
 (*----------------------------------------------------------------------------*)
 (* Documentation Comments                                                     *)
