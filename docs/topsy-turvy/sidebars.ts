@@ -14,6 +14,7 @@ const sidebars: SidebarsConfig = {
           label: 'Releases',
           link: {type: 'doc', id: 'start/releases/index'},
           items: [
+            {type: 'doc', id: 'start/releases/2025-06-24'},
             {type: 'doc', id: 'start/releases/2025-06-19'},
           ],
         },
