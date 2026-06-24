@@ -103,8 +103,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
 
-            const storedCommandLineArguments = context.workspaceState.get<string>(`commandLineArgs.${filePath}`, '');
-            const performTiptoe = vscode.workspace.getConfiguration('topsy-turvy').get<boolean>('performTiptoeMode', false);
+            const config = vscode.workspace.getConfiguration('topsy-turvy');
+            const storedCommandLineArguments = config.get<string>('commandLineArguments', '');
+            const performTiptoe = config.get<boolean>('performTiptoeMode', false);
             const cliArgs: string[] = ['perform', filePath];
             if (performTiptoe) {
                 cliArgs.push('--tiptoe');
@@ -138,14 +139,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('topsy-turvy.setCommandLineArgs', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
-                return;
-            }
-
-            const filePath = editor.document.uri.fsPath;
-            const current = context.workspaceState.get<string>(`commandLineArgs.${filePath}`, '');
+            const config = vscode.workspace.getConfiguration('topsy-turvy');
+            const current = config.get<string>('commandLineArguments', '');
             const result = await vscode.window.showInputBox({
                 prompt: 'Command-line arguments (space-separated)',
                 value: current,
@@ -153,7 +148,11 @@ export function activate(context: vscode.ExtensionContext): void {
             });
 
             if (result !== undefined) {
-                await context.workspaceState.update(`commandLineArgs.${filePath}`, result);
+                const target = vscode.workspace.workspaceFolders
+                    ? vscode.ConfigurationTarget.Workspace
+                    : vscode.ConfigurationTarget.Global;
+
+                await config.update('commandLineArguments', result, target);
             }
         }),
     );

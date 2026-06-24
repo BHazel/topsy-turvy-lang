@@ -52,6 +52,11 @@
           "default": "",
           "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the bundled binary."
         },
+        "topsy-turvy.commandLineArguments": {
+          "type": "string",
+          "default": "",
+          "description": "Command-line arguments passed to the Perform command (space-separated). Can also be set via the 'Set Command-Line Arguments' command."
+        },
         "topsy-turvy.performTiptoeMode": {
           "type": "boolean",
           "default": false,
