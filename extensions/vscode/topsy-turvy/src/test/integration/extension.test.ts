@@ -59,6 +59,13 @@ suite('Extension Integration', function () {
 
         assert.ok(commands.includes('topsy-turvy.runFile'), 'runFile command not registered');
         assert.ok(commands.includes('topsy-turvy.stopFile'), 'stopFile command not registered');
+        assert.ok(commands.includes('topsy-turvy.rehearseFile'), 'rehearseFile command not registered');
+        assert.ok(commands.includes('topsy-turvy.startCadenza'), 'startCadenza command not registered');
+        assert.ok(commands.includes('topsy-turvy.commissionFile'), 'commissionFile command not registered');
+        assert.ok(commands.includes('topsy-turvy.cuePreProcessor'), 'cuePreProcessor command not registered');
+        assert.ok(commands.includes('topsy-turvy.mountProject'), 'mountProject command not registered');
+        assert.ok(commands.includes('topsy-turvy.generatePlaybill'), 'generatePlaybill command not registered');
+        assert.ok(commands.includes('topsy-turvy.viewAstPromptbook'), 'viewAstPromptbook command not registered');
     });
 
     test('Extension_OnActivation_HasCorrectConfigurationDefaults', () => {

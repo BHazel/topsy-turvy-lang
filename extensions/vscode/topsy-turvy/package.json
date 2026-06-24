@@ -51,6 +51,41 @@
           "type": "string",
           "default": "",
           "description": "Absolute path to the Topsy Turvy CLI executable. Leave empty to use the bundled binary."
+        },
+        "topsy-turvy.commandLineArguments": {
+          "type": "string",
+          "default": "",
+          "description": "Command-line arguments passed to the Perform command (space-separated). Can also be set via the 'Set Command-Line Arguments' command."
+        },
+        "topsy-turvy.performTiptoeMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the 'perform' command with the '--tiptoe' flag."
+        },
+        "topsy-turvy.rehearseTiptoeMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the 'rehearse' command with the '--tiptoe' flag."
+        },
+        "topsy-turvy.cadenzaTiptoeMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the Cadenza REPL with the '--tiptoe' flag"
+        },
+        "topsy-turvy.playbillRenderMarkdown": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the generated documentation in the built-in Markdown preview.  When unchecked, the raw Markdown source is shown in a new editor tab instead."
+        },
+        "topsy-turvy.commissionSkipSubtitle": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the subtitle input step when commissioning a new file."
+        },
+        "topsy-turvy.mountSkipSubtitle": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the subtitle input step when mounting a new project."
         }
       }
     },
@@ -70,6 +105,48 @@
       {
         "command": "topsy-turvy.setCommandLineArgs",
         "title": "Set Command-Line Arguments",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.rehearseFile",
+        "title": "Rehearse Topsy Turvy File",
+        "icon": "$(check)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.startCadenza",
+        "title": "Start Cadenza REPL",
+        "icon": "$(terminal)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.commissionFile",
+        "title": "Commission New Topsy Turvy File",
+        "icon": "$(new-file)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.cuePreProcessor",
+        "title": "Cue the Pre-Processor",
+        "icon": "$(filter)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.mountProject",
+        "title": "Mount a New Topsy Turvy Project",
+        "icon": "$(folder)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.generatePlaybill",
+        "title": "Generate Playbill Code Documentation",
+        "icon": "$(book)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.viewAstPromptbook",
+        "title": "View the AST Promptbook",
+        "icon": "$(json)",
         "category": "Topsy Turvy"
       }
     ],
@@ -91,6 +168,31 @@
           "command": "topsy-turvy.stopFile",
           "when": "topsyTurvyRunning",
           "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.rehearseFile",
+          "when": "editorLangId == topsy-turvy && !topsyTurvyRunning",
+          "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.startCadenza",
+          "when": "editorLangId == topsy-turvy",
+          "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.cuePreProcessor",
+          "when": "editorLangId == topsy-turvy",
+          "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.generatePlaybill",
+          "when": "editorLangId == topsy-turvy",
+          "group": "navigation"
+        },
+        {
+          "command": "topsy-turvy.viewAstPromptbook",
+          "when": "editorLangId == topsy-turvy",
+          "group": "navigation"
         }
       ],
       "editor/context": [
@@ -103,6 +205,26 @@
           "command": "topsy-turvy.stopFile",
           "when": "resourceExtname == .topsy && topsyTurvyRunning",
           "group": "1_run@1"
+        },
+        {
+          "command": "topsy-turvy.rehearseFile",
+          "when": "resourceExtname == .topsy && !topsyTurvyRunning",
+          "group": "1_run@2"
+        },
+        {
+          "command": "topsy-turvy.cuePreProcessor",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@1"
+        },
+        {
+          "command": "topsy-turvy.generatePlaybill",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@2"
+        },
+        {
+          "command": "topsy-turvy.viewAstPromptbook",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@3"
         }
       ],
       "explorer/context": [
@@ -110,9 +232,35 @@
           "command": "topsy-turvy.runFile",
           "when": "resourceExtname == .topsy && !topsyTurvyRunning",
           "group": "1_run@1"
+        },
+        {
+          "command": "topsy-turvy.rehearseFile",
+          "when": "resourceExtname == .topsy && !topsyTurvyRunning",
+          "group": "1_run@2"
+        },
+        {
+          "command": "topsy-turvy.cuePreProcessor",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@1"
+        },
+        {
+          "command": "topsy-turvy.generatePlaybill",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@2"
+        },
+        {
+          "command": "topsy-turvy.viewAstPromptbook",
+          "when": "resourceExtname == .topsy",
+          "group": "2_topsy-turvy@3"
         }
       ]
     },
+    "snippets": [
+      {
+        "language": "topsy-turvy",
+        "path": "./snippets/topsy-turvy.json"
+      }
+    ],
     "semanticTokenScopes": [
       {
         "language": "topsy-turvy",
