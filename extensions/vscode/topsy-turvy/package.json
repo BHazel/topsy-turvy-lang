@@ -255,6 +255,12 @@
         }
       ]
     },
+    "snippets": [
+      {
+        "language": "topsy-turvy",
+        "path": "./snippets/topsy-turvy.json"
+      }
+    ],
     "semanticTokenScopes": [
       {
         "language": "topsy-turvy",

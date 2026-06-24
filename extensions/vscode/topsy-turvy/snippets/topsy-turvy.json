@@ -1,0 +1,97 @@
+{
+  "Try/Catch Block": {
+    "prefix": "try",
+    "body": [
+      "WITH THE GREATEST RESPECT, ${1:expression}",
+      "\tWITH GRATITUDE",
+      "\t\t${2:-- success --}",
+      "\tMODIFIED RAPTURE, ${3:-- thrown value --}",
+      "\t\t${0:-- exception handling --}",
+      "THAT CONCLUDES THE MATTER."
+    ],
+    "description": "Try/catch block. Remove ', ${3:...}' from MODIFIED RAPTURE if no caught-value binding is needed."
+  },
+  "If/Else-If/Else Block": {
+    "prefix": "if",
+    "body": [
+      "SHOULD IT TRANSPIRE THAT ${1:condition}",
+      "\tQUITE SO.",
+      "\t\t${2:-- true --}",
+      "\tOR, IF NOT, ${3:condition}",
+      "\t\t${4:-- else-if --}",
+      "\tOTHERWISE,",
+      "\t\t${0:-- else --}",
+      "SO MUCH FOR THAT."
+    ],
+    "description": "If/else-if/else conditional block."
+  },
+  "Ascending Loop": {
+    "prefix": "loopup",
+    "body": [
+      "BY A LEGAL FICTION ASCENDING ${1:i} UNTIL ${2:10}",
+      "\t${0:-- body --}",
+      "THE TERM EXPIRES."
+    ],
+    "description": "Ascending (counting-up) loop."
+  },
+  "Descending Loop": {
+    "prefix": "loopdown",
+    "body": [
+      "BY A LEGAL FICTION DESCENDING ${1:i} UNTIL ${2:0}",
+      "\t${0:-- body --}",
+      "THE TERM EXPIRES."
+    ],
+    "description": "Descending (counting-down) loop."
+  },
+  "Whilst Loop": {
+    "prefix": "whilst",
+    "body": [
+      "BY A LEGAL FICTION WHILST ${1:condition}",
+      "\t${0:-- body --}",
+      "THE TERM EXPIRES."
+    ],
+    "description": "Whilst (while) loop."
+  },
+  "Variable Declaration": {
+    "prefix": "var",
+    "body": [
+      "PRAY WELCOME ${1:name} AS A ${2|PEER,STANDING PEER,CHANCELLOR,STANDING CHANCELLOR,PIRATE,STANDING PIRATE,SAUSAGE-ROLL,STANDING SAUSAGE-ROLL,FATHOM,FOOT,YARN,STITCH,DECREE,NAUGHT|} BEING ${0:value}"
+    ],
+    "description": "Variable declaration. Remove 'BEING ${0:value}' for a declaration with no initial value."
+  },
+  "Function Declaration": {
+    "prefix": "func",
+    "body": [
+      "IT IS MY DUTY TO PERFORM ${1:name} UNDER THE TERMS OF ${2:param}",
+      "\t${3:-- body --}",
+      "\tAND SO I FIND ${4:result}",
+      "MY DUTY IS DISCHARGED."
+    ],
+    "description": "Function declaration. Replace 'UNDER THE TERMS OF ${2:param}' with 'UNDER NO OBLIGATION' for a no-parameter function."
+  },
+  "Guard Clause": {
+    "prefix": "guard",
+    "body": [
+      "YEOMAN ${1:condition}",
+      "\tOTHERWISE,",
+      "\t\t${0:-- action --}",
+      "UNDER ORDERS."
+    ],
+    "description": "Guard clause."
+  },
+  "Programme Structure": {
+    "prefix": "prog",
+    "body": [
+      "HARK! \"${1:Title of the Piece}\"",
+      "\tor, \"${2:The Subtitle}\"",
+      "",
+      "PRINCIPALS",
+      "THE CURTAIN RISES.",
+      "",
+      "${0:-- programme --}",
+      "",
+      "FINALE."
+    ],
+    "description": "Top-level programme skeleton. Remove the 'or,' line if no subtitle is needed."
+  }
+}
