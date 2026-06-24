@@ -316,7 +316,13 @@ public static class ExpressionParser
             Lexer.Keyword("LOWER DEGREE").Try().Value(Operator.LowerDegree),
             Lexer.Keyword("WOVEN OF").Try().Value(Operator.WovenOf),
             Lexer.Keyword("ALL OF").Try().Value(Operator.AllOf),
-            Lexer.Keyword("ANY OF").Try().Value(Operator.AnyOf)
+            Lexer.Keyword("ANY OF").Try().Value(Operator.AnyOf),
+            Lexer.Keyword("CHORD OF").Try().Value(Operator.ChordOf),
+            Lexer.Keyword("HARMONY OF").Try().Value(Operator.HarmonyOf),
+            Lexer.Keyword("DISCORD OF").Try().Value(Operator.DiscordOf),
+            Lexer.Keyword("INVERSION OF").Try().Value(Operator.InversionOf),
+            Lexer.Keyword("TRANSPOSITION DOWN").Try().Value(Operator.TranspositionDown),
+            Lexer.Keyword("TRANSPOSITION UP").Try().Value(Operator.TranspositionUp)
         );
 
     /// <summary>

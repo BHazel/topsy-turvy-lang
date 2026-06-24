@@ -926,6 +926,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 return this.EvaluateAllOf(node.Arguments, environment);
             case Operator.AnyOf:
                 return this.EvaluateAnyOf(node.Arguments, environment);
+            case Operator.InversionOf:
+                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => ~value, "INVERSION OF", node.Span);
+            case Operator.TranspositionUp:
+                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value << 1, "TRANSPOSITION UP", node.Span);
+            case Operator.TranspositionDown:
+                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value >> 1, "TRANSPOSITION DOWN", node.Span);
             default:
                 TopsyTurvyValue left = this.EvaluateExpression(node.Arguments[0], environment);
                 TopsyTurvyValue right = this.EvaluateExpression(node.Arguments[1], environment);
@@ -982,6 +988,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 }
 
                 return TopsyTurvyValue.Boolean(CompareNumeric(leftOperand, rightOperand, span) < 0);
+            case Operator.ChordOf:
+                return ApplyBitwise(leftOperand, rightOperand, (a, b) => a & b, "CHORD OF", span);
+            case Operator.HarmonyOf:
+                return ApplyBitwise(leftOperand, rightOperand, (a, b) => a | b, "HARMONY OF", span);
+            case Operator.DiscordOf:
+                return ApplyBitwise(leftOperand, rightOperand, (a, b) => a ^ b, "DISCORD OF", span);
             default:
                 throw new TopsyTurvyRuntimeException($"Unhandled binary operator: {binaryOperator}", span);
         }
@@ -1113,6 +1125,65 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
         return CreateIntegerFromLong(resultType, ToLong(leftOperand) % divisor);
+    }
+
+    /// <summary>
+    /// Applies a bitwise operation to two integer operands.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Both operands must be integer types: any non-integer type will result in a runtime exception.
+    /// The result type is the wider of the two operand types.
+    /// </para>
+    /// </remarks>
+    /// <param name="leftOperand">The left operand.</param>
+    /// <param name="rightOperand">The right operand.</param>
+    /// <param name="operation">A function that applies the bitwise operation to two <see cref="long"/> values.</param>
+    /// <param name="operatorName">The operator keyword name, used in error messages.</param>
+    /// <param name="span">The source span of the operation.</param>
+    /// <returns>The result of the bitwise operation.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when either operand is not an integer type.</exception>
+    private static TopsyTurvyValue ApplyBitwise(
+        TopsyTurvyValue leftOperand,
+        TopsyTurvyValue rightOperand,
+        Func<long, long, long> operation,
+        string operatorName,
+        SourceSpan span)
+    {
+        if (!IsIntegerType(leftOperand) || !IsIntegerType(rightOperand))
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"{operatorName} requires integer operands, got {leftOperand.LiteralType} and {rightOperand.LiteralType}.",
+                span);
+        }
+
+        LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
+        return CreateIntegerFromLong(resultType, operation(ToLong(leftOperand), ToLong(rightOperand)));
+    }
+
+    /// <summary>
+    /// Applies a unary bitwise operation to a single integer operand.
+    /// </summary>
+    /// <param name="operand">The operand.</param>
+    /// <param name="operation">A function that applies the bitwise operation to a <see cref="long"/> value.</param>
+    /// <param name="operatorName">The operator keyword name, used in error messages.</param>
+    /// <param name="span">The source span of the operation.</param>
+    /// <returns>The result of the bitwise operation.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the operand is not an integer type.</exception>
+    private static TopsyTurvyValue ApplyUnaryBitwise(
+        TopsyTurvyValue operand,
+        Func<long, long> operation,
+        string operatorName,
+        SourceSpan span)
+    {
+        if (!IsIntegerType(operand))
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"{operatorName} requires an integer operand, got {operand.LiteralType}.",
+                span);
+        }
+
+        return CreateIntegerFromLong(operand.LiteralType, operation(ToLong(operand)));
     }
 
     /// <summary>

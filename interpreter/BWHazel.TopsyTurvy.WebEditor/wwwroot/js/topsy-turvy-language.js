@@ -81,6 +81,12 @@ window.topsyTurvy = {
             ["LOWER DEGREE",                        "less than (<)"],
             ["ALL OF",                              "all-true (variadic AND)"],
             ["ANY OF",                              "any-true (variadic OR)"],
+            ["CHORD OF",                            "bitwise AND"],
+            ["HARMONY OF",                          "bitwise OR"],
+            ["DISCORD OF",                          "bitwise XOR"],
+            ["INVERSION OF",                        "bitwise NOT (unary)"],
+            ["TRANSPOSITION UP",                    "left shift by 1 (unary)"],
+            ["TRANSPOSITION DOWN",                  "right shift by 1 (unary)"],
             ["VERITY",                              "boolean true"],
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
@@ -295,6 +301,8 @@ window.topsyTurvy = {
 
                     // Remaining multi-word operators and keywords
                     [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|RECKONING)\s+OF\b/, 'keyword'],
+                    [/\b(CHORD|HARMONY|DISCORD|INVERSION)\s+OF\b/, 'keyword'],
+                    [/\bTRANSPOSITION\s+(UP|DOWN)\b/, 'keyword'],
                     [/\bWOVEN\s+OF\b/, 'keyword'],
                     [/\bHARDLY\s+EVER\b/, 'keyword'],
                     [/\bLOWER\s+DEGREE\b/, 'keyword'],

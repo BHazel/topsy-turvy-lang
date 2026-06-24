@@ -125,14 +125,17 @@ FixedOpExpression = FixedOp, Expression, { "AND", Expression } ;
 
 VariadicExpression = VariadicOp, Expression, { "AND", Expression }, "IF YOU PLEASE." ;
 
-FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp ;
+FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp | BitwiseOp ;
 
-ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF" 
+ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF"
                 | "QUOTIENT OF" | "REMAINDER OF" | "LARGER OF" | "SMALLER OF" ;
 
 BooleanOp       = "BOTH" | "EITHER" | "HARDLY EVER" ;
 
 ComparisonOp    = "ALIKE" | "UNLIKE" | "PRE-ADAMITE" | "LOWER DEGREE" ;
+
+BitwiseOp       = "CHORD OF" | "HARMONY OF" | "DISCORD OF"
+                | "INVERSION OF" | "TRANSPOSITION UP" | "TRANSPOSITION DOWN" ;
 
 VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
 

@@ -529,4 +529,200 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
         diagnostics.HasErrors.ShouldBeFalse();
         output[0].ShouldBe("NAY");
     }
+
+    /// <summary>
+    /// Tests that <c>CHORD OF</c> correctly computes the bitwise AND of two integers.
+    /// </summary>
+    [Fact]
+    public void Execute_WithChordOf_ComputesBitwiseAnd()
+    {
+        string source = """
+            HARK! "Bitwise AND"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED CHORD OF 12 AND 10
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("8");
+    }
+
+    /// <summary>
+    /// Tests that <c>HARMONY OF</c> correctly computes the bitwise OR of two integers.
+    /// </summary>
+    [Fact]
+    public void Execute_WithHarmonyOf_ComputesBitwiseOr()
+    {
+        string source = """
+            HARK! "Bitwise OR"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED HARMONY OF 5 AND 3
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("7");
+    }
+
+    /// <summary>
+    /// Tests that <c>DISCORD OF</c> correctly computes the bitwise XOR of two integers.
+    /// </summary>
+    [Fact]
+    public void Execute_WithDiscordOf_ComputesBitwiseXor()
+    {
+        string source = """
+            HARK! "Bitwise XOR"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED DISCORD OF 15 AND 9
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("6");
+    }
+
+    /// <summary>
+    /// Tests that <c>INVERSION OF</c> correctly computes the bitwise NOT of a <c>PEER</c> integer.
+    /// </summary>
+    [Fact]
+    public void Execute_WithInversionOf_ComputesBitwiseNot()
+    {
+        string source = """
+            HARK! "Bitwise NOT"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED INVERSION OF 0
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("-1");
+    }
+
+    /// <summary>
+    /// Tests that <c>TRANSPOSITION UP</c> correctly shifts an integer left by one position.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTranspositionUp_ShiftsLeftByOne()
+    {
+        string source = """
+            HARK! "Left shift"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED TRANSPOSITION UP 4
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("8");
+    }
+
+    /// <summary>
+    /// Tests that <c>TRANSPOSITION DOWN</c> correctly shifts an integer right by one position.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTranspositionDown_ShiftsRightByOne()
+    {
+        string source = """
+            HARK! "Right shift"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED TRANSPOSITION DOWN 8
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("4");
+    }
+
+    /// <summary>
+    /// Tests that <c>CHORD OF</c> applied to a non-integer operand produces a runtime error.
+    /// </summary>
+    [Fact]
+    public void Execute_WithChordOf_OnNonInteger_ProducesRuntimeError()
+    {
+        string source = """
+            HARK! "Bitwise AND type error"
+            PRINCIPALS
+              PRAY WELCOME result AS A FATHOM
+            THE CURTAIN RISES.
+            result IS APPOINTED CHORD OF 1.5 AND 2.0
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that <c>INVERSION OF</c> applied to a non-integer operand produces a runtime error.
+    /// </summary>
+    [Fact]
+    public void Execute_WithInversionOf_OnNonInteger_ProducesRuntimeError()
+    {
+        string source = """
+            HARK! "Bitwise NOT type error"
+            PRINCIPALS
+              PRAY WELCOME result AS A FATHOM
+            THE CURTAIN RISES.
+            result IS APPOINTED INVERSION OF 1.5
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
 }

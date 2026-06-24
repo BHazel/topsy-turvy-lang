@@ -314,7 +314,33 @@ If either operand is a `FATHOM`, the result is a `FATHOM`. If both are `PEER`, t
 
 ---
 
-## 6. String Operations
+## 6. Bitwise Operators
+
+Bitwise operators use the same prefix notation as arithmetic operators and require integer operands. Applying a bitwise operator to a `FATHOM`, `FOOT`, `YARN`, `STITCH`, `DECREE`, or `NAUGHT` value is a runtime error.
+
+| Expression                       | Operation                    |
+|----------------------------------|------------------------------|
+| `CHORD OF x AND y`               | `x & y` (bitwise AND)        |
+| `HARMONY OF x AND y`             | `x \| y` (bitwise OR)        |
+| `DISCORD OF x AND y`             | `x ^ y` (bitwise XOR)        |
+| `INVERSION OF x`                 | `~x` (bitwise NOT)    |
+| `TRANSPOSITION UP x`             | `x << 1` (left shift by 1)   |
+| `TRANSPOSITION DOWN x`           | `x >> 1` (right shift by 1)  |
+
+For the binary operators (`CHORD OF`, `HARMONY OF`, `DISCORD OF`), the result type follows the integer widening hierarchy (widest operand type wins). For the unary operators (`INVERSION OF`, `TRANSPOSITION UP`, `TRANSPOSITION DOWN`), the result type is the same as the operand type.
+
+```topsy
+BEHOLD CHORD OF 12 AND 10          ASIDE: 8  (1100 & 1010 = 1000)
+BEHOLD HARMONY OF 5 AND 3          ASIDE: 7  (0101 | 0011 = 0111)
+BEHOLD DISCORD OF 15 AND 9         ASIDE: 6  (1111 ^ 1001 = 0110)
+BEHOLD INVERSION OF 0              ASIDE: -1 (bitwise complement of 0)
+BEHOLD TRANSPOSITION UP 4          ASIDE: 8  (4 << 1)
+BEHOLD TRANSPOSITION DOWN 8        ASIDE: 4  (8 >> 1)
+```
+
+---
+
+## 7. String Operations
 
 ### Concatenation
 
@@ -347,7 +373,7 @@ The escape character within `YARN` literals is `~` (the Victorian flourish). `~`
 
 ---
 
-## 7. Comparison & Boolean Logic
+## 8. Comparison & Boolean Logic
 
 ### Comparison
 
@@ -389,7 +415,7 @@ When a non-`DECREE` value is used in a boolean context:
 
 ---
 
-## 8. Built-In Variables
+## 9. Built-In Variables
 
 ### JUST SO
 
@@ -429,7 +455,7 @@ FINALE.
 
 ---
 
-## 9. Conditionals
+## 10. Conditionals
 
 ### If / Else If / Else
 
@@ -602,7 +628,7 @@ title IS APPOINTED "Senior" SHOULD IT TRANSPIRE THAT PRE-ADAMITE age AND 60 OTHE
 
 ---
 
-## 10. Guard Clauses
+## 11. Guard Clauses
 
 A guard clause checks that a condition holds and executes an `OTHERWISE,` block when it does not.  If the condition is truthy, execution falls through the guard without entering the block.
 
@@ -652,7 +678,7 @@ THE TERM EXPIRES.
 
 ---
 
-## 11. Loops
+## 12. Loops
 
 ### Basic Loop (Infinite / Manual Break)
 
@@ -666,7 +692,7 @@ THE TERM EXPIRES.
 
 - `BY A LEGAL FICTION` — begins a loop. The Lord Chancellor in *Iolanthe* and the baronets of *Ruddigore* both operate under legal fictions that force them to repeat actions indefinitely — the precise G&S metaphor for a loop: a construct that, by a convenient fiction, repeats events until reality reasserts itself.
 - `KNOWN AS <label>` — optional label for the loop; a legal fiction, like all G&S legal fictions, may be named or may proceed anonymously. Labels are for readability only — `THAT WILL DO.` and `ONCE MORE.` always apply to the nearest enclosing loop regardless of whether any loop carries a label.
-- `THAT WILL DO.` — breaks out of the innermost loop immediately; the universal break keyword, valid in both loop and switch contexts — see §9
+- `THAT WILL DO.` — breaks out of the innermost loop immediately; the universal break keyword, valid in both loop and switch contexts — see §10
 - `ONCE MORE.` — skips the remainder of the current iteration and proceeds immediately to the next; the stage call to repeat from the top of a passage. Applies to all loop forms.
 - `THE TERM EXPIRES.` — closes the loop. Drawn from *The Grand Duke*, Act I: the Statutory Duel law *"expires to-morrow"* — a recurring obligation reaching its natural terminus.
 
@@ -704,7 +730,7 @@ THE TERM EXPIRES.
 
 ---
 
-## 12. Functions
+## 13. Functions
 
 ### Declaration
 
@@ -750,7 +776,7 @@ MY DUTY IS DISCHARGED.
 
 ---
 
-## 13. Exception Handling
+## 14. Exception Handling
 
 ### Throwing
 
@@ -836,7 +862,7 @@ THAT CONCLUDES THE MATTER.
 
 ---
 
-## 14. Libraries & Imports
+## 15. Libraries & Imports
 
 ```topsy
 PRAY ADMIT "filename"
@@ -846,7 +872,7 @@ PRAY ADMIT "filename"
 
 ---
 
-## 15. Arrays
+## 16. Arrays
 
 Arrays are ordered, indexed collections of values. An array is declared with the `LITTLE LIST OF` type annotation and accessed or mutated element-by-element with `VICTIM`.
 
@@ -867,7 +893,7 @@ PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
 - `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
 - `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, or `NAUGHT`); advisory only — see §3.2.
 - `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many `NAUGHT` elements, making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
-- `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §6); omitting `BEING` produces an empty array, **not** `NAUGHT`.
+- `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §7); omitting `BEING` produces an empty array, **not** `NAUGHT`.
 - `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
 - `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.
 - Index positions are **1-based**: the first element is at position 1.
@@ -970,7 +996,7 @@ length IS APPOINTED RECKONING OF word    ASIDE: evaluates to 6
 
 ---
 
-## 16. Documentation Comments
+## 17. Documentation Comments
 
 A **documentation comment** is an `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block placed immediately before a `PRAY WELCOME` declaration or an `IT IS MY DUTY TO PERFORM` function declaration. Blank lines between the block and the declaration are allowed; any intervening non-blank line breaks the association and the block is treated as a plain comment with no special meaning.
 
@@ -1039,7 +1065,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 17. Complete Keyword Reference
+## 18. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -1086,6 +1112,12 @@ PRAY WELCOME OldSum AS A PEER
 | `HARDLY EVER ...`                                | Logical NOT                 | *H.M.S. Pinafore* — "What, never? Well, **hardly ever!**"                         |
 | `ALL OF ... IF YOU PLEASE.`                      | Variadic AND                | —                                                                                 |
 | `ANY OF ... IF YOU PLEASE.`                      | Variadic OR                 | —                                                                                 |
+| `CHORD OF ... AND ...`                           | Bitwise AND                 | —                                                                                 |
+| `HARMONY OF ... AND ...`                         | Bitwise OR                  | —                                                                                 |
+| `DISCORD OF ... AND ...`                         | Bitwise XOR                 | —                                                                                 |
+| `INVERSION OF ...`                               | Bitwise NOT (unary)         | —                                                                                 |
+| `TRANSPOSITION UP ...`                           | Left shift by 1 (unary)     | —                                                                                 |
+| `TRANSPOSITION DOWN ...`                         | Right shift by 1 (unary)    | —                                                                                 |
 | `IF YOU PLEASE.`                                 | Variable-length list closer | Verbatim *H.M.S. Pinafore* — Sir Joseph's insistence on the proper form of address; closes any open-ended argument list: `WOVEN OF`, `SUMMON`, `ALL OF`, `ANY OF` |
 | `JUST SO`                                        | Implicit result variable    | *The Mikado* — "Just so!" — the thing just established                            |
 | `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
@@ -1133,7 +1165,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 18. Type Reference
+## 19. Type Reference
 
 | Keyword                    | Width                        | Values / Range |
 |----------------------------|------------------------------|----------------|
@@ -1147,7 +1179,7 @@ PRAY WELCOME OldSum AS A PEER
 | `STANDING SAUSAGE-ROLL`    | 8-bit unsigned integer       | 0 to 255 |
 | `FATHOM`                   | 64-bit float (double)        | Double-precision floating-point |
 | `FOOT`                     | 32-bit float (single)        | Single-precision floating-point |
-| `YARN`                     | string                       | Any sequence of characters in `""`; also supports `VICTIM` and `RECKONING OF` (see §15) |
+| `YARN`                     | string                       | Any sequence of characters in `""`; also supports `VICTIM` and `RECKONING OF` (see §16) |
 | `STITCH`                   | character                    | Any single character; literal form `'A'` (see §3.3) |
 | `DECREE`                   | boolean                      | `VERITY` or `NAY` |
 | `NAUGHT`                   | —                            | `NAUGHT` |
@@ -1155,7 +1187,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 19. Operator Precedence
+## 20. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -1168,7 +1200,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 20. Scoping
+## 21. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -1177,7 +1209,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 21. Line Structure
+## 22. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -1197,7 +1229,7 @@ AND SO I FIND ~
     AND SUMMON fibonacci WITH DIFFERENCE OF n AND 2 IF YOU PLEASE.
 ```
 
-**String escape prefix** — `~` inside a `YARN` literal introduces an escape sequence (see §6):
+**String escape prefix** — `~` inside a `YARN` literal introduces an escape sequence (see §7):
 
 | Sequence | Meaning              |
 |----------|----------------------|
@@ -1214,7 +1246,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 22. A Note on Style
+## 23. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -1229,7 +1261,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 23. Complete Example
+## 24. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"

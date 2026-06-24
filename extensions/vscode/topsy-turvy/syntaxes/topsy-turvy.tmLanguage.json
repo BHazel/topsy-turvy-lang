@@ -387,6 +387,14 @@
         },
         {
           "name": "keyword.operator.topsy",
+          "match": "(?i)\\b(CHORD|HARMONY|DISCORD|INVERSION)\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bTRANSPOSITION\\s+(UP|DOWN)\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
           "match": "(?i)\\bAND\\b"
         },
         {
