@@ -60,6 +60,8 @@ public static class ReplHighlighter
             ("ALTERED CIRCUMSTANCES",                   "deepskyblue1"),
             ("UNDER ANY CIRCUMSTANCES",                 "deepskyblue1"),
             ("THAT CONCLUDES THE MATTER.",              "deepskyblue1"),
+            ("YEOMAN",                                  "deepskyblue1"),
+            ("UNDER ORDERS.",                           "deepskyblue1"),
             ("A HIDEOUS CURSE ON",                      "deepskyblue1"),
             ("PRAY WELCOME",                            "mediumpurple1"),
             ("IS APPOINTED",                            "mediumpurple1"),

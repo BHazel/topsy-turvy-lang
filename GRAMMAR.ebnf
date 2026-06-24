@@ -30,6 +30,7 @@ Statement       = PrincipalBlock
                 | Conditional
                 | Switch
                 | Loop
+                | GuardClause
                 | FunctionDefinition
                 | ImportStatement
                 | TryCatchBlock
@@ -148,6 +149,11 @@ LoopType        = ( "ASCENDING", Identifier, "UNTIL", Expression )
                 | ( (* Infinite loop *) ) ;
 
 LoopBody       = { Statement | "ONCE MORE." | "THAT WILL DO." } ;
+
+GuardClause     = "YEOMAN", Expression, "OTHERWISE,", StatementList, "UNDER ORDERS." ;
+(* Executes StatementList only when Expression is falsy.  If truthy, execution falls through.
+   YEOMAN is the guard opener; UNDER ORDERS. is the guard closer.  OTHERWISE, is the
+   required block separator; the same keyword used by Conditional and TernaryExpression. *)
 
 (*----------------------------------------------------------------------------*)
 (* Functions & Exceptions                                                     *)

@@ -55,6 +55,8 @@ window.topsyTurvy = {
             ["SUMMON",                              "function call"],
             ["WITH",                                "function call arguments"],
             ["IF YOU PLEASE.",                      "end expression list"],
+            ["YEOMAN",                              "guard clause"],
+            ["UNDER ORDERS.",                       "end guard"],
             ["A HIDEOUS CURSE ON",                  "throw"],
             ["WITH THE GREATEST RESPECT,",          "try block"],
             ["WITH GRATITUDE",                      "success handler"],
@@ -225,6 +227,8 @@ window.topsyTurvy = {
 
                     // A LITTLE LIST OF: after "AS A" consumes the leading A, only "LITTLE LIST OF" remains in the token stream
                     [/\bLITTLE\s+LIST\s+OF\b/, 'type'],
+                    [/\bYEOMAN\b/, 'keyword'],
+                    [/\bUNDER\s+ORDERS\./, 'keyword'],
                     [/\bA\s+HIDEOUS\s+CURSE\s+ON\b/, 'keyword'],
                     [/\bBY\s+A\s+LEGAL\s+FICTION\b/, 'keyword'],
                     [/\bSO\s+MUCH\s+FOR\s+THAT\./, 'keyword'],
@@ -255,6 +259,9 @@ window.topsyTurvy = {
 
                     // THAT WILL DO and THAT CONCLUDES (already done above)
                     [/\bTHAT\s+WILL\s+DO\./, 'keyword'],
+
+                    // Standalone THAT — assert statement separator; must follow all multi-word THAT rules
+                    [/\bTHAT\b/, 'keyword'],
 
                     // QUITE SO
                     [/\bQUITE\s+SO\./, 'keyword'],

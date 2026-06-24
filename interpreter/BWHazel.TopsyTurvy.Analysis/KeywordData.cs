@@ -101,5 +101,7 @@ public static class KeywordData
         ("VICTIM",                                   "array element access / assignment"),
         ("ON",                                       "array index separator"),
         ("RECKONING OF",                             "array length expression"),
+        ("YEOMAN",                                   "guard clause"),
+        ("UNDER ORDERS.",                            "end guard"),
     ];
 }

@@ -277,6 +277,27 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The body containing one print statement.
 /// </para>
 /// <para>
+/// ### Guard Clauses
+/// The <c>Guard</c> parser matches on a guard clause, returning a <see cref="GuardNode"/>:
+/// * It first matches on the <c>YEOMAN</c> keyword.
+/// * It then matches on required whitespace followed by a condition expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * It then matches on required whitespace followed by the <c>OTHERWISE,</c> keyword.
+/// * It then matches on zero or more body statements for the else block, each back-tracked individually.
+/// * Finally it matches on required whitespace followed by the closing <c>UNDER ORDERS.</c> keyword.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// YEOMAN PRE-ADAMITE score AND 0
+///     OTHERWISE,
+///         A HIDEOUS CURSE ON "Score must be positive"
+/// UNDER ORDERS.
+/// </code>
+/// the statement would be matched by the <c>Guard</c> parser, returning a <see cref="GuardNode"/> with:
+/// * The condition set to the expression <c>PRE-ADAMITE score AND 0</c>.
+/// * The else block containing one throw statement.
+/// </para>
+/// <para>
 /// ### Exception Handling
 /// The <c>TryCatch</c> parser matches on a try-catch block, returning a <see cref="TryCatchNode"/>:
 /// * It first matches on the <c>WITH THE GREATEST RESPECT,</c> keyword.
@@ -462,6 +483,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <c>Conditional</c>
 /// * <c>Switch</c>
 /// * <c>Loop</c>
+/// * <c>Guard</c>
 /// * <c>TryCatch</c>
 /// * <c>FunctionDefinition</c>
 /// * <c>Import</c>
@@ -840,6 +862,22 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses a guard clause.
+    /// </summary>
+    public static readonly TextParser<Statement> Guard =
+        from _ in Lexer.Keyword("YEOMAN")
+        from condition in Ws(ExpressionParser.Expression)
+        from otherwiseKeyword in Ws(Lexer.Keyword("OTHERWISE,").Named("OTHERWISE, (guard body)"))
+        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from closer in Ws(Lexer.Keyword("UNDER ORDERS.").Named("UNDER ORDERS. (end of guard)"))
+        select (Statement)new GuardNode()
+        {
+            Condition = condition,
+            ElseBlock = [.. body],
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
     /// Parses the parameter list of a function definition.
     /// </summary>
     public static readonly TextParser<List<string>> ParameterList =
@@ -975,6 +1013,7 @@ public static class StatementParser
             .Or(Conditional)
             .Or(Switch)
             .Or(Loop)
+            .Or(Guard)
             .Or(TryCatch)
             .Or(FunctionDefinition)
             .Or(Import)

@@ -545,6 +545,57 @@ title IS APPOINTED "Senior" SHOULD IT TRANSPIRE THAT PRE-ADAMITE age AND 60 OTHE
 
 ---
 
+## 10. Guard Clauses
+
+A guard clause checks that a condition holds and executes an `OTHERWISE,` block when it does not.  If the condition is truthy, execution falls through the guard without entering the block.
+
+```
+YEOMAN <condition>
+  OTHERWISE,
+    <action>
+UNDER ORDERS.
+```
+
+Guard clauses are idiomatic at the top of a function or loop body to assert preconditions before proceeding.  The `OTHERWISE,` block typically contains an early return (`MY DUTY IS PREMATURELY DISCHARGED.`), a `THAT WILL DO.` break, or a throw (`A HIDEOUS CURSE ON`).
+
+### Basic Guard
+
+```topsy
+YEOMAN PRE-ADAMITE score AND 0
+  OTHERWISE,
+    A HIDEOUS CURSE ON "Score must be positive"
+UNDER ORDERS.
+```
+
+If `score` is greater than `0` the guard passes and execution continues after `UNDER ORDERS.`.  If `score` is `0` or negative the `OTHERWISE,` block executes and throws.
+
+### Guard with Early Return
+
+```topsy
+IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name
+  YEOMAN UNLIKE name AND ""
+    OTHERWISE,
+      MY DUTY IS PREMATURELY DISCHARGED.
+  UNDER ORDERS.
+  BEHOLD WOVEN OF "Hello, " AND name AND "!"
+MY DUTY IS DISCHARGED.
+```
+
+### Guard with Break
+
+```topsy
+BY A LEGAL FICTION ASCENDING i UNTIL 10
+  YEOMAN UNLIKE REMAINDER OF i AND 2 AND 0
+    OTHERWISE,
+      THAT WILL DO.
+  UNDER ORDERS.
+  BEHOLD i
+THE TERM EXPIRES.
+```
+
+---
+
+## 11. Loops
 
 ### Basic Loop (Infinite / Manual Break)
 
@@ -922,7 +973,7 @@ PRAY WELCOME OldSum AS A PEER
 | `JUST SO`                                        | Implicit result variable    | *The Mikado* — "Just so!" — the thing just established                            |
 | `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
 | `NAY`                                             | Boolean false               | Throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be" |
-| `SHOULD IT TRANSPIRE THAT`                       | If condition (two-line or inline) | Lord Chancellor's conditional reasoning, *Iolanthe*; two-line form reads `JUST SO`, inline form takes expression directly |
+| `SHOULD IT TRANSPIRE THAT`                       | If condition (two-line or inline); ternary separator | Lord Chancellor's conditional reasoning, *Iolanthe*; two-line form reads `JUST SO`, inline form takes expression directly; also serves as the condition separator in ternary expressions |
 | `QUITE SO.`                                      | True branch                 | Verbatim *The Mikado* — Ko-Ko and Pooh-Bah's crisp affirmation                    |
 | `OR, IF NOT,`                                    | Else-if                     | Lord Chancellor's enumeration of alternatives                                     |
 | `OTHERWISE,`                                     | Else branch                 | Pooh-Bah switching between logical branches and capacities                        |

@@ -218,6 +218,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case LoopNode loop:
                 this.ExecuteLoop(loop, environment);
                 break;
+            case GuardNode guard:
+                this.ExecuteGuard(guard, environment);
+                break;
             case TryCatchNode tryCatch:
                 this.ExecuteTryCatch(tryCatch, environment);
                 break;
@@ -606,6 +609,22 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             {
                 return;
             }
+        }
+    }
+
+    /// <summary>
+    /// Executes a guard clause statement.
+    /// </summary>
+    /// <param name="node">The guard node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <remarks>
+    /// Evaluates the condition: if falsy it executes the else block, otherwise falls through with no effect.
+    /// </remarks>
+    private void ExecuteGuard(GuardNode node, TopsyTurvyEnvironment environment)
+    {
+        if (!this.EvaluateExpression(node.Condition, environment).IsTruthy())
+        {
+            this.ExecuteStatements(node.ElseBlock, environment);
         }
     }
 
