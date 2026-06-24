@@ -62,6 +62,8 @@ public static class ReplHighlighter
             ("THAT CONCLUDES THE MATTER.",              "deepskyblue1"),
             ("YEOMAN",                                  "deepskyblue1"),
             ("UNDER ORDERS.",                           "deepskyblue1"),
+            ("THE LAW IS",                              "deepskyblue1"),
+            ("THAT",                                    "deepskyblue1"),
             ("A HIDEOUS CURSE ON",                      "deepskyblue1"),
             ("PRAY WELCOME",                            "mediumpurple1"),
             ("IS APPOINTED",                            "mediumpurple1"),

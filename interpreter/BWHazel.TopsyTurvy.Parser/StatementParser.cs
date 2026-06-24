@@ -327,6 +327,24 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The exception block containing one print statement.
 /// </para>
 /// <para>
+/// ### Assert Statements
+/// The <c>Assert</c> parser matches on an assert statement, returning an <see cref="AssertNode"/>:
+/// * It first matches on the <c>THE LAW IS</c> keyword.
+/// * It then matches on required whitespace followed by a condition expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * It then matches on required whitespace followed by the <c>THAT</c> keyword.
+/// * Finally it matches on required whitespace followed by an error message expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// THE LAW IS PRE-ADAMITE score AND 0 THAT "Score must be positive"
+/// THE LAW IS VERITY THAT errorMessage
+/// </code>
+/// both would be matched by the <c>Assert</c> parser, returning an <see cref="AssertNode"/> where:
+/// * The first would have the condition set to the expression <c>PRE-ADAMITE score AND 0</c> and the error message set to the string literal <c>Score must be positive</c>.
+/// * The second would have the condition set to the boolean literal <c>VERITY</c> and the error message set to the identifier <c>errorMessage</c>.
+/// </para>
+/// <para>
 /// ### Functions
 /// 5 parsers are included for function-related statements.
 /// #### Parameter List
@@ -485,6 +503,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <c>Loop</c>
 /// * <c>Guard</c>
 /// * <c>TryCatch</c>
+/// * <c>Assert</c>
 /// * <c>FunctionDefinition</c>
 /// * <c>Import</c>
 /// * <c>EarlyDischarge</c>
@@ -929,6 +948,21 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses an assert statement.
+    /// </summary>
+    public static readonly TextParser<Statement> Assert =
+        from _ in Lexer.Keyword("THE LAW IS")
+        from condition in Ws(ExpressionParser.Expression)
+        from thatKeyword in Ws(Lexer.Keyword("THAT").Named("THAT (assert error message)"))
+        from errorMessage in Ws(ExpressionParser.Expression)
+        select (Statement)new AssertNode()
+        {
+            Condition = condition,
+            ErrorMessage = errorMessage,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
     /// Parses a function definition.
     /// </summary>
     public static readonly TextParser<Statement> FunctionDefinition =
@@ -1020,6 +1054,7 @@ public static class StatementParser
             .Or(EarlyDischarge)
             .Or(Return)
             .Or(Curse)
+            .Or(Assert)
             .Or(Break)
             .Or(Continue)
             .Or(ExpressionStatementParser);

@@ -152,6 +152,7 @@ public static class SourceFormatter
         "PRINCIPALS",
         "AS A",
         "JUST SO",
+        "THE LAW IS",
         "YEOMAN",
         "UNDER ORDERS.",
         "or,",

@@ -221,6 +221,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case GuardNode guard:
                 this.ExecuteGuard(guard, environment);
                 break;
+            case AssertNode assert:
+                this.ExecuteAssert(assert, environment);
+                break;
             case TryCatchNode tryCatch:
                 this.ExecuteTryCatch(tryCatch, environment);
                 break;
@@ -625,6 +628,22 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         if (!this.EvaluateExpression(node.Condition, environment).IsTruthy())
         {
             this.ExecuteStatements(node.ElseBlock, environment);
+        }
+    }
+
+    /// <summary>
+    /// Executes an assert statement.
+    /// </summary>
+    /// <param name="node">The assert node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <remarks>
+    /// Evaluates the condition: if falsy it evaluates and throws the error message otherwise no effect occurs.
+    /// </remarks>
+    private void ExecuteAssert(AssertNode node, TopsyTurvyEnvironment environment)
+    {
+        if (!this.EvaluateExpression(node.Condition, environment).IsTruthy())
+        {
+            throw new TopsyTurvyThrowException(this.EvaluateExpression(node.ErrorMessage, environment));
         }
     }
 

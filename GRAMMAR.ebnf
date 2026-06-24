@@ -34,6 +34,7 @@ Statement       = PrincipalBlock
                 | FunctionDefinition
                 | ImportStatement
                 | TryCatchBlock
+                | AssertStatement
                 | ExpressionStatement ;
 
 (*----------------------------------------------------------------------------*)
@@ -168,6 +169,11 @@ ParameterList      = Identifier, { "AND", Identifier } ;
 FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
 ImportStatement    = "PRAY ADMIT", StringLiteral ;
+
+AssertStatement    = "THE LAW IS", Expression, "THAT", Expression ;
+(* If Expression (condition) is falsy, throws a runtime exception with the second Expression (error message)
+   as the payload — same mechanism as A HIDEOUS CURSE ON.  THAT is a structural separator and is not
+   listed in KeywordData to avoid polluting the LSP completion list. *)
 
 TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression,
                     "WITH GRATITUDE", StatementList,

@@ -127,6 +127,14 @@
         {
           "name": "keyword.control.topsy",
           "match": "(?i)\\bSO\\s+MUCH\\s+FOR\\s+THAT\\."
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "(?i)\\bYEOMAN\\b"
+        },
+        {
+          "name": "keyword.control.topsy",
+          "match": "(?i)\\bUNDER\\s+ORDERS\\."
         }
       ]
     },
@@ -194,6 +202,10 @@
       "patterns": [
         {
           "name": "keyword.control.exception.topsy",
+          "match": "(?i)\\bTHE\\s+LAW\\s+IS\\b"
+        },
+        {
+          "name": "keyword.control.exception.topsy",
           "match": "(?i)\\bA\\s+HIDEOUS\\s+CURSE\\s+ON\\b"
         },
         {
@@ -211,6 +223,10 @@
         {
           "name": "keyword.control.exception.topsy",
           "match": "(?i)\\bTHAT\\s+CONCLUDES\\s+THE\\s+MATTER\\."
+        },
+        {
+          "name": "keyword.control.exception.topsy",
+          "match": "(?i)\\bTHAT\\b"
         }
       ]
     },

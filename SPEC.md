@@ -647,7 +647,7 @@ THE TERM EXPIRES.
 
 ---
 
-## 11. Functions
+## 12. Functions
 
 ### Declaration
 
@@ -693,7 +693,7 @@ MY DUTY IS DISCHARGED.
 
 ---
 
-## 12. Exception Handling
+## 13. Exception Handling
 
 ### Throwing
 
@@ -750,9 +750,36 @@ WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
 THAT CONCLUDES THE MATTER.
 ```
 
+### Assert Statements
+
+```topsy
+THE LAW IS <condition> THAT <error-message>
+```
+
+`THE LAW IS <condition> THAT <error-message>` — asserts that a runtime invariant holds.  If `<condition>` is falsy, it throws using the same mechanism as `A HIDEOUS CURSE ON`, carrying `<error-message>` as the payload; the exception may be caught by a `WITH THE GREATEST RESPECT` block.  If the condition is truthy, execution continues with no effect.
+
+- `THE LAW IS` — opens the assertion; the Mikado and Lord Chancellor are the ultimate arbiters of law and decree — when the law is invoked, it must hold
+- `THAT` — separates the condition from the error message; a structural separator (not in the keyword completion list)
+
+**Example:**
+
+```topsy
+THE LAW IS PRE-ADAMITE score AND 0 THAT "Score must be positive"
+```
+
+```topsy
+ASIDE: Assert with a caught exception
+WITH THE GREATEST RESPECT, SUMMON validate WITH score IF YOU PLEASE.
+  WITH GRATITUDE
+    BEHOLD "Validation passed"
+  MODIFIED RAPTURE, err
+    BEHOLD WOVEN OF "Validation failed: " AND err IF YOU PLEASE.
+THAT CONCLUDES THE MATTER.
+```
+
 ---
 
-## 13. Libraries & Imports
+## 14. Libraries & Imports
 
 ```topsy
 PRAY ADMIT "filename"
@@ -762,7 +789,7 @@ PRAY ADMIT "filename"
 
 ---
 
-## 14. Arrays
+## 15. Arrays
 
 Arrays are ordered, indexed collections of values. An array is declared with the `LITTLE LIST OF` type annotation and accessed or mutated element-by-element with `VICTIM`.
 
@@ -853,7 +880,7 @@ Per §3.2, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 
 
 ---
 
-## 15. Documentation Comments
+## 16. Documentation Comments
 
 A **documentation comment** is an `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block placed immediately before a `PRAY WELCOME` declaration or an `IT IS MY DUTY TO PERFORM` function declaration. Blank lines between the block and the declaration are allowed; any intervening non-blank line breaks the association and the block is treated as a plain comment with no special meaning.
 
@@ -922,7 +949,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 16. Complete Keyword Reference
+## 17. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -990,6 +1017,8 @@ PRAY WELCOME OldSum AS A PEER
 | `WHILST`                                         | Loop while condition        | Continue while true                                                               |
 | `ONCE MORE.`                                     | Continue (loop)             | The stage call to repeat from the top of a passage; skips to the next iteration in all loop forms |
 | `THE TERM EXPIRES.`                              | End loop                    | *The Grand Duke*, Act I — verbatim: the Statutory Duel law *"expires to-morrow"*  |
+| `YEOMAN <condition>`                             | Guard clause start          | *The Yeoman of the Guard* — a yeoman stands watch and enforces; opens the guard block |
+| `UNDER ORDERS.`                                  | End guard clause            | The yeoman's orders are discharged; closes the guard block                        |
 | `IT IS MY DUTY TO PERFORM`                       | Function definition         | G&S obligation formula — used throughout the canon                                |
 | `UNDER THE TERMS OF`                             | Function parameters         | *Pirates of Penzance* — Frederic's indenture specifies the *terms*                |
 | `UNDER NO OBLIGATION`                            | No parameters               | A function bound by no terms                                                      |
@@ -1003,6 +1032,8 @@ PRAY WELCOME OldSum AS A PEER
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
 | `MODIFIED RAPTURE[, <name>]`                     | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO`; optional `, <name>` auto-declares a binding in the exception block scope |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
+| `THE LAW IS <condition> THAT <error-message>`    | Assert statement            | The Mikado and Lord Chancellor as ultimate arbiters of law; if the condition is falsy, throws with the error message as payload |
+| `THAT`                                           | Assert separator            | Structural separator between condition and error message within `THE LAW IS`; not in the keyword completion list |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
 | `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
 | `VICTIM <index> ON <array>`                      | Array element access        | The item at position `<index>` (1-based) on Ko-Ko's list                          |
@@ -1010,7 +1041,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 17. Type Reference
+## 18. Type Reference
 
 | Keyword                 | Type         | Values                                      |
 |-------------------------|--------------|---------------------------------------------|
@@ -1023,7 +1054,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 18. Operator Precedence
+## 19. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -1036,7 +1067,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 19. Scoping
+## 20. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -1045,7 +1076,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 20. Line Structure
+## 21. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -1082,7 +1113,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 21. A Note on Style
+## 22. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -1097,7 +1128,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 22. Complete Example
+## 23. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"
@@ -1145,4 +1176,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.3.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — Version 0.4.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

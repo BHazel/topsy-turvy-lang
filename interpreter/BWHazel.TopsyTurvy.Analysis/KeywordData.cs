@@ -103,5 +103,6 @@ public static class KeywordData
         ("RECKONING OF",                             "array length expression"),
         ("YEOMAN",                                   "guard clause"),
         ("UNDER ORDERS.",                            "end guard"),
+        ("THE LAW IS",                               "assert statement"),
     ];
 }
