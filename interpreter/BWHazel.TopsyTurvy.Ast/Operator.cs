@@ -38,6 +38,15 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// * <see cref="Operator"/>.<c>AnyOf</c>: Variadic Logic Or, where at least one operand must be <c>VERITY</c> (true) for the whole expression to be <c>VERITY</c>: <c>ANY OF x AND y [AND z ...] IF YOU PLEASE.</c>.
 /// </para>
 /// <para>
+/// **Bitwise Operators** are integer-only operators so applying them to floating-point or non-integer types is a runtime error:
+/// * <see cref="Operator"/>.<c>ChordOf</c>: Bitwise And, <c>x &amp; y</c>: <c>CHORD OF x AND y</c>.
+/// * <see cref="Operator"/>.<c>HarmonyOf</c>: Bitwise Or, <c>x | y</c>: <c>HARMONY OF x AND y</c>.
+/// * <see cref="Operator"/>.<c>DiscordOf</c>: Bitwise Xor, <c>x ^ y</c>: <c>DISCORD OF x AND y</c>.
+/// * <see cref="Operator"/>.<c>InversionOf</c>: Bitwise Not (unary), <c>~x</c>: <c>INVERSION OF x</c>.
+/// * <see cref="Operator"/>.<c>TranspositionUp</c>: Left shift by 1 (unary), <c>x &lt;&lt; 1</c>: <c>TRANSPOSITION UP x</c>.
+/// * <see cref="Operator"/>.<c>TranspositionDown</c>: Right shift by 1 (unary), <c>x &gt;&gt; 1</c>: <c>TRANSPOSITION DOWN x</c>.
+/// </para>
+/// <para>
 /// **Function Call** accepts a function name and zero or more arguments, closed by <c>IF YOU PLEASE.</c>:
 /// * <see cref="Operator"/>.<c>Summon</c>: Function Call: <c>SUMMON name WITH arg [AND arg ...] IF YOU PLEASE.</c>.
 /// </para>
@@ -96,5 +105,23 @@ public enum Operator
     AllOf,
 
     /// <summary>ANY OF</summary>
-    AnyOf
+    AnyOf,
+
+    /// <summary>CHORD OF</summary>
+    ChordOf,
+
+    /// <summary>HARMONY OF</summary>
+    HarmonyOf,
+
+    /// <summary>DISCORD OF</summary>
+    DiscordOf,
+
+    /// <summary>INVERSION OF</summary>
+    InversionOf,
+
+    /// <summary>TRANSPOSITION UP</summary>
+    TranspositionUp,
+
+    /// <summary>TRANSPOSITION DOWN</summary>
+    TranspositionDown
 }

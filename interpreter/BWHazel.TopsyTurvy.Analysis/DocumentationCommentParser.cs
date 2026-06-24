@@ -11,13 +11,13 @@ namespace BWHazel.TopsyTurvy.Analysis;
 public static class DocumentationCommentParser
 {
     private static readonly Regex articlePattern =
-        new(@"^ARTICLE\s+(\S+)\s+\((\S+)\)\s*:(.*)", RegexOptions.IgnoreCase);
+        new(@"^ARTICLE\s+(\S+)\s+\(([^)]+)\)\s*:(.*)", RegexOptions.IgnoreCase);
 
     private static readonly Regex consequencePattern =
-        new(@"^CONSEQUENCE\s+\((\S+)\)\s*:(.*)", RegexOptions.IgnoreCase);
+        new(@"^CONSEQUENCE\s+\(([^)]+)\)\s*:(.*)", RegexOptions.IgnoreCase);
 
     private static readonly Regex cursesPattern =
-        new(@"^CURSES\s+(\S+)\s+\((\S+)\)\s*:(.*)", RegexOptions.IgnoreCase);
+        new(@"^CURSES\s+(\S+)\s+\(([^)]+)\)\s*:(.*)", RegexOptions.IgnoreCase);
 
     private static readonly Regex statutoryPattern =
         new(@"^STATUTORY\s*:(.*)", RegexOptions.IgnoreCase);

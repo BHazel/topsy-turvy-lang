@@ -7,12 +7,8 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <para>
 /// This represents a literal value in Topsy Turvy and is produced wherever a literal value appears directly in Topsy Turvy.
 /// Every literal consists of a <see cref="Value"/> holding the parsed value and a <see cref="Type"/> identifying the
-/// <see cref="LiteralType"/>.  The five supported literal types are:
-/// * <see cref="LiteralType"/>.<c>Integer</c> (<c>PEER</c>)
-/// * <see cref="LiteralType"/>.<c>Float</c> (<c>FATHOM</c>)
-/// * <see cref="LiteralType"/>.<c>String</c> (<c>YARN</c>)
-/// * <see cref="LiteralType"/>.<c>Boolean</c> (<c>DECREE</c>)
-/// * <see cref="LiteralType"/>.<c>Null</c> (<c>NAUGHT</c>)
+/// <see cref="LiteralType"/>.  Please see the <see cref="LiteralType"/> enumeration for a description of the different literal
+/// types and their corresponding Topsy Turvy keywords.
 /// </para>
 /// <para>
 /// For example, the following code in Topsy Turvy prints a string literal:

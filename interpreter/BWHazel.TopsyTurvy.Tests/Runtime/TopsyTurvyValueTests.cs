@@ -21,14 +21,14 @@ public class TopsyTurvyValueTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="TopsyTurvyValue.Float"/> method sets the correct type and value.
+    /// Tests that the <see cref="TopsyTurvyValue.Double"/> method sets the correct type and value.
     /// </summary>
     [Fact]
     public void Float_WithValue_SetsCorrectTypeAndRawValue()
     {
-        TopsyTurvyValue value = TopsyTurvyValue.Float(2.5);
+        TopsyTurvyValue value = TopsyTurvyValue.Double(2.5);
 
-        value.LiteralType.ShouldBe(LiteralType.Float);
+        value.LiteralType.ShouldBe(LiteralType.Double);
         value.RawValue.ShouldBe(2.5);
     }
 
@@ -104,7 +104,7 @@ public class TopsyTurvyValueTests
     [Fact]
     public void IsTruthy_WithZeroFloat_ReturnsFalse()
     {
-        TopsyTurvyValue value = TopsyTurvyValue.Float(0.0);
+        TopsyTurvyValue value = TopsyTurvyValue.Double(0.0);
 
         bool result = value.IsTruthy();
 
@@ -120,7 +120,7 @@ public class TopsyTurvyValueTests
     [InlineData(-1.5)]
     public void IsTruthy_WithNonZeroFloat_ReturnsTrue(double rawValue)
     {
-        TopsyTurvyValue value = TopsyTurvyValue.Float(rawValue);
+        TopsyTurvyValue value = TopsyTurvyValue.Double(rawValue);
 
         bool result = value.IsTruthy();
 
@@ -241,7 +241,7 @@ public class TopsyTurvyValueTests
     public void ToString_WithFloat_DelegatesRawValueToString()
     {
         double rawValue = 1.5;
-        TopsyTurvyValue value = TopsyTurvyValue.Float(rawValue);
+        TopsyTurvyValue value = TopsyTurvyValue.Double(rawValue);
 
         string result = value.ToString();
 
@@ -280,7 +280,7 @@ public class TopsyTurvyValueTests
     [Fact]
     public void CastTo_FloatToInteger_TruncatesDecimalPart()
     {
-        TopsyTurvyValue value = TopsyTurvyValue.Float(3.9);
+        TopsyTurvyValue value = TopsyTurvyValue.Double(3.9);
 
         TopsyTurvyValue result = value.CastTo(LiteralType.Integer);
 
@@ -353,9 +353,9 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Integer(5);
 
-        TopsyTurvyValue result = value.CastTo(LiteralType.Float);
+        TopsyTurvyValue result = value.CastTo(LiteralType.Double);
 
-        result.LiteralType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Double);
         result.RawValue.ShouldBe(5.0);
     }
 
@@ -371,9 +371,9 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Boolean(rawValue);
 
-        TopsyTurvyValue result = value.CastTo(LiteralType.Float);
+        TopsyTurvyValue result = value.CastTo(LiteralType.Double);
 
-        result.LiteralType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Double);
         result.RawValue.ShouldBe(expectedResult);
     }
 
@@ -385,9 +385,9 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.Null();
 
-        TopsyTurvyValue result = value.CastTo(LiteralType.Float);
+        TopsyTurvyValue result = value.CastTo(LiteralType.Double);
 
-        result.LiteralType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Double);
         result.RawValue.ShouldBe(0.0);
     }
 
@@ -399,9 +399,9 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("3.14");
 
-        TopsyTurvyValue result = value.CastTo(LiteralType.Float);
+        TopsyTurvyValue result = value.CastTo(LiteralType.Double);
 
-        result.LiteralType.ShouldBe(LiteralType.Float);
+        result.LiteralType.ShouldBe(LiteralType.Double);
     }
 
     /// <summary>
@@ -412,7 +412,7 @@ public class TopsyTurvyValueTests
     {
         TopsyTurvyValue value = TopsyTurvyValue.String("hello");
 
-        Should.Throw<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Float));
+        Should.Throw<TopsyTurvyRuntimeException>(() => value.CastTo(LiteralType.Double));
     }
 
     /// <summary>

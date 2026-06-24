@@ -277,6 +277,27 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The body containing one print statement.
 /// </para>
 /// <para>
+/// ### Guard Clauses
+/// The <c>Guard</c> parser matches on a guard clause, returning a <see cref="GuardNode"/>:
+/// * It first matches on the <c>YEOMAN</c> keyword.
+/// * It then matches on required whitespace followed by a condition expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * It then matches on required whitespace followed by the <c>OTHERWISE,</c> keyword.
+/// * It then matches on zero or more body statements for the else block, each back-tracked individually.
+/// * Finally it matches on required whitespace followed by the closing <c>UNDER ORDERS.</c> keyword.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// YEOMAN PRE-ADAMITE score AND 0
+///     OTHERWISE,
+///         A HIDEOUS CURSE ON "Score must be positive"
+/// UNDER ORDERS.
+/// </code>
+/// the statement would be matched by the <c>Guard</c> parser, returning a <see cref="GuardNode"/> with:
+/// * The condition set to the expression <c>PRE-ADAMITE score AND 0</c>.
+/// * The else block containing one throw statement.
+/// </para>
+/// <para>
 /// ### Exception Handling
 /// The <c>TryCatch</c> parser matches on a try-catch block, returning a <see cref="TryCatchNode"/>:
 /// * It first matches on the <c>WITH THE GREATEST RESPECT,</c> keyword.
@@ -304,6 +325,24 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The operation set to the function call expression <c>SUMMON RaffleVerdict WITH "Solicitor" IF YOU PLEASE.</c>
 /// * The success block containing one print statement.
 /// * The exception block containing one print statement.
+/// </para>
+/// <para>
+/// ### Assert Statements
+/// The <c>Assert</c> parser matches on an assert statement, returning an <see cref="AssertNode"/>:
+/// * It first matches on the <c>THE LAW IS</c> keyword.
+/// * It then matches on required whitespace followed by a condition expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * It then matches on required whitespace followed by the <c>THAT</c> keyword.
+/// * Finally it matches on required whitespace followed by an error message expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// THE LAW IS PRE-ADAMITE score AND 0 THAT "Score must be positive"
+/// THE LAW IS VERITY THAT errorMessage
+/// </code>
+/// both would be matched by the <c>Assert</c> parser, returning an <see cref="AssertNode"/> where:
+/// * The first would have the condition set to the expression <c>PRE-ADAMITE score AND 0</c> and the error message set to the string literal <c>Score must be positive</c>.
+/// * The second would have the condition set to the boolean literal <c>VERITY</c> and the error message set to the identifier <c>errorMessage</c>.
 /// </para>
 /// <para>
 /// ### Functions
@@ -462,7 +501,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <c>Conditional</c>
 /// * <c>Switch</c>
 /// * <c>Loop</c>
+/// * <c>Guard</c>
 /// * <c>TryCatch</c>
+/// * <c>Assert</c>
 /// * <c>FunctionDefinition</c>
 /// * <c>Import</c>
 /// * <c>EarlyDischarge</c>
@@ -840,6 +881,22 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses a guard clause.
+    /// </summary>
+    public static readonly TextParser<Statement> Guard =
+        from _ in Lexer.Keyword("YEOMAN")
+        from condition in Ws(ExpressionParser.Expression)
+        from otherwiseKeyword in Ws(Lexer.Keyword("OTHERWISE,").Named("OTHERWISE, (guard body)"))
+        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from closer in Ws(Lexer.Keyword("UNDER ORDERS.").Named("UNDER ORDERS. (end of guard)"))
+        select (Statement)new GuardNode()
+        {
+            Condition = condition,
+            ElseBlock = [.. body],
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
     /// Parses the parameter list of a function definition.
     /// </summary>
     public static readonly TextParser<List<string>> ParameterList =
@@ -887,6 +944,21 @@ public static class StatementParser
         select (Statement)new ThrowNode()
         {
             Value = curseValue,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
+    /// Parses an assert statement.
+    /// </summary>
+    public static readonly TextParser<Statement> Assert =
+        from _ in Lexer.Keyword("THE LAW IS")
+        from condition in Ws(ExpressionParser.Expression)
+        from thatKeyword in Ws(Lexer.Keyword("THAT").Named("THAT (assert error message)"))
+        from errorMessage in Ws(ExpressionParser.Expression)
+        select (Statement)new AssertNode()
+        {
+            Condition = condition,
+            ErrorMessage = errorMessage,
             Span = PlaceholderSpan
         };
 
@@ -975,12 +1047,14 @@ public static class StatementParser
             .Or(Conditional)
             .Or(Switch)
             .Or(Loop)
+            .Or(Guard)
             .Or(TryCatch)
             .Or(FunctionDefinition)
             .Or(Import)
             .Or(EarlyDischarge)
             .Or(Return)
             .Or(Curse)
+            .Or(Assert)
             .Or(Break)
             .Or(Continue)
             .Or(ExpressionStatementParser);

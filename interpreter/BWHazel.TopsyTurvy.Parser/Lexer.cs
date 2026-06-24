@@ -76,10 +76,22 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// Full reserved word enforcement for declared names is applied after the parsing process.
 /// </para>
 /// <para>
+/// ### Character Literals
+/// The <c>CharacterLiteral</c> parser matches on a single-quoted character literal, returning the content as a <c>char</c>.
+/// * It first matches an opening <c>'</c> character.
+/// * It then matches exactly one character, which can be either:
+///     * An escape sequence, which starts with a <c>~</c> character followed by a supported escape code
+///       (<c>~n</c>, <c>~t</c>, <c>~'</c>, <c>~~</c>).
+///     * Any character except a single quote or tilde.
+/// * Finally, it matches a closing <c>'</c> character and returns the single resolved character.
+///
+/// This parser supports back-tracking on failure.
+/// </para>
+/// <para>
 /// ### Keywords
 /// The <c>Keyword</c> parser is a helper function that generates a parser for a specific keyword string, returning the upper-case version of the keyword on a successful match as a <c>string</c>.
 /// * It matches on the exact keyword text, ignoring case, converting the result to upper-case.
-/// 
+///
 /// This parser supports back-tracking on failure.
 /// </para>
 /// </remarks>
@@ -116,6 +128,24 @@ public static class Lexer
              .Many()
          from closingQuote in Character.EqualTo('"')
          select string.Concat(stringContent)).Named("string literal");
+
+    /// <summary>
+    /// Parses a single-quoted character literal and returns the resolved <see cref="char"/>.
+    /// </summary>
+    public static readonly TextParser<char> CharacterLiteral =
+        (from openingQuote in Character.EqualTo('\'')
+         from content in
+             (from escapeCharacter in Character.EqualTo('~')
+              from escapedCode in
+                  Character.EqualTo('n').Select(_ => '\n')
+                      .Or(Character.EqualTo('t').Select(_ => '\t'))
+                      .Or(Character.EqualTo('\'').Select(_ => '\''))
+                      .Or(Character.EqualTo('~').Select(_ => '~'))
+              select escapedCode)
+             .Or(Character.Except('\''))
+         from closingQuote in Character.EqualTo('\'')
+         select content)
+            .Try().Named("character literal");
 
     /// <summary>
     /// Parses a floating-point numeric literal.

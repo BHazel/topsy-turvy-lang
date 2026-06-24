@@ -54,4 +54,14 @@ internal static class ReplConstants
     /// Alias for <see cref="Patter"/>.
     /// </summary>
     public const string SingleLine = ":singleline";
+
+    /// <summary>
+    /// Primary environment inspection command.
+    /// </summary>
+    public const string Armoury = ":armoury";
+
+    /// <summary>
+    /// Alias for <see cref="Armoury"/>.
+    /// </summary>
+    public const string Env = ":env";
 }

@@ -14,6 +14,7 @@ namespace BWHazel.TopsyTurvy.Cli.Repl;
 /// The tokeniser is a greedy left-to-right scanner. At each position it tries, in order:
 /// * Comments
 /// * String Literals
+/// * Character Literals
 /// * Numeric Literals
 /// * Keywords (Longest Match First)
 /// * Falls back to emitting the character without any colour markup.
@@ -60,6 +61,10 @@ public static class ReplHighlighter
             ("ALTERED CIRCUMSTANCES",                   "deepskyblue1"),
             ("UNDER ANY CIRCUMSTANCES",                 "deepskyblue1"),
             ("THAT CONCLUDES THE MATTER.",              "deepskyblue1"),
+            ("YEOMAN",                                  "deepskyblue1"),
+            ("UNDER ORDERS.",                           "deepskyblue1"),
+            ("THE LAW IS",                              "deepskyblue1"),
+            ("THAT",                                    "deepskyblue1"),
             ("A HIDEOUS CURSE ON",                      "deepskyblue1"),
             ("PRAY WELCOME",                            "mediumpurple1"),
             ("IS APPOINTED",                            "mediumpurple1"),
@@ -70,9 +75,15 @@ public static class ReplHighlighter
             ("CONSERVATIVE",                            "mediumpurple1"),
             ("LIBERAL",                                 "mediumpurple1"),
             ("LITTLE LIST OF",                          "cyan"),
+            ("STANDING",                               "mediumpurple1"),
             ("PEER",                                    "cyan"),
+            ("CHANCELLOR",                              "cyan"),
+            ("PIRATE",                                  "cyan"),
+            ("SAUSAGE-ROLL",                            "cyan"),
             ("FATHOM",                                  "cyan"),
+            ("FOOT",                                    "cyan"),
             ("YARN",                                    "cyan"),
+            ("STITCH",                                  "cyan"),
             ("DECREE",                                  "cyan"),
             ("SUM OF",                                  "orange1"),
             ("DIFFERENCE OF",                           "orange1"),
@@ -91,6 +102,12 @@ public static class ReplHighlighter
             ("ALL OF",                                  "orange1"),
             ("ANY OF",                                  "orange1"),
             ("WOVEN OF",                                "orange1"),
+            ("TRANSPOSITION DOWN",                      "orange1"),
+            ("TRANSPOSITION UP",                        "orange1"),
+            ("INVERSION OF",                            "orange1"),
+            ("HARMONY OF",                              "orange1"),
+            ("DISCORD OF",                              "orange1"),
+            ("CHORD OF",                                "orange1"),
             ("RECKONING OF",                            "orange1"),
             ("IF YOU PLEASE.",                          "orange1"),
             ("VICTIM",                                  "orange1"),
@@ -179,7 +196,36 @@ public static class ReplHighlighter
                 continue;
             }
 
-            // 3. Numeric Literal: Digit, or '-' followed immediately by a digit.
+            // 3. Character Literal: Consume from ' to the next unescaped '.
+            if (sourceInput[position] == '\'')
+            {
+                int charLiteralEndPosition = position + 1;
+                while (charLiteralEndPosition < length)
+                {
+                    if (sourceInput[charLiteralEndPosition] == '~' && charLiteralEndPosition + 1 < length)
+                    {
+                        // Skip escape sequence.
+                        charLiteralEndPosition += 2;
+                        continue;
+                    }
+
+                    if (sourceInput[charLiteralEndPosition] == '\'')
+                    {
+                        charLiteralEndPosition++;
+                        break;
+                    }
+
+                    charLiteralEndPosition++;
+                }
+
+                output.Append("[sandybrown]");
+                output.Append(Markup.Escape(sourceInput[position..charLiteralEndPosition]));
+                output.Append("[/]");
+                position = charLiteralEndPosition;
+                continue;
+            }
+
+            // 5. Numeric Literal: Digit, or '-' followed immediately by a digit.
             if (char.IsDigit(sourceInput[position]) || (sourceInput[position] == '-' && position + 1 < length && char.IsDigit(sourceInput[position + 1])))
             {
                 int numericLiteralEndPosition = position;
@@ -200,7 +246,7 @@ public static class ReplHighlighter
                 continue;
             }
 
-            // 4. Keyword: Try each entry in the table, longest first.
+            // 6. Keyword: Try each entry in the table, longest first.
             bool isKeywordMatched = false;
             foreach ((string pattern, string colour) in Keywords)
             {
@@ -230,7 +276,7 @@ public static class ReplHighlighter
                 continue;
             }
 
-            // 5. Plain Character: Identifier characters, whitespace or punctuation.
+            // 7. Plain Character: Identifier characters, whitespace or punctuation.
             output.Append(Markup.Escape(sourceInput[position].ToString()));
             position++;
         }
