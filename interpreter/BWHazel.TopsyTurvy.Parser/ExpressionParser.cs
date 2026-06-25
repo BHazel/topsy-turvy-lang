@@ -19,11 +19,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The supported parsers for expressions are outlined below.
 /// </para>
 /// <para>
-/// ### Known Issue: Source Spans
-/// The current expression parser implementation does not support parsing of source code with accurate source spans (<see cref="SourceSpan"/>),
-/// with all spans set to a placeholder value of line 0 and column 0, which are deliberately out-of-range.  This is an identified known issue
-/// and will be addressed in the future.  A workaround, used by the LSP server and web editor, performs a scan line-by-line of the
-/// source code to assign approximate spans as needed.  Once the expression parser supports accurate spans, this workaround can be removed.
+/// Please note that for brevity the capture of spans is not documented for each parser.  Please see the **Source Spans** section below for a description of
+/// how spans are captured and associated with AST nodes.
 /// </para>
 /// <para>
 /// ### Type Keywords
@@ -263,6 +260,22 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///   <c>FalseValue</c> is itself a <see cref="TernaryExpressionNode"/>, demonstrating right-associative chaining.
 /// </para>
 /// <para>
+/// ### Source Spans
+/// Every expression node produced by this class carries a <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/> mapping the node back to its
+/// position in the original (pre-processed) source.  The mechanism is:
+/// * <see cref="ParserHelpers.CurrentOffset"/>: A zero-consuming parser inserted at the start and end of each LINQ
+///   chain to capture the absolute cursor offset before and after the expression is consumed.
+/// * <see cref="ParserHelpers.BuildSpan"/>: Called at node construction time with the two captured offsets converting
+///   them to <see cref="BWHazel.TopsyTurvy.Ast.SourceLocation"/> pairs via the <see cref="ParserHelpers.ActiveSourceMap"/> set by
+///   <see cref="TopsyTurvyParser"/> before each parse.
+/// * <see cref="ParserHelpers.WithOffsets{T}"/>: Used for <c>LiteralExpression</c> whose six branches are written as
+///   chained <c>.Select()</c> calls; this extension wraps any parser to return a <c>(Value, StartOffset, EndOffset)</c> tuple.
+///
+/// The <c>SummonExpression</c> is the only parser that also captures an inner span: the function name
+/// <see cref="BWHazel.TopsyTurvy.Ast.IdentifierNode"/> receives its own <c>BuildSpan</c> call using offsets captured
+/// immediately before and after the function name <c>Lexer.Identifier</c> consume.
+/// </para>
+/// <para>
 /// ### Expression Parser
 /// The <c>Expression</c> parser is the main entry point for parsing any Topsy Turvy expression, matching on any of the above
 /// expression types, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> in the order they are tried as follows:
@@ -286,15 +299,6 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </remarks>
 public static class ExpressionParser
 {
-    /// <summary>
-    /// A placeholder source span used for all expressions.
-    /// </summary>
-    /// <remarks>
-    /// This is a known issue and will be replaced with accurate spans in the future.
-    /// </remarks>
-    private static readonly SourceSpan PlaceholderSpan =
-        new(new SourceLocation(0, 0), new SourceLocation(0, 0));
-
     /// <summary>
     /// Parses an operator keyword and returns the corresponding <see cref="Operator"/> value.
     /// </summary>
@@ -335,17 +339,23 @@ public static class ExpressionParser
     public static readonly TextParser<Expression> LiteralExpression =
         (
             Lexer.NullLiteral
-                .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Null, Span = PlaceholderSpan })
-                .Or(Lexer.BooleanLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Boolean, Span = PlaceholderSpan }))
-                .Or(Lexer.CharacterLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Char, Span = PlaceholderSpan }))
-                .Or(Lexer.FloatLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Double, Span = PlaceholderSpan }))
-                .Or(Lexer.IntegerLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.Integer, Span = PlaceholderSpan }))
-                .Or(Lexer.StringLiteral
-                    .Select(literalValue => new LiteralNode() { Value = literalValue, Type = LiteralType.String, Span = PlaceholderSpan }))
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Null, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) })
+            .Or(Lexer.BooleanLiteral
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Boolean, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
+            .Or(Lexer.CharacterLiteral
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Char, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
+            .Or(Lexer.FloatLiteral
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Double, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
+            .Or(Lexer.IntegerLiteral
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Integer, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
+            .Or(Lexer.StringLiteral
+                .WithOffsets()
+                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.String, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
         ).Select(literalNode => (Expression)literalNode);
 
     /// <summary>
@@ -365,34 +375,40 @@ public static class ExpressionParser
     /// Parses the implicit variable.
     /// </summary>
     public static readonly TextParser<Expression> JustSoExpression =
-        Lexer.Keyword("JUST SO")
-            .Select(_ => (Expression)new IdentifierNode()
-                {
-                    Name = "JUST SO",
-                    Span = PlaceholderSpan
-                });
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("JUST SO")
+        from endOffset in CurrentOffset
+        select (Expression)new IdentifierNode()
+            {
+                Name = "JUST SO",
+                Span = BuildSpan(startOffset, endOffset)
+            };
 
     /// <summary>
     /// Parses the built-in programme arguments array.
     /// </summary>
     public static readonly TextParser<Expression> ThePropsExpression =
-        Lexer.Keyword("THE PROPS")
-            .Select(_ => (Expression)new IdentifierNode()
-                {
-                    Name = Keywords.SpecialNames.TheProps,
-                    Span = PlaceholderSpan
-                });
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("THE PROPS")
+        from endOffset in CurrentOffset
+        select (Expression)new IdentifierNode()
+            {
+                Name = Keywords.SpecialNames.TheProps,
+                Span = BuildSpan(startOffset, endOffset)
+            };
 
     /// <summary>
     /// Parses a variable or function name into an <see cref="IdentifierNode"/>.
     /// </summary>
     public static readonly TextParser<Expression> IdentifierExpression =
-        Lexer.Identifier
-            .Select(name => (Expression)new IdentifierNode()
-                {
-                    Name = name,
-                    Span = PlaceholderSpan
-                });
+        from startOffset in CurrentOffset
+        from name in Lexer.Identifier
+        from endOffset in CurrentOffset
+        select (Expression)new IdentifierNode()
+            {
+                Name = name,
+                Span = BuildSpan(startOffset, endOffset)
+            };
 
     /// <summary>
     /// Parses a single AND keyword followed by one expression.
@@ -418,6 +434,7 @@ public static class ExpressionParser
     /// Parses a prefix-notation operator.
     /// </summary>
     public static readonly TextParser<Expression> PrefixExpression =
+        from startOffset in CurrentOffset
         from theOperator in OperatorToken.Try()
         from firstExpression in Lexer.WhitespaceRequired
             .IgnoreThen(Parse.Ref(() => Expression!))
@@ -429,21 +446,24 @@ public static class ExpressionParser
         from expressionCloser in IsVariadic(theOperator)
             ? Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("IF YOU PLEASE."))
             : Parse.Return<string>(string.Empty)
+        from endOffset in CurrentOffset
         select (Expression)new PrefixExpressionNode()
         {
             Operator = theOperator,
             Arguments = new List<Expression>(remainingExpressions.Length + 1) { firstExpression }
                 .Concat(remainingExpressions).ToList(),
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses a function call.
     /// </summary>
     public static readonly TextParser<Expression> SummonExpression =
-        (from _ in Lexer.Keyword("SUMMON")
-         from functionName in Lexer.WhitespaceRequired
-            .IgnoreThen(Lexer.Identifier)
+        (from startOffset in CurrentOffset
+         from _ in Lexer.Keyword("SUMMON")
+         from functionNameStart in Lexer.WhitespaceRequired.IgnoreThen(CurrentOffset)
+         from functionName in Lexer.Identifier
+         from functionNameEnd in CurrentOffset
          from withKeyword in Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("WITH"))
          from arguments in
@@ -460,13 +480,12 @@ public static class ExpressionParser
                 )
          from expressionCloser in Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("IF YOU PLEASE."))
+         from endOffset in CurrentOffset
          select (Expression)new PrefixExpressionNode
          {
              Operator = Operator.Summon,
-             Arguments = arguments
-                 .Prepend(new IdentifierNode { Name = functionName, Span = PlaceholderSpan })
-                 .ToList(),
-             Span = PlaceholderSpan
+             Arguments = [.. arguments.Prepend(new IdentifierNode() { Name = functionName, Span = BuildSpan(functionNameStart, functionNameEnd) })],
+             Span = BuildSpan(startOffset, endOffset)
          }).Try();
 
     /// <summary>
@@ -524,18 +543,20 @@ public static class ExpressionParser
     /// consumed as an identifier.
     /// </remarks>
     public static readonly TextParser<Expression> ArrayIndexExpression =
-        (from victimKeyword in Lexer.Keyword("VICTIM")
+        (from startOffset in CurrentOffset
+         from victimKeyword in Lexer.Keyword("VICTIM")
          from index in Lexer.WhitespaceRequired
             .IgnoreThen(Parse.Ref(() => Expression!))
          from onKeyword in Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("ON"))
          from arrayName in Lexer.WhitespaceRequired
             .IgnoreThen(ArrayNameParser)
+         from endOffset in CurrentOffset
          select (Expression)new ArrayIndexNode()
          {
              Index = index,
              ArrayName = arrayName,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          }).Try();
 
     /// <summary>
@@ -548,28 +569,32 @@ public static class ExpressionParser
     /// consumed as an identifier.
     /// </remarks>
     public static readonly TextParser<Expression> ArrayLengthExpression =
-        (from reckoningKeyword in Lexer.Keyword("RECKONING OF")
+        (from startOffset in CurrentOffset
+         from reckoningKeyword in Lexer.Keyword("RECKONING OF")
          from arrayName in Lexer.WhitespaceRequired
             .IgnoreThen(ArrayNameParser)
+         from endOffset in CurrentOffset
          select (Expression)new ArrayLengthNode()
          {
              ArrayName = arrayName,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          }).Try();
 
     /// <summary>
     /// Parses a non-mutating expression cast.
     /// </summary>
     public static readonly TextParser<Expression> ExpressionCast =
+        from startOffset in CurrentOffset
         from asItWwereKeyword in Lexer.Keyword("AS IT WERE")
         from expression in Ws(Parse.Ref(() => Expression!))
         from asAKeyword in Ws(Lexer.Keyword("AS A"))
         from newType in Ws(TypeKeyword)
+        from endOffset in CurrentOffset
         select (Expression)new ExpressionCastNode()
         {
             Expression = expression,
             NewType = newType,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -604,17 +629,19 @@ public static class ExpressionParser
     /// so that the parser backtracks fully when <c>SHOULD IT TRANSPIRE THAT</c> is not found after a <c>TrueValue</c>.
     /// </remarks>
     public static readonly TextParser<Expression> TernaryExpression =
-        (from trueValue in NonTernaryExpression
+        (from startOffset in CurrentOffset
+         from trueValue in NonTernaryExpression
          from shouldItTranspireThatKeyword in Ws(Lexer.Keyword("SHOULD IT TRANSPIRE THAT"))
          from condition in Ws(NonTernaryExpression)
          from otherwiseKeyword in Ws(Lexer.Keyword("OTHERWISE,"))
          from falseValue in Ws(Parse.Ref(() => Expression!))
+         from endOffset in CurrentOffset
          select (Expression)new TernaryExpressionNode()
          {
              TrueValue = trueValue,
              Condition = condition,
              FalseValue = falseValue,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          }).Try();
 
     /// <summary>

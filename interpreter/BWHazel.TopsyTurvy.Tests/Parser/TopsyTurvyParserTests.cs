@@ -168,4 +168,52 @@ public class TopsyTurvyParserTests
         string source = "HARK! \"T\" IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF ALL MY DUTY IS DISCHARGED. FINALE.";
         Should.Throw<TopsyTurvySyntaxException>(() => this.parser.Parse(source));
     }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> reports a syntax error on the correct line when a
+    /// top-level statement partially matches (opening keyword consumed, body invalid).
+    /// </summary>
+    [Fact]
+    public void TryParse_WithSyntaxErrorInTopLevelStatement_DiagnosticIsOnErrorLine()
+    {
+        string source = "HARK! \"Test\"\nPRAY WELCOME x AS A WrongType\nFINALE.";
+
+        ParseResult result = this.parser.TryParse(source);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldHaveSingleItem();
+        result.Diagnostics[0].Span.Start.Line.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> reports a syntax error on the correct line when
+    /// a statement inside a function body is invalid, not on the function definition line.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithSyntaxErrorInsideFunctionBody_DiagnosticIsOnErrorLine()
+    {
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\nPRAY WELCOME x AS A WrongType\nMY DUTY IS DISCHARGED.\nFINALE.";
+
+        ParseResult result = this.parser.TryParse(source);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldHaveSingleItem();
+        result.Diagnostics[0].Span.Start.Line.ShouldBe(3);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyParser.TryParse"/> reports a syntax error on the correct line when
+    /// a statement inside a conditional true-block is invalid, not on the conditional opening line.
+    /// </summary>
+    [Fact]
+    public void TryParse_WithSyntaxErrorInsideConditionalBlock_DiagnosticIsOnErrorLine()
+    {
+        string source = "HARK! \"Test\"\nSHOULD IT TRANSPIRE THAT VERITY\nQUITE SO.\nPRAY WELCOME x AS A WrongType\nSO MUCH FOR THAT.\nFINALE.";
+        
+        ParseResult result = this.parser.TryParse(source);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldHaveSingleItem();
+        result.Diagnostics[0].Span.Start.Line.ShouldBe(4);
+    }
 }

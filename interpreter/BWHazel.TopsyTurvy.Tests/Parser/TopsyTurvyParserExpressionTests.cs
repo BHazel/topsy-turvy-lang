@@ -266,6 +266,280 @@ public class TopsyTurvyParserExpressionTests
     }
     
     /// <summary>
+    /// Tests that an integer literal parsed from a dedicated source line carries a real source span pointing to the
+    /// literal token in the original source.
+    /// </summary>
+    [Fact]
+    public void Parse_IntegerLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 42\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        (node.Span.Start.Column > 0).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that an identifier expression parsed from a dedicated source line carries a real source span pointing to
+    /// the identifier token.
+    /// </summary>
+    [Fact]
+    public void Parse_IdentifierExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nPRAY WELCOME x AS A PEER BEING 0\nBEHOLD x\nFINALE.");
+
+        program.Statements.Count.ShouldBe(2);
+        PrintNode print = program.Statements[1].ShouldBeOfType<PrintNode>();
+        IdentifierNode node = print.Expression.ShouldBeOfType<IdentifierNode>();
+        node.Span.Start.Line.ShouldBe(3);
+        (node.Span.Start.Column > 0).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that a string literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_StringLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD \"hello\"\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a boolean true literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_BooleanTrueLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD VERITY\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a boolean false literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_BooleanFalseLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD NAY\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a null literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_NullLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD NAUGHT\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a float literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_FloatLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 3.14\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a character literal node carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_CharLiteral_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 'A'\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a prefix expression node carries a real source span starting at the operator keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_PrefixExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD SUM OF 1 AND 2\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        PrefixExpressionNode node = print.Expression.ShouldBeOfType<PrefixExpressionNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that the outer <see cref="PrefixExpressionNode"/> from a SUMMON call carries a span starting at the SUMMON keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_OuterSpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD SUMMON greet WITH NOTHING IF YOU PLEASE.\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        PrefixExpressionNode node = print.Expression.ShouldBeOfType<PrefixExpressionNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that the inner <see cref="IdentifierNode"/> for the function name in a SUMMON call carries a span
+    /// pointing to the function name token, not the SUMMON keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_FunctionNameIdentifierSpanIsAfterSummonKeyword()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD SUMMON greet WITH NOTHING IF YOU PLEASE.\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        PrefixExpressionNode summon = print.Expression.ShouldBeOfType<PrefixExpressionNode>();
+        IdentifierNode functionName = summon.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        functionName.Span.Start.Line.ShouldBe(2);
+        functionName.Span.Start.Column.ShouldBe(15);
+        (functionName.Span.Start.Column > summon.Span.Start.Column).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that an array index expression carries a real source span starting at the VICTIM keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayIndexExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD VICTIM 1 ON arr\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        ArrayIndexNode node = print.Expression.ShouldBeOfType<ArrayIndexNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that an array length expression carries a real source span starting at the RECKONING OF keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayLengthExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD RECKONING OF arr\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        ArrayLengthNode node = print.Expression.ShouldBeOfType<ArrayLengthNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that an expression cast node carries a real source span starting at the AS IT WERE keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ExpressionCast_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD AS IT WERE x AS A YARN\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        ExpressionCastNode node = print.Expression.ShouldBeOfType<ExpressionCastNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that a ternary expression node carries a real source span starting at the true-value expression.
+    /// </summary>
+    [Fact]
+    public void Parse_TernaryExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD \"yes\" SHOULD IT TRANSPIRE THAT VERITY OTHERWISE, \"no\"\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        TernaryExpressionNode node = print.Expression.ShouldBeOfType<TernaryExpressionNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that the implicit JUST SO expression carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_JustSoExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD JUST SO\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        IdentifierNode node = print.Expression.ShouldBeOfType<IdentifierNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that THE PROPS built-in array expression carries a real source span at the correct position.
+    /// </summary>
+    [Fact]
+    public void Parse_ThePropsExpression_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD THE PROPS\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        IdentifierNode node = print.Expression.ShouldBeOfType<IdentifierNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that the integer literal <c>42</c> on line 2 has a span end strictly after its start,
+    /// confirming the span covers the token width and is not zero-length.
+    /// </summary>
+    [Fact]
+    public void Parse_IntegerLiteral_SpanEndIsAfterStart()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 42\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.End.Line.ShouldBe(2);
+        node.Span.End.Column.ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that when source contains an inline ASIDE: comment that is stripped by the pre-processor,
+    /// the span of the expression on the following line still reflects the correct original line number.
+    /// </summary>
+    [Fact]
+    public void Parse_WithInlineComment_SpanReflectsOriginalSourceLineNumber()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\" ASIDE: inline comment\nBEHOLD 42\nFINALE.");
+
+        PrintNode print = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+        LiteralNode node = print.Expression.ShouldBeOfType<LiteralNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(8);
+    }
+
+    /// <summary>
     /// Parses an expression in a print statement and returns the expression node for testing.
     /// </summary>
     /// <typeparam name="T">The type of the expression node.</typeparam>

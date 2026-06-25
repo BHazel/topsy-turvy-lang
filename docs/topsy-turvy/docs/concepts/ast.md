@@ -34,7 +34,7 @@ The concrete node types, grouped by their base class, are listed below.
 |`DeclarationNode`|Variable Declaration|Declares a variable with a type, optional mutability modifier (`CONSERVATIVE` / `LIBERAL`), and optional initial value: `PRAY WELCOME`.  Carries an `IsConstant` flag: `true` when the `CONSERVATIVE` modifier is present.|
 |`ExpressionCastNode`|Expression Cast|Casts an expression to a new type, storing the result in the implicit `JUST SO` variable: `AS IT WERE` ... `AS A`.|
 |`ExpressionStatement`|Expression Statement|Wraps a standalone expression used as a statement, such as a discarded function call.|
-|`FunctionDefinitionNode`|Function Definition|Defines a named function with parameters and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`|
+|`FunctionDefinitionNode`|Function Definition|Defines a named function with parameters and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`  Parameter source positions are carried in a parallel `ParameterSpans` property alongside the `Parameters` name list.|
 |`GuardNode`|Guard|Evaluates a condition and, if falsy, executes an else block: `YEOMAN <condition> OTHERWISE, <block> UNDER ORDERS.`|
 |`ImportNode`|Import|Imports another `.topsy` file, making its functions available: `PRAY ADMIT`.|
 |`InPlaceCastNode`|In-Place Cast|Converts a variable to a new type, mutating it in place: `IS HENCEFORTH A`.|
@@ -133,11 +133,9 @@ The `Operator` enum identifies the operation performed by a `PrefixExpressionNod
 
 ### Source Positions
 
-:::warning
-Accurate span tracking is not yet implemented.  The parser currently sets all node spans to `(Line: 0, Column: 0)` / `(Line: 0, Column: 0)` as a placeholder.  Line 0 is invalid under the 1-indexed convention, so any code consuming `Span` should treat a zero value as meaning "Position Unknown".
-:::
+Every `Node` carries a required `Span` property, of type `SourceSpan`, recording where in the source code the node originated.  This is used by the _Operetta Toolchain_ to report errors and warnings at the correct position.  The `Span` is populated by the [Parser](./parser.md) at parse time by consulting the `SourceMap` produced by the [Pre-Processor](./pre-processor.md), which translates the absolute character offset at the start and end of each parsed construct back to the original source line and column.
 
-Every `Node` carries a required `Span` property, of type `SourceSpan`, recording where in the source code the node originated.  This is used by the _Operetta Toolchain_ to report errors and warnings at the correct position.
+A `PlaceholderSpan` of `(Line: 0, Column: 0)` / `(Line: 0, Column: 0)` is returned only when no `SourceMap` is available, which occurs solely in specific intended situations, such as isolated tests that invoke the parser directly without a pre-processing step.  In all normal execution paths every node carries real source positions.
 
 A `SourceSpan` is a pair of `SourceLocation` values:
 

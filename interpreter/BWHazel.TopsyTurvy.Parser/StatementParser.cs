@@ -20,6 +20,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <c>SHOULD IT TRANSPIRE THAT</c> conditional, can contain nested statements within their bodies.
 /// </para>
 /// <para>
+/// Please note that for brevity the capture of spans and committed-parse semantics are not documented for each parser individually.  Please see the **Source Spans** and **Committed Parse Semantics** sections below for descriptions of how spans are captured and how block-body parsers handle partial matches.
+/// </para>
+/// <para>
 /// ### Variable Declarations
 /// The <c>Declaration</c> parser matches on variable declarations, returning a <see cref="DeclarationNode"/> with the variable name, type, optional mutability modifier and optional initial value:
 /// * It first matches the <c>PRAY WELCOME</c> keyword.
@@ -488,6 +491,28 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// the leading <c>VICTIM</c> keyword disambiguates them.
 /// </para>
 /// <para>
+/// ### Source Spans
+/// Every statement node produced by this class carries a <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/> mapping the node back to its
+/// position in the original (pre-processed) source.  The mechanism is identical to that used in <see cref="ExpressionParser"/>:
+/// <see cref="ParserHelpers.CurrentOffset"/> is inserted as the first and last clause of every LINQ <c>from</c> chain, and
+/// <see cref="ParserHelpers.BuildSpan"/> is called at node construction time with those two captured offsets.  The
+/// <see cref="ParserHelpers.ActiveSourceMap"/> is set by <see cref="TopsyTurvyParser"/> before each parse and maps
+/// pre-processed offsets back to original source line and column pairs.
+///
+/// The <c>FunctionDefinition</c> parser additionally captures one pair of offsets per parameter — immediately before and
+/// after each <c>Lexer.Identifier</c> consume in the parameter list — to populate
+/// <see cref="BWHazel.TopsyTurvy.Ast.FunctionDefinitionNode.ParameterSpans"/>.
+/// </para>
+/// <para>
+/// ### Committed Parse Semantics
+/// Every parser in this class that matches the body of a block construct uses the committed-parse
+/// pattern: once the opening keyword of a nested statement has been consumed, any subsequent failure is
+/// propagated at the actual position of the error rather than backtracking to before the whitespace that
+/// preceded the keyword.  As a result, syntax errors inside block bodies are reported at the line where
+/// the error occurs, not at the opening line of the enclosing block.  Parsing still stops at the first
+/// unrecoverable error: there is no multi-error recovery.
+/// </para>
+/// <para>
 /// ### Main Entry Point
 /// The <c>Statement</c> parser is the main entry point that tries every statement parser in turn:
 /// * <c>PrincipalBlock</c>
@@ -549,7 +574,8 @@ public static class StatementParser
     /// because both begin with <c>PRAY WELCOME</c>.
     /// </remarks>
     public static readonly TextParser<Statement> ArrayDeclaration =
-        (from _ in Lexer.Keyword("PRAY WELCOME")
+        (from startOffset in CurrentOffset
+         from _ in Lexer.Keyword("PRAY WELCOME")
          from variableName in Ws(Lexer.Identifier)
          from asAKeyword in Ws(Lexer.Keyword("AS A"))
          from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
@@ -563,6 +589,7 @@ public static class StatementParser
             .OptionalOrDefault(null)
          from elementType in Ws(ExpressionParser.TypeKeyword)
          from initialValues in ArrayInitialiser
+         from endOffset in CurrentOffset
          select (Statement)new ArrayDeclarationNode()
          {
              Name = variableName,
@@ -570,7 +597,7 @@ public static class StatementParser
              Size = sizeValue,
              IsConstant = mutabilityModifier == "CONSERVATIVE",
              InitialValues = initialValues ?? [],
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          })
          .Try();
 
@@ -583,18 +610,20 @@ public static class StatementParser
     /// eventually match <c>IS APPOINTED</c>; the <c>VICTIM</c> prefix disambiguates them.
     /// </remarks>
     public static readonly TextParser<Statement> ArrayElementAssignment =
-        (from victimKeyword in Lexer.Keyword("VICTIM")
+        (from startOffset in CurrentOffset
+         from victimKeyword in Lexer.Keyword("VICTIM")
          from index in Ws(ExpressionParser.Expression)
          from onKeyword in Ws(Lexer.Keyword("ON"))
          from arrayName in Ws(ExpressionParser.ArrayNameParser)
          from isAppointedKeyword in Ws(Lexer.Keyword("IS APPOINTED"))
          from value in Ws(ExpressionParser.Expression)
+         from endOffset in CurrentOffset
          select (Statement)new ArrayElementAssignmentNode()
          {
              Index = index,
              ArrayName = arrayName,
              Value = value,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          })
          .Try();
 
@@ -602,6 +631,7 @@ public static class StatementParser
     /// Parses a variable declaration.
     /// </summary>
     public static readonly TextParser<Statement> Declaration =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRAY WELCOME")
         from variableName in Ws(Lexer.Identifier)
         from asAKeyword in Ws(Lexer.Keyword("AS A"))
@@ -615,27 +645,30 @@ public static class StatementParser
             .IgnoreThen(Ws(ExpressionParser.Expression)))
             .Try()
             .OptionalOrDefault(null!)
+        from endOffset in CurrentOffset
         select (Statement)new DeclarationNode()
         {
             Name = variableName,
             Type = variableType,
             IsConstant = mutabilityModifier == "CONSERVATIVE",
             InitialValue = initialValue,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an assignment statement.
     /// </summary>
     public static readonly TextParser<Statement> Assignment =
-        (from variableName in Lexer.Identifier
+        (from startOffset in CurrentOffset
+         from variableName in Lexer.Identifier
          from _ in Ws(Lexer.Keyword("IS APPOINTED"))
          from newValue in Ws(ExpressionParser.Expression)
+         from endOffset in CurrentOffset
          select (Statement)new AssignmentNode()
          {
              Target = variableName,
              Value = newValue,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          })
          .Try();
 
@@ -643,14 +676,16 @@ public static class StatementParser
     /// Parses an in-place type cast.
     /// </summary>
     public static readonly TextParser<Statement> InPlaceCast =
-        (from variableName in Lexer.Identifier
+        (from startOffset in CurrentOffset
+         from variableName in Lexer.Identifier
          from _ in Ws(Lexer.Keyword("IS HENCEFORTH A"))
          from newType in Ws(ExpressionParser.TypeKeyword)
+         from endOffset in CurrentOffset
          select (Statement)new InPlaceCastNode()
          {
              Target = variableName,
              NewType = newType,
-             Span = PlaceholderSpan
+             Span = BuildSpan(startOffset, endOffset)
          })
          .Try();
 
@@ -664,28 +699,32 @@ public static class StatementParser
     /// Parses an output statement.
     /// </summary>
     public static readonly TextParser<Statement> Print =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("BEHOLD")
         from expression in Ws(ExpressionParser.Expression)
         from withoutCeremonyKeyword in Ws(Lexer.Keyword("WITHOUT CEREMONY"))
             .Try()
             .OptionalOrDefault(null!)
+        from endOffset in CurrentOffset
         select (Statement)new PrintNode()
         {
             Expression = expression,
             SuppressNewline = withoutCeremonyKeyword is not null,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an input statement.
     /// </summary>
     public static readonly TextParser<Statement> Input =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRAY TELL")
         from variableName in Ws(Lexer.Identifier)
+        from endOffset in CurrentOffset
         select (Statement)new InputNode()
         {
             Target = variableName,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -694,26 +733,20 @@ public static class StatementParser
     public static readonly TextParser<ConditionalBodyInfo> ConditionalBody =
         from trueBlockKeyword in Ws(Lexer.Keyword("QUITE SO.")
             .Named("QUITE SO. (then-block)"))
-        from trueBlock in Ws(Parse.Ref(() => Statement!))
-            .Try()
-            .Many()
+        from trueBlock in WsMany(Parse.Ref(() => Statement!))
         from elseIfBlocks in (
             from _ in Ws(Lexer.Keyword("OR, IF NOT,"))
             from condition in Ws(ExpressionParser.Expression)
                 .Try()
                 .OptionalOrDefault(null!)
-            from block in Ws(Parse.Ref(() => Statement!))
-                .Try()
-                .Many()
+            from block in WsMany(Parse.Ref(() => Statement!))
             select new ElseIfBranch(condition, [.. block])
         )
         .Try()
         .Many()
         from elseBlock in (
             from _ in Ws(Lexer.Keyword("OTHERWISE,"))
-            from block in Ws(Parse.Ref(() => Statement!))
-                .Try()
-                .Many()
+            from block in WsMany(Parse.Ref(() => Statement!))
             select (IReadOnlyList<Statement>)[.. block]
         )
         .Try()
@@ -727,6 +760,7 @@ public static class StatementParser
     /// Parses a conditional statement.
     /// </summary>
     public static readonly TextParser<Statement> Conditional =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("SHOULD IT TRANSPIRE THAT")
         from condition in Ws(ExpressionParser.Expression)
             .Try()
@@ -734,13 +768,14 @@ public static class StatementParser
         from body in ConditionalBody
         from closer in Ws(Lexer.Keyword("SO MUCH FOR THAT.")
             .Named("SO MUCH FOR THAT. (end of conditional)"))
+        from endOffset in CurrentOffset
         select (Statement)new ConditionalNode
         {
             Condition = condition,
             TrueBlock = body.TrueBlock,
             ElseIfs = body.ElseIfs,
             ElseBlock = body.ElseBlock,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -755,18 +790,14 @@ public static class StatementParser
                     .Or(Lexer.FloatLiteral.Select(value => (object?)value))
                     .Or(Lexer.IntegerLiteral.Select(value => (object?)value))
                     .Or(Lexer.StringLiteral.Select(value => (object?)value)))
-            from caseBody in Ws(Parse.Ref(() => Statement!))
-                .Try()
-                .Many()
+            from caseBody in WsMany(Parse.Ref(() => Statement!))
             select new SwitchCase(literalValue, [.. caseBody])
         )
         .Try()
         .Many()
         from defaultCase in (
             from _ in Ws(Lexer.Keyword("FAILING ALL OF THE ABOVE,"))
-            from block in Ws(Parse.Ref(() => Statement!))
-                .Try()
-                .Many()
+            from block in WsMany(Parse.Ref(() => Statement!))
             select (IReadOnlyList<Statement>)[.. block]
         )
         .Try()
@@ -779,6 +810,7 @@ public static class StatementParser
     /// Parses a switch statement.
     /// </summary>
     public static readonly TextParser<Statement> Switch =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("IN WHICH CAPACITY?")
         from expression in Ws(ExpressionParser.Expression)
             .Try()
@@ -786,12 +818,13 @@ public static class StatementParser
         from body in SwitchBody
         from closer in Ws(Lexer.Keyword("NOTHING COULD BE MORE SATISFACTORY.")
             .Named("NOTHING COULD BE MORE SATISFACTORY. (end of switch)"))
+        from endOffset in CurrentOffset
         select (Statement)new SwitchNode()
         {
             Expression = expression,
             Cases = body.Cases,
             DefaultBlock = body.DefaultBlock,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -820,33 +853,33 @@ public static class StatementParser
     /// Parses a break statement.
     /// </summary>
     public static readonly TextParser<Statement> Break =
-        Lexer.Keyword("THAT WILL DO.")
-            .Value((Statement)new BreakNode()
-            {
-                Span = PlaceholderSpan
-            });
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("THAT WILL DO.")
+        from endOffset in CurrentOffset
+        select (Statement)new BreakNode() { Span = BuildSpan(startOffset, endOffset) };
 
     /// <summary>
     /// Parses a continue statement.
     /// </summary>
     public static readonly TextParser<Statement> Continue =
-        Lexer.Keyword("ONCE MORE.")
-            .Value((Statement)new ContinueNode()
-            {
-                Span = PlaceholderSpan
-            });
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("ONCE MORE.")
+        from endOffset in CurrentOffset
+        select (Statement)new ContinueNode() { Span = BuildSpan(startOffset, endOffset) };
 
     /// <summary>
     /// Parses a loop.
     /// </summary>
     public static readonly TextParser<Statement> Loop =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("BY A LEGAL FICTION")
         from label in Ws(Lexer.Keyword("KNOWN AS").IgnoreThen(Ws(Lexer.Identifier)))
                          .Try().OptionalOrDefault(null!)
         from loopDefinition in LoopTypeParser
-        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from body in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("THE TERM EXPIRES.")
             .Named("THE TERM EXPIRES. (end of loop)"))
+        from endOffset in CurrentOffset
         select (Statement)new LoopNode()
         {
             Label = label,
@@ -854,21 +887,23 @@ public static class StatementParser
             Condition = loopDefinition.Condition,
             LoopVariable = loopDefinition.Variable,
             Body = [.. body],
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an exception-handling block.
     /// </summary>
     public static readonly TextParser<Statement> TryCatch =
+        from startOffset in CurrentOffset
         from opener in Lexer.Keyword("WITH THE GREATEST RESPECT,")
         from throwableExpression in Ws(ExpressionParser.Expression)
         from withGratitudeKeyword in Ws(Lexer.Keyword("WITH GRATITUDE"))
-        from successBlock in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from successBlock in WsMany(Parse.Ref(() => Statement!))
         from modifiedRaptureKeyword in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
         from caughtName in Character.EqualTo(',').IgnoreThen(Ws(Lexer.Identifier)).Try().OptionalOrDefault(null!)
-        from catchBlock in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from catchBlock in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER.").Named("THAT CONCLUDES THE MATTER. (end of try/catch)"))
+        from endOffset in CurrentOffset
         select (Statement)new TryCatchNode()
         {
             Operation = throwableExpression,
@@ -877,109 +912,124 @@ public static class StatementParser
             CaughtValueName = string.IsNullOrEmpty(caughtName)
                 ? null
                 : caughtName,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses a guard clause.
     /// </summary>
     public static readonly TextParser<Statement> Guard =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("YEOMAN")
         from condition in Ws(ExpressionParser.Expression)
         from otherwiseKeyword in Ws(Lexer.Keyword("OTHERWISE,").Named("OTHERWISE, (guard body)"))
-        from body in Ws(Parse.Ref(() => Statement!)).Try().Many()
+        from body in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("UNDER ORDERS.").Named("UNDER ORDERS. (end of guard)"))
+        from endOffset in CurrentOffset
         select (Statement)new GuardNode()
         {
             Condition = condition,
             ElseBlock = [.. body],
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses the parameter list of a function definition.
     /// </summary>
-    public static readonly TextParser<List<string>> ParameterList =
-        (from _ in Ws(Lexer.Keyword("UNDER THE TERMS OF"))
-         from firstParameter in Ws(Lexer.Identifier)
-         from remainingParameters in Ws(Lexer.Keyword("AND")
-            .IgnoreThen(Ws(Lexer.Identifier)))
-            .Try()
-            .Many()
-         select new List<string>(remainingParameters.Length + 1) { firstParameter }
-            .Concat(remainingParameters)
-            .ToList())
-            .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION"))
-                .Select(_ => new List<string>()));
+    private static readonly TextParser<List<(string Name, SourceSpan Span)>> ParameterList =
+        (from underTermsKeyword in Ws(Lexer.Keyword("UNDER THE TERMS OF"))
+         from firstParameterStart in Ws(CurrentOffset)
+         from firstParameter in Lexer.Identifier
+         from firstParameterEnd in CurrentOffset
+         from remainingParameters in (
+             from andKeyword in Ws(Lexer.Keyword("AND"))
+             from parameterStart in Ws(CurrentOffset)
+             from parameter in Lexer.Identifier
+             from parameterEnd in CurrentOffset
+             select (parameter, BuildSpan(parameterStart, parameterEnd))
+         )
+         .Try()
+         .Many()
+         select new List<(string, SourceSpan)>(remainingParameters.Length + 1)
+         { (firstParameter, BuildSpan(firstParameterStart, firstParameterEnd)) }
+             .Concat(remainingParameters)
+             .ToList())
+        .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION"))
+            .Select(_ => new List<(string, SourceSpan)>()));
 
     /// <summary>
     /// Parses a return statement.
     /// </summary>
     public static readonly TextParser<Statement> Return =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("AND SO I FIND")
         from returnValue in Ws(ExpressionParser.Expression)
+        from endOffset in CurrentOffset
         select (Statement)new ReturnNode()
         {
             Value = returnValue,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an early no-value return.
     /// </summary>
     public static readonly TextParser<Statement> EarlyDischarge =
-        Lexer.Keyword("MY DUTY IS PREMATURELY DISCHARGED.")
-             .Value((Statement)new ReturnNode()
-             {
-                Value = null,
-                Span = PlaceholderSpan
-             });
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("MY DUTY IS PREMATURELY DISCHARGED.")
+        from endOffset in CurrentOffset
+        select (Statement)new ReturnNode() { Value = null, Span = BuildSpan(startOffset, endOffset) };
 
     /// <summary>
     /// Parses a throw statement.
     /// </summary>
     public static readonly TextParser<Statement> Curse =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("A HIDEOUS CURSE ON")
         from curseValue in Ws(ExpressionParser.Expression)
+        from endOffset in CurrentOffset
         select (Statement)new ThrowNode()
         {
             Value = curseValue,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an assert statement.
     /// </summary>
     public static readonly TextParser<Statement> Assert =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("THE LAW IS")
         from condition in Ws(ExpressionParser.Expression)
         from thatKeyword in Ws(Lexer.Keyword("THAT").Named("THAT (assert error message)"))
         from errorMessage in Ws(ExpressionParser.Expression)
+        from endOffset in CurrentOffset
         select (Statement)new AssertNode()
         {
             Condition = condition,
             ErrorMessage = errorMessage,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses a function definition.
     /// </summary>
     public static readonly TextParser<Statement> FunctionDefinition =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("IT IS MY DUTY TO PERFORM")
         from functionName in Ws(Lexer.Identifier)
         from parameters in ParameterList
-        from body in Ws(Parse.Ref(() => Statement!))
-            .Try()
-            .Many()
+        from body in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED.")
             .Named("MY DUTY IS DISCHARGED. (end of function)"))
+        from endOffset in CurrentOffset
         select (Statement)new FunctionDefinitionNode()
         {
             Name = functionName,
-            Parameters = parameters,
+            Parameters = [.. parameters.Select(static parameter => parameter.Name)],
+            ParameterSpans = [.. parameters.Select(static parameterSpan => parameterSpan.Span)],
             Body = [.. body],
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -991,28 +1041,30 @@ public static class StatementParser
     /// <see cref="PrincipalBlockNode.Declarations"/>.
     /// </remarks>
     public static readonly TextParser<Statement> PrincipalBlock =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRINCIPALS")
-        from declarations in Ws(ArrayDeclaration.Or(Declaration))
-            .Try()
-            .Many()
+        from declarations in WsMany(ArrayDeclaration.Or(Declaration))
         from closer in Ws(Lexer.Keyword("THE CURTAIN RISES.")
             .Named("THE CURTAIN RISES. (end of declarations)"))
+        from endOffset in CurrentOffset
         select (Statement)new PrincipalBlockNode()
         {
             Declarations = declarations,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
     /// Parses an import directive.
     /// </summary>
     public static readonly TextParser<Statement> Import =
+        from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRAY ADMIT")
         from importPath in Ws(Lexer.StringLiteral)
+        from endOffset in CurrentOffset
         select (Statement)new ImportNode()
         {
             FilePath = importPath,
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -1029,7 +1081,7 @@ public static class StatementParser
             .Select(expression => (Statement)new ExpressionStatement()
                 {
                     Expression = expression,
-                    Span = PlaceholderSpan
+                    Span = expression.Span
                 });
 
     /// <summary>

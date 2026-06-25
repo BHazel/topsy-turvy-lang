@@ -89,7 +89,7 @@ public class SymbolTableTests
         table.TryGetSymbol("myVar", out SymbolInfo? info);
 
         info!.DefinitionLine.ShouldBe(2);
-        info.DefinitionColumn.ShouldBe(14);
+        info.DefinitionColumn.ShouldBe(1);
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ public class SymbolTableTests
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
         info!.DefinitionLine.ShouldBe(2);
-        info.DefinitionColumn.ShouldBe(26);
+        info.DefinitionColumn.ShouldBe(1);
     }
 
     /// <summary>
@@ -530,6 +530,46 @@ public class SymbolTableTests
 
         table.TryGetSymbol("names", out _).ShouldBeTrue();
         table.TryGetSymbol("count", out _).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that function parameter symbols carry a <see cref="SymbolInfo.DefinitionColumn"/> that is strictly greater than
+    /// the function own definition column, confirming parameters are positioned at their own token locations.
+    /// </summary>
+    [Fact]
+    public void Build_WithFunctionParameters_ParameterColumnsAreGreaterThanFunctionColumn()
+    {
+        // Function declaration starts at column 1; parameters alpha and beta appear later on the same line.
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+
+        SymbolTable table = this.BuildTable(source);
+        table.TryGetSymbol("greet", out SymbolInfo? greetInfo);
+        table.TryGetSymbol("alpha", out SymbolInfo? alphaInfo);
+        table.TryGetSymbol("beta", out SymbolInfo? betaInfo);
+
+        greetInfo!.DefinitionColumn.ShouldBe(1);
+        (alphaInfo!.DefinitionColumn > greetInfo.DefinitionColumn).ShouldBeTrue();
+        (betaInfo!.DefinitionColumn > alphaInfo.DefinitionColumn).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that function parameter symbols carry precise 1-indexed definition columns matching each parameter token position.
+    /// </summary>
+    [Fact]
+    public void Build_WithFunctionParameters_SetsCorrectDefinitionColumnsForEachParameter()
+    {
+        // In "IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta":
+        // alpha starts at column 51, beta starts at column 61 (1-indexed).
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+
+        SymbolTable table = this.BuildTable(source);
+        table.TryGetSymbol("alpha", out SymbolInfo? alphaInfo);
+        table.TryGetSymbol("beta", out SymbolInfo? betaInfo);
+
+        alphaInfo!.DefinitionLine.ShouldBe(2);
+        alphaInfo.DefinitionColumn.ShouldBe(51);
+        betaInfo!.DefinitionLine.ShouldBe(2);
+        betaInfo.DefinitionColumn.ShouldBe(61);
     }
 
     /// <summary>
