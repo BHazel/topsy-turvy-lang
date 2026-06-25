@@ -79,6 +79,16 @@ public class FunctionDefinitionNode : Statement
     public required IReadOnlyList<string> Parameters { get; init; }
 
     /// <summary>
+    /// Gets or initialises the source spans of each parameter in <see cref="Parameters"/>, in the same order.
+    /// </summary>
+    /// <remarks>
+    /// Each entry covers the identifier token of the corresponding parameter as it appeared in the original source
+    /// text.  The list has the same length as <see cref="Parameters"/> and is populated by the parser at the same
+    /// time as the parameter names.
+    /// </remarks>
+    public required IReadOnlyList<SourceSpan> ParameterSpans { get; init; }
+
+    /// <summary>
     /// Gets or initialises the block of statements in the function body.
     /// </summary>
     /// <remarks>

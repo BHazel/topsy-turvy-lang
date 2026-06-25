@@ -593,6 +593,284 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="DeclarationNode"/> produced by parsing a <c>PRAY WELCOME</c> statement carries a real source span
+    /// pointing to the start of that statement in the original source.
+    /// </summary>
+    [Fact]
+    public void Parse_DeclarationNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nPRAY WELCOME x AS A PEER BEING 42\nFINALE.");
+
+        DeclarationNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<DeclarationNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="FunctionDefinitionNode"/> produced by parsing an <c>IT IS MY DUTY TO PERFORM</c> block carries a
+    /// real source span starting at the first character of that block.
+    /// </summary>
+    [Fact]
+    public void Parse_FunctionDefinitionNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM Add UNDER NO OBLIGATION\nMY DUTY IS DISCHARGED.\nFINALE.";
+
+        ProgramNode program = this.parser.Parse(source);
+        
+        FunctionDefinitionNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<FunctionDefinitionNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="FunctionDefinitionNode.ParameterSpans"/> carries one real span per parameter at correct positions on
+    /// the declaration line.
+    /// </summary>
+    [Fact]
+    public void Parse_FunctionDefinitionNode_ParameterSpansAreOnCorrectLineWithDistinctColumns()
+    {
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+
+        ProgramNode program = this.parser.Parse(source);
+
+        FunctionDefinitionNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<FunctionDefinitionNode>();
+        node.ParameterSpans.Count.ShouldBe(2);
+        node.ParameterSpans[0].Start.Line.ShouldBe(2);
+        (node.ParameterSpans[0].Start.Column > 0).ShouldBeTrue();
+        node.ParameterSpans[1].Start.Line.ShouldBe(2);
+        (node.ParameterSpans[1].Start.Column > node.ParameterSpans[0].Start.Column).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="AssignmentNode"/> carries a real source span starting at the target variable.
+    /// </summary>
+    [Fact]
+    public void Parse_AssignmentNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nx IS APPOINTED 42\nFINALE.");
+
+        AssignmentNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PrintNode"/> carries a real source span starting at the BEHOLD keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_PrintNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 42\nFINALE.");
+
+        PrintNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<PrintNode>();
+
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="ReturnNode"/> inside a function body carries a span pointing to the return statement line.
+    /// </summary>
+    [Fact]
+    public void Parse_ReturnNode_SpanStartsAtCorrectLineInsideFunctionBody()
+    {
+        ProgramNode program = this.parser.Parse("""
+            HARK! "Test"
+            IT IS MY DUTY TO PERFORM getValue UNDER NO OBLIGATION
+            AND SO I FIND 42
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """);
+
+        FunctionDefinitionNode functionDefinition = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<FunctionDefinitionNode>();
+        ReturnNode node = functionDefinition.Body.ShouldHaveSingleItem().ShouldBeOfType<ReturnNode>();
+        node.Span.Start.Line.ShouldBe(3);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="ConditionalNode"/> carries a real source span.
+    /// </summary>
+    [Fact]
+    public void Parse_ConditionalNode_SpanStartsAtCorrectLineAndColumnAndEndsOnLaterLine()
+    {
+        ProgramNode program = this.parser.Parse("""
+            HARK! "Test"
+            SHOULD IT TRANSPIRE THAT VERITY
+            QUITE SO.
+              BEHOLD "yes"
+            SO MUCH FOR THAT.
+            FINALE.
+            """);
+
+        ConditionalNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ConditionalNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+        (node.Span.End.Line > node.Span.Start.Line).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="LoopNode"/> carries a real source span.
+    /// </summary>
+    [Fact]
+    public void Parse_LoopNode_SpanStartsAtCorrectLineAndColumnAndEndsOnLaterLine()
+    {
+        ProgramNode program = this.parser.Parse("""
+            HARK! "Test"
+            BY A LEGAL FICTION
+              THAT WILL DO.
+            THE TERM EXPIRES.
+            FINALE.
+            """);
+
+        LoopNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<LoopNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+        (node.Span.End.Line > node.Span.Start.Line).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ArrayDeclarationNode"/> carries a real source span.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayDeclarationNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nPRAY WELCOME arr AS A LITTLE LIST OF PEER\nFINALE.");
+
+        ArrayDeclarationNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ArrayDeclarationNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ImportNode"/> carries a real source span starting at the PRAY ADMIT keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ImportNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nPRAY ADMIT \"utils.topsy\"\nFINALE.");
+
+        ImportNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ImportNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="GuardNode"/> carries a real source span starting at the YEOMAN keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_GuardNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nYEOMAN VERITY OTHERWISE, UNDER ORDERS.\nFINALE.");
+
+        GuardNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<GuardNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="AssertNode"/> carries a real source span starting at the THE LAW IS keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_AssertNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nTHE LAW IS VERITY THAT \"ok\"\nFINALE.");
+
+        AssertNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<AssertNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="TryCatchNode"/> carries a real source span.
+    /// </summary>
+    [Fact]
+    public void Parse_TryCatchNode_SpanStartsAtCorrectLineAndColumnAndEndsOnLaterLine()
+    {
+        ProgramNode program = this.parser.Parse("""
+            HARK! "Test"
+            WITH THE GREATEST RESPECT, SUMMON doStuff WITH NOTHING IF YOU PLEASE.
+              WITH GRATITUDE
+                BEHOLD "ok"
+              MODIFIED RAPTURE
+                BEHOLD "err"
+            THAT CONCLUDES THE MATTER.
+            FINALE.
+            """);
+
+        TryCatchNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<TryCatchNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+        (node.Span.End.Line > node.Span.Start.Line).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="BreakNode"/> carries a real source span starting at the THAT WILL DO. keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_BreakNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nTHAT WILL DO.\nFINALE.");
+
+        BreakNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<BreakNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="ContinueNode"/> carries a real source span starting at the ONCE MORE. keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ContinueNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nONCE MORE.\nFINALE.");
+
+        ContinueNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ContinueNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="ThrowNode"/> carries a real source span starting at the A HIDEOUS CURSE ON keyword.
+    /// </summary>
+    [Fact]
+    public void Parse_ThrowNode_SpanStartsAtCorrectLineAndColumn()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nA HIDEOUS CURSE ON \"disaster\"\nFINALE.");
+
+        ThrowNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ThrowNode>();
+        node.Span.Start.Line.ShouldBe(2);
+        node.Span.Start.Column.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="AssignmentNode"/> span has a non-zero width where <c>End</c> is strictly after <c>Start</c>.
+    /// </summary>
+    [Fact]
+    public void Parse_AssignmentNode_SpanEndIsAfterStart()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nx IS APPOINTED 42\nFINALE.");
+
+        AssignmentNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+        node.Span.End.Line.ShouldBe(2);
+        node.Span.End.Column.ShouldBe(18);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="ProgramNode"/> itself carries a span starting at line 1, column 1, and ending no earlier than the final line.
+    /// </summary>
+    [Fact]
+    public void Parse_ProgramNode_SpanCoversEntireSource()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"Test\"\nBEHOLD 42\nFINALE.");
+
+        program.Span.Start.Line.ShouldBe(1);
+        program.Span.Start.Column.ShouldBe(1);
+        (program.Span.End.Line >= 3).ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Parses a single statement of a specific type from a source string.
     /// </summary>
     /// <typeparam name="T">The type of statement to parse.</typeparam>

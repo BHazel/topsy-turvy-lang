@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using BWHazel.TopsyTurvy.Ast;
 
@@ -11,7 +12,8 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// <remarks>
 /// <para>
 /// Symbols refer to all variables, functions and function parameters, each of which is represented by a <see cref="SymbolInfo"/>
-/// object.  The symbol table is built by walking the AST and scanning the original source text to recover definition positions.
+/// object.  The symbol table is built by walking the AST.  Definition positions are taken directly from the <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/>
+/// on each node which is populated by the parser at parse time.
 /// </para>
 /// <para>
 /// It should be noted that there is a limitation regarding function parameters.  Currently the symbol table is a flat dictionary
@@ -37,9 +39,9 @@ public class SymbolTable
     /// Builds a <see cref="SymbolTable"/>.
     /// </summary>
     /// <param name="program">The root node of the parsed programme.</param>
-    /// <param name="originalSource">The original (unprocessed) source text.</param>
+    /// <param name="originalSource">The original (unprocessed) source text, used to find documentation comments.</param>
     /// <remarks>
-    /// This walks the AST and scans the original source line-by-line to recover definition positions.
+    /// This walks the AST.  Definition positions are taken from each node <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/>.
     /// </remarks>
     /// <returns>A populated <see cref="SymbolTable"/>.</returns>
     public static SymbolTable Build(ProgramNode program, string originalSource)
@@ -253,16 +255,15 @@ public class SymbolTable
             return;
         }
 
-        SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
         collectedSymbols[declaration.Name] = new SymbolInfo()
         {
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
-            DefinitionLine = definition.Line,
-            DefinitionColumn = definition.Column,
-            Documentation = FindDocumentationComment(sourceLines, definition.Line)
+            DefinitionLine = declaration.Span.Start.Line,
+            DefinitionColumn = declaration.Span.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, declaration.Span.Start.Line)
         };
     }
 
@@ -282,7 +283,6 @@ public class SymbolTable
             return;
         }
 
-        SourceLocation definition = FindDefinitionLine(sourceLines, "PRAY WELCOME", declaration.Name);
         collectedSymbols[declaration.Name] = new SymbolInfo()
         {
             Name = declaration.Name,
@@ -291,9 +291,9 @@ public class SymbolTable
             TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
                 ? $"{declaration.Size.Value} "
                 : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
-            DefinitionLine = definition.Line,
-            DefinitionColumn = definition.Column,
-            Documentation = FindDocumentationComment(sourceLines, definition.Line)
+            DefinitionLine = declaration.Span.Start.Line,
+            DefinitionColumn = declaration.Span.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, declaration.Span.Start.Line)
         };
     }
 
@@ -305,11 +305,6 @@ public class SymbolTable
     /// <param name="sourceLines">The original source lines.</param>
     private static void AddFunction(FunctionDefinitionNode function, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
     {
-        SourceLocation functionDefinition = FindDefinitionLine(
-            sourceLines,
-            "IT IS MY DUTY TO PERFORM",
-            function.Name);
-
         if (!collectedSymbols.ContainsKey(function.Name))
         {
             collectedSymbols[function.Name] = new SymbolInfo()
@@ -317,13 +312,13 @@ public class SymbolTable
                 Name = function.Name,
                 Kind = SymbolKind.Function,
                 Parameters = function.Parameters,
-                DefinitionLine = functionDefinition.Line,
-                DefinitionColumn = functionDefinition.Column,
-                Documentation = FindDocumentationComment(sourceLines, functionDefinition.Line)
+                DefinitionLine = function.Span.Start.Line,
+                DefinitionColumn = function.Span.Start.Column,
+                Documentation = FindDocumentationComment(sourceLines, function.Span.Start.Line)
             };
         }
 
-        foreach (string parameter in function.Parameters)
+        foreach ((string parameter, SourceSpan parameterSpan) in function.Parameters.Zip(function.ParameterSpans))
         {
             if (!collectedSymbols.ContainsKey(parameter))
             {
@@ -331,8 +326,8 @@ public class SymbolTable
                 {
                     Name = parameter,
                     Kind = SymbolKind.Parameter,
-                    DefinitionLine = functionDefinition.Line,
-                    DefinitionColumn = functionDefinition.Column
+                    DefinitionLine = parameterSpan.Start.Line,
+                    DefinitionColumn = parameterSpan.Start.Column
                 };
             }
         }
@@ -409,46 +404,6 @@ public class SymbolTable
 
         return DocumentationCommentParser.Parse(content.ToString());
     }
-
-    /// <summary>
-    /// Finds the location of a symbol definition by searching for a keyword followed by the symbol name.
-    /// </summary>
-    /// <param name="sourceLines">The source lines to search.</param>
-    /// <param name="keyword">The keyword to search for.</param>
-    /// <param name="name">The name of the symbol to find.</param>
-    /// <returns>The 1-indexed location of the symbol definition, or <c>(0, 0)</c> if not found.</returns>
-    private static SourceLocation FindDefinitionLine(string[] sourceLines, string keyword, string name)
-    {
-        for (int i = 0; i < sourceLines.Length; i++)
-        {
-            string line = sourceLines[i];
-            int keywordIndex = line.IndexOf(keyword, StringComparison.OrdinalIgnoreCase);
-            if (keywordIndex < 0)
-            {
-                continue;
-            }
-
-            int searchFromIndex = keywordIndex + keyword.Length;
-            int nameIndex = line.IndexOf(name, searchFromIndex, StringComparison.OrdinalIgnoreCase);
-            if (nameIndex < 0)
-            {
-                continue;
-            }
-
-            // The characters immediately before and after the name must not be valid identifier characters.
-            bool isLeadingCharacterValid = nameIndex == 0 || !SourceAnalyser.IsIdentifierChar(line[nameIndex - 1]);
-            bool isTrailingCharacterValid = nameIndex + name.Length >= line.Length
-                || !SourceAnalyser.IsIdentifierChar(line[nameIndex + name.Length]);
-
-            if (isLeadingCharacterValid && isTrailingCharacterValid)
-            {
-                return new(i + 1, nameIndex + 1);
-            }
-        }
-
-        return new(0, 0);
-    }
-
 
     /// <summary>
     /// Converts a <see cref="LiteralType"/> to a user-friendly display name.
