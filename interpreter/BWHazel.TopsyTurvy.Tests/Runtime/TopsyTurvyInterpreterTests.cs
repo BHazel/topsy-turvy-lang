@@ -122,56 +122,6 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method casts a variable in-place and updates its stored value.
-    /// </summary>
-    [Fact]
-    public void Execute_WithInPlaceCast_ConvertsVariableType()
-    {
-        string source = """
-            HARK! "In-Place Cast"
-            PRINCIPALS
-              PRAY WELCOME n AS A PEER BEING 42
-            THE CURTAIN RISES.
-            n IS HENCEFORTH A YARN
-            BEHOLD n
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("42");
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method stores the cast result in the JUST SO register.
-    /// </summary>
-    [Fact]
-    public void Execute_WithExpressionCast_StoresResultInJustSo()
-    {
-        string source = """
-            HARK! "Expression Cast"
-            PRINCIPALS
-              PRAY WELCOME n AS A PEER BEING 5
-            THE CURTAIN RISES.
-            AS IT WERE n AS A YARN
-            BEHOLD JUST SO
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("5");
-    }
-
-    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method assigns the cast result directly to a variable via <c>IS APPOINTED AS IT WERE</c>.
     /// </summary>
     [Fact]
@@ -247,30 +197,6 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method stores the result of an expression statement in JUST SO.
-    /// </summary>
-    [Fact]
-    public void Execute_WithExpressionStatement_StoresResultInJustSo()
-    {
-        string source = """
-            HARK! "Expression Statement"
-            PRINCIPALS
-            THE CURTAIN RISES.
-            SUM OF 3 AND 4
-            BEHOLD JUST SO
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("7");
-    }
-
-    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method returns a runtime error diagnostic when IS APPOINTED targets a CONSERVATIVE variable.
     /// </summary>
     [Fact]
@@ -280,27 +206,6 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
             HARK! "Constant Assignment"
             PRAY WELCOME x AS A CONSERVATIVE PEER BEING 10
             x IS APPOINTED 20
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeTrue();
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method returns a runtime error diagnostic when IS HENCEFORTH A targets a CONSERVATIVE variable.
-    /// </summary>
-    [Fact]
-    public void Execute_InPlaceCastOnConstant_ReturnsRuntimeErrorDiagnostic()
-    {
-        string source = """
-            HARK! "Constant Cast"
-            PRAY WELCOME x AS A CONSERVATIVE PEER BEING 10
-            x IS HENCEFORTH A YARN
             FINALE.
             """;
 
@@ -419,7 +324,7 @@ public class TopsyTurvyInterpreterTests : TopsyTurvyInterpreterTestBase
     {
         string defineSource = """
             HARK! "Turn 1"
-            IT IS MY DUTY TO PERFORM Double UNDER THE TERMS OF n
+            IT IS MY DUTY TO PERFORM Double UNDER THE TERMS OF n AS A PEER TO FIND PEER
                 AND SO I FIND SUM OF n AND n
             MY DUTY IS DISCHARGED.
             FINALE.

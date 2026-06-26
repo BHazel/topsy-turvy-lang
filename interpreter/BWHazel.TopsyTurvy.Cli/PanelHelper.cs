@@ -103,6 +103,24 @@ public static class PanelHelper
     }
 
     /// <summary>
+    /// Writes a type error panel to the console for type errors found during the type-check pass.
+    /// </summary>
+    /// <param name="diagnostics">The type-check diagnostics to display.</param>
+    public static void WriteTypeErrors(IEnumerable<Diagnostic> diagnostics)
+    {
+        string body = string.Join("\n", diagnostics.Select(
+            diagnostic => $"[[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}]] {Markup.Escape(diagnostic.Message)}"));
+
+        Panel panel = new(new Markup($"[red]Type Error:\n{body}[/]"))
+        {
+            BorderStyle = new Style(ErrorBorderColour),
+            Header = new PanelHeader("Oh Horror!")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
     /// Writes a runtime error panel to the console with the given pre-escaped body text.
     /// </summary>
     /// <param name="escapedBody">The pre-escaped body text.</param>
@@ -185,6 +203,21 @@ public static class PanelHelper
             else
             {
                 WriteSyntaxErrors(result.SyntaxErrors);
+            }
+        }
+
+        if (result.TypeDiagnostics != null)
+        {
+            if (isPlainText)
+            {
+                foreach (Diagnostic diagnostic in result.TypeDiagnostics)
+                {
+                    Console.Error.WriteLine($"[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}] {diagnostic.Message}");
+                }
+            }
+            else
+            {
+                WriteTypeErrors(result.TypeDiagnostics);
             }
         }
 

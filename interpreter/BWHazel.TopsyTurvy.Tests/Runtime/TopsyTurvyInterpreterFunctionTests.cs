@@ -20,7 +20,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
             PRINCIPALS
               PRAY WELCOME result AS A PEER BEING 0
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM fib UNDER THE TERMS OF n
+            IT IS MY DUTY TO PERFORM fib UNDER THE TERMS OF n AS A PEER TO FIND PEER
               SHOULD IT TRANSPIRE THAT LOWER DEGREE n AND 2
                 QUITE SO.
                   AND SO I FIND 1
@@ -42,36 +42,6 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method returns null from a function that returns without a value.
-    /// </summary>
-    [Fact]
-    public void Execute_WithEarlyReturnNoValue_ReturnsNullToJustSo()
-    {
-        string source = """
-            HARK! "Early Return"
-            PRINCIPALS
-              PRAY WELCOME result AS A YARN
-            THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM earlyExit UNDER NO OBLIGATION
-              MY DUTY IS PREMATURELY DISCHARGED.
-              AND SO I FIND "never"
-            MY DUTY IS DISCHARGED.
-            SUMMON earlyExit WITH NOTHING IF YOU PLEASE.
-            result IS APPOINTED JUST SO
-            BEHOLD result
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("NAUGHT");
-    }
-
-    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method returns an error diagnostic when a function is called with the wrong number of arguments.
     /// </summary>
     [Fact]
@@ -81,7 +51,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
             HARK! "Wrong Args"
             PRINCIPALS
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
               BEHOLD name
             MY DUTY IS DISCHARGED.
             SUMMON greet WITH 1 AND 2 IF YOU PLEASE.
@@ -128,7 +98,7 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
             HARK! "Utils"
             PRINCIPALS
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
               BEHOLD WOVEN OF "Hello, " AND name AND "!" IF YOU PLEASE.
             MY DUTY IS DISCHARGED.
             FINALE.

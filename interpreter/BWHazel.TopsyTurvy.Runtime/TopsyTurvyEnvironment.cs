@@ -46,17 +46,8 @@ public sealed class TopsyTurvyEnvironment
     /// <param name="enclosing">The optional enclosing environment.</param>
     private TopsyTurvyEnvironment(TopsyTurvyEnvironment? enclosing)
     {
-        this.JustSo = TopsyTurvyValue.Null();
         this.enclosingEnvironment = enclosing;
     }
-
-    /// <summary>
-    /// Gets or sets the value of the <c>JUST SO</c> implicit variable for this environment.
-    /// </summary>
-    /// <remarks>
-    /// This receives the value of any expression not explicitly assigned to a named variable.
-    /// </remarks>
-    public TopsyTurvyValue JustSo { get; set; }
 
     /// <summary>
     /// Creates a new top-level global environment.
@@ -225,9 +216,7 @@ public sealed class TopsyTurvyEnvironment
     /// <remarks>
     /// <para>
     /// Variables can be retrieved from the current environment or any enclosing environment.  If the variable is not found in the
-    /// current environment, the enclosing chain is walked until the variable is found or the chain ends.  It should be noted that
-    /// the <c>JUST SO</c> implicit variable is always accessible in any environment and will be returned if the name <c>JUST SO</c>
-    /// is requested.  Accessing <c>JUST SO</c> will not walk the enclosing chain and is always resolved from the current environment.
+    /// current environment, the enclosing chain is walked until the variable is found or the chain ends.
     /// </para>
     /// <code>
     /// TopsyTurvyEnvironment globalEnvironment = TopsyTurvyEnvironment.CreateGlobal();
@@ -238,11 +227,6 @@ public sealed class TopsyTurvyEnvironment
     /// <exception cref="TopsyTurvyRuntimeException">Thrown if <paramref name="name"/> has not been declared in any accessible environment.</exception>
     public TopsyTurvyValue Get(string name)
     {
-        if (name == Keywords.SpecialNames.JustSo)
-        {
-            return this.JustSo;
-        }
-
         if (this.variables.TryGetValue(name, out TopsyTurvyValue? value))
         {
             return value;

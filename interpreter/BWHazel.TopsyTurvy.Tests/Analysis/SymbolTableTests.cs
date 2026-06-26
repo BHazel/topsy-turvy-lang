@@ -14,17 +14,6 @@ public class SymbolTableTests
     private readonly TopsyTurvyParser parser = new();
 
     /// <summary>
-    /// Tests that the <see cref="SymbolTable.Build"/> method always includes the implicit JUST SO variable.
-    /// </summary>
-    [Fact]
-    public void Build_WithEmptyProgram_AlwaysContainsJustSo()
-    {
-        SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
-
-        table.TryGetSymbol("JUST SO", out _).ShouldBeTrue();
-    }
-
-    /// <summary>
     /// Tests that the <see cref="SymbolTable.Build"/> method collects a variable declared with PRAY WELCOME.
     /// </summary>
     [Fact]
@@ -151,14 +140,14 @@ public class SymbolTableTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SymbolTable.Build"/> method stores the declared parameters on a function <see cref="SymbolInfo"/>.
+    /// Tests that the <see cref="SymbolTable.Build"/> method stores the typed parameters on a function <see cref="SymbolInfo"/>.
     /// </summary>
     [Fact]
-    public void Build_WithFunctionDefinition_SetsParameters()
+    public void Build_WithFunctionDefinition_SetsTypedParameters()
     {
         string source = """
             HARK! "Test"
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AND recipient
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AS A YARN AND recipient AS A YARN
             MY DUTY IS DISCHARGED.
             FINALE.
             """;
@@ -166,10 +155,10 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
-        info!.Parameters.ShouldNotBeNull();
-        info.Parameters!.Count.ShouldBe(2);
-        info.Parameters.ShouldContain("salutation");
-        info.Parameters.ShouldContain("recipient");
+        info!.TypedParameters.ShouldNotBeNull();
+        info.TypedParameters!.Count.ShouldBe(2);
+        info.TypedParameters.ShouldContain(static parameter => parameter.Name == "salutation");
+        info.TypedParameters.ShouldContain(static parameter => parameter.Name == "recipient");
     }
 
     /// <summary>
@@ -195,7 +184,7 @@ public class SymbolTableTests
     {
         string source = """
             HARK! "Test"
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AND recipient
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AS A YARN AND recipient AS A YARN
             MY DUTY IS DISCHARGED.
             FINALE.
             """;
@@ -214,7 +203,7 @@ public class SymbolTableTests
     {
         string source = """
             HARK! "Test"
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
             MY DUTY IS DISCHARGED.
             FINALE.
             """;
@@ -330,32 +319,7 @@ public class SymbolTableTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="SymbolTable.TryGetSymbol"/> method returns <c>true</c> for JUST SO regardless of case.
-    /// </summary>
-    /// <param name="symbolName">The symbol name.</param>
-    [Theory]
-    [InlineData("JUST SO")]
-    [InlineData("just so")]
-    public void TryGetSymbol_WithJustSo_ReturnsTrueForAnyCase(string symbolName)
-    {
-        SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
-
-        table.TryGetSymbol(symbolName, out _).ShouldBeTrue();
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="SymbolTable.AllSymbols"/> method always includes JUST SO.
-    /// </summary>
-    [Fact]
-    public void AllSymbols_WithEmptyProgram_AlwaysContainsJustSo()
-    {
-        SymbolTable table = this.BuildTable("HARK! \"Test\" FINALE.");
-
-        table.AllSymbols().ShouldContain(symbol => symbol.Name.Equals("JUST SO", StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="SymbolTable.AllSymbols"/> method returns all declared symbols in addition to JUST SO.
+    /// Tests that the <see cref="SymbolTable.AllSymbols"/> method returns all declared symbols.
     /// </summary>
     [Fact]
     public void AllSymbols_WithDeclaredSymbols_ContainsAllDeclaredSymbols()
@@ -373,7 +337,6 @@ public class SymbolTableTests
 
         names.ShouldContain("alpha");
         names.ShouldContain("greet");
-        names.ShouldContain("JUST SO");
     }
 
     /// <summary>
@@ -540,7 +503,7 @@ public class SymbolTableTests
     public void Build_WithFunctionParameters_ParameterColumnsAreGreaterThanFunctionColumn()
     {
         // Function declaration starts at column 1; parameters alpha and beta appear later on the same line.
-        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AS A PEER AND beta AS A PEER\nMY DUTY IS DISCHARGED.\nFINALE.";
 
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("greet", out SymbolInfo? greetInfo);
@@ -558,9 +521,9 @@ public class SymbolTableTests
     [Fact]
     public void Build_WithFunctionParameters_SetsCorrectDefinitionColumnsForEachParameter()
     {
-        // In "IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta":
-        // alpha starts at column 51, beta starts at column 61 (1-indexed).
-        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+        // In "IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AS A PEER AND beta AS A PEER":
+        // alpha starts at column 51, beta starts at column 71 (1-indexed).
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AS A PEER AND beta AS A PEER\nMY DUTY IS DISCHARGED.\nFINALE.";
 
         SymbolTable table = this.BuildTable(source);
         table.TryGetSymbol("alpha", out SymbolInfo? alphaInfo);
@@ -569,7 +532,7 @@ public class SymbolTableTests
         alphaInfo!.DefinitionLine.ShouldBe(2);
         alphaInfo.DefinitionColumn.ShouldBe(51);
         betaInfo!.DefinitionLine.ShouldBe(2);
-        betaInfo.DefinitionColumn.ShouldBe(61);
+        betaInfo.DefinitionColumn.ShouldBe(71);
     }
 
     /// <summary>

@@ -16,7 +16,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
         HARK! "Test"
         PRINCIPALS
         THE CURTAIN RISES.
-        IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+        IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AS A PEER AND rhs AS A PEER TO FIND PEER
           AND SO I FIND SUM OF lhs AND rhs
         MY DUTY IS DISCHARGED.
         FINALE.
@@ -60,7 +60,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
             HARK! "Test"
             PRINCIPALS
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AS A PEER AND rhs AS A PEER TO FIND PEER
               AND SO I FIND SUM OF lhs AND rhs
             MY DUTY IS DISCHARGED.
             SUMMON add WITH 1 AND 2 IF YOU PLEASE.
@@ -88,7 +88,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
             HARK! "Test"
             PRINCIPALS
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AS A PEER AND rhs AS A PEER TO FIND PEER
               AND SO I FIND SUM OF lhs AND rhs
             MY DUTY IS DISCHARGED.
             SUMMON add WITH 1
@@ -120,7 +120,7 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
             HARK! "Test"
             PRINCIPALS
             THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+            IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AS A PEER AND rhs AS A PEER TO FIND PEER
               AND SO I FIND SUM OF lhs AND rhs
             MY DUTY IS DISCHARGED.
             SUMMON add WITH 1 AND

@@ -216,7 +216,7 @@ public class SymbolTableDocumentationCommentTests
               ARTICLE Start (PEER): The starting number.
               ARTICLE End (PEER): The ending number.
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
               AND SO I FIND 0
             MY DUTY IS DISCHARGED.
             FINALE.
@@ -246,7 +246,7 @@ public class SymbolTableDocumentationCommentTests
               LEGEND: Sums a range.
               CONSEQUENCE (PEER): The total sum.
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
               AND SO I FIND 0
             MY DUTY IS DISCHARGED.
             FINALE.
@@ -273,7 +273,7 @@ public class SymbolTableDocumentationCommentTests
               LEGEND: Sums a range.
               CURSES SameValues (DECREE): Thrown if Start and End are the same.
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
               AND SO I FIND 0
             MY DUTY IS DISCHARGED.
             FINALE.
@@ -302,7 +302,7 @@ public class SymbolTableDocumentationCommentTests
               CHORUS:
               SUMMON SumRange WITH 1 AND 10 IF YOU PLEASE.
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
               AND SO I FIND 0
             MY DUTY IS DISCHARGED.
             FINALE.
@@ -329,7 +329,7 @@ public class SymbolTableDocumentationCommentTests
               LEGEND: A function.
               ENSEMBLE: SumRange
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM OtherFunc UNDER THE TERMS OF x
+            IT IS MY DUTY TO PERFORM OtherFunc UNDER THE TERMS OF x AS A YARN
               AND SO I FIND x
             MY DUTY IS DISCHARGED.
             FINALE.
@@ -364,7 +364,7 @@ public class SymbolTableDocumentationCommentTests
               ENSEMBLE: AnotherFunc
               STATUTORY: Use NewSumRange instead.
             END OF ASIDE.)
-            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+            IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
               AND SO I FIND 0
             MY DUTY IS DISCHARGED.
             FINALE.

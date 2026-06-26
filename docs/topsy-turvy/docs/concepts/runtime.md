@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Runtime
@@ -25,11 +25,13 @@ The environment, implemented in the `TopsyTurvyEnvironment` class, serves two pu
 
 Every named value, both variables and function parameters, in a Topsy Turvy programme is maintained in the environment, added on declaration and updated on assignment.  The environment also retrieves values when accessed.  These values are stored as instances of the `TopsyTurvyValue` class which wraps the underlying .NET primitive type and its equivalent Topsy Turvy literal type enumeration constant.  For example, a `PEER` of value `20` would be:
 
+When a variable is declared without an initial value, the environment initialises it to the type-specific default: integer types to `0`, floating-point types to `0.0`, `DECREE` to `NAY`, `YARN` to an empty string and `STITCH` to the null character.  This default is supplied at the point of declaration in the interpreter rather than deferred to first access.
+
 Arrays are stored as a `TopsyTurvyValue` with `LiteralType.Array`, whose `RawValue` holds a `List<TopsyTurvyValue>`.  Assignment copies the list reference rather than the list contents, so two array variables assigned to each other share the same underlying `List<TopsyTurvyValue>` instance: there is no copy-on-assign.
 
-Variables declared with the `CONSERVATIVE` modifier are tracked separately as constants.  Any attempt to mutate a constant via `IS APPOINTED` (assignment), `IS HENCEFORTH A` (in-place cast), or `PRAY TELL` (input) raises a runtime error.  Variables declared with `LIBERAL`, or with no modifier (the default), remain freely mutable.
+Variables declared with the `CONSERVATIVE` modifier are tracked separately as constants.  Any attempt to mutate a constant via `IS APPOINTED` (assignment) or `PRAY TELL` (input) raises a runtime error.  Variables declared with `LIBERAL`, or with no modifier (the default), remain freely mutable.
 
-When a `WITH THE GREATEST RESPECT` block catches a thrown value, the cursed value is always placed in the `JUST SO` implicit variable on entry to the `MODIFIED RAPTURE` block.  Optionally, a named binding may be written immediately after `MODIFIED RAPTURE` separated by a comma, for example `MODIFIED RAPTURE, Grievance`, and the interpreter will auto-declare `Grievance` in a nested scope covering the exception block.  The binding is scoped to the exception block only and is inaccessible after `THAT CONCLUDES THE MATTER.`
+When a `WITH THE GREATEST RESPECT` block catches a thrown value, a named binding must be written immediately after `MODIFIED RAPTURE` separated by a comma, for example `MODIFIED RAPTURE, Grievance`.  The interpreter auto-declares the binding as a `YARN` variable in a nested scope covering the exception block and is inaccessible after `THAT CONCLUDES THE MATTER.`
 
 ```cs
 TopsyTurvyValue value = TopsyTurvyValue.Integer(20);
@@ -42,7 +44,7 @@ The `TopsyTurvyValue` class also exposes two methods used during execution:
 |`IsTruthy()`|`bool`|Determines if the current value is `true` according to specified rules (please see below).|
 |`CastTo()`|`TopsyTurvyValue`|Casts a value from one Topsy Turvy type to another (please see below).|
 
-_Truthy_ values for the Topsy Turvy types are outlined below:
+`IsTruthy()` is used internally by `CastTo()` when converting any type to `DECREE`.  It is not used to evaluate conditional expressions: boolean contexts (conditions, logical operators, guard clauses) require a `DECREE` value and any other type is a type error.  The truthiness mapping used during casts is:
 
 |Type|Truthy Values|
 |-|-|

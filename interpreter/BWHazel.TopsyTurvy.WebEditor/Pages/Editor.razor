@@ -365,7 +365,7 @@
                     });
         }
 
-        IEnumerable<object> markers = result.Diagnostics
+        IEnumerable<object> parseMarkers = result.Diagnostics
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .Select(diagnostic => (object)new
             {
@@ -375,8 +375,25 @@
                 endColumn = diagnostic.Span.End.Column,
                 message = diagnostic.Message,
                 severity = 8,
-            })
-            .Concat(deprecatedWarningMarkers);
+            });
+
+        IEnumerable<object> typeMarkers = [];
+        if (result.Success && result.Program is not null)
+        {
+            TopsyTurvyTypeChecker typeChecker = new();
+            TypeCheckResult typeCheckResult = typeChecker.Check(result.Program);
+            typeMarkers = typeCheckResult.Diagnostics.Select(diagnostic => (object)new
+            {
+                startLineNumber = diagnostic.Span.Start.Line,
+                startColumn = diagnostic.Span.Start.Column,
+                endLineNumber = diagnostic.Span.End.Line,
+                endColumn = diagnostic.Span.End.Column,
+                message = diagnostic.Message,
+                severity = diagnostic.Severity == DiagnosticSeverity.Error ? 8 : 4,
+            });
+        }
+
+        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }
@@ -446,7 +463,7 @@
                 detail = info.Kind switch
                 {
                     SymbolKind.Variable  => info.TypeDisplayName ?? string.Empty,
-                    SymbolKind.Function  => $"({string.Join(", ", info.Parameters ?? Array.Empty<string>())})",
+                    SymbolKind.Function  => $"({string.Join(", ", info.TypedParameters?.Select(static parameter => parameter.Name) ?? Array.Empty<string>())})",
                     _                    => string.Empty
                 }
             })
@@ -589,6 +606,19 @@
                 .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
             {
                 await terminal!.WriteLine($"\x1b[31mSyntax error (line {diagnostic.Span.Start.Line}): {diagnostic.Message}\x1b[0m");
+            }
+
+            return;
+        }
+
+        TopsyTurvyTypeChecker typeChecker = new();
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseResult.Program!);
+        if (!typeCheckResult.Success)
+        {
+            foreach (Diagnostic diagnostic in typeCheckResult.Diagnostics
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            {
+                await terminal!.WriteLine($"\x1b[31mType error (line {diagnostic.Span.Start.Line}): {diagnostic.Message}\x1b[0m");
             }
 
             return;

@@ -151,7 +151,7 @@ public class CompletionHandler(DocumentStateManager documentStateManager)
             Detail = symbol.Kind switch
             {
                 TopsyTurvySymbolKind.Variable => symbol.TypeDisplayName,
-                TopsyTurvySymbolKind.Function => $"({string.Join(", ", symbol.Parameters ?? Array.Empty<string>())})",
+                TopsyTurvySymbolKind.Function => $"({string.Join(", ", symbol.TypedParameters?.Select(static parameter => parameter.Name) ?? Array.Empty<string>())})",
                 TopsyTurvySymbolKind.Parameter => "parameter",
                 _ => null
             }

@@ -65,9 +65,9 @@ namespace BWHazel.TopsyTurvy.Ast;
 public class SwitchNode : Statement
 {
     /// <summary>
-    /// Gets or initialises the expression to switch on, or <c>null</c> when the two-line form is used and the value is taken from <c>JUST SO</c>.
+    /// Gets or initialises the expression to switch on.
     /// </summary>
-    public Expression? Expression { get; init; }
+    public required Expression Expression { get; init; }
 
     /// <summary>
     /// Gets or initialises the list of cases.

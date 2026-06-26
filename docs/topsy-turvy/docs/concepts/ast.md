@@ -32,12 +32,11 @@ The concrete node types, grouped by their base class, are listed below.
 |`ConditionalNode`|Conditional|An if/else-if/else conditional: `SHOULD IT TRANSPIRE THAT` ... `SO MUCH FOR THAT.`|
 |`ContinueNode`|Continue|Skips to the next loop iteration: `ONCE MORE.`|
 |`DeclarationNode`|Variable Declaration|Declares a variable with a type, optional mutability modifier (`CONSERVATIVE` / `LIBERAL`), and optional initial value: `PRAY WELCOME`.  Carries an `IsConstant` flag: `true` when the `CONSERVATIVE` modifier is present.|
-|`ExpressionCastNode`|Expression Cast|Casts an expression to a new type, storing the result in the implicit `JUST SO` variable: `AS IT WERE` ... `AS A`.|
+|`ExpressionCastNode`|Expression Cast|Casts an expression to a new type: `AS IT WERE` ... `AS A`.|
 |`ExpressionStatement`|Expression Statement|Wraps a standalone expression used as a statement, such as a discarded function call.|
-|`FunctionDefinitionNode`|Function Definition|Defines a named function with parameters and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`  Parameter source positions are carried in a parallel `ParameterSpans` property alongside the `Parameters` name list.|
+|`FunctionDefinitionNode`|Function Definition|Defines a named function with typed parameters, an optional return type and a body: `IT IS MY DUTY TO PERFORM` ... `MY DUTY IS DISCHARGED.`  Parameters are represented as `TypedParameter` records carrying the name, declared `LiteralType` and source span.  The optional `TO FIND <type>` clause sets `ReturnType` and a `null` return type indicates a void function.|
 |`GuardNode`|Guard|Evaluates a condition and, if falsy, executes an else block: `YEOMAN <condition> OTHERWISE, <block> UNDER ORDERS.`|
 |`ImportNode`|Import|Imports another `.topsy` file, making its functions available: `PRAY ADMIT`.|
-|`InPlaceCastNode`|In-Place Cast|Converts a variable to a new type, mutating it in place: `IS HENCEFORTH A`.|
 |`InputNode`|Input|Reads a line from standard input into a variable as a `YARN` (string): `PRAY TELL`.|
 |`LoopNode`|Loop|A loop block supporting ascending, descending, whilst and infinite forms: `BY A LEGAL FICTION` ... `THE TERM EXPIRES.`  The form is determined by the `LoopType` enum (see below).|
 |`PrintNode`|Print|Evaluates and prints an expression to standard output: `BEHOLD`.|
@@ -53,10 +52,20 @@ The concrete node types, grouped by their base class, are listed below.
 |-|-|-|
 |`ArrayIndexNode`|Array Index|Accesses an array element or string character at a 1-based index: `VICTIM <index> ON <array>`.|
 |`ArrayLengthNode`|Array Length|Evaluates to the number of elements in an array or string: `RECKONING OF <array>`.|
-|`IdentifierNode`|Identifier|References a named variable or function, including the implicit `JUST SO` variable.|
+|`IdentifierNode`|Identifier|References a named variable or function parameter.|
 |`LiteralNode`|Literal|A fixed literal value: integer, float, string, character, boolean or null.|
 |`PrefixExpressionNode`|Prefix Expression|All prefix operations (arithmetic, bitwise, logical, comparison, variadic and function calls) identified by the `Operator` enum (see below).|
 |`TernaryExpressionNode`|Ternary Expression|Inline conditional expression: `<true-value> SHOULD IT TRANSPIRE THAT <condition> OTHERWISE, <false-value>`.  Only the false branch may itself be a ternary, enabling right-chaining.|
+
+### Supporting Types
+
+`TypedParameter` is a positional record used by `FunctionDefinitionNode` to represent a single declared parameter.  It is not a node in its own right and does not appear in the tree but is carried as a member of the node.
+
+|Property|Type|Description|
+|-|-|-|
+|`Name`|`string`|The parameter identifier.|
+|`Type`|`LiteralType`|The declared type.|
+|`Span`|`SourceSpan`|The source position of the parameter declaration.|
 
 ### Enumerations
 

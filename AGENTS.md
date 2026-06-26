@@ -41,36 +41,31 @@ are not valid without it:
 `THE TERM EXPIRES.` `MY DUTY IS DISCHARGED.`
 `MY DUTY IS PREMATURELY DISCHARGED.` `IF YOU PLEASE.`
 
-**I4 — `JUST SO` is the sole implicit variable.**
-No other implicit variable exists. `JUST SO` receives the result of any
-expression not explicitly assigned. Conditionals and switch always read from
-`JUST SO`.
-
-**I5 — Loop labels are optional.**
+**I4 — Loop labels are optional.**
 `BY A LEGAL FICTION` may optionally be followed by `KNOWN AS <label>` in all
 loop forms (infinite, ascending, descending, whilst). When present, the label
 has no semantic effect beyond documentation. The loop is valid with or without
 a label.
 
-**I6 — Switch operates on literals only.**
+**I5 — Switch operates on literals only.**
 `WHEN ACTING AS` accepts literal values only — strings, integers, floats,
 `VERITY`, `NAY`. Expressions are not valid as case labels.
 
-**I7 — Functions are not closures.**
+**I6 — Functions are not closures.**
 Functions receive values exclusively through their declared parameters.
 Global variables declared in `PRINCIPALS` are accessible everywhere except
 inside functions.
 
-**I8 — `PRAY WELCOME` is the sole declaration form.**
+**I7 — `PRAY WELCOME` is the sole declaration form.**
 Variables may only be declared with `PRAY WELCOME ... AS A ... [BEING ...]`.
 There is no implicit declaration; using an undeclared name is an error.
 
-**I9 — The boolean type is `DECREE`; its literals are `VERITY` and `NAY`.**
-`VERITY` and `NAY` are not interchangeable with `1`/`0` or `NAUGHT` in typed
-contexts. Truthiness coercion applies only when a non-`DECREE` value is used
-in a boolean context.
+**I8 — The boolean type is `DECREE`; its literals are `VERITY` and `NAY`.**
+`VERITY` and `NAY` are the only valid boolean values. Using a non-`DECREE`
+expression in any boolean context (conditions, logical operators, guard clauses)
+is a compile-time type error. Truthiness coercion has been removed in v0.5.0.
 
-**I10 — `.topsy` is the sole source file extension.**
+**I9 — `.topsy` is the sole source file extension.**
 No other extension is valid. The language name is Topsy Turvy; the extension
 remains `.topsy`.
 
@@ -111,6 +106,8 @@ The following keywords appeared in earlier drafts and versions of the language a
 | `VERITY` (type name) | `DECREE` | Boolean type |
 | `WIN` | `VERITY` | Boolean true literal |
 | `FAIL` | `NAY` | Boolean false literal |
+| `IS HENCEFORTH A` | `AS IT WERE` | In-place type cast (removed in v0.5.0; use expression cast `AS IT WERE <expr> AS A <type>` instead) |
+| `JUST SO` | *(removed)* | Implicit result variable (removed in v0.5.0; standalone expression statements now produce a warning) |
 
 ### Specific Files
 

@@ -105,19 +105,6 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
-    /// Tests that JUST SO as a standalone expression produces an <see cref="IdentifierNode"/> named JUST SO.
-    /// </summary>
-    [Fact]
-    public void Parse_WithJustSo_ProducesIdentifierNodeNamedJustSo()
-    {
-        ProgramNode program = this.parser.Parse("HARK! \"T\" JUST SO FINALE.");
-        ExpressionStatement statement = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ExpressionStatement>();
-        IdentifierNode node = statement.Expression.ShouldBeOfType<IdentifierNode>();
-
-        node.Name.ShouldBe("JUST SO");
-    }
-
-    /// <summary>
     /// Tests that a bare identifier on the right-hand side of an assignment produces an <see cref="IdentifierNode"/> with the correct name.
     /// </summary>
     [Fact]

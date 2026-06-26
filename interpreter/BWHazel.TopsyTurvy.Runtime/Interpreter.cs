@@ -207,9 +207,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case ArrayElementAssignmentNode arrayElementAssignment:
                 this.ExecuteArrayElementAssignment(arrayElementAssignment, environment);
                 break;
-            case InPlaceCastNode inPlaceCast:
-                this.ExecuteInPlaceCast(inPlaceCast, environment);
-                break;
             case PrintNode print:
                 this.ExecutePrint(print, environment);
                 break;
@@ -217,7 +214,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 this.ExecuteInput(input, environment);
                 break;
             case ExpressionStatement expressionStatement:
-                environment.JustSo = this.EvaluateExpression(expressionStatement.Expression, environment);
+                this.EvaluateExpression(expressionStatement.Expression, environment);
                 break;
             case FunctionDefinitionNode functionDefinition:
                 this.functions[functionDefinition.Name] = functionDefinition;
@@ -277,7 +274,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     {
         TopsyTurvyValue value = node.InitialValue != null
             ? this.EvaluateExpression(node.InitialValue, environment)
-            : TopsyTurvyValue.Null();
+            : GetDefaultValue(node.Type);
 
         environment.Declare(node.Name, value, isConstant: node.IsConstant);
     }
@@ -308,7 +305,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         }
 
         List<TopsyTurvyValue> elements = node.Size.HasValue
-            ? [.. Enumerable.Repeat(TopsyTurvyValue.Null(), node.Size.Value)]
+            ? [.. Enumerable.Repeat(GetDefaultValue(node.ElementType), node.Size.Value)]
             : [.. node.InitialValues.Select(expression => this.EvaluateExpression(expression, environment))];
 
         environment.Declare(node.Name, TopsyTurvyValue.Array(elements), isConstant: node.IsConstant);
@@ -398,17 +395,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
-    /// Executes an in-place cast statement.
-    /// </summary>
-    /// <param name="node">The in-place cast node.</param>
-    /// <param name="environment">The environment.</param>
-    private void ExecuteInPlaceCast(InPlaceCastNode node, TopsyTurvyEnvironment environment)
-    {
-        TopsyTurvyValue value = environment.Get(node.Target).CastTo(node.NewType);
-        environment.Assign(node.Target, value);
-    }
-
-    /// <summary>
     /// Executes a print statement.
     /// </summary>
     /// <param name="node">The print node.</param>
@@ -438,9 +424,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <param name="environment">The environment.</param>
     private void ExecuteConditional(ConditionalNode node, TopsyTurvyEnvironment environment)
     {
-        bool condition = node.Condition != null
-            ? this.EvaluateExpression(node.Condition, environment).IsTruthy()
-            : environment.JustSo.IsTruthy();
+        bool condition = this.EvaluateExpression(node.Condition, environment).IsTruthy();
 
         if (condition)
         {
@@ -450,9 +434,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         foreach (ElseIfBranch branch in node.ElseIfs)
         {
-            bool branchCondition = branch.Condition != null
-                ? this.EvaluateExpression(branch.Condition, environment).IsTruthy()
-                : environment.JustSo.IsTruthy();
+            bool branchCondition = this.EvaluateExpression(branch.Condition, environment).IsTruthy();
 
             if (branchCondition)
             {
@@ -479,9 +461,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <param name="environment">The environment.</param>
     private void ExecuteSwitch(SwitchNode node, TopsyTurvyEnvironment environment)
     {
-        TopsyTurvyValue switchValue = node.Expression != null
-            ? this.EvaluateExpression(node.Expression, environment)
-            : environment.JustSo;
+        TopsyTurvyValue switchValue = this.EvaluateExpression(node.Expression, environment);
 
         bool isCaseMatched = false;
         try
@@ -685,23 +665,14 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     {
         try
         {
-            TopsyTurvyValue result = this.EvaluateExpression(node.Operation, environment);
-            environment.JustSo = result;
+            this.EvaluateExpression(node.Operation, environment);
             this.ExecuteStatements(node.SuccessBlock, environment);
         }
         catch (TopsyTurvyThrowException ex)
         {
-            environment.JustSo = ex.ThrowValue;
-            if (node.CaughtValueName is not null)
-            {
-                TopsyTurvyEnvironment catchEnvironment = environment.CreateNested();
-                catchEnvironment.Declare(node.CaughtValueName, ex.ThrowValue);
-                this.ExecuteStatements(node.ExceptionBlock, catchEnvironment);
-            }
-            else
-            {
-                this.ExecuteStatements(node.ExceptionBlock, environment);
-            }
+            TopsyTurvyEnvironment catchEnvironment = environment.CreateNested();
+            catchEnvironment.Declare(node.CaughtValueName, ex.ThrowValue);
+            this.ExecuteStatements(node.ExceptionBlock, catchEnvironment);
         }
     }
 
@@ -1378,7 +1349,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         TopsyTurvyEnvironment scope = TopsyTurvyEnvironment.CreateFunctionEnvironment();
         for (int i = 0; i < function.Parameters.Count; i++)
         {
-            scope.Declare(function.Parameters[i], arguments[i]);
+            scope.Declare(function.Parameters[i].Name, arguments[i]);
         }
 
         TopsyTurvyValue returnValue = TopsyTurvyValue.Null();
@@ -1391,7 +1362,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             returnValue = returnSignal.Value ?? TopsyTurvyValue.Null();
         }
 
-        callingEnvironment.JustSo = returnValue;
         return returnValue;
     }
 
@@ -1568,5 +1538,27 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         LiteralType.UnsignedShort => TopsyTurvyValue.UnsignedShort((ushort)value),
         LiteralType.Byte => TopsyTurvyValue.Byte((byte)value),
         _ => TopsyTurvyValue.Integer((int)value)
+    };
+
+    /// <summary>
+    /// Gets the default value for a declared type, used when no BEING initialiser is provided.
+    /// </summary>
+    /// <param name="type">The declared <see cref="LiteralType"/>.</param>
+    /// <returns>The default <see cref="TopsyTurvyValue"/> for the given type.</returns>
+    private static TopsyTurvyValue GetDefaultValue(LiteralType type) => type switch
+    {
+        LiteralType.Long => TopsyTurvyValue.Long(0L),
+        LiteralType.Short => TopsyTurvyValue.Short(0),
+        LiteralType.SignedByte => TopsyTurvyValue.SignedByte(0),
+        LiteralType.UnsignedInteger => TopsyTurvyValue.UnsignedInteger(0u),
+        LiteralType.UnsignedLong => TopsyTurvyValue.UnsignedLong(0ul),
+        LiteralType.UnsignedShort => TopsyTurvyValue.UnsignedShort(0),
+        LiteralType.Byte => TopsyTurvyValue.Byte(0),
+        LiteralType.Double => TopsyTurvyValue.Double(0.0),
+        LiteralType.Single => TopsyTurvyValue.Single(0.0f),
+        LiteralType.String => TopsyTurvyValue.String(string.Empty),
+        LiteralType.Char => TopsyTurvyValue.Char('\0'),
+        LiteralType.Boolean => TopsyTurvyValue.Boolean(false),
+        _ => TopsyTurvyValue.Integer(0)
     };
 }

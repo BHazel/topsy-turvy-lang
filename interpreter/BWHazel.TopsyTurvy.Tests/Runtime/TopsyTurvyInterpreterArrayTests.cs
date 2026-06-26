@@ -178,17 +178,21 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method pre-allocates the correct number of NAUGHT elements for a sized array declaration.
+    /// Tests that the <see cref="Interpreter.Execute"/> method pre-allocates elements set to the type default for a sized array declaration.
     /// </summary>
-    [Fact]
-    public void Execute_ArrayDeclaration_WithSize_PreAllocatesNaughtElements()
+    /// <param name="typeKeyword">The Topsy Turvy type keyword to use in the array declaration.</param>
+    /// <param name="expectedDefault">The expected string representation of the type default value.</param>
+    [Theory]
+    [InlineData("PEER", "0")]
+    [InlineData("FATHOM", "0")]
+    [InlineData("DECREE", "NAY")]
+    [InlineData("YARN", "")]
+    public void Execute_ArrayDeclaration_WithSize_PreAllocatesTypeDefaultElements(string typeKeyword, string expectedDefault)
     {
-        string source = """
+        string source = $"""
             HARK! "Arrays"
-            PRAY WELCOME arr AS A LITTLE LIST OF 3 YARN
+            PRAY WELCOME arr AS A LITTLE LIST OF 1 {typeKeyword}
             BEHOLD VICTIM 1 ON arr
-            BEHOLD VICTIM 2 ON arr
-            BEHOLD VICTIM 3 ON arr
             FINALE.
             """;
 
@@ -198,10 +202,8 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         diagnostics.HasErrors.ShouldBeFalse();
-        output.Count.ShouldBe(3);
-        output[0].ShouldBe("NAUGHT");
-        output[1].ShouldBe("NAUGHT");
-        output[2].ShouldBe("NAUGHT");
+        output.Count.ShouldBe(1);
+        output[0].ShouldBe(expectedDefault);
     }
 
     /// <summary>

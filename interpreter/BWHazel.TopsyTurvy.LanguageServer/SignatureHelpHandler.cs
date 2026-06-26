@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -126,17 +127,18 @@ public class SignatureHelpHandler(DocumentStateManager documentStateManager)
             }
 
             int activeParamIndex = CountAndTokens(afterWithText);
-            int paramCount = info.Parameters?.Count ?? 0;
+            int paramCount = info.TypedParameters?.Count ?? 0;
             if (paramCount > 0)
             {
                 activeParamIndex = Math.Min(activeParamIndex, paramCount - 1);
             }
 
-            string label = $"{info.Name}({string.Join(", ", info.Parameters ?? Array.Empty<string>())})";
-            List<ParameterInformation> parameterInfoEntries = [.. (info.Parameters ?? Array.Empty<string>())
+            IReadOnlyList<TypedParameter> typedParameters = info.TypedParameters ?? [];
+            string label = $"{info.Name}({string.Join(", ", typedParameters.Select(static parameter => parameter.Name))})";
+            List<ParameterInformation> parameterInfoEntries = [.. typedParameters
                 .Select(static parameter => new ParameterInformation()
                     {
-                        Label = parameter
+                        Label = parameter.Name
                     })];
 
             return Task.FromResult<SignatureHelp?>(new()

@@ -27,11 +27,8 @@ BEHOLD "----------------------------------------------------------"
 BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE idx AND LARGER OF idx AND limit
 
   ASIDE: determine divisibility — the matter is of the gravest importance
-  ALIKE REMAINDER OF idx AND 3 AND 0
-  by_three IS APPOINTED JUST SO
-
-  ALIKE REMAINDER OF idx AND 5 AND 0
-  by_five IS APPOINTED JUST SO
+  by_three IS APPOINTED ALIKE REMAINDER OF idx AND 3 AND 0
+  by_five IS APPOINTED ALIKE REMAINDER OF idx AND 5 AND 0
 
   ASIDE: render judgement with appropriate ceremony
   SHOULD IT TRANSPIRE THAT BOTH by_three AND by_five
@@ -42,8 +39,7 @@ BY A LEGAL FICTION KNOWN AS the_list WHILST UNLIKE idx AND LARGER OF idx AND lim
     OR, IF NOT, by_five
       output IS APPOINTED "Buzz"
     OTHERWISE,
-      AS IT WERE idx AS A YARN
-      output IS APPOINTED JUST SO
+      output IS APPOINTED AS IT WERE idx AS A YARN
   SO MUCH FOR THAT.
 
   BEHOLD output

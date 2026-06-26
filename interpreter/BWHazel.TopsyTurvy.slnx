@@ -7,6 +7,7 @@
   <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Tests/BWHazel.TopsyTurvy.Tests.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.TypeChecker/BWHazel.TopsyTurvy.TypeChecker.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor/BWHazel.TopsyTurvy.WebEditor.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor.E2ETests/BWHazel.TopsyTurvy.WebEditor.E2ETests.csproj" />
 </Solution>

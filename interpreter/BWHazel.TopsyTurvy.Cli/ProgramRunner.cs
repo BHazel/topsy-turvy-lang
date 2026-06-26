@@ -3,6 +3,7 @@ using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
+using BWHazel.TopsyTurvy.TypeChecker;
 
 namespace BWHazel.TopsyTurvy.Cli;
 
@@ -50,6 +51,13 @@ public class ProgramRunner
                 parseData);
         }
 
+        TopsyTurvyTypeChecker typeChecker = new();
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseData.Program!);
+        if (!typeCheckResult.Success)
+        {
+            return (ProgramExecutionResult.TypeErrors(typeCheckResult.Diagnostics), parseData);
+        }
+
         return (ProgramExecutionResult.Success(), parseData);
     }
 
@@ -79,6 +87,13 @@ public class ProgramRunner
         catch (TopsyTurvySyntaxException ex)
         {
             return ProgramExecutionResult.SyntaxError(ex.Errors);
+        }
+
+        TopsyTurvyTypeChecker typeCheckerForRun = new();
+        TypeCheckResult typeCheckResultForRun = typeCheckerForRun.Check(program);
+        if (!typeCheckResultForRun.Success)
+        {
+            return ProgramExecutionResult.TypeErrors(typeCheckResultForRun.Diagnostics);
         }
 
         Interpreter interpreter = new(io);

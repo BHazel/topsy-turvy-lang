@@ -7,8 +7,8 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <para>
 /// This corresponds to the <c>PRAY TELL</c> input statement in Topsy Turvy.  It reads a line from standard input and stores
 /// it in the named variable as a <c>YARN</c> (string).  Every input statement consists of a single <see cref="Target"/> naming
-/// the variable that receives the input.  If a non-string value is required, follow it with an <see cref="InPlaceCastNode"/> to
-/// convert the <c>YARN</c> to the appropriate type.
+/// the variable that receives the input.  The target variable must be of type <c>YARN</c>.  If the input needs to be converted to
+/// another type, use an <see cref="ExpressionCastNode"/> (<c>AS IT WERE &lt;var&gt; AS A &lt;type&gt;</c>) in a subsequent assignment.
 /// </para>
 /// <para>
 /// For example, the following code in Topsy Turvy reads a line of input into the variable <c>Incantation</c>:

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using BWHazel.TopsyTurvy.Ast;
 
@@ -48,13 +47,6 @@ public class SymbolTable
     {
         Dictionary<string, SymbolInfo> collectedSymbols = new(StringComparer.OrdinalIgnoreCase);
         string[] sourceLines = originalSource.Split('\n');
-
-        collectedSymbols[Keywords.SpecialNames.JustSo] = new SymbolInfo()
-        {
-            Name = Keywords.SpecialNames.JustSo,
-            Kind = SymbolKind.Variable,
-            TypeDisplayName = "implicit variable"
-        };
 
         collectedSymbols[Keywords.SpecialNames.TheProps] = new SymbolInfo()
         {
@@ -261,6 +253,7 @@ public class SymbolTable
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
+            DeclaredType = declaration.Type,
             DefinitionLine = declaration.Span.Start.Line,
             DefinitionColumn = declaration.Span.Start.Column,
             Documentation = FindDocumentationComment(sourceLines, declaration.Span.Start.Line)
@@ -311,23 +304,26 @@ public class SymbolTable
             {
                 Name = function.Name,
                 Kind = SymbolKind.Function,
-                Parameters = function.Parameters,
+                DeclaredType = function.ReturnType,
+                TypedParameters = function.Parameters,
                 DefinitionLine = function.Span.Start.Line,
                 DefinitionColumn = function.Span.Start.Column,
                 Documentation = FindDocumentationComment(sourceLines, function.Span.Start.Line)
             };
         }
 
-        foreach ((string parameter, SourceSpan parameterSpan) in function.Parameters.Zip(function.ParameterSpans))
+        foreach (TypedParameter parameter in function.Parameters)
         {
-            if (!collectedSymbols.ContainsKey(parameter))
+            if (!collectedSymbols.ContainsKey(parameter.Name))
             {
-                collectedSymbols[parameter] = new SymbolInfo()
+                collectedSymbols[parameter.Name] = new SymbolInfo()
                 {
-                    Name = parameter,
+                    Name = parameter.Name,
                     Kind = SymbolKind.Parameter,
-                    DefinitionLine = parameterSpan.Start.Line,
-                    DefinitionColumn = parameterSpan.Start.Column
+                    DeclaredType = parameter.Type,
+                    TypeDisplayName = LiteralTypeToDisplayName(parameter.Type),
+                    DefinitionLine = parameter.Span.Start.Line,
+                    DefinitionColumn = parameter.Span.Start.Column
                 };
             }
         }

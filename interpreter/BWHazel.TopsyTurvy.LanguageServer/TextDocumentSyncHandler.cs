@@ -13,6 +13,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Parser;
+using BWHazel.TopsyTurvy.TypeChecker;
 
 using AstDiagnostic = BWHazel.TopsyTurvy.Ast.Diagnostic;
 using AstDiagnosticSeverity = BWHazel.TopsyTurvy.Ast.DiagnosticSeverity;
@@ -169,6 +170,27 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
                     Message = diagnostic.Message,
                     Source = LanguageServerConstants.LanguageId
                 })];
+
+            if (result.Success && result.Program is not null)
+            {
+                TopsyTurvyTypeChecker typeChecker = new();
+                TypeCheckResult typeCheckResult = typeChecker.Check(result.Program);
+                lspDiagnostics.AddRange(typeCheckResult.Diagnostics.Select(
+                    (AstDiagnostic diagnostic) => new Diagnostic()
+                    {
+                        Range = new(
+                            new(diagnostic.Span.Start.Line - 1, diagnostic.Span.Start.Column - 1),
+                            new(diagnostic.Span.End.Line - 1, diagnostic.Span.End.Column - 1)),
+                        Severity = diagnostic.Severity switch
+                        {
+                            AstDiagnosticSeverity.Error => DiagnosticSeverity.Error,
+                            AstDiagnosticSeverity.Warning => DiagnosticSeverity.Warning,
+                            _ => DiagnosticSeverity.Information
+                        },
+                        Message = diagnostic.Message,
+                        Source = LanguageServerConstants.LanguageId
+                    }));
+            }
 
             DocumentState? documentState = this.documentStateManager.Get(uri);
             if (documentState?.SymbolTable is not null)
