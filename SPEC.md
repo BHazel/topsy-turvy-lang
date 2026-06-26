@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.4.0
+### Language Specification — Version 0.5.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -9,7 +9,7 @@
 
 ## Overview
 
-**Topsy Turvy** is a general-purpose esoteric programming language in the tradition of LOLCODE, themed around the Gilbert & Sullivan operetta canon. Programs are written in the voice of a Victorian theatrical libretto — formal, pompous, comic, and entirely deadpan. The underlying semantics are those of a conventional dynamically-typed procedural language; only the syntax is topsy-turvy.
+**Topsy Turvy** is a general-purpose esoteric programming language in the tradition of LOLCODE, themed around the Gilbert & Sullivan operetta canon. Programs are written in the voice of a Victorian theatrical libretto — formal, pompous, comic, and entirely deadpan. The underlying semantics are those of a conventional statically-typed procedural language; only the syntax is topsy-turvy.
 
 Source files use the `.topsy` extension.
 
@@ -97,7 +97,7 @@ THE CURTAIN RISES.
 - `PRAY WELCOME` — the formal welcoming of a new character onto the stage; `PRAY` drawn verbatim from *The Mikado*, Act I (*"Gentlemen, I pray you tell me..."*); `WELCOME` reflecting the theatrical tradition of receiving each new arrival before the assembled company, as in the *Dramatis Personae*
 - `<name>` — any valid identifier (letters, digits, hyphens, underscores; must begin with a letter)
 - `AS A [CONSERVATIVE | LIBERAL] <type>` — declares the type, with an optional mutability modifier (see §3.1 below)
-- `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to `NAUGHT` (null)
+- `BEING <value>` — optional initial value, in the manner of a *Dramatis Personae* parenthetical ("Nanki-Poo, *being* the son of the Mikado..."); if omitted, the variable is initialised to the type's default value (see §3.4)
 - `THE CURTAIN RISES.` — closes the `PRINCIPALS` block. Once all characters have been introduced and the company is assembled, the curtain rises and the drama begins. The full stop is mandatory.
 
 ### 3.1 Constants and Mutability Modifiers
@@ -106,7 +106,7 @@ An optional mutability modifier may appear between `AS A` and the type keyword t
 
 | Modifier | Meaning |
 |---|---|
-| `CONSERVATIVE` | The variable is a **constant**. Once declared, it cannot be reassigned by `IS APPOINTED`, recast in place by `IS HENCEFORTH A`, or overwritten by `PRAY TELL`. Attempting any of these operations is a runtime error. |
+| `CONSERVATIVE` | The variable is a **constant**. Once declared, it cannot be reassigned by `IS APPOINTED`. Attempting this operation is a runtime error. |
 | `LIBERAL` | The variable is explicitly **mutable**. This is identical to declaring without a modifier and exists for documentation clarity. |
 | *(none)* | Mutable — the default when no modifier is given. All existing code continues to work unchanged. |
 
@@ -170,37 +170,38 @@ The escape sequences inside a character literal use the same Victorian flourish 
 
 `STITCH` values may also be produced at runtime by indexing into a `YARN` variable — see §16.
 
-### 3.4 Dynamic Typing
+### 3.4 Static Typing
 
-Topsy Turvy is a **dynamically typed** language in the Python tradition: type annotations are **advisory**, not enforced.
+Topsy Turvy is a **statically typed** language: type annotations are **enforced** constraints, not documentation.
 
-**The declared type is documentation, not a constraint.** A variable declared as `PEER` may hold a `YARN` value after a subsequent `IS APPOINTED`. The interpreter will not raise an error when a value of a different type is stored. This mirrors Python's behaviour with annotated variables:
-
-```python
-# Python — valid at runtime, annotation is advisory
-Ko_Ko: int = 42
-Ko_Ko = "Lord High Executioner"  # no error
-```
-
-The equivalent in Topsy Turvy:
+**The declared type is a binding contract.** Assigning a value of the wrong type to a declared variable is a compile-time type error.
 
 ```topsy
 PRAY WELCOME Ko-Ko AS A PEER BEING 42
-Ko-Ko IS APPOINTED "Lord High Executioner"  ASIDE: perfectly legal — annotation is advisory
+Ko-Ko IS APPOINTED "Lord High Executioner"  ASIDE: TYPE ERROR — cannot assign YARN to PEER
 ```
 
-**Explicit casts are still required to convert values.** Storing a different type does not convert it; `IS HENCEFORTH A` or `AS IT WERE` must be used when a specific type is needed:
+**Default values when `BEING` is omitted** are assigned based on the declared type:
+
+| Type | Default value |
+|---|---|
+| `PEER`, `CHANCELLOR`, `PIRATE`, `SAUSAGE-ROLL` and unsigned variants | `0` |
+| `FATHOM`, `FOOT` | `0.0` |
+| `DECREE` | `NAY` |
+| `STITCH` | `'\0'` (the null character) |
+| `YARN` | `""` (the empty string) |
+| `A LITTLE LIST OF <T>` | empty array; or type-defaulted elements if a size is given |
+
+**`NAUGHT` as an assigned value** is permitted only for `YARN` and array variables — it signals the absence of a string or the empty state of an array. Assigning `NAUGHT` to a numeric, boolean, or character variable is a type error.
+
+**Explicit casts with `AS IT WERE`** are trusted and not verified at compile time. A cast that is invalid at runtime will still raise a runtime error.
 
 ```topsy
-Ko-Ko IS HENCEFORTH A PEER  ASIDE: now converts whatever Ko-Ko holds to PEER
+PRAY WELCOME age AS A YARN BEING AS IT WERE Ko-Ko AS A YARN   ASIDE: cast in a declaration initialiser
+ageStr IS APPOINTED AS IT WERE Ko-Ko AS A YARN                 ASIDE: cast in an assignment
 ```
 
-**Type annotations serve three purposes:**
-1. They set the initial value's type when `BEING` is provided.
-2. They document the programmer's intent for future readers.
-3. They inform the LSP hover tooltip.
-
-This philosophy extends to collection types. An `A LITTLE LIST OF YARN` declares the programmer's intent that the list should contain strings — but the runtime will not reject an element of a different type (see §14 Arrays).
+`AS A NAUGHT` and `A LITTLE LIST OF NAUGHT` are type errors. `NAUGHT` is valid as a value (the null literal), but may only be assigned where `YARN` or an array is expected.
 
 ---
 
@@ -246,17 +247,14 @@ is_guilty IS APPOINTED VERITY
 ### Type Casting
 
 ```topsy
-Ko-Ko IS HENCEFORTH A PEER                                          ASIDE: re-cast Ko-Ko to integer in place
-
 PRAY WELCOME age AS A YARN BEING AS IT WERE Ko-Ko AS A YARN         ASIDE: cast in a declaration initialiser
 
 ageStr IS APPOINTED AS IT WERE Ko-Ko AS A YARN                      ASIDE: cast in an assignment
 
-AS IT WERE Ko-Ko AS A YARN                                          ASIDE: standalone cast — result stored in JUST SO
+SUMMON someFunc WITH AS IT WERE Ko-Ko AS A YARN IF YOU PLEASE.      ASIDE: cast as a function argument
 ```
 
-- `IS HENCEFORTH A <type>` — casts the variable in place (statement)
-- `AS IT WERE <expr> AS A <type>` — a cast **expression** that evaluates to the cast value without mutating the source; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is. Because it is an expression, it can appear anywhere a value is expected: as the right-hand side of `IS APPOINTED`, as the `BEING` initialiser of a declaration, as a function argument, or as a sub-expression. When used as a standalone statement, the result is stored in the implicit `JUST SO` variable for use in subsequent statements.
+- `AS IT WERE <expr> AS A <type>` — a cast **expression** that evaluates to the cast value without mutating the source; "as it were" is the G&S hedging construction, used when a character invokes a convenient fiction about what something actually is. Because it is an expression, it can appear anywhere a value is expected: as the right-hand side of `IS APPOINTED`, as the `BEING` initialiser of a declaration, as a function argument, or as a sub-expression.  Explicit casts are trusted at compile time — a cast that is invalid at runtime will raise a runtime error.
 
 ---
 
@@ -285,7 +283,14 @@ BEHOLD "Ko-Ko's value is " AND Ko-Ko AND ", which is most irregular."
 PRAY TELL Ko-Ko
 ```
 
-- `PRAY TELL <variable>` — reads a line from standard input into the variable as a `YARN`; use `IS HENCEFORTH A PEER` to cast to integer if needed. Drawn verbatim from *The Mikado*, Act I — Nanki-Poo's opening recitative: *"Gentlemen, I pray you tell me / Where a gentle maiden dwelleth..."*
+- `PRAY TELL <variable>` — reads a line from standard input into the variable. The target variable must be declared as `YARN`; using `PRAY TELL` with any other type is a type error. To obtain a numeric value, read into a `YARN` variable then cast with `AS IT WERE`. Drawn verbatim from *The Mikado*, Act I — Nanki-Poo's opening recitative: *"Gentlemen, I pray you tell me / Where a gentle maiden dwelleth..."*
+
+```topsy
+PRAY WELCOME input AS A YARN
+PRAY WELCOME candidate AS A PEER
+PRAY TELL input
+candidate IS APPOINTED AS IT WERE input AS A PEER
+```
 
 ---
 
@@ -407,32 +412,21 @@ HARDLY EVER PRE-ADAMITE x AND y     ASIDE: x <= y
 
 `HARDLY EVER` is the logical NOT operator — drawn directly from *H.M.S. Pinafore*: "What, never? / No, never! / What, never? / **Well, hardly ever!**" The absolute negative, delivered with comic deflation. `HARDLY EVER x` is the logical inverse of `x`.
 
-### Truthiness
+### Type Requirements
 
-When a non-`DECREE` value is used in a boolean context:
-- `NAY`: `0`, `0.0`, `""`, `NAUGHT`
-- `VERITY`: everything else
+All operands of `BOTH`, `EITHER`, `HARDLY EVER`, `ALL OF`, and `ANY OF` must be of type `DECREE`. Passing a non-`DECREE` value to a boolean operator is a type error.
+
+All conditions in `SHOULD IT TRANSPIRE THAT`, `WHILST`, `UNTIL`, `YEOMAN`, and the ternary expression must also be of type `DECREE`.
+
+Comparison operators (`ALIKE`, `UNLIKE`, `PRE-ADAMITE`, `LOWER DEGREE`) require operands of the same type, or types that are compatible by integer widening (e.g. comparing a `PEER` to a `CHANCELLOR` is valid; comparing a `PEER` to a `YARN` is a type error). These operators always return `DECREE`.
+
+Arithmetic operators (`SUM OF`, `DIFFERENCE OF`, etc.) require numeric operands. If operands differ, the result type is the wider of the two, following the integer widening hierarchy: `CHANCELLOR` > `PEER` > `PIRATE` > `SAUSAGE-ROLL`; `FATHOM` > `FOOT`. A `PEER` compared to or combined with a `FATHOM` produces a `FATHOM` result.
+
+Bitwise operators (`CHORD OF`, `HARMONY OF`, `DISCORD OF`, `INVERSION OF`, `TRANSPOSITION UP`, `TRANSPOSITION DOWN`) require integer operands. Applying a bitwise operator to a `FATHOM`, `FOOT`, `YARN`, `STITCH`, or `DECREE` value is a type error.
 
 ---
 
 ## 9. Built-In Variables
-
-### JUST SO
-
-Any expression that is evaluated but not explicitly assigned deposits its result in the implicit variable **`JUST SO`**. This is used primarily to feed values into conditional constructs without an intermediate assignment.
-
-> *"Merely corroborative detail, intended to give artistic verisimilitude to an otherwise bald and unconvincing narrative."* — The Mikado
-
-```topsy
-ALIKE Ko-Ko AND 0
-ASIDE: JUST SO now holds VERITY or NAY
-SHOULD IT TRANSPIRE THAT
-  QUITE SO.
-    BEHOLD "Ko-Ko's value is zero — most irregular."
-SO MUCH FOR THAT.
-```
-
-When the inline conditional form is used (`SHOULD IT TRANSPIRE THAT <expression>` or `IN WHICH CAPACITY? <expression>`), the expression is evaluated directly and `JUST SO` is bypassed — the expression's result is consumed immediately by the conditional and is not deposited into `JUST SO`.
 
 ### THE PROPS
 
@@ -459,22 +453,6 @@ FINALE.
 
 ### If / Else If / Else
 
-Two equivalent forms are supported. In the **two-line form**, the expression is evaluated on the preceding line (depositing its result in `JUST SO`), and `SHOULD IT TRANSPIRE THAT` appears alone on the next line. In the **inline form**, the expression is supplied directly on the same line as the keyword, bypassing `JUST SO`.
-
-**Two-line form:**
-```topsy
-<expression>
-SHOULD IT TRANSPIRE THAT
-  QUITE SO.
-    <true block>
-  OR, IF NOT, <expression>
-    <else-if block>
-  OTHERWISE,
-    <else block>
-SO MUCH FOR THAT.
-```
-
-**Inline form:**
 ```topsy
 SHOULD IT TRANSPIRE THAT <expression>
   QUITE SO.
@@ -486,27 +464,13 @@ SHOULD IT TRANSPIRE THAT <expression>
 SO MUCH FOR THAT.
 ```
 
-- `SHOULD IT TRANSPIRE THAT` — the conditional phrasing of the Lord Chancellor in *Iolanthe*, who frames every legal determination as something that *transpires* to be the case; in the two-line form it evaluates `JUST SO` as a `DECREE`; in the inline form the supplied expression is evaluated directly
+- `SHOULD IT TRANSPIRE THAT <expression>` — the conditional phrasing of the Lord Chancellor in *Iolanthe*, who frames every legal determination as something that *transpires* to be the case; `<expression>` must be of type `DECREE`
 - `QUITE SO.` — the true branch; verbatim from *The Mikado*, used by Ko-Ko and Pooh-Bah as a crisp affirmation that the established fact is confirmed
-- `OR, IF NOT, <expression>` — else-if; evaluates a new expression; the Lord Chancellor's habit of carefully enumerating alternatives
+- `OR, IF NOT, <expression>` — else-if; the supplied expression must be of type `DECREE`; the Lord Chancellor's habit of carefully enumerating alternatives
 - `OTHERWISE,` — the else branch; Pooh-Bah explicitly uses "otherwise" and "on the other hand" when switching between his many logical branches and capacities
 - `SO MUCH FOR THAT.` — closes the conditional block; Ko-Ko's characteristic dismissive summary once a matter has been disposed of
 
-**Example (two-line form):**
-
-```topsy
-ALIKE rank AND "Admiral"
-SHOULD IT TRANSPIRE THAT
-  QUITE SO.
-    BEHOLD "He is the Ruler of the Queen's Navee!"
-  OR, IF NOT, ALIKE rank AND "Captain"
-    BEHOLD "What, never? Well, hardly ever!"
-  OTHERWISE,
-    BEHOLD "A mere landsman."
-SO MUCH FOR THAT.
-```
-
-**Example (inline form):**
+**Example:**
 
 ```topsy
 SHOULD IT TRANSPIRE THAT ALIKE rank AND "Admiral"
@@ -521,25 +485,6 @@ SO MUCH FOR THAT.
 
 ### Switch / Case
 
-As with the conditional, two equivalent forms are supported. In the **two-line form**, the expression is evaluated on the preceding line (depositing its result in `JUST SO`), and `IN WHICH CAPACITY?` appears alone on the next line. In the **inline form**, the expression follows immediately after the `?`.
-
-**Two-line form:**
-```topsy
-<expression>
-IN WHICH CAPACITY?
-  WHEN ACTING AS <literal>
-    <block>
-    THAT WILL DO.
-  WHEN ACTING AS <literal>
-  WHEN ACTING AS <literal>
-    <block>
-    THAT WILL DO.
-  FAILING ALL OF THE ABOVE,
-    <block>
-NOTHING COULD BE MORE SATISFACTORY.
-```
-
-**Inline form:**
 ```topsy
 IN WHICH CAPACITY? <expression>
   WHEN ACTING AS <literal>
@@ -554,30 +499,13 @@ IN WHICH CAPACITY? <expression>
 NOTHING COULD BE MORE SATISFACTORY.
 ```
 
-- `IN WHICH CAPACITY?` — drawn from Pooh-Bah's response when addressed: *"In which of my capacities?"* — he holds so many offices that the caller must specify which one they are invoking; in the two-line form it switches on `JUST SO`; in the inline form the supplied expression is evaluated directly
+- `IN WHICH CAPACITY? <expression>` — drawn from Pooh-Bah's response when addressed: *"In which of my capacities?"* — he holds so many offices that the caller must specify which one they are invoking; the supplied expression is evaluated directly; case literal types must match the switch expression type (see §6)
 - `WHEN ACTING AS <literal>` — case label; mirrors Pooh-Bah switching between his official capacities; cases fall through unless broken
 - `THAT WILL DO.` — the universal break keyword; used dismissively throughout the G&S canon — by the Mikado, by Ko-Ko, by the Lord Chancellor — to signal that a matter is concluded and no further elaboration is required; valid in both switch and loop contexts
 - `FAILING ALL OF THE ABOVE,` — default case; the Lord Chancellor's catch-all when none of the specific provisions apply
 - `NOTHING COULD BE MORE SATISFACTORY.` — closes the switch block; verbatim from *The Mikado*, Act II — the Mikado's response upon receiving the report of the (entirely fictitious) execution, delivered with great satisfaction while everything is in fact catastrophically wrong
 
-**Example (two-line form):**
-
-```topsy
-office
-IN WHICH CAPACITY?
-  WHEN ACTING AS "Executioner"
-    BEHOLD "I have a little list."
-    THAT WILL DO.
-  WHEN ACTING AS "Chancellor"
-  WHEN ACTING AS "Admiral"
-    BEHOLD "A man of many parts."
-    THAT WILL DO.
-  FAILING ALL OF THE ABOVE,
-    BEHOLD "Lord High Everything Else, no doubt."
-NOTHING COULD BE MORE SATISFACTORY.
-```
-
-**Example (inline form):**
+**Example:**
 
 ```topsy
 IN WHICH CAPACITY? office
@@ -603,15 +531,13 @@ A ternary expression is an inline conditional that evaluates to one of two value
 ```
 
 - `SHOULD IT TRANSPIRE THAT` and `OTHERWISE,` are reused from the block conditional; no new keywords are introduced.
-- `<true-value>` is the value returned when the condition is truthy. It may be any expression that is not itself a ternary (to avoid left-recursion ambiguity).
-- `<condition>` is the guard condition. It may be any expression that is not itself a ternary, to avoid `OTHERWISE,` being consumed ambiguously.
-- `<false-value>` is the value returned when the condition is falsy. It may be any expression, including a nested ternary, enabling right-chaining:
+- `<true-value>` is the value returned when the condition is `VERITY`. It may be any expression that is not itself a ternary (to avoid left-recursion ambiguity). `<true-value>` and `<false-value>` must be of the same type or widening-compatible types; the result type is the wider of the two.
+- `<condition>` is the guard condition. It must be of type `DECREE`. It may not itself be a ternary, to avoid `OTHERWISE,` being consumed ambiguously.
+- `<false-value>` is the value returned when the condition is `NAY`. It may be any expression, including a nested ternary, enabling right-chaining:
 
 ```topsy
 a SHOULD IT TRANSPIRE THAT cond1 OTHERWISE, b SHOULD IT TRANSPIRE THAT cond2 OTHERWISE, c
 ```
-
-When the ternary expression is used as a standalone statement and not inside an assignment or call, its result is deposited in `JUST SO` via the normal expression-statement path.
 
 **Examples:**
 ```topsy
@@ -630,7 +556,7 @@ title IS APPOINTED "Senior" SHOULD IT TRANSPIRE THAT PRE-ADAMITE age AND 60 OTHE
 
 ## 11. Guard Clauses
 
-A guard clause checks that a condition holds and executes an `OTHERWISE,` block when it does not.  If the condition is truthy, execution falls through the guard without entering the block.
+A guard clause checks that a condition holds and executes an `OTHERWISE,` block when it does not.  If the condition is `VERITY`, execution falls through the guard without entering the block.  The condition must be of type `DECREE`.
 
 ```
 YEOMAN <condition>
@@ -705,7 +631,7 @@ THE TERM EXPIRES.
 ```
 
 - `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` begins at `0`
-- `UNTIL <expression>` — exits when the expression is `VERITY` (checked before each iteration). From *The Pirates of Penzance* — Frederic's indenture binds him *"until"* his twenty-first birthday.
+- `UNTIL <expression>` — exits when the expression is `VERITY` (checked before each iteration); `<expression>` must be of type `DECREE`. From *The Pirates of Penzance* — Frederic's indenture binds him *"until"* his twenty-first birthday.
 
 ### Descending (Counted Down) Loop
 
@@ -726,7 +652,7 @@ BY A LEGAL FICTION KNOWN AS watchman WHILST UNLIKE Ko-Ko AND 0
 THE TERM EXPIRES.
 ```
 
-- `WHILST <expression>` — continues while expression is `VERITY` (checked before each iteration; no automatic variable mutation)
+- `WHILST <expression>` — continues while expression is `VERITY` (checked before each iteration; no automatic variable mutation); `<expression>` must be of type `DECREE`
 
 ---
 
@@ -735,19 +661,26 @@ THE TERM EXPIRES.
 ### Declaration
 
 ```topsy
-IT IS MY DUTY TO PERFORM <name> UNDER THE TERMS OF <param1> [AND <param2> ...]
+IT IS MY DUTY TO PERFORM <name> UNDER THE TERMS OF <param1> AS A <type1> [AND <param2> AS A <type2> ...] [TO FIND <return-type>]
   <body>
   AND SO I FIND <expression>
 MY DUTY IS DISCHARGED.
 ```
 
 - `IT IS MY DUTY TO PERFORM <name>` — declares a function; the G&S obligation formula, used throughout the canon
-- `UNDER THE TERMS OF <param1> [AND <param2> ...]` — declares parameters. From *The Pirates of Penzance*: Frederic's indenture specifies the exact *terms* under which his obligation is to be performed. Parameters are the terms of the indenture.
+- `UNDER THE TERMS OF <param> AS A <type> [AND <param> AS A <type> ...]` — declares typed parameters. Each parameter requires a type annotation. From *The Pirates of Penzance*: Frederic's indenture specifies the exact *terms* under which his obligation is to be performed.
 - `UNDER NO OBLIGATION` — for functions with no parameters
-- `AND SO I FIND <expression>` — returns a value; the judicial verdict formula from *Trial by Jury*
+- `TO FIND <type>` — declares the return type. Omitting `TO FIND` means the function is **void** — it returns no value. `TO FIND NAUGHT` is not valid because `NAUGHT` is not a type; void is expressed by omitting `TO FIND` entirely.
+- `AND SO I FIND <expression>` — returns a value; the judicial verdict formula from *Trial by Jury*; the expression type must match the declared `TO FIND` type; using `AND SO I FIND` in a void function (one without `TO FIND`) is a type error
 - `MY DUTY IS DISCHARGED.` — closes the function; the obligation is fulfilled
-- `MY DUTY IS PREMATURELY DISCHARGED.` — early return with no value
+- `MY DUTY IS PREMATURELY DISCHARGED.` — early return with no value; valid only in void functions; using it in a function declared `TO FIND <type>` is a type error
 - Functions have their own scope; they receive values only through parameters
+
+**Type checking rules:**
+- All argument types in a call must match the declared parameter types (or be widening-compatible)
+- Return expressions must match the declared `TO FIND` type
+- Every code path through a typed function must reach an `AND SO I FIND`
+- A void function with no reachable `AND SO I FIND` is valid
 
 ### Calling
 
@@ -759,19 +692,28 @@ SUMMON greet WITH NOTHING IF YOU PLEASE.
 
 - `SUMMON <name> WITH <arg1> [AND <arg2> ...] IF YOU PLEASE.` — calls a function. `SUMMON` is verbatim from *The Mikado*, Act I — Ko-Ko: *"I summon my guard."* To summon a named party to perform their duty, with the specified terms, if they would be so kind. `IF YOU PLEASE` is verbatim from *H.M.S. Pinafore* — Sir Joseph Porter's insistence on the proper form of address.
 - `SUMMON <name> WITH NOTHING IF YOU PLEASE.` — calls a function with no arguments
-- The return value becomes `JUST SO`, or can be used directly in an expression
+- The return value may be used directly in an expression; using the return value of a void function is a type error
 
 **Example — Factorial:**
 
 ```topsy
-IT IS MY DUTY TO PERFORM factorial UNDER THE TERMS OF n
-  ALIKE n AND 0
-  SHOULD IT TRANSPIRE THAT
+IT IS MY DUTY TO PERFORM factorial UNDER THE TERMS OF n AS A PEER TO FIND PEER
+  SHOULD IT TRANSPIRE THAT ALIKE n AND 0
     QUITE SO.
       AND SO I FIND 1
   SO MUCH FOR THAT.
   AND SO I FIND PRODUCT OF n AND SUMMON factorial WITH DIFFERENCE OF n AND 1 IF YOU PLEASE.
 MY DUTY IS DISCHARGED.
+```
+
+**Example — Void Function:**
+
+```topsy
+IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+  BEHOLD WOVEN OF "Hello, " AND name AND "!" IF YOU PLEASE.
+MY DUTY IS DISCHARGED.
+
+SUMMON greet WITH "Ko-Ko" IF YOU PLEASE.
 ```
 
 ---
@@ -784,7 +726,7 @@ MY DUTY IS DISCHARGED.
 A HIDEOUS CURSE ON <value>
 ```
 
-`A HIDEOUS CURSE ON <value>` — raises an exception, carrying `<value>` as the exception payload. Drawn from *Ruddigore*: the Murgatroyd baronets are bound by an ancestral curse — to hurl a hideous curse upon something is the most dramatically appropriate signal that affairs have gone catastrophically wrong. May be used anywhere in the programme; if uncaught by a `WITH THE GREATEST RESPECT` block the programme terminates with an error and the cursed value is reported.
+`A HIDEOUS CURSE ON <value>` — raises an exception, carrying `<value>` as the exception payload. `<value>` must be of type `YARN`; throwing a non-`YARN` value is a type error. Drawn from *Ruddigore*: the Murgatroyd baronets are bound by an ancestral curse — to hurl a hideous curse upon something is the most dramatically appropriate signal that affairs have gone catastrophically wrong. May be used anywhere in the programme; if uncaught by a `WITH THE GREATEST RESPECT` block the programme terminates with an error and the cursed value is reported.
 
 ### Catching
 
@@ -792,42 +734,32 @@ A HIDEOUS CURSE ON <value>
 WITH THE GREATEST RESPECT, <operation>
   WITH GRATITUDE
     <success block>
-  MODIFIED RAPTURE[, <name>]
+  MODIFIED RAPTURE, <name>
     <exception block>
 THAT CONCLUDES THE MATTER.
 ```
 
 - `WITH THE GREATEST RESPECT, <operation>` — wraps a potentially-failing operation; catches any exception raised by `A HIDEOUS CURSE ON` within `<operation>`
 - `WITH GRATITUDE` — the success handler; entered when no exception is raised
-- `MODIFIED RAPTURE[, <name>]` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the cursed value is always available as `JUST SO` on entry to this block; if `, <name>` is given, the cursed value is also auto-declared as a named variable scoped to the exception block (no prior `PRAY WELCOME` required)
+- `MODIFIED RAPTURE, <name>` — the exception handler; from *The Pirates of Penzance*: Mabel's "Oh joy! Oh rapture! — *modified* rapture!" upon learning the bad news; the named binding is required — the cursed value is auto-declared as `<name>` with type `YARN`, scoped to the exception block (no prior `PRAY WELCOME` required)
 - `THAT CONCLUDES THE MATTER.` — closes the block
 
 **Example:**
 
 ```topsy
-IT IS MY DUTY TO PERFORM checked_divide UNDER THE TERMS OF a AND b
-  ALIKE b AND 0
-  SHOULD IT TRANSPIRE THAT
+IT IS MY DUTY TO PERFORM checked_divide UNDER THE TERMS OF a AS A PEER AND b AS A PEER TO FIND PEER
+  SHOULD IT TRANSPIRE THAT ALIKE b AND 0
     QUITE SO.
       A HIDEOUS CURSE ON "Division by zero — the Pirate King is most displeased."
   SO MUCH FOR THAT.
   AND SO I FIND QUOTIENT OF a AND b
 MY DUTY IS DISCHARGED.
 
+PRAY WELCOME result AS A PEER
 WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
   WITH GRATITUDE
-    BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
-  MODIFIED RAPTURE
-    BEHOLD WOVEN OF "A curse has been invoked: " AND JUST SO IF YOU PLEASE.
-THAT CONCLUDES THE MATTER.
-```
-
-The optional `<name>` after `MODIFIED RAPTURE` binds the cursed value to a named variable for the duration of the exception block.  The named variable is auto-declared — no `PRAY WELCOME` is needed — and is not accessible outside the block.  `JUST SO` is still set regardless.
-
-```topsy
-WITH THE GREATEST RESPECT, SUMMON checked_divide WITH 10 AND 0 IF YOU PLEASE.
-  WITH GRATITUDE
-    BEHOLD WOVEN OF "Result: " AND JUST SO IF YOU PLEASE.
+    result IS APPOINTED SUMMON checked_divide WITH 10 AND 2 IF YOU PLEASE.
+    BEHOLD WOVEN OF "Result: " AND result IF YOU PLEASE.
   MODIFIED RAPTURE, Grievance
     BEHOLD WOVEN OF "A curse has been invoked: " AND Grievance IF YOU PLEASE.
 THAT CONCLUDES THE MATTER.
@@ -839,7 +771,7 @@ THAT CONCLUDES THE MATTER.
 THE LAW IS <condition> THAT <error-message>
 ```
 
-`THE LAW IS <condition> THAT <error-message>` — asserts that a runtime invariant holds.  If `<condition>` is falsy, it throws using the same mechanism as `A HIDEOUS CURSE ON`, carrying `<error-message>` as the payload; the exception may be caught by a `WITH THE GREATEST RESPECT` block.  If the condition is truthy, execution continues with no effect.
+`THE LAW IS <condition> THAT <error-message>` — asserts that a runtime invariant holds.  `<condition>` must be of type `DECREE`; `<error-message>` must be of type `YARN`.  If `<condition>` is `NAY`, it throws using the same mechanism as `A HIDEOUS CURSE ON`, carrying `<error-message>` as the payload; the exception may be caught by a `WITH THE GREATEST RESPECT` block.  If the condition is `VERITY`, execution continues with no effect.
 
 - `THE LAW IS` — opens the assertion; the Mikado and Lord Chancellor are the ultimate arbiters of law and decree — when the law is invoked, it must hold
 - `THAT` — separates the condition from the error message; a structural separator (not in the keyword completion list)
@@ -891,8 +823,8 @@ PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
 ```
 
 - `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
-- `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, or `NAUGHT`); advisory only — see §3.2.
-- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many `NAUGHT` elements, making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
+- `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, `STITCH`, etc.); assigning an element of the wrong type is a type error. `NAUGHT` is not a valid element type.
+- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many elements, each initialised to the type's default value (see §3.4), making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
 - `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §7); omitting `BEING` produces an empty array, **not** `NAUGHT`.
 - `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
 - `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.
@@ -942,13 +874,6 @@ VICTIM 2 ON miscreants IS APPOINTED "Nanki-Poo"
 
 Replaces the element at position `<index>` with `<value>`. If the array was declared `CONSERVATIVE`, attempting to set an element is a runtime error.
 
-### Array Truthiness
-
-| State      | Truthiness |
-|------------|------------|
-| Non-empty  | `VERITY`   |
-| Empty      | `NAY`      |
-
 ### Display
 
 `BEHOLD` renders an array as a comma-separated, bracket-enclosed list of its elements' string representations:
@@ -956,10 +881,6 @@ Replaces the element at position `<index>` with `<value>`. If the array was decl
 ```topsy
 BEHOLD miscreants   ASIDE: prints ["Pooh-Bah", "Ko-Ko", "Pish-Tush"]
 ```
-
-### Note on Element-Type Enforcement
-
-Per §3.4, the declared element type is advisory. `VICTIM n ON arr IS APPOINTED 42` is valid even if `arr` was declared `A LITTLE LIST OF YARN` — no runtime error will be raised. This matches the general dynamic-typing philosophy of the language.
 
 ### Strings as Character Sequences
 
@@ -1040,15 +961,15 @@ PRAY WELCOME Numbers AS A PEER
   ARTICLE Start (PEER): The starting number.
   ARTICLE End (PEER): The ending number.
   CONSEQUENCE (PEER): The total sum.
-  CURSES SameValues (DECREE): Thrown if Start and End are the same.
+  CURSES SameValues (YARN): Thrown if Start and End are the same.
   CHORUS:
   SUMMON SumRange WITH 1 AND 10 IF YOU PLEASE.
   ENSEMBLE: AnotherFunc
 END OF ASIDE.)
-IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AND End
+IT IS MY DUTY TO PERFORM SumRange UNDER THE TERMS OF Start AS A PEER AND End AS A PEER TO FIND PEER
   PRAY WELCOME Total AS A PEER BEING 0
   ASIDE: Code logic...
-  A HIDEOUS CURSE ON SameValues
+  A HIDEOUS CURSE ON "Start and End must differ."
   AND SO I FIND Total
 MY DUTY IS DISCHARGED.
 ```
@@ -1079,8 +1000,7 @@ PRAY WELCOME OldSum AS A PEER
 | `CONSERVATIVE`                                   | Constant modifier           | *Iolanthe*, Act II — "every boy and every gal ... is either a little Liberal or else a little Conservative"; a value fixed by decree, immovable by any subsequent appointment |
 | `LIBERAL`                                        | Explicit mutable modifier   | *Iolanthe*, Act II — same verse; the mutable counterpart to `CONSERVATIVE`; optional, as mutability is the default |
 | `IS APPOINTED`                                   | Assignment                  | *The Mikado*, Act I — Ko-Ko raised to Lord High Executioner by official proclamation |
-| `IS HENCEFORTH A`                                | In-place cast               | *Iolanthe* — the Fairy Queen's transforming declaration                           |
-| `AS IT WERE`                                     | Expression cast             | G&S hedging construction — invoking a convenient fiction about what something is  |
+| `AS IT WERE`                                     | Expression cast             | G&S hedging construction — invoking a convenient fiction about what something is |
 | `BEHOLD`                                         | Print output                | *The Mikado*, Act I — "Behold the Lord High Executioner!" — public announcement   |
 | `WITHOUT CEREMONY`                               | Suppress newline on output  | Victorian politeness turned off                                                   |
 | `PRAY TELL`                                      | Read input                  | *The Mikado*, Act I — Nanki-Poo: *"Gentlemen, I pray you tell me..."*             |
@@ -1119,15 +1039,14 @@ PRAY WELCOME OldSum AS A PEER
 | `TRANSPOSITION UP ...`                           | Left shift by 1 (unary)     | —                                                                                 |
 | `TRANSPOSITION DOWN ...`                         | Right shift by 1 (unary)    | —                                                                                 |
 | `IF YOU PLEASE.`                                 | Variable-length list closer | Verbatim *H.M.S. Pinafore* — Sir Joseph's insistence on the proper form of address; closes any open-ended argument list: `WOVEN OF`, `SUMMON`, `ALL OF`, `ANY OF` |
-| `JUST SO`                                        | Implicit result variable    | *The Mikado* — "Just so!" — the thing just established                            |
 | `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
 | `NAY`                                             | Boolean false               | Throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be" |
-| `SHOULD IT TRANSPIRE THAT`                       | If condition (two-line or inline); ternary separator | Lord Chancellor's conditional reasoning, *Iolanthe*; two-line form reads `JUST SO`, inline form takes expression directly; also serves as the condition separator in ternary expressions |
+| `SHOULD IT TRANSPIRE THAT`                       | If condition; ternary separator | Lord Chancellor's conditional reasoning, *Iolanthe*; expression is required on the same line; also serves as the condition separator in ternary expressions; condition must be `DECREE` |
 | `QUITE SO.`                                      | True branch                 | Verbatim *The Mikado* — Ko-Ko and Pooh-Bah's crisp affirmation                    |
 | `OR, IF NOT,`                                    | Else-if                     | Lord Chancellor's enumeration of alternatives                                     |
 | `OTHERWISE,`                                     | Else branch                 | Pooh-Bah switching between logical branches and capacities                        |
 | `SO MUCH FOR THAT.`                              | End if                      | Ko-Ko's dismissive summary once a matter is disposed of                           |
-| `IN WHICH CAPACITY?`                             | Switch (two-line or inline) | Verbatim Pooh-Bah register, *The Mikado* — "In which of my capacities?"; two-line form switches on `JUST SO`, inline form takes expression directly |
+| `IN WHICH CAPACITY?`                             | Switch                      | Verbatim Pooh-Bah register, *The Mikado* — "In which of my capacities?"; expression is required on the same line; case literal types must match the switch expression type |
 | `WHEN ACTING AS`                                 | Case label                  | Pooh-Bah switching between his official capacities                                |
 | `THAT WILL DO.`                                  | Break (loop or switch)      | Universal break — used dismissively throughout the canon; valid in both loop and switch contexts |
 | `FAILING ALL OF THE ABOVE,`                      | Default case                | Lord Chancellor's catch-all provision                                             |
@@ -1142,19 +1061,20 @@ PRAY WELCOME OldSum AS A PEER
 | `YEOMAN <condition>`                             | Guard clause start          | *The Yeoman of the Guard* — a yeoman stands watch and enforces; opens the guard block |
 | `UNDER ORDERS.`                                  | End guard clause            | The yeoman's orders are discharged; closes the guard block                        |
 | `IT IS MY DUTY TO PERFORM`                       | Function definition         | G&S obligation formula — used throughout the canon                                |
-| `UNDER THE TERMS OF`                             | Function parameters         | *Pirates of Penzance* — Frederic's indenture specifies the *terms*                |
+| `UNDER THE TERMS OF`                             | Function parameters         | *Pirates of Penzance* — Frederic's indenture specifies the *terms*; each parameter requires `AS A <type>` |
 | `UNDER NO OBLIGATION`                            | No parameters               | A function bound by no terms                                                      |
-| `AND SO I FIND`                                  | Return with value           | *Trial by Jury* — the judicial verdict formula                                    |
+| `TO FIND`                                        | Return type declaration     | Declares the function's return type; omitting it means void (no return value); `TO FIND NAUGHT` is not valid |
+| `AND SO I FIND`                                  | Return with value           | *Trial by Jury* — the judicial verdict formula; expression must match the `TO FIND` type; type error in a void function |
 | `MY DUTY IS DISCHARGED.`                         | End function                | The obligation is fulfilled                                                       |
-| `MY DUTY IS PREMATURELY DISCHARGED.`             | Return (no value)           | Early exit — duty cut short                                                       |
+| `MY DUTY IS PREMATURELY DISCHARGED.`             | Return (no value)           | Early exit — duty cut short; valid only in void functions; type error in a function declared with `TO FIND` |
 | `SUMMON ... WITH ... IF YOU PLEASE.`             | Function call               | *The Mikado*, Act I — Ko-Ko: *"I summon my guard"*; `IF YOU PLEASE` from *Pinafore* |
 | `SUMMON ... WITH NOTHING IF YOU PLEASE.`         | Call with no args           | —                                                                                 |
-| `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given value; terminates programme if uncaught |
+| `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given `YARN` value; a non-`YARN` value is a type error; terminates programme if uncaught |
 | `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
-| `MODIFIED RAPTURE[, <name>]`                     | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; cursed value available as `JUST SO`; optional `, <name>` auto-declares a binding in the exception block scope |
+| `MODIFIED RAPTURE, <name>`                       | Exception handler           | *Pirates of Penzance* — Mabel: "Oh joy! Oh rapture! — *modified* rapture!"; the named binding is **mandatory**; auto-declares `<name>` as a `YARN` variable scoped to the exception block |
 | `THAT CONCLUDES THE MATTER.`                     | End try/catch               | —                                                                                 |
-| `THE LAW IS <condition> THAT <error-message>`    | Assert statement            | The Mikado and Lord Chancellor as ultimate arbiters of law; if the condition is falsy, throws with the error message as payload |
+| `THE LAW IS <condition> THAT <error-message>`    | Assert statement            | The Mikado and Lord Chancellor as ultimate arbiters of law; `<condition>` must be `DECREE`, `<error-message>` must be `YARN`; if `NAY`, throws with the error message as payload |
 | `THAT`                                           | Assert separator            | Structural separator between condition and error message within `THE LAW IS`; not in the keyword completion list |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
 | `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
@@ -1182,8 +1102,8 @@ PRAY WELCOME OldSum AS A PEER
 | `YARN`                     | string                       | Any sequence of characters in `""`; also supports `VICTIM` and `RECKONING OF` (see §16) |
 | `STITCH`                   | character                    | Any single character; literal form `'A'` (see §3.3) |
 | `DECREE`                   | boolean                      | `VERITY` or `NAY` |
-| `NAUGHT`                   | —                            | `NAUGHT` |
-| `A LITTLE LIST OF <T>`     | ordered list                 | Ordered 1-based collection; element type advisory (see §3.4) |
+| `NAUGHT`                   | null value only              | `NAUGHT` is a value, not a type. It may only be assigned to `YARN` or array variables. `AS A NAUGHT` is a type error. |
+| `A LITTLE LIST OF <T>`     | ordered list                 | Ordered 1-based collection; element type is enforced — assigning a wrong-type element is a type error |
 
 ---
 
@@ -1271,19 +1191,17 @@ ASIDE: Determine whether a number is prime.
 
 PRINCIPALS
   PRAY WELCOME candidate AS A PEER
-  PRAY WELCOME i         AS A PEER
+  PRAY WELCOME input     AS A YARN
 THE CURTAIN RISES.
 
-IT IS MY DUTY TO PERFORM is_prime UNDER THE TERMS OF n
-  ALIKE n AND SMALLER OF n AND 1
-  SHOULD IT TRANSPIRE THAT
+IT IS MY DUTY TO PERFORM is_prime UNDER THE TERMS OF n AS A PEER TO FIND DECREE
+  SHOULD IT TRANSPIRE THAT ALIKE n AND SMALLER OF n AND 1
     QUITE SO.
       AND SO I FIND NAY
   SO MUCH FOR THAT.
   PRAY WELCOME i AS A PEER BEING 2
-  BY A LEGAL FICTION KNOWN AS trial WHILST UNLIKE i AND PRODUCT OF i AND i
-    UNLIKE REMAINDER OF n AND i AND 0
-    SHOULD IT TRANSPIRE THAT
+  BY A LEGAL FICTION KNOWN AS trial WHILST LOWER DEGREE PRODUCT OF i AND i AND SUM OF n AND 1
+    SHOULD IT TRANSPIRE THAT ALIKE REMAINDER OF n AND i AND 0
       QUITE SO.
         AND SO I FIND NAY
     SO MUCH FOR THAT.
@@ -1293,11 +1211,10 @@ IT IS MY DUTY TO PERFORM is_prime UNDER THE TERMS OF n
 MY DUTY IS DISCHARGED.
 
 BEHOLD "Pray enter a number for examination:"
-PRAY TELL candidate
-candidate IS HENCEFORTH A PEER
+PRAY TELL input
+candidate IS APPOINTED AS IT WERE input AS A PEER
 
-SUMMON is_prime WITH candidate IF YOU PLEASE.
-SHOULD IT TRANSPIRE THAT
+SHOULD IT TRANSPIRE THAT SUMMON is_prime WITH candidate IF YOU PLEASE.
   QUITE SO.
     BEHOLD WOVEN OF candidate AND " is prime — a most singular distinction." IF YOU PLEASE.
   OTHERWISE,
@@ -1309,4 +1226,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.4.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — Version 0.5.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*

@@ -68,7 +68,6 @@ public static class ReplHighlighter
             ("A HIDEOUS CURSE ON",                      "deepskyblue1"),
             ("PRAY WELCOME",                            "mediumpurple1"),
             ("IS APPOINTED",                            "mediumpurple1"),
-            ("IS HENCEFORTH A",                         "mediumpurple1"),
             ("AS IT WERE",                              "mediumpurple1"),
             ("AS A",                                    "mediumpurple1"),
             ("BEING",                                   "mediumpurple1"),
@@ -122,6 +121,7 @@ public static class ReplHighlighter
             ("MY DUTY IS DISCHARGED.",                  "lightgreen_1"),
             ("UNDER THE TERMS OF",                      "lightgreen_1"),
             ("UNDER NO OBLIGATION",                     "lightgreen_1"),
+            ("TO FIND",                                 "lightgreen_1"),
             ("AND SO I FIND",                           "lightgreen_1"),
             ("SUMMON",                                  "lightgreen_1"),
             ("WITH",                                    "lightgreen_1"),
@@ -129,7 +129,6 @@ public static class ReplHighlighter
             ("VERITY",                                  "gold1"),
             ("NAY",                                     "gold1"),
             ("NAUGHT",                                  "grey"),
-            ("JUST SO",                                 "bold cyan"),
             ("THE PROPS",                               "bold cyan"),
         ];
 

@@ -1,5 +1,5 @@
-(* Topsy Turvy Formal Grammar v0.3.0 *)
-(* Based on SPEC.md v0.4.0 *)
+(* Topsy Turvy Formal Grammar v0.4.0 *)
+(* Based on SPEC.md v0.5.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -28,7 +28,6 @@ Statement       = PrincipalBlock
                 | Declaration
                 | ArrayAssignment
                 | Assignment
-                | TypeCast
                 | PrintStatement
                 | InputStatement
                 | Conditional
@@ -63,9 +62,9 @@ ScalarType      = BaseIntegerType
                 | "STANDING", BaseIntegerType
                 | "FATHOM" | "FOOT"
                 | "YARN" | "STITCH"
-                | "DECREE" | "NAUGHT" ;
+                | "DECREE" ;
 (* "STANDING" may only precede a BaseIntegerType.  Combining it with FATHOM, FOOT, YARN,
-   STITCH, DECREE, or NAUGHT is a parse error. *)
+   STITCH or DECREE is a parse error. *)
 
 ArrayType       = "LITTLE LIST OF", ScalarType ;
 (* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
@@ -75,8 +74,6 @@ Type            = ScalarType | ArrayType ;
 Assignment      = Identifier, "IS APPOINTED", Expression ;
 
 ArrayAssignment = "VICTIM", Expression, "ON", Identifier, "IS APPOINTED", Expression ;
-
-TypeCast        = Identifier, "IS HENCEFORTH A", ScalarType ;
 
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
@@ -142,14 +139,14 @@ VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
 (*----------------------------------------------------------------------------*)
 (* Control Flow                                                               *)
 (*----------------------------------------------------------------------------*)
-Conditional     = "SHOULD IT TRANSPIRE THAT", [ Expression ], 
+Conditional     = "SHOULD IT TRANSPIRE THAT", Expression,
                   IfBody, "SO MUCH FOR THAT." ;
 
-IfBody          = "QUITE SO.", StatementList, 
-                  { "OR, IF NOT,", [ Expression ], StatementList }, 
+IfBody          = "QUITE SO.", StatementList,
+                  { "OR, IF NOT,", Expression, StatementList },
                   [ "OTHERWISE,", StatementList ] ;
 
-Switch          = "IN WHICH CAPACITY?", [ Expression ], 
+Switch          = "IN WHICH CAPACITY?", Expression,
                   SwitchBody, "NOTHING COULD BE MORE SATISFACTORY." ;
 
 SwitchBody      = { CaseLabel, [ StatementList ], [ "THAT WILL DO." ] }, 
@@ -176,12 +173,17 @@ GuardClause     = "YEOMAN", Expression, "OTHERWISE,", StatementList, "UNDER ORDE
 (*----------------------------------------------------------------------------*)
 (* Functions & Exceptions                                                     *)
 (*----------------------------------------------------------------------------*)
-FunctionDefinition = "IT IS MY DUTY TO PERFORM", Identifier, 
-                    ( "UNDER THE TERMS OF", ParameterList | "UNDER NO OBLIGATION" ), 
-                    FunctionBody, 
+FunctionDefinition = "IT IS MY DUTY TO PERFORM", Identifier,
+                    ( "UNDER THE TERMS OF", ParameterList | "UNDER NO OBLIGATION" ),
+                    [ "TO FIND", ScalarType ],
+                    FunctionBody,
                     ( "MY DUTY IS DISCHARGED." | "MY DUTY IS PREMATURELY DISCHARGED." ) ;
+(* TO FIND ScalarType declares the return type.  Omitting it means the function is void —
+   no AND SO I FIND expression is expected. *)
 
-ParameterList      = Identifier, { "AND", Identifier } ;
+ParameterList      = TypedParameter, { "AND", TypedParameter } ;
+
+TypedParameter     = Identifier, "AS A", ScalarType ;
 
 FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
@@ -194,7 +196,7 @@ AssertStatement    = "THE LAW IS", Expression, "THAT", Expression ;
 
 TryCatchBlock      = "WITH THE GREATEST RESPECT,", Expression,
                     "WITH GRATITUDE", StatementList,
-                    "MODIFIED RAPTURE", [ ",", Identifier ], StatementList,
+                    "MODIFIED RAPTURE,", Identifier, StatementList,
                     "THAT CONCLUDES THE MATTER." ;
 
 (*----------------------------------------------------------------------------*)
@@ -238,16 +240,14 @@ StatutoryLine      = "STATUTORY:", { AnyChar } ;
 (*----------------------------------------------------------------------------*)
 (* Runtime-Injected Built-In Variables                                        *)
 (*----------------------------------------------------------------------------*)
-(* The following identifiers are not grammar productions — they are injected  *)
-(* by the interpreter before execution begins and are always present.         *)
+(* The following identifier is not a grammar production — it is injected by  *)
+(* the interpreter before execution begins and is always present.             *)
 (*                                                                             *)
-(* JUST SO    : implicit variable; receives any expression result not         *)
-(*              explicitly assigned.                                           *)
 (* THE PROPS  : CONSERVATIVE LITTLE LIST OF YARN; contains the arguments      *)
 (*              passed to the programme at invocation.  Empty array when none  *)
 (*              are supplied.  1-based indexing; elements are always YARN.     *)
 (*              Inaccessible inside functions per Invariant I7.                *)
 (*                                                                             *)
-(* Neither identifier may be re-declared with PRAY WELCOME; doing so is a    *)
-(* runtime error.                                                              *)
+(* THE PROPS may not be re-declared with PRAY WELCOME; doing so is a type    *)
+(* error.                                                                      *)            *)
 (*----------------------------------------------------------------------------*)

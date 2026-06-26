@@ -107,6 +107,9 @@ UNDER THE TERMS OF
 UNDER NO OBLIGATION
 //^ keyword.other.function.topsy
 
+TO FIND
+//^ keyword.other.function.topsy
+
 MY DUTY IS DISCHARGED.
 //^ keyword.other.function.topsy
 
@@ -151,10 +154,7 @@ AS A LITTLE LIST OF YARN
 //^ keyword.other.declaration.topsy
 //     ^ storage.type.topsy
 
-// ── Assignment and implicit variables ────────────────────────────────────────
-
-JUST SO IS APPOINTED 1
-//^ variable.language.topsy
+// ── Assignment and built-in variables ────────────────────────────────────────
 
 VICTIM 1 ON THE PROPS
 //              ^ variable.language.topsy

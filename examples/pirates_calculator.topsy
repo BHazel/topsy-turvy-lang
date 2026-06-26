@@ -19,6 +19,8 @@ END OF ASIDE.)
 PRINCIPALS
   PRAY WELCOME first_plunder   AS A FATHOM  ASIDE: the first number
   PRAY WELCOME second_plunder  AS A FATHOM  ASIDE: the second number
+  PRAY WELCOME first_str       AS A YARN    ASIDE: input buffer for first number
+  PRAY WELCOME second_str      AS A YARN    ASIDE: input buffer for second number
   PRAY WELCOME operation       AS A YARN    ASIDE: the chosen operation
   PRAY WELCOME result          AS A FATHOM  ASIDE: the computed result
   PRAY WELCOME another         AS A YARN    ASIDE: whether to continue
@@ -28,26 +30,19 @@ ASIDE: -----------------------------------------------------------------------
 ASIDE: Functions — the duties of the crew, each assigned his particular role
 ASIDE: -----------------------------------------------------------------------
 
-IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AND rhs
+IT IS MY DUTY TO PERFORM add UNDER THE TERMS OF lhs AS A FATHOM AND rhs AS A FATHOM TO FIND FATHOM
   AND SO I FIND SUM OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM subtract UNDER THE TERMS OF lhs AND rhs
+IT IS MY DUTY TO PERFORM subtract UNDER THE TERMS OF lhs AS A FATHOM AND rhs AS A FATHOM TO FIND FATHOM
   AND SO I FIND DIFFERENCE OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM multiply UNDER THE TERMS OF lhs AND rhs
+IT IS MY DUTY TO PERFORM multiply UNDER THE TERMS OF lhs AS A FATHOM AND rhs AS A FATHOM TO FIND FATHOM
   AND SO I FIND PRODUCT OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
-IT IS MY DUTY TO PERFORM divide UNDER THE TERMS OF lhs AND rhs
-  ALIKE rhs AND 0.0
-  SHOULD IT TRANSPIRE THAT
-    QUITE SO.
-      BEHOLD "  ERROR: Division by zero is not permitted, even by pirates."
-      BEHOLD "         The Sergeant of Police has been notified."
-      MY DUTY IS PREMATURELY DISCHARGED.
-  SO MUCH FOR THAT.
+IT IS MY DUTY TO PERFORM divide UNDER THE TERMS OF lhs AS A FATHOM AND rhs AS A FATHOM TO FIND FATHOM
   AND SO I FIND QUOTIENT OF lhs AND rhs
 MY DUTY IS DISCHARGED.
 
@@ -64,12 +59,12 @@ BEHOLD ""
 BY A LEGAL FICTION KNOWN AS main_loop
 
   BEHOLD "Please enter the first number:"
-  PRAY TELL first_plunder
-  first_plunder IS HENCEFORTH A FATHOM
+  PRAY TELL first_str
+  first_plunder IS APPOINTED AS IT WERE first_str AS A FATHOM
 
   BEHOLD "Please enter the second number:"
-  PRAY TELL second_plunder
-  second_plunder IS HENCEFORTH A FATHOM
+  PRAY TELL second_str
+  second_plunder IS APPOINTED AS IT WERE second_str AS A FATHOM
 
   BEHOLD "Please select your operation:"
   BEHOLD "  + (addition, the most honourable)"
@@ -93,13 +88,13 @@ BY A LEGAL FICTION KNOWN AS main_loop
       BEHOLD WOVEN OF "  " AND first_plunder AND " * " AND second_plunder AND " = " AND result IF YOU PLEASE.
       THAT WILL DO.
     WHEN ACTING AS "/"
-      SUMMON divide WITH first_plunder AND second_plunder IF YOU PLEASE.
-      result IS APPOINTED JUST SO
-      ALIKE result AND NAUGHT
-      SHOULD IT TRANSPIRE THAT
+      SHOULD IT TRANSPIRE THAT ALIKE second_plunder AND 0.0
         QUITE SO.
-        OTHERWISE,
-          BEHOLD WOVEN OF "  " AND first_plunder AND " / " AND second_plunder AND " = " AND result IF YOU PLEASE.
+          BEHOLD "  ERROR: Division by zero is not permitted, even by pirates."
+          BEHOLD "         The Sergeant of Police has been notified."
+      OTHERWISE,
+        result IS APPOINTED SUMMON divide WITH first_plunder AND second_plunder IF YOU PLEASE.
+        BEHOLD WOVEN OF "  " AND first_plunder AND " / " AND second_plunder AND " = " AND result IF YOU PLEASE.
       SO MUCH FOR THAT.
       THAT WILL DO.
     FAILING ALL OF THE ABOVE,
@@ -111,8 +106,7 @@ BY A LEGAL FICTION KNOWN AS main_loop
   BEHOLD "A policeman's lot, as you know, is not a happy one — but the engine stands ready."
   PRAY TELL another
 
-  ALIKE another AND "no"
-  SHOULD IT TRANSPIRE THAT
+  SHOULD IT TRANSPIRE THAT ALIKE another AND "no"
     QUITE SO.
       THAT WILL DO.
   SO MUCH FOR THAT.

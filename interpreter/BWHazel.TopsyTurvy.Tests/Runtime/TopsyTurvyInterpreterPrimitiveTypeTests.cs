@@ -203,50 +203,6 @@ public class TopsyTurvyInterpreterPrimitiveTypeTests : TopsyTurvyInterpreterTest
     }
 
     /// <summary>
-    /// Tests that an in-place cast to <c>CHANCELLOR</c> changes the variable type.
-    /// </summary>
-    [Fact]
-    public void Execute_InPlaceCastToChancellor_ChangesType()
-    {
-        string source = """
-            HARK! "Cast"
-            PRAY WELCOME x AS A PEER BEING 42
-            x IS HENCEFORTH A CHANCELLOR
-            BEHOLD x
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        interpreter.Execute(program);
-
-        output.ShouldHaveSingleItem().ShouldBe("42");
-    }
-
-    /// <summary>
-    /// Tests that an in-place cast to <c>STITCH</c> from a <c>PEER</c> uses the code-point as the character.
-    /// </summary>
-    [Fact]
-    public void Execute_InPlaceCastPeerToStitch_UsesCodePoint()
-    {
-        string source = """
-            HARK! "Cast to char"
-            PRAY WELCOME x AS A PEER BEING 65
-            x IS HENCEFORTH A STITCH
-            BEHOLD x
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        interpreter.Execute(program);
-
-        output.ShouldHaveSingleItem().ShouldBe("A");
-    }
-
-    /// <summary>
     /// Tests that <c>VICTIM n ON yarn</c> returns the 1-based character at position <c>n</c> as a <c>STITCH</c>.
     /// </summary>
     [Fact]

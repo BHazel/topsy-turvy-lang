@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using BWHazel.TopsyTurvy.Ast;
 
@@ -19,14 +19,14 @@ public static class HoverMarkdownBuilder
     {
         string signature = symbolInfo.Kind switch
         {
-            SymbolKind.Variable when symbolInfo.Name.Equals(Keywords.SpecialNames.JustSo, StringComparison.OrdinalIgnoreCase) =>
-                "**implicit variable** `JUST SO`: receives the result of the last expression",
             SymbolKind.Variable when symbolInfo.IsConstant =>
                 $"**(constant)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
             SymbolKind.Variable =>
                 $"**(variable)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
             SymbolKind.Function =>
-                $"**(function)** `{symbolInfo.Name}`({string.Join(", ", symbolInfo.Parameters ?? Array.Empty<string>())})",
+                BuildFunctionSignature(symbolInfo),
+            SymbolKind.Parameter when symbolInfo.TypeDisplayName is not null =>
+                $"**(parameter)** `{symbolInfo.Name}` : {symbolInfo.TypeDisplayName}",
             SymbolKind.Parameter =>
                 $"**(parameter)** `{symbolInfo.Name}`",
             _ =>
@@ -117,4 +117,31 @@ public static class HoverMarkdownBuilder
 
         return builder.ToString().TrimEnd();
     }
+
+    /// <summary>
+    /// Builds the signature string for a function symbol, including typed parameters and return type.
+    /// </summary>
+    /// <param name="symbolInfo">The function symbol.</param>
+    /// <returns>A Markdown signature string.</returns>
+    private static string BuildFunctionSignature(SymbolInfo symbolInfo)
+    {
+        string parameterList = symbolInfo.TypedParameters is { Count: > 0 }
+            ? string.Join(", ", symbolInfo.TypedParameters.Select(static parameter =>
+                $"{parameter.Name} AS A {LiteralTypeToKeyword(parameter.Type)}"))
+            : string.Empty;
+
+        string returnPart = symbolInfo.DeclaredType.HasValue
+            ? $" TO FIND {LiteralTypeToKeyword(symbolInfo.DeclaredType.Value)}"
+            : string.Empty;
+
+        return $"**(function)** `{symbolInfo.Name}`({parameterList}){returnPart}";
+    }
+
+    /// <summary>
+    /// Gets the display name for a <see cref="LiteralType"/> as a keyword string.
+    /// </summary>
+    /// <param name="type">The literal type.</param>
+    /// <returns>The keyword string for the literal type.</returns>
+    private static string LiteralTypeToKeyword(LiteralType type) =>
+        SymbolTable.LiteralTypeToDisplayName(type);
 }

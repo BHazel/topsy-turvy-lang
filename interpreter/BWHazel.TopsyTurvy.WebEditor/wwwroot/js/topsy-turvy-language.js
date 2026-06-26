@@ -21,7 +21,6 @@ window.topsyTurvy = {
             ["CONSERVATIVE",                        "constant declaration modifier"],
             ["LIBERAL",                             "mutable declaration modifier"],
             ["IS APPOINTED",                        "assignment"],
-            ["IS HENCEFORTH A",                     "in-place cast"],
             ["AS IT WERE",                          "expression cast"],
             ["BEHOLD",                              "print"],
             ["WITHOUT CEREMONY",                    "print (no newline)"],
@@ -49,6 +48,7 @@ window.topsyTurvy = {
             ["IT IS MY DUTY TO PERFORM",            "function definition"],
             ["UNDER THE TERMS OF",                  "function parameters"],
             ["UNDER NO OBLIGATION",                 "no-parameter function"],
+            ["TO FIND",                             "function return type"],
             ["AND SO I FIND",                       "return with value"],
             ["MY DUTY IS DISCHARGED.",              "end function"],
             ["MY DUTY IS PREMATURELY DISCHARGED.",  "return (no value)"],
@@ -90,7 +90,6 @@ window.topsyTurvy = {
             ["VERITY",                              "boolean true"],
             ["NAY",                                 "boolean false"],
             ["NAUGHT",                              "null"],
-            ["JUST SO",                             "implicit variable"],
             ["THE PROPS",                           "built-in programme arguments"],
             ["PEER",                                "32-bit signed integer type"],
             ["CHANCELLOR",                          "64-bit signed integer type"],
@@ -260,6 +259,9 @@ window.topsyTurvy = {
                     [/\bUNDER\s+THE\s+TERMS\s+OF\b/, 'keyword'],
                     [/\bUNDER\s+NO\s+OBLIGATION\b/, 'keyword'],
 
+                    // TO FIND — function return type declaration
+                    [/\bTO\s+FIND\b/, 'keyword'],
+
                     // AND SO I FIND must precede standalone AND
                     [/\bAND\s+SO\s+I\s+FIND\b/, 'keyword'],
 
@@ -289,8 +291,6 @@ window.topsyTurvy = {
                     [/\bAS\s+IT\s+WERE\b/, 'keyword'],
                     [/\bAS\s+A\b/, 'keyword'],
 
-                    // IS HENCEFORTH A must precede IS APPOINTED
-                    [/\bIS\s+HENCEFORTH\s+A\b/, 'keyword'],
                     [/\bIS\s+APPOINTED\b/, 'keyword'],
 
                     // PRAY group — order doesn't matter since second words differ,

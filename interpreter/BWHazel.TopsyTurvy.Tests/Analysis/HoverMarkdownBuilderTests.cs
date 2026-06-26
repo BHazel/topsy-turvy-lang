@@ -1,4 +1,5 @@
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
@@ -26,56 +27,25 @@ public class HoverMarkdownBuilderTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method produces the expected Markdown for the implicit JUST SO variable.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method produces the expected Markdown for a function symbol with typed parameters.
     /// </summary>
     [Fact]
-    public void Build_WithJustSo_ReturnsImplicitVariableMarkdown()
-    {
-        SymbolInfo info = new()
-        {
-            Name = "JUST SO",
-            Kind = SymbolKind.Variable,
-            TypeDisplayName = "implicit variable"
-        };
-
-        string result = HoverMarkdownBuilder.Build(info);
-
-        result.ShouldBe("**implicit variable** `JUST SO`: receives the result of the last expression");
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method produces the expected Markdown for the implicit JUST SO variable when in lower-case.
-    /// </summary>
-    [Fact]
-    public void Build_WithJustSoLowercase_ReturnsImplicitVariableMarkdown()
-    {
-        SymbolInfo info = new()
-        {
-            Name = "just so",
-            Kind = SymbolKind.Variable
-        };
-
-        string result = HoverMarkdownBuilder.Build(info);
-
-        result.ShouldContain("implicit variable");
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method produces the expected Markdown for a function symbol with parameters.
-    /// </summary>
-    [Fact]
-    public void Build_WithFunctionWithParameters_ReturnsSignatureWithParameters()
+    public void Build_WithFunctionWithParameters_ReturnsSignatureWithTypedParameters()
     {
         SymbolInfo info = new()
         {
             Name = "greet",
             Kind = SymbolKind.Function,
-            Parameters = ["salutation", "recipient"]
+            TypedParameters =
+            [
+                new TypedParameter("salutation", LiteralType.String, new(new(0, 0), new(0, 0))),
+                new TypedParameter("recipient", LiteralType.String, new(new(0, 0), new(0, 0)))
+            ]
         };
 
         string result = HoverMarkdownBuilder.Build(info);
 
-        result.ShouldBe("**(function)** `greet`(salutation, recipient)");
+        result.ShouldBe("**(function)** `greet`(salutation AS A YARN, recipient AS A YARN)");
     }
 
     /// <summary>
@@ -88,7 +58,7 @@ public class HoverMarkdownBuilderTests
         {
             Name = "greet",
             Kind = SymbolKind.Function,
-            Parameters = []
+            TypedParameters = []
         };
 
         string result = HoverMarkdownBuilder.Build(info);
@@ -106,7 +76,7 @@ public class HoverMarkdownBuilderTests
         {
             Name = "greet",
             Kind = SymbolKind.Function,
-            Parameters = null
+            TypedParameters = null
         };
 
         string result = HoverMarkdownBuilder.Build(info);

@@ -29,6 +29,11 @@ public class ProgramExecutionResult
     public IReadOnlyList<Diagnostic>? RuntimeDiagnostics { get; set; }
 
     /// <summary>
+    /// Gets or sets a list of type-check diagnostics when execution failed due to type errors.
+    /// </summary>
+    public IReadOnlyList<Diagnostic>? TypeDiagnostics { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ProgramExecutionResult"/> class.
     /// </summary>
     private ProgramExecutionResult()
@@ -79,5 +84,17 @@ public class ProgramExecutionResult
         {
             IsSuccess = false,
             RuntimeDiagnostics = new List<Diagnostic>(diagnostics).AsReadOnly()
+        };
+
+    /// <summary>
+    /// Creates a failed execution result due to type errors.
+    /// </summary>
+    /// <param name="diagnostics">The type-check diagnostics.</param>
+    /// <returns>A <see cref="ProgramExecutionResult"/> representing a failed execution due to type errors.</returns>
+    public static ProgramExecutionResult TypeErrors(IReadOnlyList<Diagnostic> diagnostics) =>
+        new()
+        {
+            IsSuccess = false,
+            TypeDiagnostics = diagnostics
         };
 }

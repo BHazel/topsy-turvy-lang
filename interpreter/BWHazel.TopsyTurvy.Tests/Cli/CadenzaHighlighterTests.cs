@@ -262,15 +262,4 @@ public class CadenzaHighlighterTests
         result.ShouldContain("[lightgreen_1]behold[/]");
     }
 
-    /// <summary>
-    /// Tests that the <see cref="ReplHighlighter.Highlight"/> method wraps <c>JUST SO</c> in <c>bold cyan</c> markup
-    /// (special variable).
-    /// </summary>
-    [Fact]
-    public void Highlight_SpecialVariableJustSo_AppliesBoldCyanMarkup()
-    {
-        string result = ReplHighlighter.Highlight("JUST SO");
-        
-        result.ShouldBe("[bold cyan]JUST SO[/]");
-    }
 }

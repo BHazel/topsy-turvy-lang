@@ -13,27 +13,26 @@ HARK! "A Most Ingenious Paradox"
 END OF ASIDE.)
 
 PRINCIPALS
-  PRAY WELCOME n     AS A PEER  ASIDE: which term to compute up to
-  PRAY WELCOME prev  AS A PEER  BEING 0
-  PRAY WELCOME b     AS A PEER  BEING 1
-  PRAY WELCOME temp  AS A PEER  BEING 0
-  PRAY WELCOME idx   AS A PEER  BEING 0
+  PRAY WELCOME n       AS A PEER  ASIDE: which term to compute up to
+  PRAY WELCOME n_str   AS A YARN  ASIDE: input buffer for n
+  PRAY WELCOME prev    AS A PEER  BEING 0
+  PRAY WELCOME b       AS A PEER  BEING 1
+  PRAY WELCOME temp    AS A PEER  BEING 0
+  PRAY WELCOME idx     AS A PEER  BEING 0
 THE CURTAIN RISES.
 
 ASIDE: -----------------------------------------------------------------------
 ASIDE: DUTY THE FIRST: a recursive function to compute the nth Fibonacci term
 ASIDE: -----------------------------------------------------------------------
 
-IT IS MY DUTY TO PERFORM fibonacci UNDER THE TERMS OF n
+IT IS MY DUTY TO PERFORM fibonacci UNDER THE TERMS OF n AS A PEER TO FIND PEER
   ASIDE: base cases — as Frederic's piratical indentures clearly specify
-  ALIKE n AND 0
-  SHOULD IT TRANSPIRE THAT
+  SHOULD IT TRANSPIRE THAT ALIKE n AND 0
     QUITE SO.
       AND SO I FIND 0
   SO MUCH FOR THAT.
 
-  ALIKE n AND 1
-  SHOULD IT TRANSPIRE THAT
+  SHOULD IT TRANSPIRE THAT ALIKE n AND 1
     QUITE SO.
       AND SO I FIND 1
   SO MUCH FOR THAT.
@@ -51,8 +50,8 @@ ASIDE: -----------------------------------------------------------------------
 
 BEHOLD "A MOST INGENIOUS PARADOX"
 BEHOLD "Please state the number of terms you require:"
-PRAY TELL n
-n IS HENCEFORTH A PEER
+PRAY TELL n_str
+n IS APPOINTED AS IT WERE n_str AS A PEER
 
 BEHOLD WOVEN OF "The first " AND n AND " terms of the Fibonacci sequence:" IF YOU PLEASE.
 BEHOLD "--------------------------------------------"

@@ -414,10 +414,9 @@ public class TopsyTurvyParser
                     break;
                 case FunctionDefinitionNode functionDefinition:
                     CheckDeclarationName(functionDefinition.Name, "function", functionDefinition.Span, diagnostics);
-                    foreach ((string parameter, SourceSpan paramSpan) in
-                        functionDefinition.Parameters.Zip(functionDefinition.ParameterSpans))
+                    foreach (TypedParameter parameter in functionDefinition.Parameters)
                     {
-                        CheckDeclarationName(parameter, "parameter", paramSpan, diagnostics);
+                        CheckDeclarationName(parameter.Name, "parameter", parameter.Span, diagnostics);
                     }
 
                     break;

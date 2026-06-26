@@ -28,8 +28,8 @@ public class TopsyTurvyInterpreterExceptionTests : TopsyTurvyInterpreterTestBase
             WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
                 result IS APPOINTED "success"
-              MODIFIED RAPTURE
-                result IS APPOINTED JUST SO
+              MODIFIED RAPTURE, Err
+                result IS APPOINTED Err
             THAT CONCLUDES THE MATTER.
             BEHOLD result
             FINALE.
@@ -60,8 +60,8 @@ public class TopsyTurvyInterpreterExceptionTests : TopsyTurvyInterpreterTestBase
             MY DUTY IS DISCHARGED.
             WITH THE GREATEST RESPECT, SUMMON safe WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
-                result IS APPOINTED JUST SO
-              MODIFIED RAPTURE
+                result IS APPOINTED "ok"
+              MODIFIED RAPTURE, Dummy
                 result IS APPOINTED "error"
             THAT CONCLUDES THE MATTER.
             BEHOLD result
@@ -189,39 +189,6 @@ public class TopsyTurvyInterpreterExceptionTests : TopsyTurvyInterpreterTestBase
         DiagnosticCollection diagnostics = interpreter.Execute(program);
 
         diagnostics.HasErrors.ShouldBeTrue();
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method still sets JUST SO when no caught binding is specified.
-    /// </summary>
-    [Fact]
-    public void Execute_TryCatch_WithoutCaughtBinding_JustSoStillSet()
-    {
-        string source = """
-            HARK! "Catch No Binding"
-            PRINCIPALS
-              PRAY WELCOME result AS A YARN BEING "none"
-            THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM boom UNDER NO OBLIGATION
-              A HIDEOUS CURSE ON "calamity"
-            MY DUTY IS DISCHARGED.
-            WITH THE GREATEST RESPECT, SUMMON boom WITH NOTHING IF YOU PLEASE.
-              WITH GRATITUDE
-                result IS APPOINTED "ok"
-              MODIFIED RAPTURE
-                result IS APPOINTED JUST SO
-            THAT CONCLUDES THE MATTER.
-            BEHOLD result
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("calamity");
     }
 
     /// <summary>

@@ -66,35 +66,6 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The second would have the target variable name <c>TotalLords</c> and a new value set by the response from a function call to <c>GetTotalLords</c>.
 /// </para>
 /// <para>
-/// ### Type Casts
-/// The in-place cast is the only type cast handled at the statement layer.
-/// The non-mutating expression cast (<c>AS IT WERE ... AS A</c>) is handled by <see cref="ExpressionParser.ExpressionCast"/>.
-/// #### In-place Casts
-/// The <c>InPlaceCast</c> parser matches on in-place type casts, returning an <see cref="InPlaceCastNode"/> with the target variable name and new type:
-/// * It first matches an identifier for the target variable name using the <see cref="Lexer"/><c>.Identifier</c> parser.
-/// * It then matches required whitespace followed by the <c>IS HENCEFORTH A</c> keyword.
-/// * It then matches more required whitespace followed by a type keyword using the <see cref="ExpressionParser"/><c>.TypeKeyword</c> parser.
-///
-/// This parser supports back-tracking on failure.
-/// </para>
-/// <para>
-/// In the following Topsy Turvy example:
-/// <code>
-/// LovesickMaidens IS HENCEFORTH A YARN
-/// </code>
-/// the statement would be matched by the <c>InPlaceCast</c> parser, returning an <see cref="InPlaceCastNode"/> with the target
-/// variable name <c>LovesickMaidens</c> and new type of <see cref="LiteralType"/><c>.String</c>.
-/// </para>
-/// <para>
-/// The non-mutating expression cast (<c>AS IT WERE ... AS A</c>) is handled at the expression layer by
-/// <see cref="ExpressionParser.ExpressionCast"/>.
-/// </para>
-/// <para>
-/// #### Type Cast Parser
-/// The <c>TypeCast</c> parser is the entry point for in-place type casts:
-/// * In-place Casts (<c>InPlaceCast</c>)
-/// </para>
-/// <para>
 /// ### User I/O
 /// 2 parsers are included for interactive user input and output.
 /// 
@@ -175,8 +146,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// #### Conditional
 /// The <c>Conditional</c> parser matches on a complete conditional statement, returning a <see cref="ConditionalNode"/>:
 /// * It first matches on the <c>SHOULD IT TRANSPIRE THAT</c> keyword.
-/// * It then tries to match on required whitespace followed by a condition expression, back-tracking if not matched.
-///     * If no condition is matched, the <c>JUST SO</c> implicit variable is used as the condition.
+/// * It then matches on required whitespace followed by a condition expression.
 /// * It then matches on the body of the conditional using the <c>ConditionalBody</c> parser.
 /// * It then matches on required whitespace followed by the closing <c>SO MUCH FOR THAT.</c> keyword.
 /// </para>
@@ -204,8 +174,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// #### Switch
 /// The <c>Switch</c> parser matches on a complete switch statement, returning a <see cref="SwitchNode"/>:
 /// * It first matches on the <c>IN WHICH CAPACITY?</c> keyword.
-/// * It then tries to match on required whitespace followed by an expression to switch on, back-tracking if not matched.
-///     * If no expression is matched, the <c>JUST SO</c> implicit variable is used.
+/// * It then matches on required whitespace followed by an expression to switch on.
 /// * It then matches on the case structure using the <c>SwitchBody</c> parser.
 /// * It then matches on required whitespace followed by the closing <c>NOTHING COULD BE MORE SATISFACTORY.</c> keyword.
 /// </para>
@@ -307,8 +276,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * It then matches on required whitespace followed by a single expression for the operation to guard.
 /// * It then matches on required whitespace followed by the <c>WITH GRATITUDE</c> keyword to open the success block.
 /// * It then matches on zero or more statements for the success block, executed if the guarded expression succeeds.
-/// * It then matches on required whitespace followed by the <c>MODIFIED RAPTURE</c> keyword to open the exception block.
-/// * It then optionally matches on required whitespace followed by an identifier for the caught value binding.
+/// * It then matches on required whitespace followed by the <c>MODIFIED RAPTURE,</c> keyword to open the exception block.
+/// * It then matches on required whitespace followed by an identifier for the caught value binding.
 /// * It then matches on zero or more statements for the exception block, executed if the guarded expression throws.
 /// * Finally it matches on required whitespace followed by the closing <c>THAT CONCLUDES THE MATTER.</c> keyword.
 ///
@@ -320,14 +289,15 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// WITH THE GREATEST RESPECT, SUMMON RaffleVerdict WITH "Solicitor" IF YOU PLEASE.
 ///     WITH GRATITUDE
 ///         BEHOLD "A Blessing!"
-///     MODIFIED RAPTURE
-///         BEHOLD WOVEN OF "A Hideous Curse: " AND JUST SO IF YOU PLEASE.
+///     MODIFIED RAPTURE, Grievance
+///         BEHOLD WOVEN OF "A Hideous Curse: " AND Grievance IF YOU PLEASE.
 /// THAT CONCLUDES THE MATTER.
 /// </code>
 /// the statement would be matched by the <c>TryCatch</c> parser, returning a <see cref="TryCatchNode"/> with:
 /// * The operation set to the function call expression <c>SUMMON RaffleVerdict WITH "Solicitor" IF YOU PLEASE.</c>
 /// * The success block containing one print statement.
-/// * The exception block containing one print statement.
+/// * The exception block containing one print statement using the <c>Grievance</c> binding.
+/// * The caught value name set to <c>Grievance</c>.
 /// </para>
 /// <para>
 /// ### Assert Statements
@@ -351,9 +321,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// ### Functions
 /// 5 parsers are included for function-related statements.
 /// #### Parameter List
-/// The <c>ParameterList</c> parser matches on the parameter clause of a function definition, returning a list of parameter names.
+/// The <c>ParameterList</c> parser matches on the parameter clause of a function definition, returning a list of <see cref="Ast.TypedParameter"/> records.
 /// It matches one of two forms:
-/// * Functions with parameters: <c>UNDER THE TERMS OF</c> followed by one or more identifiers separated by <c>AND</c>.
+/// * Functions with parameters: <c>UNDER THE TERMS OF</c> followed by one or more typed parameters in the form <c>&lt;name&gt; AS A &lt;type&gt;</c>, separated by <c>AND</c>.
 /// * Functions with no parameters: <c>UNDER NO OBLIGATION</c>.
 /// </para>
 /// <para>
@@ -379,19 +349,22 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * It first matches on the <c>IT IS MY DUTY TO PERFORM</c> keyword.
 /// * It then matches on required whitespace followed by an identifier for the function name.
 /// * It then matches on the parameter clause using the <c>ParameterList</c> parser.
+/// * It then optionally matches on the <c>TO FIND &lt;type&gt;</c> return-type clause, back-tracking if not matched.
+///     * If no <c>TO FIND</c> clause is matched, the function is void.
 /// * It then matches on zero or more body statements.
 /// * Finally it matches on required whitespace followed by the closing <c>MY DUTY IS DISCHARGED.</c> keyword.
 /// </para>
 /// <para>
 /// In the following Topsy Turvy example:
 /// <code>
-/// IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AND Liberals
+/// IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AS A PEER AND Liberals AS A PEER TO FIND PEER
 ///     AND SO I FIND SUM OF Conservatives AND Liberals
 /// MY DUTY IS DISCHARGED.
 /// </code>
 /// the statement would be matched by the <c>FunctionDefinition</c> parser, returning a <see cref="FunctionDefinitionNode"/> with:
 /// * The function name set to <c>TotalLords</c>.
-/// * The parameters set to a list containing <c>Conservatives</c> and <c>Liberals</c>.
+/// * The parameters set to a list of two <see cref="Ast.TypedParameter"/> records: <c>Conservatives AS A PEER</c> and <c>Liberals AS A PEER</c>.
+/// * The return type set to <see cref="LiteralType"/><c>.Integer</c>.
 /// * The body containing one return statement.
 /// </para>
 /// <para>
@@ -433,11 +406,10 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <see cref="ExpressionParser.ArrayLengthExpression"/>: an array length expression (<c>RECKONING OF arr</c>).
 /// * <see cref="ExpressionParser.PrefixExpression"/>: a prefix operator expression.
 /// * <see cref="ExpressionParser.LiteralExpression"/>: a literal value.
-/// * <see cref="ExpressionParser.JustSoExpression"/>: the <c>JUST SO</c> implicit variable.
 /// * <see cref="ExpressionParser.ExpressionCast"/>: a non-mutating type cast (<c>AS IT WERE ... AS A</c>).
 ///
 /// It should be noted that <see cref="ExpressionParser.IdentifierExpression"/> is intentionally excluded: a bare identifier would be ambiguous
-/// with the start of an <c>Assignment</c> or <c>InPlaceCast</c> statement, both of which also begin with an identifier.
+/// with the start of an <c>Assignment</c> statement which also begins with an identifier.
 /// </para>
 /// <para>
 /// ### Array Declarations
@@ -499,9 +471,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <see cref="ParserHelpers.ActiveSourceMap"/> is set by <see cref="TopsyTurvyParser"/> before each parse and maps
 /// pre-processed offsets back to original source line and column pairs.
 ///
-/// The <c>FunctionDefinition</c> parser additionally captures one pair of offsets per parameter — immediately before and
-/// after each <c>Lexer.Identifier</c> consume in the parameter list — to populate
-/// <see cref="BWHazel.TopsyTurvy.Ast.FunctionDefinitionNode.ParameterSpans"/>.
+/// The <c>FunctionDefinition</c> parser captures one pair of offsets per parameter, immediately before and
+/// after each <c>Lexer.Identifier</c> consume in the parameter list, to populate the
+/// <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter.Span"/> of each <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter"/>.
 /// </para>
 /// <para>
 /// ### Committed Parse Semantics
@@ -520,7 +492,6 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <c>Declaration</c>
 /// * <c>ArrayElementAssignment</c>
 /// * <c>Assignment</c>
-/// * <c>TypeCast</c>
 /// * <c>Print</c>
 /// * <c>Input</c>
 /// * <c>Conditional</c>
@@ -673,29 +644,6 @@ public static class StatementParser
          .Try();
 
     /// <summary>
-    /// Parses an in-place type cast.
-    /// </summary>
-    public static readonly TextParser<Statement> InPlaceCast =
-        (from startOffset in CurrentOffset
-         from variableName in Lexer.Identifier
-         from _ in Ws(Lexer.Keyword("IS HENCEFORTH A"))
-         from newType in Ws(ExpressionParser.TypeKeyword)
-         from endOffset in CurrentOffset
-         select (Statement)new InPlaceCastNode()
-         {
-             Target = variableName,
-             NewType = newType,
-             Span = BuildSpan(startOffset, endOffset)
-         })
-         .Try();
-
-    /// <summary>
-    /// Parses either form of type cast.
-    /// </summary>
-    public static readonly TextParser<Statement> TypeCast =
-        InPlaceCast;
-
-    /// <summary>
     /// Parses an output statement.
     /// </summary>
     public static readonly TextParser<Statement> Print =
@@ -737,8 +685,6 @@ public static class StatementParser
         from elseIfBlocks in (
             from _ in Ws(Lexer.Keyword("OR, IF NOT,"))
             from condition in Ws(ExpressionParser.Expression)
-                .Try()
-                .OptionalOrDefault(null!)
             from block in WsMany(Parse.Ref(() => Statement!))
             select new ElseIfBranch(condition, [.. block])
         )
@@ -763,8 +709,6 @@ public static class StatementParser
         from startOffset in CurrentOffset
         from _ in Lexer.Keyword("SHOULD IT TRANSPIRE THAT")
         from condition in Ws(ExpressionParser.Expression)
-            .Try()
-            .OptionalOrDefault(null!)
         from body in ConditionalBody
         from closer in Ws(Lexer.Keyword("SO MUCH FOR THAT.")
             .Named("SO MUCH FOR THAT. (end of conditional)"))
@@ -813,8 +757,6 @@ public static class StatementParser
         from startOffset in CurrentOffset
         from _ in Lexer.Keyword("IN WHICH CAPACITY?")
         from expression in Ws(ExpressionParser.Expression)
-            .Try()
-            .OptionalOrDefault(null!)
         from body in SwitchBody
         from closer in Ws(Lexer.Keyword("NOTHING COULD BE MORE SATISFACTORY.")
             .Named("NOTHING COULD BE MORE SATISFACTORY. (end of switch)"))
@@ -900,7 +842,8 @@ public static class StatementParser
         from withGratitudeKeyword in Ws(Lexer.Keyword("WITH GRATITUDE"))
         from successBlock in WsMany(Parse.Ref(() => Statement!))
         from modifiedRaptureKeyword in Ws(Lexer.Keyword("MODIFIED RAPTURE"))
-        from caughtName in Character.EqualTo(',').IgnoreThen(Ws(Lexer.Identifier)).Try().OptionalOrDefault(null!)
+        from _ in Character.EqualTo(',')
+        from caughtName in Ws(Lexer.Identifier)
         from catchBlock in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("THAT CONCLUDES THE MATTER.").Named("THAT CONCLUDES THE MATTER. (end of try/catch)"))
         from endOffset in CurrentOffset
@@ -909,9 +852,7 @@ public static class StatementParser
             Operation = throwableExpression,
             SuccessBlock = [.. successBlock],
             ExceptionBlock = [.. catchBlock],
-            CaughtValueName = string.IsNullOrEmpty(caughtName)
-                ? null
-                : caughtName,
+            CaughtValueName = caughtName,
             Span = BuildSpan(startOffset, endOffset)
         };
 
@@ -936,26 +877,32 @@ public static class StatementParser
     /// <summary>
     /// Parses the parameter list of a function definition.
     /// </summary>
-    private static readonly TextParser<List<(string Name, SourceSpan Span)>> ParameterList =
+    private static readonly TextParser<List<TypedParameter>> ParameterList =
         (from underTermsKeyword in Ws(Lexer.Keyword("UNDER THE TERMS OF"))
          from firstParameterStart in Ws(CurrentOffset)
          from firstParameter in Lexer.Identifier
          from firstParameterEnd in CurrentOffset
+         from firstAsAKeyword in Ws(Lexer.Keyword("AS A"))
+         from firstParameterType in Ws(ExpressionParser.TypeKeyword)
          from remainingParameters in (
              from andKeyword in Ws(Lexer.Keyword("AND"))
              from parameterStart in Ws(CurrentOffset)
              from parameter in Lexer.Identifier
              from parameterEnd in CurrentOffset
-             select (parameter, BuildSpan(parameterStart, parameterEnd))
+             from parameterAsAKeyword in Ws(Lexer.Keyword("AS A"))
+             from parameterType in Ws(ExpressionParser.TypeKeyword)
+             select new TypedParameter(parameter, parameterType, BuildSpan(parameterStart, parameterEnd))
          )
          .Try()
          .Many()
-         select new List<(string, SourceSpan)>(remainingParameters.Length + 1)
-         { (firstParameter, BuildSpan(firstParameterStart, firstParameterEnd)) }
-             .Concat(remainingParameters)
-             .ToList())
+         select new List<TypedParameter>(remainingParameters.Length + 1)
+         {
+            new TypedParameter(firstParameter, firstParameterType, BuildSpan(firstParameterStart, firstParameterEnd))
+        }
+        .Concat(remainingParameters)
+        .ToList())
         .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION"))
-            .Select(_ => new List<(string, SourceSpan)>()));
+            .Select(_ => new List<TypedParameter>()));
 
     /// <summary>
     /// Parses a return statement.
@@ -1019,6 +966,10 @@ public static class StatementParser
         from _ in Lexer.Keyword("IT IS MY DUTY TO PERFORM")
         from functionName in Ws(Lexer.Identifier)
         from parameters in ParameterList
+        from returnType in Ws(Lexer.Keyword("TO FIND").IgnoreThen(Ws(ExpressionParser.TypeKeyword)))
+            .Select(type => (LiteralType?)type)
+            .Try()
+            .OptionalOrDefault(null)
         from body in WsMany(Parse.Ref(() => Statement!))
         from closer in Ws(Lexer.Keyword("MY DUTY IS DISCHARGED.")
             .Named("MY DUTY IS DISCHARGED. (end of function)"))
@@ -1026,8 +977,8 @@ public static class StatementParser
         select (Statement)new FunctionDefinitionNode()
         {
             Name = functionName,
-            Parameters = [.. parameters.Select(static parameter => parameter.Name)],
-            ParameterSpans = [.. parameters.Select(static parameterSpan => parameterSpan.Span)],
+            Parameters = [.. parameters],
+            ReturnType = returnType,
             Body = [.. body],
             Span = BuildSpan(startOffset, endOffset)
         };
@@ -1076,7 +1027,6 @@ public static class StatementParser
             .Or(ExpressionParser.ArrayLengthExpression)
             .Or(ExpressionParser.PrefixExpression)
             .Or(ExpressionParser.LiteralExpression)
-            .Or(ExpressionParser.JustSoExpression)
             .Or(ExpressionParser.ExpressionCast)
             .Select(expression => (Statement)new ExpressionStatement()
                 {
@@ -1093,7 +1043,6 @@ public static class StatementParser
             .Or(Declaration)
             .Or(ArrayElementAssignment)
             .Or(Assignment)
-            .Or(TypeCast)
             .Or(Print)
             .Or(Input)
             .Or(Conditional)

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Tests.Analysis;
 
@@ -104,7 +105,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 Parameters = new Dictionary<string, (string Type, string Description)>()
@@ -134,7 +139,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 ReturnValue = ("PEER", "The total sum.")
@@ -158,7 +167,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 Exceptions = [("SameValues", "DECREE", "Thrown if Start and End are the same.")]
@@ -182,7 +195,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 Examples = ["SUMMON SumRange WITH 1 AND 10 IF YOU PLEASE."]
@@ -206,7 +223,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 SeeAlso = ["OtherFunc", "AnotherFunc"]
@@ -230,7 +251,11 @@ public class HoverMarkdownBuilderDocumentationCommentTests
         {
             Name = "SumRange",
             Kind = SymbolKind.Function,
-            Parameters = ["Start", "End"],
+            TypedParameters =
+                [
+                    new TypedParameter("Start", LiteralType.Integer, new(new(0, 0), new(0, 0))),
+                    new TypedParameter("End", LiteralType.Integer, new(new(0, 0), new(0, 0)))
+                ],
             Documentation = new DocumentationComment()
             {
                 Summary = "Sums a range."
@@ -239,6 +264,6 @@ public class HoverMarkdownBuilderDocumentationCommentTests
 
         string result = HoverMarkdownBuilder.Build(symbolInfo);
 
-        result.ShouldStartWith("**(function)** `SumRange`(Start, End)");
+        result.ShouldStartWith("**(function)** `SumRange`(Start AS A PEER, End AS A PEER)");
     }
 }

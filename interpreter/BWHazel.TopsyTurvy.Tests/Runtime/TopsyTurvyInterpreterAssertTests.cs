@@ -91,8 +91,8 @@ public class TopsyTurvyInterpreterAssertTests : TopsyTurvyInterpreterTestBase
             WITH THE GREATEST RESPECT, SUMMON fail_assert WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
                 result IS APPOINTED "no error"
-              MODIFIED RAPTURE
-                result IS APPOINTED JUST SO
+              MODIFIED RAPTURE, ErrMsg
+                result IS APPOINTED ErrMsg
             THAT CONCLUDES THE MATTER.
             BEHOLD result
             FINALE.

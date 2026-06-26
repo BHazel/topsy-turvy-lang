@@ -57,17 +57,6 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that IS HENCEFORTH A produces an <see cref="InPlaceCastNode"/> with the correct target variable name.
-    /// </summary>
-    [Fact]
-    public void Parse_WithInPlaceCast_SetsTarget()
-    {
-        InPlaceCastNode node = this.ParseFirstStatement<InPlaceCastNode>("x IS HENCEFORTH A FATHOM");
-
-        node.Target.ShouldBe("x");
-    }
-
-    /// <summary>
     /// Tests that AS IT WERE produces an <see cref="ExpressionCastNode"/> with the correct new type when used as a standalone statement.
     /// </summary>
     [Fact]
@@ -163,7 +152,7 @@ public class TopsyTurvyParserStatementTests
             SHOULD IT TRANSPIRE THAT VERITY
               QUITE SO.
                 BEHOLD "yes"
-              OR, IF NOT,
+              OR, IF NOT, NAY
                 BEHOLD "maybe"
             SO MUCH FOR THAT.
             """;
@@ -344,21 +333,21 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that a function declared UNDER THE TERMS OF captures all parameter names.
+    /// Tests that a function declared UNDER THE TERMS OF captures all typed parameter names and types.
     /// </summary>
     [Fact]
     public void Parse_FunctionDefinition_WithParameters_SetsParameterNames()
     {
         string statements = """
-            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AND recipient
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF salutation AS A YARN AND recipient AS A YARN
             MY DUTY IS DISCHARGED.
             """;
 
         FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
 
         node.Parameters.Count.ShouldBe(2);
-        node.Parameters.ShouldContain("salutation");
-        node.Parameters.ShouldContain("recipient");
+        node.Parameters.ShouldContain(parameter => parameter.Name == "salutation");
+        node.Parameters.ShouldContain(parameter => parameter.Name == "recipient");
     }
 
     /// <summary>
@@ -418,7 +407,7 @@ public class TopsyTurvyParserStatementTests
             WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
                 BEHOLD "ok"
-              MODIFIED RAPTURE
+              MODIFIED RAPTURE, Err
                 BEHOLD "err"
             THAT CONCLUDES THE MATTER.
             """;
@@ -448,26 +437,6 @@ public class TopsyTurvyParserStatementTests
         TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
 
         node.CaughtValueName.ShouldBe("Grievance");
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="StatementParser.TryCatch"/> parser leaves <see cref="TryCatchNode.CaughtValueName"/> as <c>null</c> when no identifier follows MODIFIED RAPTURE.
-    /// </summary>
-    [Fact]
-    public void Parse_TryCatch_WithoutCaughtBinding_CaughtValueNameIsNull()
-    {
-        string statements = """
-            WITH THE GREATEST RESPECT, SUMMON risky WITH NOTHING IF YOU PLEASE.
-              WITH GRATITUDE
-                BEHOLD "ok"
-              MODIFIED RAPTURE
-                BEHOLD JUST SO
-            THAT CONCLUDES THE MATTER.
-            """;
-
-        TryCatchNode node = this.ParseFirstStatement<TryCatchNode>(statements);
-
-        node.CaughtValueName.ShouldBeNull();
     }
 
     /// <summary>
@@ -623,22 +592,21 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
-    /// Tests that <see cref="FunctionDefinitionNode.ParameterSpans"/> carries one real span per parameter at correct positions on
-    /// the declaration line.
+    /// Tests that each <see cref="TypedParameter.Span"/> carries a real source span at the correct position on the declaration line.
     /// </summary>
     [Fact]
     public void Parse_FunctionDefinitionNode_ParameterSpansAreOnCorrectLineWithDistinctColumns()
     {
-        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF alpha AND beta\nMY DUTY IS DISCHARGED.\nFINALE.";
+        string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF alpha AS A PEER AND beta AS A PEER\nMY DUTY IS DISCHARGED.\nFINALE.";
 
         ProgramNode program = this.parser.Parse(source);
 
         FunctionDefinitionNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<FunctionDefinitionNode>();
-        node.ParameterSpans.Count.ShouldBe(2);
-        node.ParameterSpans[0].Start.Line.ShouldBe(2);
-        (node.ParameterSpans[0].Start.Column > 0).ShouldBeTrue();
-        node.ParameterSpans[1].Start.Line.ShouldBe(2);
-        (node.ParameterSpans[1].Start.Column > node.ParameterSpans[0].Start.Column).ShouldBeTrue();
+        node.Parameters.Count.ShouldBe(2);
+        node.Parameters[0].Span.Start.Line.ShouldBe(2);
+        (node.Parameters[0].Span.Start.Column > 0).ShouldBeTrue();
+        node.Parameters[1].Span.Start.Line.ShouldBe(2);
+        (node.Parameters[1].Span.Start.Column > node.Parameters[0].Span.Start.Column).ShouldBeTrue();
     }
 
     /// <summary>
@@ -793,7 +761,7 @@ public class TopsyTurvyParserStatementTests
             WITH THE GREATEST RESPECT, SUMMON doStuff WITH NOTHING IF YOU PLEASE.
               WITH GRATITUDE
                 BEHOLD "ok"
-              MODIFIED RAPTURE
+              MODIFIED RAPTURE, Err
                 BEHOLD "err"
             THAT CONCLUDES THE MATTER.
             FINALE.

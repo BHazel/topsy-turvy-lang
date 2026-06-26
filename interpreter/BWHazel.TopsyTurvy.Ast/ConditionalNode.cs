@@ -96,7 +96,7 @@ public class ConditionalNode : Statement
     /// <summary>
     /// Gets or initialises the condition to evaluate.
     /// </summary>
-    public Expression? Condition { get; init; }
+    public required Expression Condition { get; init; }
 
     /// <summary>
     /// Gets or initialises the block of statements to execute if the condition is true.
