@@ -110,8 +110,18 @@ internal sealed class TypeCheckVisitor
     /// <returns>The populated <see cref="TypeCheckResult"/>.</returns>
     internal TypeCheckResult Visit(ProgramNode program)
     {
-        this.scopeStack.Push(new(StringComparer.Ordinal));
-        this.arrayElementTypeStack.Push(new(StringComparer.Ordinal));
+        Dictionary<string, LiteralType> rootScope = new(StringComparer.Ordinal)
+        {
+            [Keywords.SpecialNames.TheProps] = LiteralType.Array,
+        };
+
+        Dictionary<string, LiteralType> rootArrayElementScope = new(StringComparer.Ordinal)
+        {
+            [Keywords.SpecialNames.TheProps] = LiteralType.String,
+        };
+        
+        this.scopeStack.Push(rootScope);
+        this.arrayElementTypeStack.Push(rootArrayElementScope);
 
         this.CollectFunctionSignatures(program.Statements);
         this.CheckStatements(program.Statements);
@@ -278,7 +288,13 @@ internal sealed class TypeCheckVisitor
         LiteralType? declaredType = this.LookupSymbol(node.Target);
         LiteralType? valueType = this.EvaluateExpression(node.Value);
 
-        if (declaredType is null || valueType is null)
+        if (declaredType is null)
+        {
+            this.Error($"'{node.Target}' is not declared.", node.Span);
+            return;
+        }
+
+        if (valueType is null)
         {
             return;
         }
@@ -321,7 +337,13 @@ internal sealed class TypeCheckVisitor
     private void CheckInput(InputNode node)
     {
         LiteralType? declaredType = this.LookupSymbol(node.Target);
-        if (declaredType is not null && declaredType.Value != LiteralType.String)
+        if (declaredType is null)
+        {
+            this.Error($"'{node.Target}' is not declared.", node.Span);
+            return;
+        }
+
+        if (declaredType.Value != LiteralType.String)
         {
             this.Error(
                 $"PRAY TELL can only target a YARN variable: '{node.Target}' is declared as {TypeName(declaredType.Value)}.",
@@ -601,8 +623,16 @@ internal sealed class TypeCheckVisitor
     /// </summary>
     /// <param name="node">The identifier node to infer the type of.</param>
     /// <returns>The inferred type of the identifier node, or <c>null</c> if the type cannot be determined.</returns>
-    private LiteralType? InferIdentifier(IdentifierNode node) =>
-        this.LookupSymbol(node.Name);
+    private LiteralType? InferIdentifier(IdentifierNode node)
+    {
+        LiteralType? type = this.LookupSymbol(node.Name);
+        if (type is null)
+        {
+            this.Error($"'{node.Name}' is not declared.", node.Span);
+        }
+
+        return type;
+    }
 
     /// <summary>
     /// Infers the type of a prefix expression node based on its operator and argument types.
