@@ -191,10 +191,182 @@ html, body {
     }
 }
 
+/**
+ * The editor pane (left side of the split).
+ * @remarks Flex column so the mode tab bar and content area stack vertically
+ *          inside the CSS Grid cell.  The pane-drag code measures .panes-container
+ *          geometry only and is unaffected by this internal restructure.
+ */
 .editor-pane {
     overflow: hidden;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
+
+/**
+ * The Code / Visual mode tab bar inside the editor pane (bottom of the flex column).
+ * @remarks MudBlazor tab bars default to 48px. The dense overrides here shrink the
+ *          bar to roughly 32px so it does not eat into editor vertical space.
+ */
+.editor-mode-tabs {
+    flex-shrink: 0;
+}
+
+.editor-mode-tabs .mud-tabs-toolbar {
+    height: 32px;
+    min-height: 32px;
+}
+
+.editor-mode-tabs .mud-tab {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 0.75rem;
+}
+
+/**
+ * The content area below the mode tab bar (Monaco editor or visual canvas).
+ * @remarks `flex: 1` and `min-height: 0` ensure the content fills remaining
+ *          space while the Monaco `automaticLayout` resize observer still fires.
+ */
+.editor-content-area {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/**
+ * Outer container for a visual node.
+ * @remarks ZBD positions this element on the canvas. We give it a minimum
+ *          width so short titles do not collapse the node and overflow hidden
+ *          so the rounded top clips the header background correctly.
+ */
+.visual-node {
+    min-width: 180px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    overflow: visible;
+}
+
+/**
+ * Zero-height row that positions the Flow In port circle centred on the node top edge.
+ * @remarks The Port Renderer overflows upward.  ZBD measures its actual DOM position.
+ */
+.visual-node-flow-top {
+    height: 0;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+/**
+ * FlowOut Row
+ * @remarks Centred below the body.  Multiple outputs are shown side-by-side with labels.
+ */
+.visual-node-flow-bottom {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 2px 8px 4px;
+}
+
+/**
+ * Per-port column inside the Flow Out row.
+  */
+.visual-node-flow-bottom-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+/**
+ * Data Port
+ * @remarks Left column for inputs and right column for outputs.
+ */
+.visual-node-data-ports {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.visual-node-data-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.visual-node-data-port-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+}
+
+.visual-node-data-port-row--out {
+    justify-content: flex-end;
+}
+
+/**
+ * Header bar is always the first visible child of .visual-node.
+ * @remarks border-radius: 3px 3px 0 0 clips the header own background corners,
+ *          matching the node rounded top without needing overflow: hidden on the parent.
+ */
+.visual-node-header {
+    padding: 4px 8px;
+    border-radius: 3px 3px 0 0;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.visual-node-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.visual-node-subtitle {
+    font-weight: 400;
+    font-size: 0.65rem;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+.visual-node-port-label {
+    font-size: 0.65rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.visual-node-port-circle--in,
+.visual-node-port-circle--out {
+    width: 10px;
+    height: 10px;
+}
+
+.visual-node-header-program       { background: #5c6bc0; }
+.visual-node-header-declaration   { background: #388e3c; }
+.visual-node-header-assignment    { background: #0288d1; }
+.visual-node-header-print         { background: #f57c00; }
+.visual-node-header-input         { background: #7b1fa2; }
+.visual-node-header-conditional   { background: #c62828; }
+.visual-node-header-loop          { background: #00838f; }
+.visual-node-header-function      { background: #4527a0; }
+.visual-node-header-operator      { background: #558b2f; }
+.visual-node-header-literal       { background: #4e342e; }
+.visual-node-header-identifier    { background: #388e3c; }
+.visual-node-header-parameter     { background: #1565c0; }
+.visual-node-header-controlflow   { background: #795548; }
+.visual-node-header-errorhandling { background: #bf360c; }
+.visual-node-header-other         { background: #546e7a; }
 
 .output-pane {
     display: grid;

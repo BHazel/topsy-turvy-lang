@@ -1,0 +1,114 @@
+@using System.Linq
+@using Blazor.Diagrams.Components.Renderers
+
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
+
+@*
+Represents a single node in the visual editor.
+
+The node layout is a vertical stack of rows:
+
+* Flow In: Zero-height for port circles to sit on the top edge of the node.
+* Header: Coloured bar with the node title and optional subtitle and always the first visible element, flush to the node top.
+* Data Ports: Input data on the left and output data on the right.
+* Flow Out: Port circles with labels for branching nodes, such as conditional or try-catch, at the bottom.
+*@
+<div class="visual-node">
+
+    @* Flow In Row *@
+    @if (this.FlowInPorts.Any())
+    {
+        <div class="visual-node-flow-top">
+            @foreach (TopsyTurvyVisualPortModel port in this.FlowInPorts)
+            {
+                <PortRenderer Port="@port" />
+            }
+        </div>
+    }
+
+    @* Header *@
+    <div class="visual-node-header visual-node-header-@(this.Node.Kind.ToString().ToLowerInvariant())">
+        <div class="visual-node-title">@this.Node.Title</div>
+        @if (this.Node.Subtitle is not null)
+        {
+            <div class="visual-node-subtitle">@this.Node.Subtitle</div>
+        }
+    </div>
+
+    @* Data Ports *@
+    @if (this.DataInPorts.Any() || this.DataOutPorts.Any())
+    {
+        <div class="visual-node-data-ports">
+            <div class="visual-node-data-col visual-node-data-col--in">
+                @foreach (TopsyTurvyVisualPortModel port in this.DataInPorts)
+                {
+                    <div class="visual-node-data-port-row">
+                        <PortRenderer Port="@port" Class="visual-node-port-circle visual-node-port-circle--in" />
+                        <span class="visual-node-port-label">@port.Label</span>
+                    </div>
+                }
+            </div>
+            <div class="visual-node-data-col visual-node-data-col--out">
+                @foreach (TopsyTurvyVisualPortModel port in this.DataOutPorts)
+                {
+                    <div class="visual-node-data-port-row visual-node-data-port-row--out">
+                        <span class="visual-node-port-label">@port.Label</span>
+                        <PortRenderer Port="@port" Class="visual-node-port-circle visual-node-port-circle--out" />
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* Flow Out / Branch Out *@
+    @if (this.BottomFlowPorts.Any())
+    {
+        <div class="visual-node-flow-bottom">
+            @foreach (TopsyTurvyVisualPortModel port in this.BottomFlowPorts)
+            {
+                <div class="visual-node-flow-bottom-item">
+                    @if (this.BottomFlowPorts.Count() > 1)
+                    {
+                        <span class="visual-node-port-label">@port.Label</span>
+                    }
+
+                    <PortRenderer Port="@port" />
+                </div>
+            }
+
+        </div>
+    }
+
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the node model to render.
+    /// </summary>
+    /// <remarks>
+    /// Injected by Z.Blazor.Diagrams.
+    /// </remarks>
+    [Parameter]
+    public TopsyTurvyVisualNodeModel Node { get; set; } = default!;
+
+    /// <summary>
+    /// Gets the Flow In ports for this node, which render at the top of the node.
+    /// </summary>
+    private IEnumerable<TopsyTurvyVisualPortModel> FlowInPorts => this.Node.Ports.OfType<TopsyTurvyVisualPortModel>().Where(port => port.Role == VisualPortRole.FlowIn);
+
+    /// <summary>
+    /// Gets the Data In ports for this node, which render on the left side of the node.
+    /// </summary>
+    private IEnumerable<TopsyTurvyVisualPortModel> DataInPorts => this.Node.Ports.OfType<TopsyTurvyVisualPortModel>().Where(port => port.Role == VisualPortRole.DataIn);
+
+    /// <summary>
+    /// Gets the Data Out ports for this node, which render on the right side of the node.
+    /// </summary>
+    private IEnumerable<TopsyTurvyVisualPortModel> DataOutPorts=> this.Node.Ports.OfType<TopsyTurvyVisualPortModel>().Where(port => port.Role == VisualPortRole.DataOut);
+
+    /// <summary>
+    /// Gets the Flow Out and Branch Out ports for this node, which render at the bottom of the node.
+    /// </summary>
+    private IEnumerable<TopsyTurvyVisualPortModel> BottomFlowPorts => this.Node.Ports.OfType<TopsyTurvyVisualPortModel>()
+        .Where(port => port.Role == VisualPortRole.FlowOut || port.Role == VisualPortRole.BranchOut);
+}

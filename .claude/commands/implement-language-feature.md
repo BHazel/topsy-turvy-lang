@@ -162,7 +162,57 @@ cd extensions/vscode/topsy-turvy && npm run test:grammar
 All four snapshot files must pass. If a snapshot changes legitimately, update
 it with `vscode-tmgrammar-test --updateSnapshot`.
 
-### 3i. REPL highlighter: `Repl/ReplHighlighter.cs`
+### 3i. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
+
+If the feature adds a new AST statement or expression node, or renames an existing node's keyword, update `VisualGraphBuilder` to reflect it. The file is ~1100 lines but its structure is straightforward: a `BuildStatement` dispatch switch and a `CreateExpressionNode` compound section.
+
+**Statement Nodes:** Add a new `case` branch in `BuildStatement` that calls a new `Create*Node` helper. The helper must follow the block-closer pattern documented in `AGENTS.md §Visual Editor Conventions` if it introduces a new block construct.
+
+**Expression Nodes:** Add a new `if (expression is ...)` branch in `CreateExpressionNode`. Place expression nodes at `(anchor.X - ExprColumnWidth, anchor.Y + portIndex * ExprPortSpacingY)`.
+
+**Port Conventions:** Always use `MakePort(parent, label, VisualPortRole.*)`. Never pass a `PortAlignment` directly; alignment is derived automatically from role.
+
+**Current Node → Keyword Mapping** (keep this table in sync when AST nodes are added or renamed):
+
+| AST type | Visual title | `VisualNodeKind` |
+|---|---|---|
+| `ProgramNode` (header) | `HARK!` | `Program` |
+| `ProgramNode` (finale) | `FINALE.` | `Program` |
+| `DeclarationNode` | `PRAY WELCOME` | `Declaration` |
+| `ArrayDeclarationNode` | `PRAY WELCOME` | `Declaration` |
+| `AssignmentNode` | `IS APPOINTED` | `Assignment` |
+| `ArrayElementAssignmentNode` | `IS APPOINTED` (subtitle: `{arr} [at index]`) | `Assignment` |
+| `PrintNode` | `BEHOLD` / `BEHOLD WITHOUT FANFARE` | `Print` |
+| `InputNode` | `PRAY TELL` | `Input` |
+| `ConditionalNode` (opener) | `SHOULD IT TRANSPIRE THAT` | `Conditional` |
+| `ConditionalNode` (closer) | `SO MUCH FOR THAT.` | `Conditional` |
+| `LoopNode` (opener) | `BY A LEGAL FICTION` | `Loop` |
+| `LoopNode` (closer) | `THE TERM EXPIRES.` | `Loop` |
+| `FunctionDefinitionNode` (no body) | `IT IS MY DUTY TO PERFORM` | `Function` |
+| `FunctionDefinitionNode` (with body, opener) | `IT IS MY DUTY TO PERFORM` | `Function` |
+| `FunctionDefinitionNode` (closer) | `MY DUTY IS DISCHARGED.` | `Function` |
+| `ReturnNode` | `AND SO I FIND` | `Function` |
+| `ThrowNode` | `A HIDEOUS CURSE ON` | `ErrorHandling` |
+| `TryCatchNode` (opener) | `WITH THE GREATEST RESPECT,` | `ErrorHandling` |
+| `TryCatchNode` (closer) | `THAT CONCLUDES THE MATTER.` | `ErrorHandling` |
+| `SwitchNode` (opener) | `IN WHICH CAPACITY?` | `Conditional` |
+| `SwitchNode` (closer) | `NOTHING COULD BE MORE SATISFACTORY.` | `Conditional` |
+| `ImportNode` | `PRAY ADMIT` | `Other` |
+| `GuardNode` (opener) | `YEOMAN` | `ControlFlow` |
+| `GuardNode` (closer) | `UNDER ORDERS.` | `ControlFlow` |
+| `AssertNode` | `THE LAW IS` | `ErrorHandling` |
+| `ExpressionStatement` | `EXPRESSION` | `Other` |
+| `LiteralNode` | literal value string | `Literal` |
+| `IdentifierNode` / `ParameterNode` | name | `Identifier` / `Parameter` |
+| `PrefixExpressionNode` (operator) | operator keyword (e.g. `SUM OF`) | `Operator` |
+| `TernaryExpressionNode` | `SHOULD IT TRANSPIRE THAT` | `Conditional` |
+| `ArrayIndexNode` | array name (subtitle: `at index`) | `Identifier` |
+| `ArrayLengthNode` | `RECKONING OF` | `Operator` |
+| `ExpressionCastNode` | `AS IT WERE` (subtitle: `AS A {type}`) | `Operator` |
+| `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
+| branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
+
+### 3j. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
 constructor. Place each entry in the appropriate colour category (programme

@@ -74,11 +74,30 @@
 
     <div class="panes-container">
         <div class="editor-pane">
-            <StandaloneCodeEditor @ref="monacoEditor"
-                                  Id="topsy-turvy-editor"
-                                  CssClass="topsy-turvy-monaco"
-                                  ConstructionOptions="GetEditorOptions"
-                                  OnDidChangeModelContent="OnContentChangedAsync" />
+            <div class="editor-content-area">
+                <div style="@(this.activeEditorMode == EditorMode.Code ? "height:100%" : "display:none;height:100%")">
+                    <TopsyTurvyCodeEditor @ref="this.codeEditor"
+                                     Id="topsy-turvy-editor"
+                                     CssClass="topsy-turvy-monaco"
+                                     ConstructionOptions="this.GetEditorOptions"
+                                     OnDidChangeModelContent="this.OnContentChangedAsync" />
+                </div>
+                @if (this.visualTabEverActivated)
+                {
+                    <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%" : "display:none;height:100%")">
+                        <VisualEditor Diagram="this.visualDiagram" />
+                    </div>
+                }
+            </div>
+
+            <MudTabs ActivePanelIndex="@((int)this.activeEditorMode)"
+                     ActivePanelIndexChanged="this.OnEditorModeChangedAsync"
+                     Class="editor-mode-tabs"
+                     Color="Color.Default"
+                     Rounded="false">
+                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Libretto" : "Code")" PanelClass="d-none" />
+                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Stage" : "Visual")" PanelClass="d-none" />
+            </MudTabs>
         </div>
         <div class="pane-divider"></div>
         <div class="output-pane">
@@ -119,7 +138,12 @@
     [CascadingParameter(Name = "ToggleDarkMode")]
     private Action? ToggleDarkMode { get; set; }
 
-    private StandaloneCodeEditor? monacoEditor;
+    private TopsyTurvyCodeEditor? codeEditor;
+    private StandaloneCodeEditor? monacoEditor => this.codeEditor?.Editor;
+    private EditorMode activeEditorMode = EditorMode.Code;
+    private bool visualTabEverActivated = false;
+    private BlazorDiagram? visualDiagram;
+    private string lastBuiltVisualSource = string.Empty;
     private Xterm? terminal;
     private bool editorReady = false;
     private string commandLineArgumentsText = string.Empty;
@@ -319,11 +343,64 @@
             }
 
             await this.UpdateDiagnosticsAsync(source);
+
+            // Invalidate the visual graph cache so the next switch to the Visual tab rebuilds it.
+            this.lastBuiltVisualSource = string.Empty;
+            if (this.activeEditorMode == EditorMode.Visual)
+            {
+                await this.RebuildVisualGraphAsync();
+            }
+
             await this.SavePreferencesAsync();
         }
         catch (OperationCanceledException)
         {
         }
+    }
+
+    /// <summary>
+    /// Handles switching between the Code and Visual editor mode tabs.
+    /// </summary>
+    /// <param name="index">The newly selected tab index matching <see cref="EditorMode"/>.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnEditorModeChangedAsync(int index)
+    {
+        this.activeEditorMode = (EditorMode)index;
+
+        if (this.activeEditorMode == EditorMode.Visual)
+        {
+            this.visualTabEverActivated = true;
+            await this.RebuildVisualGraphAsync();
+        }
+    }
+
+    /// <summary>
+    /// Re-parses the active file and rebuilds the visual diagram from the resulting AST,
+    /// skipping the rebuild if the source text has not changed since the last build.
+    /// </summary>
+    private async Task RebuildVisualGraphAsync()
+    {
+        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+        if (source == this.lastBuiltVisualSource && this.visualDiagram is not null)
+        {
+            return;
+        }
+
+        TopsyTurvyParser parser = new();
+        ParseResult result = parser.TryParse(source);
+        if (result.Program is not null)
+        {
+            VisualGraphBuilder builder = new();
+            this.visualDiagram = builder.Build(result.Program);
+            this.lastBuiltVisualSource = source;
+        }
+        else
+        {
+            this.visualDiagram = null;
+            this.lastBuiltVisualSource = string.Empty;
+        }
+
+        this.StateHasChanged();
     }
 
     /// <summary>

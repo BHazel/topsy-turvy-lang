@@ -1,0 +1,42 @@
+@using Blazor.Diagrams.Components
+
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
+
+@if (this.Diagram is null)
+{
+    <div class="visual-empty-state">
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            An error occurred while parsing the programme.
+        </MudText>
+    </div>
+}
+else
+{
+    <CascadingValue Value="@this.Diagram">
+        <DiagramCanvas @key="@this.Diagram" Class="visual-diagram-canvas" />
+    </CascadingValue>
+}
+
+@code {
+    private BlazorDiagram? previousDiagram;
+
+    /// <summary>
+    /// Gets or sets the diagram to render, or <c>null</c> to show the empty-state message.
+    /// </summary>
+    [Parameter]
+    public BlazorDiagram? Diagram { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (this.Diagram != this.previousDiagram)
+        {
+            if (this.Diagram is not null)
+            {
+                this.Diagram.RegisterComponent<TopsyTurvyVisualNodeModel, VisualNodeWidget>();
+            }
+
+            this.previousDiagram = this.Diagram;
+        }
+    }
+}
