@@ -505,3 +505,23 @@ html, body {
         content: var(--blazor-load-percentage-text, "Loading");
     }
 
+/**
+ * Warning overlay shown on the visual canvas when the graph is not parseable.
+ * @remarks Positioned in the bottom-left corner so it does not block the graph.
+ */
+.visual-graph-error-overlay {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 0.85rem;
+    pointer-events: none;
+}
+

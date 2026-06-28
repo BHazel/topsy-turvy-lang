@@ -90,10 +90,17 @@
                 </div>
                 @if (this.visualTabEverActivated)
                 {
-                    <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%" : "display:none;height:100%")">
+                    <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%;position:relative" : "display:none;height:100%")">
                         <VisualEditor Diagram="this.visualDiagram"
                                       IsReadOnly="this.isVisualReadOnly"
                                       OnNodeChanged="this.OnVisualNodeChangedAsync" />
+                        @if (this.visualGraphHasErrors)
+                        {
+                            <div class="visual-graph-error-overlay" title="The graph is not currently parseable. Connect all required ports to update the code editor.">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                                <span>Programme contains errors: please check values and connect all required ports.</span>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -158,6 +165,7 @@
     private string commandLineArgumentsText = string.Empty;
     private string stdinText = string.Empty;
     private bool isRunning = false;
+    private bool visualGraphHasErrors = false;
     private string lastRunOutput = string.Empty;
     private bool previousIsDarkMode = true;
     private bool areGsLabelsEnabled = true;
@@ -425,6 +433,8 @@
     /// <summary>
     /// Regenerates the Monaco editor source from the current visual diagram state and updates diagnostics.
     /// </summary>
+    /// <remarks>If the generated source is not parseable the Monaco editor is not updated and a warning icon is shown.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task OnVisualNodeChangedAsync()
     {
         if (this.visualDiagram is null)
@@ -437,8 +447,20 @@
 
         TopsyTurvyCodeGenerator generator = new();
         string source = generator.Generate(program);
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        if (!parseResult.Success)
+        {
+            this.visualGraphHasErrors = true;
+            this.StateHasChanged();
+            return;
+        }
+
+        this.visualGraphHasErrors = false;
         this.lastBuiltVisualSource = source;
-        
+
         await this.JSRuntime.InvokeVoidAsync("blazorMonaco.editor.setValue", "topsy-turvy-editor", source);
         await this.UpdateDiagnosticsAsync(source);
         await this.SavePreferencesAsync();

@@ -41,10 +41,18 @@ public sealed class TopsyTurvyVisualNodeModel : NodeModel
     public VisualNodeKind Kind { get; set; }
 
     /// <summary>
+    /// Gets or sets the concrete AST type name this node represents.
+    /// </summary>
+    /// <remarks>
+    /// Read by <c>VisualGraphToAstConverter</c> to reconstruct the correct AST node without reference equality.
+    /// </remarks>
+    public string? StatementType { get; set; }
+
+    /// <summary>
     /// Gets or sets the original AST node from which this visual node was built.
     /// </summary>
     /// <remarks>
-    /// Used by <c>VisualGraphToAstConverter</c> to pass through non-editable structures unchanged.
+    /// Used by <c>VisualGraphToAstConverter</c> as a fallback for structural reconstruction.
     /// </remarks>
     public object? AstNode { get; set; }
 
