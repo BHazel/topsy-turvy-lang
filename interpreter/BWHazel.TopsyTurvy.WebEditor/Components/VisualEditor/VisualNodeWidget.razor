@@ -1,5 +1,7 @@
+@using System
 @using System.Linq
 @using Blazor.Diagrams.Components.Renderers
+@using BWHazel.TopsyTurvy.Ast
 
 @namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
 
@@ -60,6 +62,63 @@ The node layout is a vertical stack of rows:
         </div>
     }
 
+    @* Editing Controls *@
+    @if (!this.IsReadOnly && this.HasEditingControls)
+    {
+        <div class="visual-node-edit-section">
+            @if (this.Node.Kind == VisualNodeKind.Program)
+            {
+                <MudTextField T="string" Label="Title" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudTextField T="string" Label="Subtitle" Value="@this.Node.LiteralValue"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.LiteralValue = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            else if (this.Node.Kind == VisualNodeKind.Declaration)
+            {
+                <MudTextField T="string" Label="Name" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudSelect T="LiteralType?" Label="Type" Value="@this.Node.NodeLiteralType"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.NodeLiteralType = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(t => t != LiteralType.Null))
+                    {
+                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">@literalType</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudCheckBox T="bool" Label="Constant" Value="@this.Node.IsIdentifierConstant"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.IsIdentifierConstant = v))"
+                    Class="visual-node-edit-field" />
+            }
+            else if (this.Node.Kind == VisualNodeKind.Assignment)
+            {
+                <MudTextField T="string" Label="Target" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            else if (this.Node.Kind == VisualNodeKind.Print)
+            {
+                <MudCheckBox T="bool" Label="Suppress newline" Value="@this.Node.PrintSuppressNewline"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.PrintSuppressNewline = v))"
+                    Class="visual-node-edit-field" />
+            }
+            else if (this.Node.Kind == VisualNodeKind.Literal)
+            {
+                <MudTextField T="string" Label="Value" Value="@this.Node.LiteralValue"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.LiteralValue = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            else if (this.Node.Kind == VisualNodeKind.Identifier || this.Node.Kind == VisualNodeKind.Function)
+            {
+                <MudTextField T="string" Label="Name" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+        </div>
+    }
+
     @* Flow Out / Branch Out *@
     @if (this.BottomFlowPorts.Any())
     {
@@ -92,6 +151,30 @@ The node layout is a vertical stack of rows:
     public TopsyTurvyVisualNodeModel Node { get; set; } = default!;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the visual editor is in read-only mode.
+    /// </summary>
+    [CascadingParameter(Name = "IsReadOnly")]
+    public bool IsReadOnly { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the callback to invoke when a node property is changed via an editing control.
+    /// </summary>
+    [CascadingParameter(Name = "OnNodeChanged")]
+    public EventCallback OnNodeChanged { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this node kind has any editing controls.
+    /// </summary>
+    private bool HasEditingControls => this.Node.Kind is
+        VisualNodeKind.Program or
+        VisualNodeKind.Declaration or
+        VisualNodeKind.Assignment or
+        VisualNodeKind.Print or
+        VisualNodeKind.Literal or
+        VisualNodeKind.Identifier or
+        VisualNodeKind.Function;
+
+    /// <summary>
     /// Gets the Flow In ports for this node, which render at the top of the node.
     /// </summary>
     private IEnumerable<TopsyTurvyVisualPortModel> FlowInPorts => this.Node.Ports.OfType<TopsyTurvyVisualPortModel>().Where(port => port.Role == VisualPortRole.FlowIn);
@@ -111,4 +194,14 @@ The node layout is a vertical stack of rows:
     /// </summary>
     private IEnumerable<TopsyTurvyVisualPortModel> BottomFlowPorts => this.Node.Ports.OfType<TopsyTurvyVisualPortModel>()
         .Where(port => port.Role == VisualPortRole.FlowOut || port.Role == VisualPortRole.BranchOut);
+
+    /// <summary>
+    /// Applies a property mutation to the node model and fires <see cref="OnNodeChanged"/> to trigger source regeneration.
+    /// </summary>
+    /// <param name="updateModel">The action that updates the model property.</param>
+    private async Task OnPropertyChanged(Action updateModel)
+    {
+        updateModel();
+        await this.OnNodeChanged.InvokeAsync();
+    }
 }

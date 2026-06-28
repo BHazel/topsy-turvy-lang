@@ -28,6 +28,12 @@
                        Disabled="isRunning"
                        OnClick="this.RunProgramAsync">@(this.areGsLabelsEnabled ? "Perform" : "Run")</MudButton>
             <MudSpacer />
+            @if (this.activeEditorMode == EditorMode.Visual)
+            {
+                <MudButton Size="Size.Small"
+                           StartIcon="@(this.isVisualReadOnly ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.Lock)"
+                           OnClick="this.ToggleVisualReadOnlyAsync">@(this.isVisualReadOnly ? "Edit" : "Lock")</MudButton>
+            }
             <MudButton Size="Size.Small"
                        Color="Color.Error"
                        StartIcon="@Icons.Material.Outlined.DeleteOutline"
@@ -85,7 +91,9 @@
                 @if (this.visualTabEverActivated)
                 {
                     <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%" : "display:none;height:100%")">
-                        <VisualEditor Diagram="this.visualDiagram" />
+                        <VisualEditor Diagram="this.visualDiagram"
+                                      IsReadOnly="this.isVisualReadOnly"
+                                      OnNodeChanged="this.OnVisualNodeChangedAsync" />
                     </div>
                 }
             </div>
@@ -143,6 +151,7 @@
     private EditorMode activeEditorMode = EditorMode.Code;
     private bool visualTabEverActivated = false;
     private BlazorDiagram? visualDiagram;
+    private bool isVisualReadOnly = true;
     private string lastBuiltVisualSource = string.Empty;
     private Xterm? terminal;
     private bool editorReady = false;
@@ -391,7 +400,7 @@
         if (result.Program is not null)
         {
             VisualGraphBuilder builder = new();
-            this.visualDiagram = builder.Build(result.Program);
+            this.visualDiagram = builder.Build(result.Program, this.isVisualReadOnly);
             this.lastBuiltVisualSource = source;
         }
         else
@@ -401,6 +410,38 @@
         }
 
         this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Toggles the visual editor between read-only and edit modes and rebuilds the diagram.
+    /// </summary>
+    private async Task ToggleVisualReadOnlyAsync()
+    {
+        this.isVisualReadOnly = !this.isVisualReadOnly;
+        this.lastBuiltVisualSource = string.Empty;
+        await this.RebuildVisualGraphAsync();
+    }
+
+    /// <summary>
+    /// Regenerates the Monaco editor source from the current visual diagram state and updates diagnostics.
+    /// </summary>
+    private async Task OnVisualNodeChangedAsync()
+    {
+        if (this.visualDiagram is null)
+        {
+            return;
+        }
+
+        VisualGraphToAstConverter converter = new();
+        ProgramNode program = converter.Convert(this.visualDiagram);
+
+        TopsyTurvyCodeGenerator generator = new();
+        string source = generator.Generate(program);
+        this.lastBuiltVisualSource = source;
+        
+        await this.JSRuntime.InvokeVoidAsync("blazorMonaco.editor.setValue", "topsy-turvy-editor", source);
+        await this.UpdateDiagnosticsAsync(source);
+        await this.SavePreferencesAsync();
     }
 
     /// <summary>

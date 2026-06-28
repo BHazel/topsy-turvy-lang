@@ -1,5 +1,6 @@
 using Blazor.Diagrams.Core.Geometry;
 using Blazor.Diagrams.Core.Models;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 
@@ -38,4 +39,43 @@ public sealed class TopsyTurvyVisualNodeModel : NodeModel
     /// Gets or sets the semantic colour category for the node header.
     /// </summary>
     public VisualNodeKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the original AST node from which this visual node was built.
+    /// </summary>
+    /// <remarks>
+    /// Used by <c>VisualGraphToAstConverter</c> to pass through non-editable structures unchanged.
+    /// </remarks>
+    public object? AstNode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variable or function name associated with this node.
+    /// </summary>
+    /// <remarks>
+    /// Populated for Declaration, Assignment target, Identifier and Function opener nodes.
+    /// </remarks>
+    public string? SymbolIdentifierNodeName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Topsy Turvy type associated with this node.
+    /// </summary>
+    /// <remarks>
+    /// Populated for Declaration and Literal nodes.
+    /// </remarks>
+    public LiteralType? NodeLiteralType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the literal value as a string, used for editable Literal nodes.
+    /// </summary>
+    public string? LiteralValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this node represents a constant declaration.
+    /// </summary>
+    public bool IsIdentifierConstant { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a print statement suppresses the trailing newline.
+    /// </summary>
+    public bool PrintSuppressNewline { get; set; }
 }
