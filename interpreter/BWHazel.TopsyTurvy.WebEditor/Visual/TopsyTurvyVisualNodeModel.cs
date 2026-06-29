@@ -73,6 +73,11 @@ public sealed class TopsyTurvyVisualNodeModel : NodeModel
     public LiteralType? NodeLiteralType { get; set; }
 
     /// <summary>
+    /// Gets or sets the element type for array declaration nodes.
+    /// </summary>
+    public LiteralType? ArrayElementLiteralType { get; set; }
+
+    /// <summary>
     /// Gets or sets the literal value as a string, used for editable Literal nodes.
     /// </summary>
     public string? LiteralValue { get; set; }
@@ -86,4 +91,17 @@ public sealed class TopsyTurvyVisualNodeModel : NodeModel
     /// Gets or sets a value indicating whether a print statement suppresses the trailing newline.
     /// </summary>
     public bool PrintSuppressNewline { get; set; }
+
+    /// <summary>
+    /// Gets or sets the node ID of the paired closer node for block-opener nodes.
+    /// </summary>
+    /// <remarks>
+    /// Set by <c>VisualGraphBuilder</c> and used by the "Delete block" context-menu action.
+    /// </remarks>
+    public string? PairedCloserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the node ID of the paired opener node for block-closer nodes.
+    /// </summary>
+    public string? PairedOpenerId { get; set; }
 }

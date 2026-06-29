@@ -1,0 +1,277 @@
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
+
+@if (this.IsOpen)
+{
+    <MudPaper Elevation="0"
+              Square="true"
+              Class="visual-symbol-panel"
+              Style="width:200px; flex-shrink:0; height:100%; overflow-y:auto; border-right:1px solid var(--mud-palette-divider); display:flex; flex-direction:column;"
+              @onclick:stopPropagation="true"
+              @ondrop:stopPropagation="true"
+              @ondragover:stopPropagation="true">
+
+        <MudText Typo="Typo.overline"
+                 Class="px-3 py-2"
+                 Style="background:var(--mud-palette-background-grey); border-bottom:1px solid var(--mud-palette-divider); position:sticky; top:0; z-index:1;">
+            Nodes
+        </MudText>
+
+        <MudExpansionPanels MultiExpansion="true" Dense="true" Square="true" Elevation="0">
+            <MudExpansionPanel Text="Statement" Dense="true">
+                @foreach ((string label, string type, VisualNodeKind kind) in StatementNodes)
+                {
+                    string nodeType = type;
+                    VisualNodeKind nodeKind = kind;
+                    <div draggable="true"
+                         title="Drag or double-click to add."
+                         style="@GetNodeEntryStyle(nodeKind)"
+                         @ondragstart="@(() => this.OnNodeTypeDragStarted.InvokeAsync(nodeType))"
+                         @ondblclick="@(() => this.OnNodeTypeDoubleClicked.InvokeAsync(nodeType))">
+                        @label
+                    </div>
+                }
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Control Flow" Dense="true">
+                @foreach ((string label, string type, VisualNodeKind kind) in ControlFlowNodes)
+                {
+                    string nodeType = type;
+                    VisualNodeKind nodeKind = kind;
+                    <div draggable="true"
+                         title="Drag or double-click to add."
+                         style="@GetNodeEntryStyle(nodeKind)"
+                         @ondragstart="@(() => this.OnNodeTypeDragStarted.InvokeAsync(nodeType))"
+                         @ondblclick="@(() => this.OnNodeTypeDoubleClicked.InvokeAsync(nodeType))">
+                        @label
+                    </div>
+                }
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Error Handling" Dense="true">
+                @foreach ((string label, string type, VisualNodeKind kind) in ErrorHandlingNodes)
+                {
+                    string nodeType = type;
+                    VisualNodeKind nodeKind = kind;
+                    <div draggable="true"
+                         title="Drag or double-click to add."
+                         style="@GetNodeEntryStyle(nodeKind)"
+                         @ondragstart="@(() => this.OnNodeTypeDragStarted.InvokeAsync(nodeType))"
+                         @ondblclick="@(() => this.OnNodeTypeDoubleClicked.InvokeAsync(nodeType))">
+                        @label
+                    </div>
+                }
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Function" Dense="true">
+                @foreach ((string label, string type, VisualNodeKind kind) in FunctionNodes)
+                {
+                    string nodeType = type;
+                    VisualNodeKind nodeKind = kind;
+                    <div draggable="true"
+                         title="Drag or double-click to add."
+                         style="@GetNodeEntryStyle(nodeKind)"
+                         @ondragstart="@(() => this.OnNodeTypeDragStarted.InvokeAsync(nodeType))"
+                         @ondblclick="@(() => this.OnNodeTypeDoubleClicked.InvokeAsync(nodeType))">
+                        @label
+                    </div>
+                }
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Expression" Dense="true">
+                @foreach ((string label, string type, VisualNodeKind kind) in ExpressionNodes)
+                {
+                    string nodeType = type;
+                    VisualNodeKind nodeKind = kind;
+                    <div draggable="true"
+                         title="Drag or double-click to add."
+                         style="@GetNodeEntryStyle(nodeKind)"
+                         @ondragstart="@(() => this.OnNodeTypeDragStarted.InvokeAsync(nodeType))"
+                         @ondblclick="@(() => this.OnNodeTypeDoubleClicked.InvokeAsync(nodeType))">
+                        @label
+                    </div>
+                }
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        @{
+            IReadOnlyList<VisualSymbolEntry> variables = this.Symbols.Where(symbol => symbol.Kind == VisualSymbolKind.Variable).ToList();
+            IReadOnlyList<VisualSymbolEntry> functions = this.Symbols.Where(symbol => symbol.Kind == VisualSymbolKind.Function).ToList();
+        }
+
+        @if (this.Symbols.Count > 0)
+        {
+            <MudText Typo="Typo.overline"
+                     Class="px-3 py-2 mt-1"
+                     Style="background:var(--mud-palette-background-grey); border-top:1px solid var(--mud-palette-divider); border-bottom:1px solid var(--mud-palette-divider); position:sticky; top:0; z-index:1;">
+                Symbols
+            </MudText>
+
+            <MudExpansionPanels MultiExpansion="true" Dense="true" Square="true" Elevation="0">
+                @if (variables.Count > 0)
+                {
+                    <MudExpansionPanel Text="Variables" Dense="true">
+                        @foreach (VisualSymbolEntry variable in variables)
+                        {
+                            VisualSymbolEntry variableSymbol = variable;
+                            <div draggable="true"
+                                 title="Drag or double-click to add"
+                                 style="@SymbolVariableEntryStyle"
+                                 @ondragstart="@(() => this.OnSymbolDragStarted.InvokeAsync(variableSymbol))"
+                                 @ondblclick="@(() => this.OnSymbolDoubleClicked.InvokeAsync(variableSymbol))">
+                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;">@variableSymbol.Name</span>
+                                @if (variableSymbol.TypeDisplay is not null)
+                                {
+                                    <MudChip T="string"
+                                             Size="MudBlazor.Size.Small"
+                                             Color="Color.Info"
+                                             Variant="Variant.Outlined"
+                                             Style="height:18px; font-size:10px; padding:0 5px; pointer-events:none; flex-shrink:0;">
+                                        @variableSymbol.TypeDisplay
+                                    </MudChip>
+                                }
+                            </div>
+                        }
+                    </MudExpansionPanel>
+                }
+
+                @if (functions.Count > 0)
+                {
+                    <MudExpansionPanel Text="Functions" Dense="true">
+                        @foreach (VisualSymbolEntry function in functions)
+                        {
+                            VisualSymbolEntry functionSymbol = function;
+                            <div draggable="true"
+                                 title="Drag or double-click to add"
+                                 style="@SymbolFunctionEntryStyle"
+                                 @ondragstart="@(() => this.OnSymbolDragStarted.InvokeAsync(functionSymbol))"
+                                 @ondblclick="@(() => this.OnSymbolDoubleClicked.InvokeAsync(functionSymbol))">
+                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;">@functionSymbol.Name</span>
+                                <MudChip T="string"
+                                         Size="MudBlazor.Size.Small"
+                                         Color="Color.Secondary"
+                                         Variant="Variant.Outlined"
+                                         Style="height:18px; font-size:10px; padding:0 5px; pointer-events:none; flex-shrink:0;">
+                                    DUTY
+                                </MudChip>
+                            </div>
+                        }
+                    </MudExpansionPanel>
+                }
+
+            </MudExpansionPanels>
+        }
+
+    </MudPaper>
+}
+
+@code {
+    private const string SymbolVariableEntryStyle =
+        "display:flex; align-items:center; gap:4px; font-size:11px; line-height:1.3;" +
+        "padding:2px 5px; margin:1px 0; border-radius:3px;" +
+        "border:1px solid var(--mud-palette-lines-default); border-left:3px solid var(--visual-node-color-assignment);" +
+        "background:var(--mud-palette-surface); color:var(--mud-palette-text-primary); cursor:grab; user-select:none;";
+
+    private const string SymbolFunctionEntryStyle =
+        "display:flex; align-items:center; gap:4px; font-size:11px; line-height:1.3;" +
+        "padding:2px 5px; margin:1px 0; border-radius:3px;" +
+        "border:1px solid var(--mud-palette-lines-default); border-left:3px solid var(--visual-node-color-function);" +
+        "background:var(--mud-palette-surface); color:var(--mud-palette-text-primary); cursor:grab; user-select:none;";
+
+    private static readonly IReadOnlyList<(string Label, string Type, VisualNodeKind Kind)> StatementNodes =
+    [
+        ("PRAY WELCOME",        "DeclarationNode",            VisualNodeKind.Declaration),
+        ("IS APPOINTED",        "AssignmentNode",             VisualNodeKind.Assignment),
+        ("VICTIM IS APPOINTED", "ArrayElementAssignmentNode", VisualNodeKind.Assignment),
+        ("BEHOLD",              "PrintNode",                  VisualNodeKind.Print),
+        ("PRAY TELL",           "InputNode",                  VisualNodeKind.Input),
+        ("PRAY ADMIT",          "ImportNode",                 VisualNodeKind.Other),
+        ("THE LAW IS",          "AssertNode",                 VisualNodeKind.ErrorHandling),
+    ];
+
+    private static readonly IReadOnlyList<(string Label, string Type, VisualNodeKind Kind)> ControlFlowNodes =
+    [
+        ("SHOULD IT TRANSPIRE THAT", "ConditionalOpener", VisualNodeKind.Conditional),
+        ("BY A LEGAL FICTION",       "LoopOpener",        VisualNodeKind.Loop),
+        ("YEOMAN",                   "GuardOpener",       VisualNodeKind.ControlFlow),
+        ("THAT WILL DO.",            "BreakNode",         VisualNodeKind.ControlFlow),
+        ("ONCE MORE.",               "ContinueNode",      VisualNodeKind.ControlFlow),
+        ("AND SO I FIND",            "ReturnNode",        VisualNodeKind.Function),
+    ];
+
+    private static readonly IReadOnlyList<(string Label, string Type, VisualNodeKind Kind)> ErrorHandlingNodes =
+    [
+        ("WITH THE GREATEST RESPECT,", "TryCatchOpener", VisualNodeKind.ErrorHandling),
+        ("A HIDEOUS CURSE ON",         "ThrowNode",      VisualNodeKind.ErrorHandling),
+    ];
+
+    private static readonly IReadOnlyList<(string Label, string Type, VisualNodeKind Kind)> FunctionNodes =
+    [
+        ("IT IS MY DUTY TO PERFORM", "FunctionBodyOpener", VisualNodeKind.Function),
+    ];
+
+    private static readonly IReadOnlyList<(string Label, string Type, VisualNodeKind Kind)> ExpressionNodes =
+    [
+        ("Literal Value",      "LiteralNode",       VisualNodeKind.Literal),
+        ("Arithmetic",         "ArithmeticNode",    VisualNodeKind.Operator),
+        ("Bitwise",            "BitwiseNode",       VisualNodeKind.Operator),
+        ("Logical",            "LogicalNode",       VisualNodeKind.Operator),
+        ("Variadic Logical",   "VariadicNode",      VisualNodeKind.Operator),
+        ("WOVEN OF",           "WovenNode",         VisualNodeKind.Operator),
+        ("Ternary",            "TernaryNode",       VisualNodeKind.Conditional),
+        ("SUMMON",             "SummonNode",        VisualNodeKind.Function),
+        ("LITTLE LIST index",  "ArrayIndexNode",    VisualNodeKind.Identifier),
+        ("RECKONING OF",       "ArrayLengthNode",   VisualNodeKind.Operator),
+        ("AS IT WERE (cast)",  "ExpressionCastNode",VisualNodeKind.Operator),
+    ];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the symbol panel is visible.
+    /// </summary>
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of declared symbols to display in the Symbols section.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<VisualSymbolEntry> Symbols { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user begins dragging a node-type chip onto the canvas.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnNodeTypeDragStarted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user begins dragging a declared symbol onto the canvas.
+    /// </summary>
+    [Parameter]
+    public EventCallback<VisualSymbolEntry> OnSymbolDragStarted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user double-clicks a node-type chip to add it at the default position.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnNodeTypeDoubleClicked { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user double-clicks a declared symbol chip to add it at the default position.
+    /// </summary>
+    [Parameter]
+    public EventCallback<VisualSymbolEntry> OnSymbolDoubleClicked { get; set; }
+
+    /// <summary>
+    /// Gets the CSS style string for a node entry based on its kind.
+    /// </summary>
+    /// <param name="kind">The kind of the visual node.</param>
+    /// <returns>A CSS style string for the node entry.</returns>
+    private static string GetNodeEntryStyle(VisualNodeKind kind)
+    {
+        string colourVariable = $"var(--visual-node-color-{kind.ToString().ToLowerInvariant()})";
+        return
+            $"font-size:11px; line-height:1.3; padding:2px 5px; margin:1px 0; border-radius:3px;" +
+            $"border:1px solid var(--mud-palette-lines-default); border-left:3px solid {colourVariable};" +
+            $"background:var(--mud-palette-surface); color:var(--mud-palette-text-primary);" +
+            $"cursor:grab; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;";
+    }
+}

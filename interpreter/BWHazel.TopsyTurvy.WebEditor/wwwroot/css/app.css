@@ -265,23 +265,33 @@ html, body {
 
 /**
  * FlowOut Row
- * @remarks Centred below the body.  Multiple outputs are shown side-by-side with labels.
+ * @remarks Zero-height container at the node bottom, mirrors .visual-node-flow-top so port
+ *          circles sit centred on the bottom edge.  Overflow upward shows labels above the edge.
  */
 .visual-node-flow-bottom {
+    height: 0;
     display: flex;
     justify-content: center;
     gap: 16px;
-    padding: 2px 8px 4px;
+    overflow: visible;
 }
 
 /**
  * Per-port column inside the Flow Out row.
-  */
+ * @remarks The port circle is absolutely positioned at y=0 (the bottom edge).
+ *          The label sits above it via negative transform so it appears inside the node.
+ */
 .visual-node-flow-bottom-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1px;
+    position: relative;
+}
+
+.visual-node-flow-bottom-item .visual-node-port-label {
+    position: absolute;
+    bottom: 7px;
+    white-space: nowrap;
 }
 
 /**
@@ -365,21 +375,42 @@ html, body {
     font-size: 11px !important;
 }
 
-.visual-node-header-program       { background: #5c6bc0; }
-.visual-node-header-declaration   { background: #388e3c; }
-.visual-node-header-assignment    { background: #0288d1; }
-.visual-node-header-print         { background: #f57c00; }
-.visual-node-header-input         { background: #7b1fa2; }
-.visual-node-header-conditional   { background: #c62828; }
-.visual-node-header-loop          { background: #00838f; }
-.visual-node-header-function      { background: #4527a0; }
-.visual-node-header-operator      { background: #558b2f; }
-.visual-node-header-literal       { background: #4e342e; }
-.visual-node-header-identifier    { background: #388e3c; }
-.visual-node-header-parameter     { background: #1565c0; }
-.visual-node-header-controlflow   { background: #795548; }
-.visual-node-header-errorhandling { background: #bf360c; }
-.visual-node-header-other         { background: #546e7a; }
+/**
+ * Node header colour tokens.
+ */
+:root {
+    --visual-node-color-program:       #5c6bc0;
+    --visual-node-color-declaration:   #388e3c;
+    --visual-node-color-assignment:    #0288d1;
+    --visual-node-color-print:         #f57c00;
+    --visual-node-color-input:         #7b1fa2;
+    --visual-node-color-conditional:   #c62828;
+    --visual-node-color-loop:          #00838f;
+    --visual-node-color-function:      #4527a0;
+    --visual-node-color-operator:      #558b2f;
+    --visual-node-color-literal:       #4e342e;
+    --visual-node-color-identifier:    #388e3c;
+    --visual-node-color-parameter:     #1565c0;
+    --visual-node-color-controlflow:   #795548;
+    --visual-node-color-errorhandling: #bf360c;
+    --visual-node-color-other:         #546e7a;
+}
+
+.visual-node-header-program       { background: var(--visual-node-color-program); }
+.visual-node-header-declaration   { background: var(--visual-node-color-declaration); }
+.visual-node-header-assignment    { background: var(--visual-node-color-assignment); }
+.visual-node-header-print         { background: var(--visual-node-color-print); }
+.visual-node-header-input         { background: var(--visual-node-color-input); }
+.visual-node-header-conditional   { background: var(--visual-node-color-conditional); }
+.visual-node-header-loop          { background: var(--visual-node-color-loop); }
+.visual-node-header-function      { background: var(--visual-node-color-function); }
+.visual-node-header-operator      { background: var(--visual-node-color-operator); }
+.visual-node-header-literal       { background: var(--visual-node-color-literal); }
+.visual-node-header-identifier    { background: var(--visual-node-color-identifier); }
+.visual-node-header-parameter     { background: var(--visual-node-color-parameter); }
+.visual-node-header-controlflow   { background: var(--visual-node-color-controlflow); }
+.visual-node-header-errorhandling { background: var(--visual-node-color-errorhandling); }
+.visual-node-header-other         { background: var(--visual-node-color-other); }
 
 .output-pane {
     display: grid;
@@ -506,6 +537,85 @@ html, body {
     }
 
 /**
+ * Visual node ports.
+ * @remarks The ZBD default port styles only apply to .default-node, so we replicate
+ * the needed rules for our custom .visual-node wrapper.  Flow ports (top/bottom)
+ * are absolutely positioned to sit on the node edge.  Data ports (left/right) stay
+ * inline in their flex rows — no position:absolute.
+ */
+.visual-node .diagram-port {
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    border: 2px solid var(--mud-palette-surface);
+    cursor: crosshair;
+    z-index: 10;
+}
+
+.visual-node .diagram-port.visual-node-flow-port {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px;
+}
+
+.visual-node .diagram-port.visual-node-port-circle {
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.visual-node .diagram-port:hover,
+.visual-node .diagram-port.has-links {
+    background: var(--mud-palette-primary-darken);
+}
+
+/**
+ * Visual context menu.
+ * @remarks Must be global (not scoped) because it is rendered by a child component.
+ */
+.visual-context-menu {
+    position: fixed;
+    z-index: 2000;
+    min-width: 220px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    padding: 4px 0;
+    font-size: 0.82rem;
+}
+
+.visual-context-menu-section-label {
+    padding: 6px 12px 2px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+    cursor: default;
+    user-select: none;
+}
+
+.visual-context-menu-item {
+    padding: 5px 16px;
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+}
+
+.visual-context-menu-item:hover {
+    background: var(--mud-palette-action-hover);
+}
+
+.visual-context-menu-item--danger {
+    color: var(--mud-palette-error);
+}
+
+.visual-context-menu-item--danger:hover {
+    background: color-mix(in srgb, var(--mud-palette-error) 12%, transparent);
+}
+
+/**
  * Warning overlay shown on the visual canvas when the graph is not parseable.
  * @remarks Positioned in the bottom-left corner so it does not block the graph.
  */
@@ -525,3 +635,23 @@ html, body {
     pointer-events: none;
 }
 
+
+/**
+ * Visual Node Panel.
+ * @remarks Remove MudBlazor gutter padding on content and header to enable wider capsules.
+ */
+.visual-symbol-panel .mud-expand-panel-content.mud-expand-panel-gutters {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+.visual-symbol-panel .mud-expand-panel-header.mud-expand-panel-header-gutters {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+.visual-symbol-panel .mud-expand-panel {
+    margin: 0;
+}

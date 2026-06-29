@@ -64,7 +64,7 @@ public sealed class VisualGraphBuilder
 
         if (isReadOnly)
         {
-            diagram.UnregisterBehavior<SelectionBehavior>();
+            diagram.UnregisterBehavior<DragNewLinkBehavior>();
         }
 
         NodeLayoutContext layout = new(primaryX: 700, secondaryX: 500);
@@ -192,7 +192,7 @@ public sealed class VisualGraphBuilder
             AssignmentNode node => this.CreateAssignmentNode(node, layout, diagram),
             ArrayElementAssignmentNode node => this.CreateArrayElementAssignmentNode(node, layout, diagram),
             PrintNode node => this.CreatePrintNode(node, layout, diagram),
-            InputNode node => this.CreateInputNode(node, layout),
+            InputNode node => this.CreateInputNode(node, layout, diagram),
             ConditionalNode node => this.CreateConditionalNode(node, layout, diagram),
             LoopNode node => this.CreateLoopNode(node, layout, diagram),
             BreakNode => this.CreateSimpleNode(layout, "THAT WILL DO.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: false, statementType: "BreakNode"),
@@ -269,10 +269,20 @@ public sealed class VisualGraphBuilder
         statementNode.StatementType = "ArrayDeclarationNode";
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        statementNode.SymbolIdentifierNodeName = node.Name;
+        statementNode.NodeLiteralType = LiteralType.Array;
+        statementNode.ArrayElementLiteralType = node.ElementType;
+        statementNode.IsIdentifierConstant = node.IsConstant;
+
+        if (node.InitialValues.Count == 0 && node.Size.HasValue)
+        {
+            statementNode.LiteralValue = node.Size.Value.ToString();
+        }
 
         for (int i = 0; i < node.InitialValues.Count; i++)
         {
-            TopsyTurvyVisualPortModel port = this.MakePort(statementNode, $"val {i + 1}", VisualPortRole.DataIn);
+            TopsyTurvyVisualPortModel port = this.MakePort(statementNode, $"Victim {i + 1}", VisualPortRole.DataIn);
             statementNode.AddPort(port);
             this.CreateExpressionNode(node.InitialValues[i], port, layout, diagram, anchor: statementNode.Position, portIndex: i);
         }
@@ -289,17 +299,19 @@ public sealed class VisualGraphBuilder
     /// <returns>The visual node model for the assignment.</returns>
     private TopsyTurvyVisualNodeModel CreateAssignmentNode(AssignmentNode node, NodeLayoutContext layout, BlazorDiagram diagram)
     {
-        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "IS APPOINTED", node.Target, VisualNodeKind.Assignment);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "IS APPOINTED", null, VisualNodeKind.Assignment);
         statementNode.StatementType = "AssignmentNode";
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
         statementNode.AstNode = node;
-        statementNode.SymbolIdentifierNodeName = node.Target;
 
-        TopsyTurvyVisualPortModel dataInPort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
-        statementNode.AddPort(dataInPort);
+        TopsyTurvyVisualPortModel targetPort = this.MakePort(statementNode, "Variable", VisualPortRole.DataIn);
+        statementNode.AddPort(targetPort);
+        this.CreateTargetIdentifierNode(node.Target, targetPort, statementNode.Position, diagram);
 
-        this.CreateExpressionNode(node.Value, dataInPort, layout, diagram, anchor: statementNode.Position);
+        TopsyTurvyVisualPortModel valuePort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
+        statementNode.AddPort(valuePort);
+        this.CreateExpressionNode(node.Value, valuePort, layout, diagram, anchor: statementNode.Position, portIndex: 1);
         return statementNode;
     }
 
@@ -312,19 +324,24 @@ public sealed class VisualGraphBuilder
     /// <returns>The visual node model for the array element assignment.</returns>
     private TopsyTurvyVisualNodeModel CreateArrayElementAssignmentNode(ArrayElementAssignmentNode node, NodeLayoutContext layout, BlazorDiagram diagram)
     {
-        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "IS APPOINTED", $"{node.ArrayName} [at index]", VisualNodeKind.Assignment);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "VICTIM IS APPOINTED", null, VisualNodeKind.Assignment);
         statementNode.StatementType = "ArrayElementAssignmentNode";
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
 
-        TopsyTurvyVisualPortModel indexPort = this.MakePort(statementNode, "Index", VisualPortRole.DataIn);
+        TopsyTurvyVisualPortModel targetPort = this.MakePort(statementNode, "Variable", VisualPortRole.DataIn);
+        statementNode.AddPort(targetPort);
+        this.CreateTargetIdentifierNode(node.ArrayName, targetPort, statementNode.Position, diagram);
+
+        TopsyTurvyVisualPortModel indexPort = this.MakePort(statementNode, "Victim", VisualPortRole.DataIn);
         statementNode.AddPort(indexPort);
 
         TopsyTurvyVisualPortModel valuePort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
         statementNode.AddPort(valuePort);
 
-        this.CreateExpressionNode(node.Index, indexPort, layout, diagram, anchor: statementNode.Position, portIndex: 0);
-        this.CreateExpressionNode(node.Value, valuePort, layout, diagram, anchor: statementNode.Position, portIndex: 1);
+        this.CreateExpressionNode(node.Index, indexPort, layout, diagram, anchor: statementNode.Position, portIndex: 1);
+        this.CreateExpressionNode(node.Value, valuePort, layout, diagram, anchor: statementNode.Position, portIndex: 2);
         return statementNode;
     }
 
@@ -337,11 +354,7 @@ public sealed class VisualGraphBuilder
     /// <returns>The visual node model for the print statement.</returns>
     private TopsyTurvyVisualNodeModel CreatePrintNode(PrintNode node, NodeLayoutContext layout, BlazorDiagram diagram)
     {
-        string title = node.SuppressNewline
-            ? "BEHOLD WITHOUT CEREMONY"
-            : "BEHOLD";
-        
-        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), title, null, VisualNodeKind.Print);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "BEHOLD", null, VisualNodeKind.Print);
         statementNode.StatementType = "PrintNode";
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
@@ -360,16 +373,19 @@ public sealed class VisualGraphBuilder
     /// </summary>
     /// <param name="node">The input statement node.</param>
     /// <param name="layout">The layout context for positioning the node.</param>
+    /// <param name="diagram">The diagram to which the node will be added.</param>
     /// <returns>The visual node model for the input statement.</returns>
-    private TopsyTurvyVisualNodeModel CreateInputNode(InputNode node, NodeLayoutContext layout)
+    private TopsyTurvyVisualNodeModel CreateInputNode(InputNode node, NodeLayoutContext layout, BlazorDiagram diagram)
     {
-        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY TELL", node.Target, VisualNodeKind.Input);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY TELL", null, VisualNodeKind.Input);
         statementNode.StatementType = "InputNode";
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
-        statementNode.AddPort(this.MakePort(statementNode, node.Target, VisualPortRole.DataOut));
         statementNode.AstNode = node;
-        statementNode.SymbolIdentifierNodeName = node.Target;
+
+        TopsyTurvyVisualPortModel targetPort = this.MakePort(statementNode, "Variable", VisualPortRole.DataIn);
+        statementNode.AddPort(targetPort);
+        this.CreateTargetIdentifierNode(node.Target, targetPort, statementNode.Position, diagram);
         return statementNode;
     }
 
@@ -479,6 +495,9 @@ public sealed class VisualGraphBuilder
         closerNode.AddPort(this.MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
 
+        openerNode.PairedCloserId = closerNode.Id;
+        closerNode.PairedOpenerId = openerNode.Id;
+
         foreach (TopsyTurvyVisualNodeModel tail in tails)
         {
             this.LinkFlow(tail, closerNode, diagram);
@@ -532,6 +551,9 @@ public sealed class VisualGraphBuilder
         closerNode.AddPort(this.MakePort(closerNode, "In", VisualPortRole.FlowIn));
         closerNode.AddPort(this.MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
+
+        openerNode.PairedCloserId = closerNode.Id;
+        closerNode.PairedOpenerId = openerNode.Id;
 
         if (bodyTail is not null)
         {
@@ -628,6 +650,10 @@ public sealed class VisualGraphBuilder
         closerNode.StatementType = "FunctionBodyCloser";
         closerNode.AddPort(this.MakePort(closerNode, "In", VisualPortRole.FlowIn));
         diagram.Nodes.Add(closerNode);
+
+        openerNode.PairedCloserId = closerNode.Id;
+        closerNode.PairedOpenerId = openerNode.Id;
+
         this.LinkFlow(previousNode, closerNode, diagram);
 
         return bodyCount;
@@ -746,6 +772,9 @@ public sealed class VisualGraphBuilder
         closerNode.AddPort(this.MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
 
+        openerNode.PairedCloserId = closerNode.Id;
+        closerNode.PairedOpenerId = openerNode.Id;
+
         foreach (TopsyTurvyVisualNodeModel tail in tails)
         {
             this.LinkFlow(tail, closerNode, diagram);
@@ -842,6 +871,9 @@ public sealed class VisualGraphBuilder
         closer.AddPort(this.MakePort(closer, "In", VisualPortRole.FlowIn));
         closer.AddPort(this.MakePort(closer, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closer);
+
+        opener.PairedCloserId = closer.Id;
+        closer.PairedOpenerId = opener.Id;
 
         foreach (TopsyTurvyVisualNodeModel tail in tails)
         {
@@ -1002,6 +1034,9 @@ public sealed class VisualGraphBuilder
         closer.AddPort(this.MakePort(closer, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closer);
 
+        openerNode.PairedCloserId = closer.Id;
+        closer.PairedOpenerId = openerNode.Id;
+
         this.LinkFlow(openerNode, closer, diagram);
         this.LinkFlow(elseTail, closer, diagram);
 
@@ -1138,9 +1173,9 @@ public sealed class VisualGraphBuilder
             string title = VisualOperatorMaps.OperatorToTitle.TryGetValue(prefix.Operator, out string? mapped)
                 ? mapped
                 : prefix.Operator.ToString();
-            
+
             TopsyTurvyVisualNodeModel operatorNode = this.MakeNode(position, title, null, VisualNodeKind.Operator);
-            operatorNode.StatementType = "OperatorNode";
+            operatorNode.StatementType = GetOperatorStatementType(prefix.Operator);
 
             List<TopsyTurvyVisualPortModel> argPorts = [];
             for (int i = 0; i < prefix.Arguments.Count; i++)
@@ -1197,9 +1232,12 @@ public sealed class VisualGraphBuilder
 
         if (expression is ArrayIndexNode arrayIndex)
         {
-            TopsyTurvyVisualNodeModel indexNode = this.MakeNode(position, arrayIndex.ArrayName, "at index", VisualNodeKind.Identifier);
+            TopsyTurvyVisualNodeModel indexNode = this.MakeNode(position, "VICTIM", "at index", VisualNodeKind.Identifier);
             indexNode.StatementType = "ArrayIndexNode";
             indexNode.SymbolIdentifierNodeName = arrayIndex.ArrayName;
+
+            TopsyTurvyVisualPortModel varPort = this.MakePort(indexNode, "Variable", VisualPortRole.DataIn);
+            indexNode.AddPort(varPort);
             TopsyTurvyVisualPortModel indexPort = this.MakePort(indexNode, "Index", VisualPortRole.DataIn);
             indexNode.AddPort(indexPort);
             indexNode.AddPort(this.MakePort(indexNode, "Out", VisualPortRole.DataOut));
@@ -1211,7 +1249,19 @@ public sealed class VisualGraphBuilder
                 diagram.Links.Add(new LinkModel(indexOut, targetDataInPort));
             }
 
-            this.CreateExpressionNode(arrayIndex.Index, indexPort, layout, diagram, anchor: position, portIndex: 0);
+            BlazorDiagramsPoint variablePosition = new(position.X - ExpressionColumnWidth, position.Y);
+            TopsyTurvyVisualNodeModel variableNode = this.MakeNode(variablePosition, arrayIndex.ArrayName, null, VisualNodeKind.Identifier);
+            variableNode.StatementType = "IdentifierNode";
+            variableNode.SymbolIdentifierNodeName = arrayIndex.ArrayName;
+            variableNode.AddPort(this.MakePort(variableNode, "Out", VisualPortRole.DataOut));
+            diagram.Nodes.Add(variableNode);
+            PortModel? variableOutPort = FindPort(variableNode, VisualPortRole.DataOut);
+            if (variableOutPort is not null)
+            {
+                diagram.Links.Add(new LinkModel(variableOutPort, varPort));
+            }
+
+            this.CreateExpressionNode(arrayIndex.Index, indexPort, layout, diagram, anchor: position, portIndex: 1);
             return;
         }
 
@@ -1220,7 +1270,7 @@ public sealed class VisualGraphBuilder
             TopsyTurvyVisualNodeModel lengthNode = this.MakeNode(position, "RECKONING OF", null, VisualNodeKind.Operator);
             lengthNode.StatementType = "ArrayLengthNode";
             lengthNode.SymbolIdentifierNodeName = arrayLength.ArrayName;
-            TopsyTurvyVisualPortModel arrayPort = this.MakePort(lengthNode, "Array", VisualPortRole.DataIn);
+            TopsyTurvyVisualPortModel arrayPort = this.MakePort(lengthNode, "Variable", VisualPortRole.DataIn);
             lengthNode.AddPort(arrayPort);
             lengthNode.AddPort(this.MakePort(lengthNode, "Out", VisualPortRole.DataOut));
             diagram.Nodes.Add(lengthNode);
@@ -1297,12 +1347,12 @@ public sealed class VisualGraphBuilder
     /// <returns>The created visual node.</returns>
     private TopsyTurvyVisualNodeModel CreateLiteralExpressionNode(LiteralNode node, BlazorDiagramsPoint pos)
     {
-        string label = node.Value?.ToString() ?? Keywords.Literals.Naught;
-        TopsyTurvyVisualNodeModel expressionNode = this.MakeNode(pos, label, FormatLiteralType(node.Type), VisualNodeKind.Literal);
+        string subtitle = $"{FormatLiteralType(node.Type)} : {node.Value?.ToString() ?? Keywords.Literals.Naught}";
+        TopsyTurvyVisualNodeModel expressionNode = this.MakeNode(pos, "Literal", subtitle, VisualNodeKind.Literal);
         expressionNode.StatementType = "LiteralNode";
         expressionNode.AddPort(this.MakePort(expressionNode, "Out", VisualPortRole.DataOut));
         expressionNode.AstNode = node;
-        expressionNode.LiteralValue = label;
+        expressionNode.LiteralValue = node.Value?.ToString() ?? Keywords.Literals.Naught;
         expressionNode.NodeLiteralType = node.Type;
         return expressionNode;
     }
@@ -1328,6 +1378,28 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
+    /// Gets the statement type corresponding to the AST node for an operator node based on its operator category.
+    /// </summary>
+    private static string GetOperatorStatementType(Operator theOperator) => theOperator switch
+    {
+        Operator.ChordOf or
+            Operator.HarmonyOf or
+            Operator.DiscordOf or
+            Operator.InversionOf or
+            Operator.TranspositionUp or
+            Operator.TranspositionDown => "BitwiseNode",
+        Operator.Both or
+            Operator.Either or
+            Operator.HardlyEver or
+            Operator.Alike or
+            Operator.Unlike => "LogicalNode",
+        Operator.AllOf or
+            Operator.AnyOf => "VariadicNode",
+        Operator.WovenOf => "WovenNode",
+        _ => "ArithmeticNode",
+    };
+
+    /// <summary>
     /// Builds the SUMMON sub-graph.
     /// </summary>
     /// <param name="prefix">The prefix expression node representing the SUMMON operation.</param>
@@ -1337,11 +1409,23 @@ public sealed class VisualGraphBuilder
     /// <param name="summonPosition">The position to place the SUMMON node.</param>
     private void CreateSummonNode(PrefixExpressionNode prefix, TopsyTurvyVisualPortModel targetDataInPort, NodeLayoutContext layout, BlazorDiagram diagram, BlazorDiagramsPoint summonPosition)
     {
-        TopsyTurvyVisualNodeModel summonNode = this.MakeNode(summonPosition, "SUMMON", null, VisualNodeKind.Operator);
+        TopsyTurvyVisualNodeModel summonNode = this.MakeNode(summonPosition, "SUMMON", null, VisualNodeKind.Function);
         summonNode.StatementType = "SummonNode";
+        summonNode.AddPort(this.MakePort(summonNode, "In", VisualPortRole.FlowIn));
         TopsyTurvyVisualPortModel functionPort = this.MakePort(summonNode, "Function", VisualPortRole.DataIn);
         summonNode.AddPort(functionPort);
+
+        // The first argument is the function identifier, followed by zero or more argument expressions.
+        List<TopsyTurvyVisualPortModel> argumentPorts = [];
+        for (int i = 1; i < prefix.Arguments.Count; i++)
+        {
+            TopsyTurvyVisualPortModel argumentPort = this.MakePort(summonNode, $"Arg {i}", VisualPortRole.DataIn);
+            summonNode.AddPort(argumentPort);
+            argumentPorts.Add(argumentPort);
+        }
+
         summonNode.AddPort(this.MakePort(summonNode, "Out", VisualPortRole.DataOut));
+        summonNode.AddPort(this.MakePort(summonNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(summonNode);
 
         PortModel? summonOut = FindPort(summonNode, VisualPortRole.DataOut);
@@ -1355,26 +1439,16 @@ public sealed class VisualGraphBuilder
             return;
         }
 
-        // The function identifier node, the first argument on the AST node, is shown with Function
-        // colour and receives the call arguments (the remaining arguments) as Data In ports.  Its
-        // Data Out feeds the SUMMON Function port.
+        // The function identifier node carries the function name and connects to the SUMMON
+        // "Function" Data In port.  Arguments are handled by the SUMMON node.
         string functionTitle = prefix.Arguments[0] is IdentifierNode id
             ? id.Name
             : "Function";
-        
+
         BlazorDiagramsPoint functionPos = new(summonPosition.X - ExpressionColumnWidth, summonPosition.Y);
         TopsyTurvyVisualNodeModel functionNode = this.MakeNode(functionPos, functionTitle, null, VisualNodeKind.Function);
         functionNode.StatementType = "SummonFunctionNode";
         functionNode.SymbolIdentifierNodeName = functionTitle;
-
-        List<TopsyTurvyVisualPortModel> callArgPorts = [];
-        for (int i = 1; i < prefix.Arguments.Count; i++)
-        {
-            TopsyTurvyVisualPortModel argPort = this.MakePort(functionNode, $"arg{i}", VisualPortRole.DataIn);
-            functionNode.AddPort(argPort);
-            callArgPorts.Add(argPort);
-        }
-
         functionNode.AddPort(this.MakePort(functionNode, "Out", VisualPortRole.DataOut));
         diagram.Nodes.Add(functionNode);
 
@@ -1384,9 +1458,31 @@ public sealed class VisualGraphBuilder
             diagram.Links.Add(new LinkModel(functionOut, functionPort));
         }
 
-        for (int i = 0; i < callArgPorts.Count; i++)
+        for (int i = 0; i < argumentPorts.Count; i++)
         {
-            this.CreateExpressionNode(prefix.Arguments[i + 1], callArgPorts[i], layout, diagram, anchor: functionPos, portIndex: i);
+            this.CreateExpressionNode(prefix.Arguments[i + 1], argumentPorts[i], layout, diagram, anchor: summonPosition, portIndex: i + 1);
+        }
+    }
+
+    /// <summary>
+    /// Creates a visual node for a target identifier and links it to the specified target port.
+    /// </summary>
+    /// <param name="name">The name of the identifier.</param>
+    /// <param name="targetPort">The target port to link the identifier node to.</param>
+    /// <param name="statementPosition">The position of the statement node that consumes the identifier.</param>
+    /// <param name="diagram">The diagram to which the identifier node will be added.</param>
+    private void CreateTargetIdentifierNode(string name, TopsyTurvyVisualPortModel targetPort, BlazorDiagramsPoint statementPosition, BlazorDiagram diagram)
+    {
+        BlazorDiagramsPoint position = new(statementPosition.X - ExpressionColumnWidth, statementPosition.Y);
+        TopsyTurvyVisualNodeModel identifierVisualNode = this.MakeNode(position, name, null, VisualNodeKind.Identifier);
+        identifierVisualNode.StatementType = "IdentifierNode";
+        identifierVisualNode.SymbolIdentifierNodeName = name;
+        identifierVisualNode.AddPort(this.MakePort(identifierVisualNode, "Out", VisualPortRole.DataOut));
+        diagram.Nodes.Add(identifierVisualNode);
+        PortModel? outPort = FindPort(identifierVisualNode, VisualPortRole.DataOut);
+        if (outPort is not null)
+        {
+            diagram.Links.Add(new LinkModel(outPort, targetPort));
         }
     }
 

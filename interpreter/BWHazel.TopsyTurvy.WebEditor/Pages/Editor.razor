@@ -28,12 +28,6 @@
                        Disabled="isRunning"
                        OnClick="this.RunProgramAsync">@(this.areGsLabelsEnabled ? "Perform" : "Run")</MudButton>
             <MudSpacer />
-            @if (this.activeEditorMode == EditorMode.Visual)
-            {
-                <MudButton Size="Size.Small"
-                           StartIcon="@(this.isVisualReadOnly ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.Lock)"
-                           OnClick="this.ToggleVisualReadOnlyAsync">@(this.isVisualReadOnly ? "Edit" : "Lock")</MudButton>
-            }
             <MudButton Size="Size.Small"
                        Color="Color.Error"
                        StartIcon="@Icons.Material.Outlined.DeleteOutline"
@@ -93,7 +87,11 @@
                     <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%;position:relative" : "display:none;height:100%")">
                         <VisualEditor Diagram="this.visualDiagram"
                                       IsReadOnly="this.isVisualReadOnly"
-                                      OnNodeChanged="this.OnVisualNodeChangedAsync" />
+                                      OnNodeChanged="this.OnVisualNodeChangedAsync"
+                                      IsPanelOpen="this.isSymbolPanelOpen"
+                                      VisualSymbols="this.visualSymbols"
+                                      OnToggleReadOnly="this.ToggleVisualReadOnlyAsync"
+                                      OnTogglePanelOpen="@(() => { this.isSymbolPanelOpen = !this.isSymbolPanelOpen; this.StateHasChanged(); })" />
                         @if (this.visualGraphHasErrors)
                         {
                             <div class="visual-graph-error-overlay" title="The graph is not currently parseable. Connect all required ports to update the code editor.">
@@ -111,7 +109,7 @@
                      Color="Color.Default"
                      Rounded="false">
                 <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Libretto" : "Code")" PanelClass="d-none" />
-                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Stage" : "Visual")" PanelClass="d-none" />
+                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Stage (Experimental)" : "Visual (Experimental)")" PanelClass="d-none" />
             </MudTabs>
         </div>
         <div class="pane-divider"></div>
@@ -166,6 +164,8 @@
     private string stdinText = string.Empty;
     private bool isRunning = false;
     private bool visualGraphHasErrors = false;
+    private bool isSymbolPanelOpen = false;
+    private IReadOnlyList<VisualSymbolEntry> visualSymbols = [];
     private string lastRunOutput = string.Empty;
     private bool previousIsDarkMode = true;
     private bool areGsLabelsEnabled = true;
@@ -361,6 +361,15 @@
 
             await this.UpdateDiagnosticsAsync(source);
 
+            // If the content matches what the visual editor just generated, this is a visual-driven
+            // update: skip invalidating the cache to prevent `RebuildVisualGraphAsync` from erasing
+            // any unsaved factory nodes that are not yet part of the AST.
+            if (source == this.lastBuiltVisualSource)
+            {
+                await this.SavePreferencesAsync();
+                return;
+            }
+
             // Invalidate the visual graph cache so the next switch to the Visual tab rebuilds it.
             this.lastBuiltVisualSource = string.Empty;
             if (this.activeEditorMode == EditorMode.Visual)
@@ -410,11 +419,13 @@
             VisualGraphBuilder builder = new();
             this.visualDiagram = builder.Build(result.Program, this.isVisualReadOnly);
             this.lastBuiltVisualSource = source;
+            this.visualSymbols = VisualSymbolScanner.Scan(this.visualDiagram);
         }
         else
         {
             this.visualDiagram = null;
             this.lastBuiltVisualSource = string.Empty;
+            this.visualSymbols = [];
         }
 
         this.StateHasChanged();
@@ -425,6 +436,13 @@
     /// </summary>
     private async Task ToggleVisualReadOnlyAsync()
     {
+        // When locking, sync Monaco from the current visual diagram first so connected
+        // factory nodes that updated the graph are not lost when the diagram rebuilds.
+        if (this.isVisualReadOnly == false && this.visualDiagram is not null && !this.visualGraphHasErrors)
+        {
+            await this.OnVisualNodeChangedAsync();
+        }
+
         this.isVisualReadOnly = !this.isVisualReadOnly;
         this.lastBuiltVisualSource = string.Empty;
         await this.RebuildVisualGraphAsync();
@@ -446,7 +464,17 @@
         ProgramNode program = converter.Convert(this.visualDiagram);
 
         TopsyTurvyCodeGenerator generator = new();
-        string source = generator.Generate(program);
+        string source;
+        try
+        {
+            source = generator.Generate(program);
+        }
+        catch
+        {
+            this.visualGraphHasErrors = true;
+            this.StateHasChanged();
+            return;
+        }
 
         TopsyTurvyParser parser = new();
         ParseResult parseResult = parser.TryParse(source);
@@ -460,10 +488,64 @@
 
         this.visualGraphHasErrors = false;
         this.lastBuiltVisualSource = source;
+        this.visualSymbols = [.. VisualSymbolScanner.Scan(this.visualDiagram), .. this.GetImportedFunctionSymbols(this.visualDiagram)];
 
         await this.JSRuntime.InvokeVoidAsync("blazorMonaco.editor.setValue", "topsy-turvy-editor", source);
         await this.UpdateDiagnosticsAsync(source);
         await this.SavePreferencesAsync();
+    }
+
+    /// <summary>
+    /// Gets any defined functions from imported files referenced in the visual diagram.
+    /// </summary>
+    /// <param name="diagram">The visual diagram to scan for import nodes.</param>
+    /// <returns>A list of visual symbol entries representing the functions defined in the imported files.</returns>
+    private IReadOnlyList<VisualSymbolEntry> GetImportedFunctionSymbols(BlazorDiagram diagram)
+    {
+        List<VisualSymbolEntry> symbols = [];
+        TopsyTurvyParser importParser = new();
+
+        foreach (TopsyTurvyVisualNodeModel visualNode in diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>())
+        {
+            if (visualNode.StatementType != "ImportNode")
+            {
+                continue;
+            }
+
+            string? filePath = visualNode.SymbolIdentifierNodeName;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                continue;
+            }
+
+            VirtualFile? file = this.files.Find(file =>
+                file.Name.Equals(filePath, StringComparison.OrdinalIgnoreCase) ||
+                file.Name.Equals(filePath + ".topsy", StringComparison.OrdinalIgnoreCase));
+            
+            if (file is null)
+            {
+                continue;
+            }
+
+            ParseResult parseResult = importParser.TryParse(file.Content);
+            if (parseResult.Program is null)
+            {
+                continue;
+            }
+
+            foreach (Statement statement in parseResult.Program.Statements)
+            {
+                if (statement is not FunctionDefinitionNode func)
+                {
+                    continue;
+                }
+
+                List<string> parameterNames = [.. func.Parameters.Select(parameter => parameter.Name)];
+                symbols.Add(new VisualSymbolEntry(func.Name, VisualSymbolKind.Function, null, parameterNames));
+            }
+        }
+
+        return symbols;
     }
 
     /// <summary>

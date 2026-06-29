@@ -1,7 +1,9 @@
 @using System
 @using System.Linq
 @using Blazor.Diagrams.Components.Renderers
+@using Blazor.Diagrams.Core.Models;
 @using BWHazel.TopsyTurvy.Ast
+@using BWHazel.TopsyTurvy.WebEditor.Visual
 
 @namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
 
@@ -23,7 +25,7 @@ The node layout is a vertical stack of rows:
         <div class="visual-node-flow-top">
             @foreach (TopsyTurvyVisualPortModel port in this.FlowInPorts)
             {
-                <PortRenderer Port="@port" />
+                <PortRenderer Port="@port" Class="visual-node-flow-port" />
             }
         </div>
     }
@@ -69,10 +71,22 @@ The node layout is a vertical stack of rows:
             @if (this.Node.Kind == VisualNodeKind.Program)
             {
                 <MudTextField T="string" Label="Title" Value="@this.Node.SymbolIdentifierNodeName"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.Node.Subtitle = string.IsNullOrEmpty(this.Node.LiteralValue)
+                            ? $"\"{value}\""
+                            : $"\"{value}\" or, \"{this.Node.LiteralValue}\"";
+                    }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                <MudTextField T="string" Label="Subtitle" Value="@this.Node.LiteralValue"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.LiteralValue = v))"
+                <MudTextField T="string" Label="Subtitle (optional)" Value="@this.Node.LiteralValue"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.LiteralValue = string.IsNullOrEmpty(value) ? null : value;
+                        this.Node.Subtitle = string.IsNullOrEmpty(value)
+                            ? $"\"{this.Node.SymbolIdentifierNodeName}\""
+                            : $"\"{this.Node.SymbolIdentifierNodeName}\" or, \"{value}\"";
+                    }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
             }
             else if (this.Node.Kind == VisualNodeKind.Declaration)
@@ -85,35 +99,160 @@ The node layout is a vertical stack of rows:
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(t => t != LiteralType.Null))
                     {
-                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">@literalType</MudSelectItem>
+                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                            @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                        </MudSelectItem>
                     }
                 </MudSelect>
+                @if (this.Node.NodeLiteralType == LiteralType.Array)
+                {
+                    <MudSelect T="LiteralType?" Label="Element Type" Value="@this.Node.ArrayElementLiteralType"
+                        ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.ArrayElementLiteralType = v))"
+                        Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null && type != LiteralType.Array))
+                        {
+                            <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                                @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                    @if (!this.HasArrayElementPorts)
+                    {
+                        <MudTextField T="string" Label="Size (optional)" Value="@this.Node.LiteralValue"
+                            ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.LiteralValue = string.IsNullOrWhiteSpace(value) ? null : value))"
+                            Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    }
+                    <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                        Size="MudBlazor.Size.Small"
+                        OnClick="@this.AddArrayElementPort">Add Victim</MudButton>
+                }
                 <MudCheckBox T="bool" Label="Constant" Value="@this.Node.IsIdentifierConstant"
                     ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.IsIdentifierConstant = v))"
                     Class="visual-node-edit-field" />
             }
-            else if (this.Node.Kind == VisualNodeKind.Assignment)
-            {
-                <MudTextField T="string" Label="Target" Value="@this.Node.SymbolIdentifierNodeName"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
-                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            }
             else if (this.Node.Kind == VisualNodeKind.Print)
             {
-                <MudCheckBox T="bool" Label="Suppress newline" Value="@this.Node.PrintSuppressNewline"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.PrintSuppressNewline = v))"
+                <MudCheckBox T="bool" Label="Without Ceremony" Value="@this.Node.PrintSuppressNewline"
+                    ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.PrintSuppressNewline = value))"
                     Class="visual-node-edit-field" />
+            }
+            else if (this.Node.StatementType == "ImportNode")
+            {
+                <MudTextField T="string" Label="File" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.Node.Subtitle = value;
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            else if (this.Node.StatementType == "ArithmeticNode")
+            {
+                <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
+                    ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.Title = value))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (string arithmeticOperator in ArithmeticOperators)
+                    {
+                        <MudSelectItem T="string" Value="@arithmeticOperator">@arithmeticOperator</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (this.Node.StatementType == "BitwiseNode")
+            {
+                <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.Title = value;
+                        this.AdjustOperatorPortCount(value);
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (string bitwiseOperator in BitwiseOperators)
+                    {
+                        <MudSelectItem T="string" Value="@bitwiseOperator">@bitwiseOperator</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (this.Node.StatementType == "LogicalNode")
+            {
+                <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.Title = value;
+                        this.AdjustOperatorPortCount(value);
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (string logicalOperator in LogicalOperators)
+                    {
+                        <MudSelectItem T="string" Value="@logicalOperator">@logicalOperator</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (this.Node.StatementType == "VariadicNode")
+            {
+                <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
+                    ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.Title = value))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (string variadicOperator in VariadicOperators)
+                    {
+                        <MudSelectItem T="string" Value="@variadicOperator">@variadicOperator</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                    Size="MudBlazor.Size.Small"
+                    OnClick="@this.AddOperatorArgumentPort">Add Argument</MudButton>
+            }
+            else if (this.Node.StatementType == "WovenNode")
+            {
+                <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                    Size="MudBlazor.Size.Small"
+                    OnClick="@this.AddOperatorArgumentPort">Add Argument</MudButton>
+            }
+            else if (this.Node.StatementType == "ExpressionCastNode")
+            {
+                <MudSelect T="LiteralType?" Label="Cast To" Value="@this.Node.NodeLiteralType"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.NodeLiteralType = value;
+                        string typeLabel = value.HasValue && VisualTypeMaps.TypeToKeyword.TryGetValue(value.Value, out string? kw) ? kw : value?.ToString() ?? "?";
+                        this.Node.Subtitle = $"→ {typeLabel}";
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null && type != LiteralType.Array))
+                    {
+                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                            @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (this.Node.StatementType == "SummonNode")
+            {
+                <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                    Size="MudBlazor.Size.Small"
+                    OnClick="@this.AddSummonArgumentPort">Add Argument</MudButton>
             }
             else if (this.Node.Kind == VisualNodeKind.Literal)
             {
+                <MudSelect T="LiteralType?" Label="Type" Value="@this.Node.NodeLiteralType"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.NodeLiteralType = value;
+                        this.Node.Subtitle = this.FormatLiteralSubtitle(value, this.Node.LiteralValue);
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null))
+                    {
+                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                            @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                        </MudSelectItem>
+                    }
+                </MudSelect>
                 <MudTextField T="string" Label="Value" Value="@this.Node.LiteralValue"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.LiteralValue = v))"
-                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            }
-            else if (this.Node.Kind == VisualNodeKind.Identifier || this.Node.Kind == VisualNodeKind.Function)
-            {
-                <MudTextField T="string" Label="Name" Value="@this.Node.SymbolIdentifierNodeName"
-                    ValueChanged="@(v => this.OnPropertyChanged(() => this.Node.SymbolIdentifierNodeName = v))"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.LiteralValue = value;
+                        this.Node.Subtitle = this.FormatLiteralSubtitle(this.Node.NodeLiteralType, value);
+                    }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
             }
         </div>
@@ -131,7 +270,7 @@ The node layout is a vertical stack of rows:
                         <span class="visual-node-port-label">@port.Label</span>
                     }
 
-                    <PortRenderer Port="@port" />
+                    <PortRenderer Port="@port" Class="visual-node-flow-port" />
                 </div>
             }
 
@@ -165,14 +304,89 @@ The node layout is a vertical stack of rows:
     /// <summary>
     /// Gets a value indicating whether this node kind has any editing controls.
     /// </summary>
-    private bool HasEditingControls => this.Node.Kind is
-        VisualNodeKind.Program or
-        VisualNodeKind.Declaration or
-        VisualNodeKind.Assignment or
-        VisualNodeKind.Print or
-        VisualNodeKind.Literal or
-        VisualNodeKind.Identifier or
-        VisualNodeKind.Function;
+    private bool HasEditingControls =>
+        (this.Node.Kind == VisualNodeKind.Program && this.Node.Title != "FINALE.") ||
+        this.Node.Kind is VisualNodeKind.Declaration or VisualNodeKind.Print or VisualNodeKind.Literal or VisualNodeKind.Operator ||
+        this.Node.StatementType == "ImportNode" ||
+        (this.Node.StatementType == "SummonNode" && string.IsNullOrEmpty(this.Node.SymbolIdentifierNodeName));
+
+    private static readonly IReadOnlyList<string> ArithmeticOperators =
+    [
+        "SUM OF", "DIFFERENCE OF", "PRODUCT OF", "QUOTIENT OF", "REMAINDER OF",
+        "LARGER OF", "SMALLER OF", "PRE-ADAMITE", "LOWER DEGREE",
+    ];
+
+    private static readonly IReadOnlyList<string> BitwiseOperators =
+    [
+        "CHORD OF", "HARMONY OF", "DISCORD OF",
+        "INVERSION OF", "TRANSPOSITION UP", "TRANSPOSITION DOWN",
+    ];
+
+    private static readonly IReadOnlyList<string> LogicalOperators = ["BOTH", "EITHER", "HARDLY EVER", "ALIKE", "UNLIKE"];
+
+    private static readonly IReadOnlyList<string> VariadicOperators = ["ALL OF", "ANY OF"];
+
+    private static readonly IReadOnlySet<string> UnaryOperators =
+        new HashSet<string> { "HARDLY EVER", "INVERSION OF", "TRANSPOSITION UP", "TRANSPOSITION DOWN" };
+
+    /// <summary>
+    /// Adjusts the number of Data In ports for a bitwise or logical operator node based on the selected operator.
+    /// </summary>
+    /// <param name="operatorNodeTitle">The operator title.</param>
+    private void AdjustOperatorPortCount(string operatorNodeTitle)
+    {
+        if (UnaryOperators.Contains(operatorNodeTitle))
+        {
+            return;
+        }
+
+        int dataInPortsCount = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.DataIn);
+
+        if (dataInPortsCount < 2)
+        {
+            this.Node.AddPort(new TopsyTurvyVisualPortModel(
+                this.Node, Blazor.Diagrams.Core.Models.PortAlignment.Left, "Arg 2", VisualPortRole.DataIn));
+        }
+    }
+
+    /// <summary>
+    /// Adds a new Data In port for an additional argument to a variadic or WOVEN OF operator node.
+    /// </summary>
+    private async Task AddOperatorArgumentPort()
+    {
+        int argIndex = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.DataIn);
+
+        TopsyTurvyVisualPortModel? port = new(this.Node, PortAlignment.Left, $"Arg {argIndex + 1}", VisualPortRole.DataIn);
+        this.Node.AddPort(port);
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Adds a new Data In port for an additional argument to a SUMMON node.
+    /// </summary>
+    private async Task AddSummonArgumentPort()
+    {
+        int argumentIndex = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.DataIn && port.Label != "Function");
+
+        TopsyTurvyVisualPortModel? port = new TopsyTurvyVisualPortModel(this.Node, PortAlignment.Left, $"Arg {argumentIndex + 1}", VisualPortRole.DataIn);
+        this.Node.AddPort(port);
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether this array declaration node has any Data In ports for array element values.
+    /// </summary>
+    private bool HasArrayElementPorts => this.Node.Ports
+        .OfType<TopsyTurvyVisualPortModel>()
+        .Any(port => port.Role == VisualPortRole.DataIn && port.Label?.StartsWith("Victim ") == true);
 
     /// <summary>
     /// Gets the Flow In ports for this node, which render at the top of the node.
@@ -202,6 +416,36 @@ The node layout is a vertical stack of rows:
     private async Task OnPropertyChanged(Action updateModel)
     {
         updateModel();
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Formats the subtitle for a Literal node.
+    /// </summary>
+    /// <param name="type">The literal type.</param>
+    /// <param name="value">The literal value.</param>
+    /// <returns>A formatted subtitle string.</returns>
+    private string FormatLiteralSubtitle(LiteralType? type, string? value)
+    {
+        string typeDisplay = type.HasValue && VisualTypeMaps.TypeToKeyword.TryGetValue(type.Value, out string? keyword)
+            ? keyword
+            : type?.ToString() ?? "?";
+        return $"{typeDisplay} : {value ?? Keywords.Literals.Naught}";
+    }
+
+    /// <summary>
+    /// Adds a new Data In port for an array element value to a Declaration node of array type.
+    /// </summary>
+    private async Task AddArrayElementPort()
+    {
+        int victimIndex = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.DataIn && port.Label?.StartsWith("Victim ") == true);
+        
+        var port = new TopsyTurvyVisualPortModel(this.Node, PortAlignment.Left, $"Victim {victimIndex + 1}", VisualPortRole.DataIn);
+        this.Node.AddPort(port);
+        this.Node.Refresh();
         await this.OnNodeChanged.InvokeAsync();
     }
 }

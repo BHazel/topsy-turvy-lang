@@ -212,6 +212,43 @@ If the feature adds a new AST statement or expression node, or renames an existi
 | `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
 | branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
 
+### 3j-ii. Visual editor supporting files
+
+Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGraphBuilder` whenever a node type or keyword changes:
+
+**`VisualGraphToAstConverter.cs`** — The converter walks the live diagram and reconstructs an AST. If a new statement node is added:
+- Add a `case` in `ReconstructSingleStatement` (for non-block nodes) or `ReconstructBlock` (for block openers), naming the new `StatementType` string.
+- Add a corresponding `Reconstruct*Factory` method that builds the AST node from visual node properties and DataIn port links, following the pattern of the existing factory methods.
+- If the new node has branch bodies (BranchOut ports), update `WalkBranchBody` callers or add new branch label constants to match the port labels used in `VisualGraphBuilder`.
+- If the new node introduces a new branch-entry header node (`statementType` ending in `Branch`, e.g. `"TryCatchSuccessBranch"`), add that string to the `is "..." or "..."` skip list in `WalkFlowStatements` so header artefact nodes are never reconstructed as statements.
+
+**`VisualNodeFactory.cs`** — The factory creates visual nodes without an AST input (for the context menu). If a new statement node is added:
+- Add a `case` in the `CreateStatement` switch (for statement nodes) or `CreateExpression` switch (for expression nodes).
+- For block types, create a `Create*Block` helper that adds opener + branch-entry headers + closer, sets `PairedCloserId`/`PairedOpenerId`, and adds all required ports (FlowIn, FlowOut, BranchOut, DataIn) with labels matching the port labels in `VisualGraphBuilder`.
+
+**`VisualContextMenu.razor`** — The context menu lists every addable node type. Add a `<div class="visual-context-menu-item">` entry in the appropriate section (Statement / Control Flow / Error Handling / Function / Expression) for the new node type. The `@onclick` handler must pass the matching `StatementType` string to `OnAddStatementNode` or `OnAddExpression`.
+
+**`VisualTypeMaps.cs`** — If the feature adds or renames a `LiteralType` enum value, add or update the corresponding entry in `VisualTypeMaps.TypeToKeyword` using the `Keywords.TypeNames.*` constant (never a raw string literal).
+
+### 3k. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
+
+If the feature adds, removes, or renames a statement or expression construct, update the code generator and add corresponding round-trip tests.
+
+**Code generator** (`BWHazel.TopsyTurvy.Analysis/TopsyTurvyCodeGenerator.cs`):
+- Add a new `case` in `WriteStatement` for new statement node types, emitting the correct keyword sequence, indentation (use the `indent` local, `depth + 1` for nested blocks), and terminating punctuation.
+- Add a new `case` in `WriteExpression` for new expression node types.
+- Update `OperatorKeyword` if a new `Operator` enum value is introduced.
+- Update `TypeKeyword` if a new `LiteralType` enum value is introduced.
+- Generated source must satisfy all grammar invariants (I1–I10 in `AGENTS.md`): `IF YOU PLEASE.` on variadic close, full stops on block closers, etc.
+- Verify by parsing the output: `new TopsyTurvyParser().TryParse(generated).Diagnostics` must be empty.
+
+**Tests** (`BWHazel.TopsyTurvy.Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`):
+- Add at least one round-trip test per new statement and expression construct.
+- Round-trip pattern: write source as a raw string literal → `GenerateFromSource(source)` → `parser.TryParse(generated)` → `result.Diagnostics.ShouldBeEmpty()` → assert structural properties on `result.Program`.
+- Use `[Theory]` with `[InlineData]` when covering multiple variants of the same construct (e.g. operator keywords, type keywords).
+- Avoid reserved identifier names: `i`, `a`, and `b` are reserved by the language and must not be used as variable or parameter names in test source.
+- Check `DEVELOPMENT.md` for the current baseline test count and confirm the new tests push it up.
+
 ### 3j. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
