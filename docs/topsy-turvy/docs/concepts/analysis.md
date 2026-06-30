@@ -15,6 +15,7 @@ In the _Operetta Toolchain_ the Analysis layer is implemented in the `BWHazel.To
 * **`SymbolTable`:** All declared names built from the AST on each successful parse.
 * **`HoverMarkdownBuilder`:** Formats symbol information as Markdown for hover tooltips.
 * **`SourceFormatter`:** Formats code according to language standards.
+* **`TopsyTurvyCodeGenerator`:** Converts an AST back into valid Topsy Turvy source code.
 * **`SourceAnalyser`:** Finds occurrences of a symbol by scanning source text.
     * This is used as a workaround for missing AST position information as outlined in the Known Limitations section on the [Language Server](./language-server.md) page.
 * **`KeywordData`:** The authoritative list of all Topsy Turvy keywords, used for completions and formatting.
@@ -134,6 +135,42 @@ The `DepthAction` enum records what depth adjustment each line requires:
 |`PreDecrease1`|Block-closing lines such as `MY DUTY IS DISCHARGED.`|Indent decreases by 1 before the line is written.|
 |`PreDecrease2`|`SO MUCH FOR THAT.` / `NOTHING COULD BE MORE SATISFACTORY.`|Indent decreases by 2 before the line is written.|
 |`MidBlock`|Mid-block transitions such as `OR, IF NOT,` / `OTHERWISE,`|Indent decreases by 1, the line is written, then increases by 1.|
+
+### Code Generator
+
+The `TopsyTurvyCodeGenerator` converts an AST back into valid Topsy Turvy source code, effectively a reverse of the [Parser](./parser.md).  It provides a single `Generate()` method which takes a complete `ProgramNode` node and walks the complete AST, node by node, emitting source code formatted according to the source formatter regardless of how it was originally written: the AST does not store original code formatting or style.  The generated source code will parse back to a structurally identical AST.
+
+As an example, given the following AST, as constructed by the parser from any source that expresses the same programme:
+
+```csharp
+new ProgramNode()
+{
+    Title = "Demo Programme",
+    Statements =
+    [
+        new DeclarationNode()
+        {
+            Name = "Count",
+            Type = LiteralType.Integer,
+            InitialValue = new LiteralNode() { Type = LiteralType.Integer, Value = 0 },
+        },
+        new PrintNode()
+        {
+            Expression = new IdentifierNode { Name = "Count" },
+        },
+    ],
+}
+```
+
+the code generator produces:
+
+```
+HARK! "Demo Programme"
+
+PRAY WELCOME Count AS A PEER BEING 0
+BEHOLD Count
+FINALE.
+```
 
 ### Source Analyser
 
