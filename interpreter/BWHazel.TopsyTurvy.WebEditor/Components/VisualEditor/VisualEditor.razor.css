@@ -1,0 +1,43 @@
+.visual-diagram-canvas {
+    width: 100%;
+    height: 100%;
+    background: var(--mud-palette-background);
+}
+
+.visual-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.visual-editor-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.visual-editor-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    outline: none;
+}
+
+.visual-canvas-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+}
+
+.visual-canvas-panel-toggle {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}

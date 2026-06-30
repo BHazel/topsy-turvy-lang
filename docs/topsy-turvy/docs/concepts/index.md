@@ -13,7 +13,7 @@ The _Operetta_ implementation of Topsy Turvy uses standard conventions in progra
 * The AST is then checked by the [**Type Checker**](./type-checker.md), which verifies that all types are used consistently before execution begins.
 * The checked AST can then be run in a [**Runtime**](./runtime.md) environment, such as by the Interpreter, as an actual running programme.
 
-Additionally, the AST can undergo [**Analysis**](./analysis.md) to provide useful information and rich experiences when working with code, exposed to editors and tools via a [**Language Server**](./language-server.md).
+Additionally, the AST can undergo [**Analysis**](./analysis.md) to provide useful information and rich experiences when working with code, exposed to editors and tools via a [**Language Server**](./language-server.md) or even regenerate valid Topsy Turvy source code.
 
 ```mermaid
 flowchart LR

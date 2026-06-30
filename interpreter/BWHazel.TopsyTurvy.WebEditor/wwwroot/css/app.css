@@ -191,10 +191,227 @@ html, body {
     }
 }
 
+/**
+ * The editor pane (left side of the split).
+ * @remarks Flex column so the mode tab bar and content area stack vertically
+ *          inside the CSS Grid cell.  The pane-drag code measures .panes-container
+ *          geometry only and is unaffected by this internal restructure.
+ */
 .editor-pane {
     overflow: hidden;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
+
+/**
+ * The Code / Visual mode tab bar inside the editor pane (bottom of the flex column).
+ * @remarks MudBlazor tab bars default to 48px. The dense overrides here shrink the
+ *          bar to roughly 32px so it does not eat into editor vertical space.
+ */
+.editor-mode-tabs {
+    flex-shrink: 0;
+}
+
+.editor-mode-tabs .mud-tabs-toolbar {
+    height: 32px;
+    min-height: 32px;
+}
+
+.editor-mode-tabs .mud-tab {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 0.75rem;
+}
+
+/**
+ * The content area below the mode tab bar (Monaco editor or visual canvas).
+ * @remarks `flex: 1` and `min-height: 0` ensure the content fills remaining
+ *          space while the Monaco `automaticLayout` resize observer still fires.
+ */
+.editor-content-area {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/**
+ * Outer container for a visual node.
+ * @remarks ZBD positions this element on the canvas. We give it a minimum
+ *          width so short titles do not collapse the node and overflow hidden
+ *          so the rounded top clips the header background correctly.
+ */
+.visual-node {
+    min-width: 180px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    overflow: visible;
+}
+
+/**
+ * Zero-height row that positions the Flow In port circle centred on the node top edge.
+ * @remarks The Port Renderer overflows upward.  ZBD measures its actual DOM position.
+ */
+.visual-node-flow-top {
+    height: 0;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+/**
+ * FlowOut Row
+ * @remarks Zero-height container at the node bottom, mirrors .visual-node-flow-top so port
+ *          circles sit centred on the bottom edge.  Overflow upward shows labels above the edge.
+ */
+.visual-node-flow-bottom {
+    height: 0;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    overflow: visible;
+}
+
+/**
+ * Per-port column inside the Flow Out row.
+ * @remarks The port circle is absolutely positioned at y=0 (the bottom edge).
+ *          The label sits above it via negative transform so it appears inside the node.
+ */
+.visual-node-flow-bottom-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    min-width: 56px;
+}
+
+.visual-node-flow-bottom-item .visual-node-port-label {
+    position: absolute;
+    bottom: 7px;
+    white-space: nowrap;
+}
+
+/**
+ * Data Port
+ * @remarks Left column for inputs and right column for outputs.
+ */
+.visual-node-data-ports {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.visual-node-data-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.visual-node-data-port-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+}
+
+.visual-node-data-port-row--out {
+    justify-content: flex-end;
+}
+
+/**
+ * Header bar is always the first visible child of .visual-node.
+ * @remarks border-radius: 3px 3px 0 0 clips the header own background corners,
+ *          matching the node rounded top without needing overflow: hidden on the parent.
+ */
+.visual-node-header {
+    padding: 4px 8px;
+    border-radius: 3px 3px 0 0;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.visual-node-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.visual-node-subtitle {
+    font-weight: 400;
+    font-size: 0.65rem;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+.visual-node-port-label {
+    font-size: 0.65rem;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.visual-node-port-circle--in,
+.visual-node-port-circle--out {
+    width: 10px;
+    height: 10px;
+}
+
+.visual-node-edit-section {
+    padding: 6px 8px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 11px;
+}
+
+.visual-node-edit-section * {
+    font-size: 11px !important;
+}
+
+/**
+ * Node header colour tokens.
+ */
+:root {
+    --visual-node-color-program:       #5c6bc0;
+    --visual-node-color-declaration:   #388e3c;
+    --visual-node-color-assignment:    #0288d1;
+    --visual-node-color-print:         #f57c00;
+    --visual-node-color-input:         #7b1fa2;
+    --visual-node-color-conditional:   #c62828;
+    --visual-node-color-loop:          #00838f;
+    --visual-node-color-function:      #4527a0;
+    --visual-node-color-operator:      #558b2f;
+    --visual-node-color-literal:       #4e342e;
+    --visual-node-color-identifier:    #388e3c;
+    --visual-node-color-parameter:     #1565c0;
+    --visual-node-color-controlflow:   #795548;
+    --visual-node-color-errorhandling: #bf360c;
+    --visual-node-color-other:         #546e7a;
+}
+
+.visual-node-header-program       { background: var(--visual-node-color-program); }
+.visual-node-header-declaration   { background: var(--visual-node-color-declaration); }
+.visual-node-header-assignment    { background: var(--visual-node-color-assignment); }
+.visual-node-header-print         { background: var(--visual-node-color-print); }
+.visual-node-header-input         { background: var(--visual-node-color-input); }
+.visual-node-header-conditional   { background: var(--visual-node-color-conditional); }
+.visual-node-header-loop          { background: var(--visual-node-color-loop); }
+.visual-node-header-function      { background: var(--visual-node-color-function); }
+.visual-node-header-operator      { background: var(--visual-node-color-operator); }
+.visual-node-header-literal       { background: var(--visual-node-color-literal); }
+.visual-node-header-identifier    { background: var(--visual-node-color-identifier); }
+.visual-node-header-parameter     { background: var(--visual-node-color-parameter); }
+.visual-node-header-controlflow   { background: var(--visual-node-color-controlflow); }
+.visual-node-header-errorhandling { background: var(--visual-node-color-errorhandling); }
+.visual-node-header-other         { background: var(--visual-node-color-other); }
 
 .output-pane {
     display: grid;
@@ -320,3 +537,135 @@ html, body {
         content: var(--blazor-load-percentage-text, "Loading");
     }
 
+/**
+ * Visual node ports.
+ * @remarks The ZBD default port styles only apply to .default-node, so we replicate
+ * the needed rules for our custom .visual-node wrapper.  Flow ports (top/bottom)
+ * are absolutely positioned to sit on the node edge.  Data ports (left/right) stay
+ * inline in their flex rows — no position:absolute.
+ */
+.visual-node .diagram-port {
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    border: 2px solid var(--mud-palette-surface);
+    cursor: crosshair;
+    z-index: 10;
+}
+
+.visual-node .diagram-port.visual-node-flow-port {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px;
+}
+
+.visual-node .diagram-port.visual-node-port-circle {
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.visual-node .diagram-port:hover,
+.visual-node .diagram-port.has-links {
+    background: var(--mud-palette-primary-darken);
+}
+
+/**
+ * Visual context menu.
+ * @remarks Must be global (not scoped) because it is rendered by a child component.
+ */
+.visual-context-menu {
+    position: fixed;
+    z-index: 2000;
+    min-width: 220px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    padding: 4px 0;
+    font-size: 0.82rem;
+}
+
+.visual-context-menu-section-label {
+    padding: 6px 12px 2px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+    cursor: default;
+    user-select: none;
+}
+
+.visual-context-menu-item {
+    padding: 5px 16px;
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+}
+
+.visual-context-menu-item:hover {
+    background: var(--mud-palette-action-hover);
+}
+
+.visual-context-menu-item--danger {
+    color: var(--mud-palette-error);
+}
+
+.visual-context-menu-item--danger:hover {
+    background: color-mix(in srgb, var(--mud-palette-error) 12%, transparent);
+}
+
+/**
+ * Warning overlay shown on the visual canvas when the graph is not parseable.
+ * @remarks Positioned in the bottom-left corner so it does not block the graph.
+ */
+.visual-graph-error-overlay {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 0.85rem;
+    pointer-events: none;
+}
+
+
+.visual-symbol-panel-resize-handle {
+    width: 5px;
+    height: 100%;
+    cursor: ew-resize;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.visual-symbol-panel-resize-handle:hover {
+    background: var(--mud-palette-primary);
+    opacity: 0.3;
+}
+
+/**
+ * Visual Node Panel.
+ * @remarks Remove MudBlazor gutter padding on content and header to enable wider capsules.
+ */
+.visual-symbol-panel .mud-expand-panel-content.mud-expand-panel-gutters {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+.visual-symbol-panel .mud-expand-panel-header.mud-expand-panel-header-gutters {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+.visual-symbol-panel .mud-expand-panel {
+    margin: 0;
+}

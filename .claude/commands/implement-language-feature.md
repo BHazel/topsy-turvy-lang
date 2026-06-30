@@ -162,7 +162,94 @@ cd extensions/vscode/topsy-turvy && npm run test:grammar
 All four snapshot files must pass. If a snapshot changes legitimately, update
 it with `vscode-tmgrammar-test --updateSnapshot`.
 
-### 3i. REPL highlighter: `Repl/ReplHighlighter.cs`
+### 3i. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
+
+If the feature adds a new AST statement or expression node, or renames an existing node's keyword, update `VisualGraphBuilder` to reflect it. The file is ~1100 lines but its structure is straightforward: a `BuildStatement` dispatch switch and a `CreateExpressionNode` compound section.
+
+**Statement Nodes:** Add a new `case` branch in `BuildStatement` that calls a new `Create*Node` helper. The helper must follow the block-closer pattern documented in `AGENTS.md §Visual Editor Conventions` if it introduces a new block construct.
+
+**Expression Nodes:** Add a new `if (expression is ...)` branch in `CreateExpressionNode`. Place expression nodes at `(anchor.X - ExprColumnWidth, anchor.Y + portIndex * ExprPortSpacingY)`.
+
+**Port Conventions:** Always use `MakePort(parent, label, VisualPortRole.*)`. Never pass a `PortAlignment` directly; alignment is derived automatically from role.
+
+**Current Node → Keyword Mapping** (keep this table in sync when AST nodes are added or renamed):
+
+| AST type | Visual title | `VisualNodeKind` |
+|---|---|---|
+| `ProgramNode` (header) | `HARK!` | `Program` |
+| `ProgramNode` (finale) | `FINALE.` | `Program` |
+| `DeclarationNode` | `PRAY WELCOME` | `Declaration` |
+| `ArrayDeclarationNode` | `PRAY WELCOME` | `Declaration` |
+| `AssignmentNode` | `IS APPOINTED` | `Assignment` |
+| `ArrayElementAssignmentNode` | `IS APPOINTED` (subtitle: `{arr} [at index]`) | `Assignment` |
+| `PrintNode` | `BEHOLD` / `BEHOLD WITHOUT FANFARE` | `Print` |
+| `InputNode` | `PRAY TELL` | `Input` |
+| `ConditionalNode` (opener) | `SHOULD IT TRANSPIRE THAT` | `Conditional` |
+| `ConditionalNode` (closer) | `SO MUCH FOR THAT.` | `Conditional` |
+| `LoopNode` (opener) | `BY A LEGAL FICTION` | `Loop` |
+| `LoopNode` (closer) | `THE TERM EXPIRES.` | `Loop` |
+| `FunctionDefinitionNode` (no body) | `IT IS MY DUTY TO PERFORM` | `Function` |
+| `FunctionDefinitionNode` (with body, opener) | `IT IS MY DUTY TO PERFORM` | `Function` |
+| `FunctionDefinitionNode` (closer) | `MY DUTY IS DISCHARGED.` | `Function` |
+| `ReturnNode` | `AND SO I FIND` | `Function` |
+| `ThrowNode` | `A HIDEOUS CURSE ON` | `ErrorHandling` |
+| `TryCatchNode` (opener) | `WITH THE GREATEST RESPECT,` | `ErrorHandling` |
+| `TryCatchNode` (closer) | `THAT CONCLUDES THE MATTER.` | `ErrorHandling` |
+| `SwitchNode` (opener) | `IN WHICH CAPACITY?` | `Conditional` |
+| `SwitchNode` (closer) | `NOTHING COULD BE MORE SATISFACTORY.` | `Conditional` |
+| `ImportNode` | `PRAY ADMIT` | `Other` |
+| `GuardNode` (opener) | `YEOMAN` | `ControlFlow` |
+| `GuardNode` (closer) | `UNDER ORDERS.` | `ControlFlow` |
+| `AssertNode` | `THE LAW IS` | `ErrorHandling` |
+| `ExpressionStatement` | `EXPRESSION` | `Other` |
+| `LiteralNode` | literal value string | `Literal` |
+| `IdentifierNode` / `ParameterNode` | name | `Identifier` / `Parameter` |
+| `PrefixExpressionNode` (operator) | operator keyword (e.g. `SUM OF`) | `Operator` |
+| `TernaryExpressionNode` | `SHOULD IT TRANSPIRE THAT` | `Conditional` |
+| `ArrayIndexNode` | array name (subtitle: `at index`) | `Identifier` |
+| `ArrayLengthNode` | `RECKONING OF` | `Operator` |
+| `ExpressionCastNode` | `AS IT WERE` (subtitle: `AS A {type}`) | `Operator` |
+| `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
+| branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
+
+### 3j. Visual editor supporting files
+
+Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGraphBuilder` whenever a node type or keyword changes:
+
+**`VisualGraphToAstConverter.cs`** — The converter walks the live diagram and reconstructs an AST. If a new statement node is added:
+- Add a `case` in `ReconstructSingleStatement` (for non-block nodes) or `ReconstructBlock` (for block openers), naming the new `StatementType` string.
+- Add a corresponding `Reconstruct*Factory` method that builds the AST node from visual node properties and DataIn port links, following the pattern of the existing factory methods.
+- If the new node has branch bodies (BranchOut ports), update `WalkBranchBody` callers or add new branch label constants to match the port labels used in `VisualGraphBuilder`.
+- If the new node introduces a new branch-entry header node (`statementType` ending in `Branch`, e.g. `"TryCatchSuccessBranch"`), add that string to the `is "..." or "..."` skip list in `WalkFlowStatements` so header artefact nodes are never reconstructed as statements.
+
+**`VisualNodeFactory.cs`** — The factory creates visual nodes without an AST input (for the context menu). If a new statement node is added:
+- Add a `case` in the `CreateStatement` switch (for statement nodes) or `CreateExpression` switch (for expression nodes).
+- For block types, create a `Create*Block` helper that adds opener + branch-entry headers + closer, sets `PairedCloserId`/`PairedOpenerId`, and adds all required ports (FlowIn, FlowOut, BranchOut, DataIn) with labels matching the port labels in `VisualGraphBuilder`.
+
+**`VisualContextMenu.razor`** — The context menu lists every addable node type. Add a `<div class="visual-context-menu-item">` entry in the appropriate section (Statement / Control Flow / Error Handling / Function / Expression) for the new node type. The `@onclick` handler must pass the matching `StatementType` string to `OnAddStatementNode` or `OnAddExpression`.
+
+**`VisualTypeMaps.cs`** — If the feature adds or renames a `LiteralType` enum value, add or update the corresponding entry in `VisualTypeMaps.TypeToKeyword` using the `Keywords.TypeNames.*` constant (never a raw string literal).
+
+### 3k. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
+
+If the feature adds, removes, or renames a statement or expression construct, update the code generator and add corresponding round-trip tests.
+
+**Code generator** (`BWHazel.TopsyTurvy.Analysis/TopsyTurvyCodeGenerator.cs`):
+- Add a new `case` in `WriteStatement` for new statement node types, emitting the correct keyword sequence, indentation (use the `indent` local, `depth + 1` for nested blocks), and terminating punctuation.
+- Add a new `case` in `WriteExpression` for new expression node types.
+- Update `OperatorKeyword` if a new `Operator` enum value is introduced.
+- Update `TypeKeyword` if a new `LiteralType` enum value is introduced.
+- Generated source must satisfy all grammar invariants (I1–I10 in `AGENTS.md`): `IF YOU PLEASE.` on variadic close, full stops on block closers, etc.
+- Verify by parsing the output: `new TopsyTurvyParser().TryParse(generated).Diagnostics` must be empty.
+
+**Tests** (`BWHazel.TopsyTurvy.Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`):
+- Add at least one round-trip test per new statement and expression construct.
+- Round-trip pattern: write source as a raw string literal → `GenerateFromSource(source)` → `parser.TryParse(generated)` → `result.Diagnostics.ShouldBeEmpty()` → assert structural properties on `result.Program`.
+- Use `[Theory]` with `[InlineData]` when covering multiple variants of the same construct (e.g. operator keywords, type keywords).
+- Avoid reserved identifier names: `i`, `a`, and `b` are reserved by the language and must not be used as variable or parameter names in test source.
+- Check `DEVELOPMENT.md` for the current baseline test count and confirm the new tests push it up.
+
+### 3l. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
 constructor. Place each entry in the appropriate colour category (programme

@@ -163,6 +163,32 @@ These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
 * **Superpower Combinators:** Call them directly as delegates using `new TextSpan("input")` from `Superpower.Model`; no direct `PackageReference` to Superpower is required in the test project as it is available transitively via the Parser project reference.
 * **What not to Test:** `Lexer.Whitespace`, `Lexer.WhitespaceRequired`, and `Lexer.IntegerLiteral` are intentionally untested; each is a single-line delegation to a Superpower library primitive with no custom logic.
 
+### Visual Editor Conventions
+
+These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/Visual/` and `Components/VisualEditor/`. Read §2 of `DEVELOPMENT.md` for the full constraint set.
+
+**Port Alignment:** `VisualPortRole` determines `PortAlignment` inside `MakePort`; never pass an alignment explicitly:
+
+| `VisualPortRole` | `PortAlignment` | Edge Type |
+|---|---|---|
+| `FlowIn` | Top | Programme Flow (execution enters node from above) |
+| `FlowOut` | Bottom | Programme Flow (execution continues below) |
+| `BranchOut` | Bottom | Programme Flow (branch choice exits below) |
+| `DataIn` | Left | Data / Expression (value flows in from the left) |
+| `DataOut` | Right | Data / Expression (value flows out to the right) |
+
+**Block Closer Pattern:** For any block node (Conditional, Loop, TryCatch, Switch, Guard):
+1. Build all branches first, collecting each tail node.
+2. `maxTailY = branches.Max(t => t.Position.Y)`
+3. Place closer at `(openerX, maxTailY + NodeLayoutContext.RowSpacing)`.
+4. Call `layout.AdvancePrimaryYTo(closerY + NodeLayoutContext.RowSpacing)`.
+
+**Branch Centreing** Branch `i` of `N` branches is placed at `openerX + (i - (N-1)/2.0) * spacing`. Default spacing: 660 px (Conditional, TryCatch), 440 px (Switch).
+
+**Expression Anchoring:** Expression nodes are placed at `(anchor.X - ExprColumnWidth, anchor.Y + portIndex * ExprPortSpacingY)` relative to their consuming statement node. `ExprColumnWidth = 210.0`, `ExprPortSpacingY = 80.0`.
+
+**CSS Prefix:** All visual node CSS classes use `visual-node-` (e.g. `visual-node-header`, `visual-node-flow-top`). The retired `vn-` prefix must not be re-introduced.
+
 ### Web Editor Conventions
 
 These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
@@ -187,6 +213,8 @@ Several areas of the codebase must be kept consistent whenever related changes a
 ### New Language Keyword or Construct
 
 Use the `/implement-language-feature` skill as it is the single source of truth for layer order, build checkpoints and per-layer constraints.  Do not attempt a language change without it: the change touches at least eight files across four projects and several invariants must hold simultaneously.
+
+The skill also covers the visual editor layer (`VisualGraphBuilder`). Every new or renamed AST node type that produces a statement or expression needs a corresponding `Create*` or expression branch in `VisualGraphBuilder.cs`: consult the node-mapping table in the skill for the full list.
 
 ### New REPL Command
 
