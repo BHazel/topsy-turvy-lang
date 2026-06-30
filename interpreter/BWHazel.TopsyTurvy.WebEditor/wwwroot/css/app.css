@@ -272,7 +272,7 @@ html, body {
     height: 0;
     display: flex;
     justify-content: center;
-    gap: 16px;
+    gap: 32px;
     overflow: visible;
 }
 
@@ -286,6 +286,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     position: relative;
+    min-width: 56px;
 }
 
 .visual-node-flow-bottom-item .visual-node-port-label {
@@ -363,7 +364,7 @@ html, body {
 }
 
 .visual-node-edit-section {
-    padding: 6px 8px;
+    padding: 6px 8px 24px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -622,7 +623,7 @@ html, body {
 .visual-graph-error-overlay {
     position: absolute;
     bottom: 1rem;
-    left: 1rem;
+    right: 1rem;
     z-index: 100;
     display: flex;
     align-items: center;
@@ -635,6 +636,19 @@ html, body {
     pointer-events: none;
 }
 
+
+.visual-symbol-panel-resize-handle {
+    width: 5px;
+    height: 100%;
+    cursor: ew-resize;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.visual-symbol-panel-resize-handle:hover {
+    background: var(--mud-palette-primary);
+    opacity: 0.3;
+}
 
 /**
  * Visual Node Panel.

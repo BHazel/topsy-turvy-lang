@@ -196,7 +196,7 @@ public sealed class VisualGraphBuilder
             ConditionalNode node => this.CreateConditionalNode(node, layout, diagram),
             LoopNode node => this.CreateLoopNode(node, layout, diagram),
             BreakNode => this.CreateSimpleNode(layout, "THAT WILL DO.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: false, statementType: "BreakNode"),
-            ContinueNode => this.CreateSimpleNode(layout, "ONCE MORE.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: true, statementType: "ContinueNode"),
+            ContinueNode => this.CreateSimpleNode(layout, "ONCE MORE.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: false, statementType: "ContinueNode"),
             FunctionDefinitionNode node => this.CreateFunctionSignatureNode(node, layout),
             ReturnNode node => this.CreateReturnNode(node, layout, diagram),
             ThrowNode node => this.CreateThrowNode(node, layout, diagram),
@@ -620,15 +620,33 @@ public sealed class VisualGraphBuilder
         openerNode.StatementType = "FunctionBodyOpener";
         openerNode.SymbolIdentifierNodeName = node.Name;
         openerNode.AstNode = node;
+        openerNode.NodeLiteralType = node.ReturnType;
         openerNode.AddPort(this.MakePort(openerNode, "Out", VisualPortRole.FlowOut));
-
-        foreach (TypedParameter parameter in node.Parameters)
-        {
-            string paramLabel = $"{parameter.Name} : {FormatLiteralType(parameter.Type)}";
-            openerNode.AddPort(this.MakePort(openerNode, paramLabel, VisualPortRole.DataOut));
-        }
-
         diagram.Nodes.Add(openerNode);
+
+        BlazorDiagramsPoint openerPosition = openerNode.Position;
+        for (int i = 0; i < node.Parameters.Count; i++)
+        {
+            TypedParameter parameter = node.Parameters[i];
+            TopsyTurvyVisualPortModel paramPort = this.MakePort(openerNode, $"Param {i + 1}", VisualPortRole.DataIn);
+            openerNode.AddPort(paramPort);
+
+            TopsyTurvyVisualNodeModel termNode = this.MakeNode(
+                new BlazorDiagramsPoint(openerPosition.X - 280, openerPosition.Y + i * NodeLayoutContext.RowSpacing),
+                "TERM",
+                parameter.Name,
+                VisualNodeKind.Parameter);
+            
+            termNode.StatementType = "ParameterNode";
+            termNode.SymbolIdentifierNodeName = parameter.Name;
+            termNode.NodeLiteralType = parameter.Type;
+
+            TopsyTurvyVisualPortModel termOutPort = this.MakePort(termNode, "Out", VisualPortRole.DataOut);
+            termNode.AddPort(termOutPort);
+
+            diagram.Nodes.Add(termNode);
+            diagram.Links.Add(new LinkModel(termOutPort, paramPort));
+        }
 
         TopsyTurvyVisualNodeModel? previousNode = openerNode;
         int bodyCount = 0;

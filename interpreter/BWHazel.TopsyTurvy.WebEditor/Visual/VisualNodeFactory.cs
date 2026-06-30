@@ -44,7 +44,7 @@ internal static class VisualNodeFactory
             "PrintNode" => [SimpleStatement(statementType, "BEHOLD", null, VisualNodeKind.Print, position, diagram, ref nodeCounter, dataInLabels: ["Expr"])],
             "InputNode" => [SimpleStatement(statementType, "PRAY TELL", null, VisualNodeKind.Input, position, diagram, ref nodeCounter, dataInLabels: ["Variable"])],
             "BreakNode" => [SimpleStatement(statementType, "THAT WILL DO.", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter, shouldFlowOut: false)],
-            "ContinueNode" => [SimpleStatement(statementType, "ONCE MORE.", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter)],
+            "ContinueNode" => [SimpleStatement(statementType, "ONCE MORE.", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter, shouldFlowOut: false)],
             "ReturnNode" => [SimpleStatement(statementType, "AND SO I FIND", null, VisualNodeKind.Function, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ThrowNode" => [SimpleStatement(statementType, "A HIDEOUS CURSE ON", null, VisualNodeKind.ErrorHandling, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ImportNode" => [SimpleStatement(statementType, "PRAY ADMIT", null, VisualNodeKind.Other, position, diagram, ref nodeCounter)],
@@ -89,6 +89,7 @@ internal static class VisualNodeFactory
             "ArrayLengthNode" => ExpressionNode(statementType, "RECKONING OF", null, VisualNodeKind.Operator, position, ref nodeCounter, dataInLabels: ["Variable"]),
             "ExpressionCastNode" => ExpressionNode(statementType, "AS IT WERE", "→ PEER", VisualNodeKind.Operator, position, ref nodeCounter, dataInLabels: ["Expr"], defaultLiteralType: LiteralType.Integer),
             "SummonNode" => CreateSummonExpressionNode(position, ref nodeCounter),
+            "FunctionReferenceNode" => ExpressionNode("FunctionReferenceNode", "function", null, VisualNodeKind.Function, position, ref nodeCounter),
             _ => null,
         };
 
@@ -106,18 +107,43 @@ internal static class VisualNodeFactory
     /// <param name="position">The position where the block should be created.</param>
     /// <param name="diagram">The diagram to which the block's nodes will be added.</param>
     /// <param name="nodeCounter">A counter used to generate unique node IDs.</param>
-    /// <returns>A list containing the opener and closer nodes of the conditional block.</returns>
+    /// <returns>
+    /// A list containing the opener, branch headers the closer nodes.
+    /// </returns>
     private static IReadOnlyList<TopsyTurvyVisualNodeModel> CreateConditionalBlock(
         Point position, BlazorDiagram diagram, ref int nodeCounter)
     {
         TopsyTurvyVisualNodeModel openerNode = MakeNode("ConditionalOpener", "SHOULD IT TRANSPIRE THAT", null, VisualNodeKind.Conditional, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
         openerNode.AddPort(MakePort(openerNode, "Cond", VisualPortRole.DataIn));
-        openerNode.AddPort(MakePort(openerNode, "True", VisualPortRole.BranchOut));
+        
+        TopsyTurvyVisualPortModel truePort = MakePort(openerNode, "True", VisualPortRole.BranchOut);
+        openerNode.AddPort(truePort);
+        
+        TopsyTurvyVisualPortModel elsePort = MakePort(openerNode, "Else", VisualPortRole.BranchOut);
+        openerNode.AddPort(elsePort);
+
         diagram.Nodes.Add(openerNode);
 
-        Point closerPosition = new(position.X, position.Y + NodeLayoutContext.RowSpacing);
-        TopsyTurvyVisualNodeModel closerNode = MakeNode("ConditionalCloser", "SO MUCH FOR THAT.", null, VisualNodeKind.Conditional, closerPosition, ref nodeCounter);
+        const double branchSpacing = 660.0;
+        double headerY = position.Y + NodeLayoutContext.RowSpacing;
+
+        TopsyTurvyVisualNodeModel trueHeaderNode = MakeNode("ConditionalTrueBranch", "QUITE SO.", null, VisualNodeKind.Conditional, new Point(position.X - branchSpacing / 2, headerY), ref nodeCounter);
+        TopsyTurvyVisualPortModel trueHeaderInPort = MakePort(trueHeaderNode, "In", VisualPortRole.FlowIn);
+        trueHeaderNode.AddPort(trueHeaderInPort);
+        trueHeaderNode.AddPort(MakePort(trueHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(trueHeaderNode);
+        diagram.Links.Add(new LinkModel(truePort, trueHeaderInPort));
+
+        TopsyTurvyVisualNodeModel elseHeaderNode = MakeNode("ConditionalElseBranch", "OTHERWISE,", null, VisualNodeKind.Conditional, new Point(position.X + branchSpacing / 2, headerY), ref nodeCounter);
+        TopsyTurvyVisualPortModel elseHeaderInPort = MakePort(elseHeaderNode, "In", VisualPortRole.FlowIn);
+        elseHeaderNode.AddPort(elseHeaderInPort);
+        elseHeaderNode.AddPort(MakePort(elseHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(elseHeaderNode);
+        diagram.Links.Add(new LinkModel(elsePort, elseHeaderInPort));
+
+        double closerY = headerY + NodeLayoutContext.RowSpacing;
+        TopsyTurvyVisualNodeModel closerNode = MakeNode("ConditionalCloser", "SO MUCH FOR THAT.", null, VisualNodeKind.Conditional, new Point(position.X, closerY), ref nodeCounter);
         closerNode.AddPort(MakePort(closerNode, "In", VisualPortRole.FlowIn));
         closerNode.AddPort(MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
@@ -125,7 +151,7 @@ internal static class VisualNodeFactory
         openerNode.PairedCloserId = closerNode.Id;
         closerNode.PairedOpenerId = openerNode.Id;
 
-        return [openerNode, closerNode];
+        return [openerNode, trueHeaderNode, elseHeaderNode, closerNode];
     }
 
     /// <summary>
@@ -140,6 +166,7 @@ internal static class VisualNodeFactory
     {
         TopsyTurvyVisualNodeModel openerNode = MakeNode("LoopOpener", "BY A LEGAL FICTION", "Infinite", VisualNodeKind.Loop, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
+        openerNode.AddPort(MakePort(openerNode, "Cond", VisualPortRole.DataIn));
         openerNode.AddPort(MakePort(openerNode, "Body", VisualPortRole.BranchOut));
         diagram.Nodes.Add(openerNode);
 
@@ -161,19 +188,41 @@ internal static class VisualNodeFactory
     /// <param name="position">The position where the block should be created.</param>
     /// <param name="diagram">The diagram to which the block's nodes will be added.</param>
     /// <param name="nodeCounter">A counter used to generate unique node IDs.</param>
-    /// <returns>A list containing the opener and closer nodes of the try-catch block.</returns>
+    /// <returns>A list containing the opener, branch and closer nodes of the try-catch block.</returns>
     private static IReadOnlyList<TopsyTurvyVisualNodeModel> CreateTryCatchBlock(
         Point position, BlazorDiagram diagram, ref int nodeCounter)
     {
         TopsyTurvyVisualNodeModel openerNode = MakeNode("TryCatchOpener", "WITH THE GREATEST RESPECT,", "catch: error", VisualNodeKind.ErrorHandling, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
         openerNode.AddPort(MakePort(openerNode, "Op", VisualPortRole.DataIn));
-        openerNode.AddPort(MakePort(openerNode, "Success", VisualPortRole.BranchOut));
-        openerNode.AddPort(MakePort(openerNode, "Error", VisualPortRole.BranchOut));
+        
+        TopsyTurvyVisualPortModel successPort = MakePort(openerNode, "Success", VisualPortRole.BranchOut);
+        openerNode.AddPort(successPort);
+        
+        TopsyTurvyVisualPortModel errorPort = MakePort(openerNode, "Error", VisualPortRole.BranchOut);
+        openerNode.AddPort(errorPort);
+
         diagram.Nodes.Add(openerNode);
 
-        Point closerPosition = new(position.X, position.Y + NodeLayoutContext.RowSpacing);
-        TopsyTurvyVisualNodeModel closerNode = MakeNode("TryCatchCloser", "THAT CONCLUDES THE MATTER.", null, VisualNodeKind.ErrorHandling, closerPosition, ref nodeCounter);
+        const double tryCatchSpacing = 660.0;
+        double headerY = position.Y + NodeLayoutContext.RowSpacing;
+
+        TopsyTurvyVisualNodeModel successHeaderNode = MakeNode("TryCatchSuccessBranch", "WITH GRATITUDE", null, VisualNodeKind.ErrorHandling, new Point(position.X - tryCatchSpacing / 2, headerY), ref nodeCounter);
+        TopsyTurvyVisualPortModel successHeaderInPort = MakePort(successHeaderNode, "In", VisualPortRole.FlowIn);
+        successHeaderNode.AddPort(successHeaderInPort);
+        successHeaderNode.AddPort(MakePort(successHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(successHeaderNode);
+        diagram.Links.Add(new LinkModel(successPort, successHeaderInPort));
+
+        TopsyTurvyVisualNodeModel errorHeaderNode = MakeNode("TryCatchErrorBranch", "MODIFIED RAPTURE,", null, VisualNodeKind.ErrorHandling, new Point(position.X + tryCatchSpacing / 2, headerY), ref nodeCounter);
+        TopsyTurvyVisualPortModel errorHeaderInPort = MakePort(errorHeaderNode, "In", VisualPortRole.FlowIn);
+        errorHeaderNode.AddPort(errorHeaderInPort);
+        errorHeaderNode.AddPort(MakePort(errorHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(errorHeaderNode);
+        diagram.Links.Add(new LinkModel(errorPort, errorHeaderInPort));
+
+        double closerY = headerY + NodeLayoutContext.RowSpacing;
+        TopsyTurvyVisualNodeModel closerNode = MakeNode("TryCatchCloser", "THAT CONCLUDES THE MATTER.", null, VisualNodeKind.ErrorHandling, new Point(position.X, closerY), ref nodeCounter);
         closerNode.AddPort(MakePort(closerNode, "In", VisualPortRole.FlowIn));
         closerNode.AddPort(MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
@@ -181,7 +230,7 @@ internal static class VisualNodeFactory
         openerNode.PairedCloserId = closerNode.Id;
         closerNode.PairedOpenerId = openerNode.Id;
 
-        return [openerNode, closerNode];
+        return [openerNode, successHeaderNode, errorHeaderNode, closerNode];
     }
 
     /// <summary>
@@ -225,16 +274,20 @@ internal static class VisualNodeFactory
     {
         TopsyTurvyVisualNodeModel openerNode = MakeNode("GuardOpener", "YEOMAN", null, VisualNodeKind.ControlFlow, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
-        openerNode.AddPort(MakePort(openerNode, "Out", VisualPortRole.FlowOut));
+        TopsyTurvyVisualPortModel guardOutPort = MakePort(openerNode, "Out", VisualPortRole.FlowOut);
+        openerNode.AddPort(guardOutPort);
         openerNode.AddPort(MakePort(openerNode, "Cond", VisualPortRole.DataIn));
         openerNode.AddPort(MakePort(openerNode, "Else", VisualPortRole.BranchOut));
         diagram.Nodes.Add(openerNode);
 
         Point closerPosition = new(position.X, position.Y + NodeLayoutContext.RowSpacing);
         TopsyTurvyVisualNodeModel closerNode = MakeNode("GuardCloser", "UNDER ORDERS.", null, VisualNodeKind.ControlFlow, closerPosition, ref nodeCounter);
-        closerNode.AddPort(MakePort(closerNode, "In", VisualPortRole.FlowIn));
+        TopsyTurvyVisualPortModel closerInPort = MakePort(closerNode, "In", VisualPortRole.FlowIn);
+        closerNode.AddPort(closerInPort);
         closerNode.AddPort(MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
+
+        diagram.Links.Add(new LinkModel(guardOutPort, closerInPort));
 
         openerNode.PairedCloserId = closerNode.Id;
         closerNode.PairedOpenerId = openerNode.Id;

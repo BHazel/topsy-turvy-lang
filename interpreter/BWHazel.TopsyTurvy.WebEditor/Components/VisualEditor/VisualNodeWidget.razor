@@ -1,6 +1,8 @@
 @using System
 @using System.Linq
+@using Blazor.Diagrams
 @using Blazor.Diagrams.Components.Renderers
+@using Blazor.Diagrams.Core.Geometry;
 @using Blazor.Diagrams.Core.Models;
 @using BWHazel.TopsyTurvy.Ast
 @using BWHazel.TopsyTurvy.WebEditor.Visual
@@ -225,11 +227,102 @@ The node layout is a vertical stack of rows:
                     }
                 </MudSelect>
             }
-            else if (this.Node.StatementType == "SummonNode")
+            else if (this.Node.StatementType == "FunctionBodyOpener")
+            {
+                <MudTextField T="string" Label="Name" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.UpdateFunctionSubtitle();
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudCheckBox T="bool" Label="Void" Value="@(this.Node.NodeLiteralType is null)"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.NodeLiteralType = value
+                            ? null
+                            : LiteralType.String;
+
+                        this.UpdateFunctionSubtitle();
+                    }))"
+                    Class="visual-node-edit-field" />
+                @if (this.Node.NodeLiteralType is not null)
+                {
+                    <MudSelect T="LiteralType?" Label="Return Type" Value="@this.Node.NodeLiteralType"
+                        ValueChanged="@(value => this.OnPropertyChanged(() =>
+                        {
+                            this.Node.NodeLiteralType = value;
+                            this.UpdateFunctionSubtitle();
+                        }))"
+                        Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null))
+                        {
+                            <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                                @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                    Size="MudBlazor.Size.Small"
+                    OnClick="@this.AddParameter">Add Parameter</MudButton>
+            }
+            else if (this.Node.StatementType == "ParameterNode")
+            {
+                <MudTextField T="string" Label="Name" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.Node.Subtitle = value;
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudSelect T="LiteralType?" Label="Type" Value="@this.Node.NodeLiteralType"
+                    ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.NodeLiteralType = value))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null))
+                    {
+                        <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                            @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (this.Node.StatementType == "TryCatchOpener")
+            {
+                <MudTextField T="string" Label="Caught Variable" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.Node.Subtitle = string.IsNullOrWhiteSpace(value)
+                            ? "catch: error"
+                            : $"catch: {value}";
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            else if (this.Node.StatementType == "ConditionalOpener")
             {
                 <MudButton StartIcon="@Icons.Material.Outlined.Add"
                     Size="MudBlazor.Size.Small"
-                    OnClick="@this.AddSummonArgumentPort">Add Argument</MudButton>
+                    OnClick="@this.AddElseIfBranch">+ Else If</MudButton>
+            }
+            else if (this.Node.StatementType == "LoopOpener")
+            {
+                <MudSelect T="string" Label="Loop Type" Value="@this.Node.Subtitle"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.Subtitle = value;
+                        this.UpdateLoopCondPort(value);
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (string loopType in LoopTypes)
+                    {
+                        <MudSelectItem T="string" Value="@loopType">@loopType</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (this.Node.Subtitle is "Ascending" or "Descending")
+                {
+                    <span class="visual-node-port-label" style="padding-left:4px;opacity:0.7">Connect Variable port to an Identifier</span>
+                }
             }
             else if (this.Node.Kind == VisualNodeKind.Literal)
             {
@@ -302,13 +395,25 @@ The node layout is a vertical stack of rows:
     public EventCallback OnNodeChanged { get; set; }
 
     /// <summary>
+    /// Gets or sets the diagram instance.
+    /// </summary>
+    [CascadingParameter]
+    public BlazorDiagram Diagram { get; set; } = default!;
+
+    /// <summary>
     /// Gets a value indicating whether this node kind has any editing controls.
     /// </summary>
     private bool HasEditingControls =>
         (this.Node.Kind == VisualNodeKind.Program && this.Node.Title != "FINALE.") ||
         this.Node.Kind is VisualNodeKind.Declaration or VisualNodeKind.Print or VisualNodeKind.Literal or VisualNodeKind.Operator ||
         this.Node.StatementType == "ImportNode" ||
-        (this.Node.StatementType == "SummonNode" && string.IsNullOrEmpty(this.Node.SymbolIdentifierNodeName));
+        this.Node.StatementType == "ConditionalOpener" ||
+        this.Node.StatementType == "LoopOpener" ||
+        this.Node.StatementType == "FunctionBodyOpener" ||
+        this.Node.StatementType == "ParameterNode" ||
+        this.Node.StatementType == "TryCatchOpener";
+
+    private static readonly IReadOnlyList<string> LoopTypes = ["Infinite", "Ascending", "Descending", "Whilst"];
 
     private static readonly IReadOnlyList<string> ArithmeticOperators =
     [
@@ -377,6 +482,138 @@ The node layout is a vertical stack of rows:
 
         TopsyTurvyVisualPortModel? port = new TopsyTurvyVisualPortModel(this.Node, PortAlignment.Left, $"Arg {argumentIndex + 1}", VisualPortRole.DataIn);
         this.Node.AddPort(port);
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Adds a new Else If branch to a <c>ConditionalOpener</c> node.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task AddElseIfBranch()
+    {
+        int elseIfIndex = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.BranchOut && port.Label?.StartsWith("Else If") == true);
+
+        TopsyTurvyVisualPortModel branchPort = new(this.Node, PortAlignment.Bottom, $"Else If {elseIfIndex + 1}", VisualPortRole.BranchOut);
+        this.Node.AddPort(branchPort);
+
+        // Create the OR, IF NOT, header node below and to the right of the opener.
+        const double spacing = 660.0;
+        double headerX = this.Node.Position.X + (elseIfIndex + 1) * spacing;
+        double headerY = this.Node.Position.Y + NodeLayoutContext.RowSpacing;
+        string headerId = $"factory-elseif-{Guid.NewGuid():N}";
+
+        TopsyTurvyVisualNodeModel headerNode = new(headerId, new Point(headerX, headerY), "OR, IF NOT,", null, VisualNodeKind.Conditional)
+        {
+            StatementType = "ConditionalElseIfBranch",
+        };
+
+        TopsyTurvyVisualPortModel headerInPort = new(headerNode, PortAlignment.Top, "In", VisualPortRole.FlowIn);
+        headerNode.AddPort(headerInPort);
+
+        TopsyTurvyVisualPortModel headerCondPort = new(headerNode, PortAlignment.Left, "Cond", VisualPortRole.DataIn);
+        headerNode.AddPort(headerCondPort);
+
+        TopsyTurvyVisualPortModel headerOutPort = new(headerNode, PortAlignment.Bottom, "Out", VisualPortRole.FlowOut);
+        headerNode.AddPort(headerOutPort);
+
+        this.Diagram.Nodes.Add(headerNode);
+        this.Diagram.Links.Add(new LinkModel(branchPort, headerInPort));
+
+        TopsyTurvyVisualNodeModel? closerNode = this.Diagram.Nodes
+            .OfType<TopsyTurvyVisualNodeModel>()
+            .FirstOrDefault(visualNode => visualNode.Id == this.Node.PairedCloserId);
+
+        if (closerNode is not null)
+        {
+            PortModel? closerInPort = closerNode.Ports.OfType<TopsyTurvyVisualPortModel>().FirstOrDefault(port => port.Role == VisualPortRole.FlowIn);
+            if (closerInPort is not null)
+            {
+                this.Diagram.Links.Add(new LinkModel(headerOutPort, closerInPort));
+            }
+        }
+
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Adds or removes the <c>Cond</c> Data In port on a loop opener node based on the selected loop type.
+    /// </summary>
+    /// <param name="loopType">The selected loop type subtitle string.</param>
+    /// <remarks>
+    /// Infinite loops have no condition expression, so the Cond port is hidden when "Infinite" is selected
+    /// and shown for all other loop types.
+    /// </remarks>
+    private void UpdateLoopCondPort(string loopType)
+    {
+        bool needsConditionPort = loopType != "Infinite";
+        bool hasConditionPort = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Any(port => port.Role == VisualPortRole.DataIn && port.Label == "Cond");
+
+        if (needsConditionPort && !hasConditionPort)
+        {
+            this.Node.AddPort(new TopsyTurvyVisualPortModel(this.Node, PortAlignment.Left, "Cond", VisualPortRole.DataIn));
+        }
+
+        bool needsLoopVariable = loopType is "Ascending" or "Descending";
+        bool hasLoopVariable = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Any(port => port.Role == VisualPortRole.DataIn && port.Label == "Variable");
+
+        if (needsLoopVariable && !hasLoopVariable)
+        {
+            this.Node.AddPort(new TopsyTurvyVisualPortModel(this.Node, PortAlignment.Left, "Variable", VisualPortRole.DataIn));
+        }
+
+        this.Node.Refresh();
+    }
+
+    /// <summary>
+    /// Updates the subtitle of a <c>FunctionBodyOpener</c> node to reflect the current name and return type.
+    /// </summary>
+    private void UpdateFunctionSubtitle()
+    {
+        string functionName = this.Node.SymbolIdentifierNodeName ?? "functionName";
+        string returnPart = this.Node.NodeLiteralType.HasValue && VisualTypeMaps.TypeToKeyword.TryGetValue(this.Node.NodeLiteralType.Value, out string? keyword)
+            ? $" → {keyword}"
+            : string.Empty;
+        
+        this.Node.Subtitle = $"{functionName}{returnPart}";
+    }
+
+    /// <summary>
+    /// Adds a new <c>TERM</c> parameter node to the diagram and connects it to a new <c>Param N</c> Data In port
+    /// on the function body opener.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task AddParameter()
+    {
+        int paramIndex = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Count(port => port.Role == VisualPortRole.DataIn && port.Label?.StartsWith("Param ") == true);
+
+        TopsyTurvyVisualPortModel paramPort = new(this.Node, PortAlignment.Left, $"Param {paramIndex + 1}", VisualPortRole.DataIn);
+        this.Node.AddPort(paramPort);
+
+        string termId = $"factory-param-{Guid.NewGuid():N}";
+        double termX = this.Node.Position.X - 280;
+        double termY = this.Node.Position.Y + paramIndex * NodeLayoutContext.RowSpacing;
+
+        TopsyTurvyVisualNodeModel termVisualNode = new(termId, new Point(termX, termY), "TERM", null, VisualNodeKind.Parameter)
+        {
+            StatementType = "ParameterNode",
+        };
+
+        TopsyTurvyVisualPortModel termOutPort = new(termVisualNode, PortAlignment.Right, "Out", VisualPortRole.DataOut);
+        termVisualNode.AddPort(termOutPort);
+
+        this.Diagram.Nodes.Add(termVisualNode);
+        this.Diagram.Links.Add(new LinkModel(termOutPort, paramPort));
+
         this.Node.Refresh();
         await this.OnNodeChanged.InvokeAsync();
     }

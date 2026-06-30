@@ -1,11 +1,14 @@
+@using Microsoft.JSInterop
+
 @namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
 
 @if (this.IsOpen)
 {
+    <div style="display:flex; flex-direction:row; flex-shrink:0; height:100%; position:relative; width:@(this.panelWidth + "px");">
     <MudPaper Elevation="0"
               Square="true"
               Class="visual-symbol-panel"
-              Style="width:200px; flex-shrink:0; height:100%; overflow-y:auto; border-right:1px solid var(--mud-palette-divider); display:flex; flex-direction:column;"
+              Style="flex:1; min-width:0; height:100%; overflow-y:auto; border-right:1px solid var(--mud-palette-divider); display:flex; flex-direction:column;"
               @onclick:stopPropagation="true"
               @ondrop:stopPropagation="true"
               @ondragover:stopPropagation="true">
@@ -95,6 +98,7 @@
 
         @{
             IReadOnlyList<VisualSymbolEntry> variables = this.Symbols.Where(symbol => symbol.Kind == VisualSymbolKind.Variable).ToList();
+            IReadOnlyList<VisualSymbolEntry> parameters = this.Symbols.Where(symbol => symbol.Kind == VisualSymbolKind.Parameter).ToList();
             IReadOnlyList<VisualSymbolEntry> functions = this.Symbols.Where(symbol => symbol.Kind == VisualSymbolKind.Function).ToList();
         }
 
@@ -114,7 +118,7 @@
                         {
                             VisualSymbolEntry variableSymbol = variable;
                             <div draggable="true"
-                                 title="Drag or double-click to add"
+                                 title="Drag or double-click to add."
                                  style="@SymbolVariableEntryStyle"
                                  @ondragstart="@(() => this.OnSymbolDragStarted.InvokeAsync(variableSymbol))"
                                  @ondblclick="@(() => this.OnSymbolDoubleClicked.InvokeAsync(variableSymbol))">
@@ -127,6 +131,39 @@
                                              Variant="Variant.Outlined"
                                              Style="height:18px; font-size:10px; padding:0 5px; pointer-events:none; flex-shrink:0;">
                                         @variableSymbol.TypeDisplay
+                                    </MudChip>
+                                }
+                            </div>
+                        }
+                    </MudExpansionPanel>
+                }
+
+                @if (parameters.Count > 0)
+                {
+                    <MudExpansionPanel Text="Parameters" Dense="true">
+                        @foreach (VisualSymbolEntry parameter in parameters)
+                        {
+                            VisualSymbolEntry parameterSymbol = parameter;
+                            <div draggable="true"
+                                 title="Drag or double-click to add."
+                                 style="@SymbolParameterEntryStyle"
+                                 @ondragstart="@(() => this.OnSymbolDragStarted.InvokeAsync(parameterSymbol))"
+                                 @ondblclick="@(() => this.OnSymbolDoubleClicked.InvokeAsync(parameterSymbol))">
+                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;">
+                                    @parameterSymbol.Name
+                                    @if (parameterSymbol.OwnerName is not null)
+                                    {
+                                        <span style="opacity:0.6; font-size:10px;"> (@parameterSymbol.OwnerName)</span>
+                                    }
+                                </span>
+                                @if (parameterSymbol.TypeDisplay is not null)
+                                {
+                                    <MudChip T="string"
+                                             Size="MudBlazor.Size.Small"
+                                             Color="Color.Info"
+                                             Variant="Variant.Outlined"
+                                             Style="height:18px; font-size:10px; padding:0 5px; pointer-events:none; flex-shrink:0;">
+                                        @parameterSymbol.TypeDisplay
                                     </MudChip>
                                 }
                             </div>
@@ -162,6 +199,10 @@
         }
 
     </MudPaper>
+    <div class="visual-symbol-panel-resize-handle"
+         @onmousedown="this.OnResizeHandleMouseDown"
+         @onmousedown:stopPropagation="true"></div>
+    </div>
 }
 
 @code {
@@ -169,6 +210,12 @@
         "display:flex; align-items:center; gap:4px; font-size:11px; line-height:1.3;" +
         "padding:2px 5px; margin:1px 0; border-radius:3px;" +
         "border:1px solid var(--mud-palette-lines-default); border-left:3px solid var(--visual-node-color-assignment);" +
+        "background:var(--mud-palette-surface); color:var(--mud-palette-text-primary); cursor:grab; user-select:none;";
+
+    private const string SymbolParameterEntryStyle =
+        "display:flex; align-items:center; gap:4px; font-size:11px; line-height:1.3;" +
+        "padding:2px 5px; margin:1px 0; border-radius:3px;" +
+        "border:1px solid var(--mud-palette-lines-default); border-left:3px solid var(--visual-node-color-parameter);" +
         "background:var(--mud-palette-surface); color:var(--mud-palette-text-primary); cursor:grab; user-select:none;";
 
     private const string SymbolFunctionEntryStyle =
@@ -261,6 +308,26 @@
     public EventCallback<VisualSymbolEntry> OnSymbolDoubleClicked { get; set; }
 
     /// <summary>
+    /// Gets or sets the JavaScript runtime.
+    /// </summary>
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = default!;
+
+    /// <summary>
+    /// Sets the width of the panel.
+    /// </summary>
+    /// <param name="width">The new width of the panel.</param>
+    /// <remarks>
+    /// This clamps the width between 160 and 480 pixels.
+    /// </remarks>
+    [JSInvokable]
+    public void SetPanelWidth(int width)
+    {
+        this.panelWidth = Math.Clamp(width, 160, 480);
+        this.StateHasChanged();
+    }
+
+    /// <summary>
     /// Gets the CSS style string for a node entry based on its kind.
     /// </summary>
     /// <param name="kind">The kind of the visual node.</param>
@@ -273,5 +340,26 @@
             $"border:1px solid var(--mud-palette-lines-default); border-left:3px solid {colourVariable};" +
             $"background:var(--mud-palette-surface); color:var(--mud-palette-text-primary);" +
             $"cursor:grab; user-select:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;";
+    }
+
+    private int panelWidth = 200;
+
+    /// <summary>
+    /// Handles the mouse down event on the resize handle, initiating the panel resizing process.
+    /// </summary>
+    /// <param name="e">Information about the mouse event.</param>
+    private void OnResizeHandleMouseDown(MouseEventArgs e)
+    {
+        _ = ResizePanelAsync(e.ClientX);
+    }
+
+    /// <summary>
+    /// Resizes the panel via JavaScript.
+    /// </summary>
+    /// <param name="startX">The starting X position of the mouse when the resize began.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task ResizePanelAsync(double startX)
+    {
+        await this.JSRuntime.InvokeVoidAsync("visualSymbolPanel.startResize", startX, this.panelWidth, DotNetObjectReference.Create(this));
     }
 }

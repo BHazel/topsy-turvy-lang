@@ -212,7 +212,7 @@ If the feature adds a new AST statement or expression node, or renames an existi
 | `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
 | branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
 
-### 3j-ii. Visual editor supporting files
+### 3j. Visual editor supporting files
 
 Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGraphBuilder` whenever a node type or keyword changes:
 
@@ -249,7 +249,7 @@ If the feature adds, removes, or renames a statement or expression construct, up
 - Avoid reserved identifier names: `i`, `a`, and `b` are reserved by the language and must not be used as variable or parameter names in test source.
 - Check `DEVELOPMENT.md` for the current baseline test count and confirm the new tests push it up.
 
-### 3j. REPL highlighter: `Repl/ReplHighlighter.cs`
+### 3l. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
 constructor. Place each entry in the appropriate colour category (programme

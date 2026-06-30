@@ -112,12 +112,16 @@ internal sealed class VisualGraphToAstConverter
     /// <param name="startNode">The node whose Flow Out chain to walk.</param>
     /// <param name="stopAtId">If non-null, walking stops when a node with this ID is reached.</param>
     /// <param name="diagram">The diagram to walk.</param>
+    /// <param name="skipFirst">A value indicating whether to advance past the start node before collecting, <c>false</c> for when the start node is the first real statement.</param>
     /// <remarks>Handles both existing (AstNode-backed) and factory nodes.</remarks>
     /// <returns>A list of reconstructed statements in flow order.</returns>
-    private List<Statement> WalkFlowStatements(TopsyTurvyVisualNodeModel startNode, string? stopAtId, BlazorDiagram diagram)
+    private List<Statement> WalkFlowStatements(TopsyTurvyVisualNodeModel startNode, string? stopAtId, BlazorDiagram diagram, bool skipFirst = true)
     {
         List<Statement> statements = [];
-        TopsyTurvyVisualNodeModel? currentVisualNode = NextFlowNode(startNode);
+        TopsyTurvyVisualNodeModel? currentVisualNode = skipFirst
+            ? NextFlowNode(startNode)
+            : startNode;
+        
         HashSet<string> visitedVisualNodeIds = [];
 
         while (currentVisualNode is not null && currentVisualNode.Id != stopAtId)
@@ -271,8 +275,27 @@ internal sealed class VisualGraphToAstConverter
             return [];
         }
 
-        return this.WalkFlowStatements(branchEntry, openerNode.PairedCloserId, diagram);
+        // Branch-header keyword, such as `QUITE SO.`, are structural nodes that carry no AST payload.
+        // WalkFlowStatements skips them via NextFlowNode(startNode) at its entry.
+        // When there is no header (loop body, guard else from factory), branchEntry is the first real
+        // statement and must not be skipped.
+        bool skipFirst = IsBranchHeaderNode(branchEntry);
+        return this.WalkFlowStatements(branchEntry, openerNode.PairedCloserId, diagram, skipFirst);
     }
+
+    /// <summary>
+    /// Determines if the branch header is a header keyword that carries no AST payload.
+    /// </summary>
+    private static bool IsBranchHeaderNode(TopsyTurvyVisualNodeModel node) =>
+        node.StatementType is
+            "ConditionalTrueBranch" or
+            "ConditionalElseIfBranch" or
+            "ConditionalElseBranch" or
+            "TryCatchSuccessBranch" or
+            "TryCatchErrorBranch" or
+            "SwitchCaseBranch" or
+            "SwitchDefaultBranch" or
+            "GuardElseBranch";
 
     /// <summary>
     /// Reconstructs a declaration statement from a factory node in the diagram.
@@ -500,12 +523,32 @@ internal sealed class VisualGraphToAstConverter
     /// <returns>The reconstructed conditional statement.</returns>
     private ConditionalNode ReconstructConditionalFactory(TopsyTurvyVisualNodeModel openerNode, BlazorDiagram diagram)
     {
+        List<ElseIfBranch> elseIfs = [];
+        List<TopsyTurvyVisualPortModel> elseIfPorts = [.. openerNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.BranchOut && port.Label is not null && port.Label.StartsWith("Else If"))
+            .OrderBy(port => port.Label)];
+
+        foreach (TopsyTurvyVisualPortModel elseIfPort in elseIfPorts)
+        {
+            TopsyTurvyVisualNodeModel? headerNode = GetBranchFlowTarget(openerNode, elseIfPort.Label!);
+            Expression condition = headerNode is not null
+                ? this.GetExpressionFromDataIn(headerNode, "Cond", diagram) ?? Fallback()
+                : Fallback();
+            
+            List<Statement> body = headerNode is not null
+                ? this.WalkFlowStatements(headerNode, openerNode.PairedCloserId, diagram)
+                : [];
+            
+            elseIfs.Add(new ElseIfBranch(condition, body));
+        }
+
         return new()
         {
             Condition = this.GetExpressionFromDataIn(openerNode, "Cond", diagram) ?? Fallback(),
             TrueBlock = this.WalkBranchBody(openerNode, "True", diagram),
-            ElseIfs = (IReadOnlyList<ElseIfBranch>)[],
-            ElseBlock = [],
+            ElseIfs = elseIfs.AsReadOnly(),
+            ElseBlock = this.WalkBranchBody(openerNode, "Else", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -518,12 +561,28 @@ internal sealed class VisualGraphToAstConverter
     /// <returns>The reconstructed loop statement.</returns>
     private LoopNode ReconstructLoopFactory(TopsyTurvyVisualNodeModel openerNode, BlazorDiagram diagram)
     {
+        LoopType loopType = openerNode.Subtitle switch
+        {
+            "Ascending" => LoopType.Ascending,
+            "Descending" => LoopType.Descending,
+            "Whilst" => LoopType.Whilst,
+            _ => LoopType.Infinite,
+        };
+
+        Expression? condition = loopType != LoopType.Infinite
+            ? this.GetExpressionFromDataIn(openerNode, "Cond", diagram)
+            : null;
+
+        string? loopVariable = loopType is LoopType.Ascending or LoopType.Descending
+            ? (GetTargetNameFromPort(openerNode) ?? "i")
+            : null;
+
         return new()
         {
             Label = null,
-            Type = LoopType.Whilst,
-            LoopVariable = null,
-            Condition = this.GetExpressionFromDataIn(openerNode, "Cond", diagram),
+            Type = loopType,
+            LoopVariable = loopVariable,
+            Condition = condition,
             Body = this.WalkBranchBody(openerNode, "Body", diagram),
             Span = PlaceholderSpan,
         };
@@ -573,11 +632,27 @@ internal sealed class VisualGraphToAstConverter
     {
         List<Statement> body = this.WalkFlowStatements(openerNode, openerNode.PairedCloserId, diagram);
 
+        List<TypedParameter> parameters = [.. openerNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.DataIn && port.Label?.StartsWith("Param ") == true)
+            .OrderBy(port => port.Label)
+            .Select(port =>
+            {
+                TopsyTurvyVisualNodeModel? termNode = GetExpressionSourceNode(port);
+                return termNode is not null
+                    ? new TypedParameter(
+                        termNode.SymbolIdentifierNodeName ?? string.Empty,
+                        termNode.NodeLiteralType ?? LiteralType.String,
+                        PlaceholderSpan)
+                    : null;
+            })
+            .OfType<TypedParameter>()];
+
         return new()
         {
             Name = openerNode.SymbolIdentifierNodeName ?? string.Empty,
-            Parameters = [],
-            ReturnType = LiteralType.Null,
+            Parameters = parameters.AsReadOnly(),
+            ReturnType = openerNode.NodeLiteralType,
             Body = body,
             Span = PlaceholderSpan,
         };
@@ -666,12 +741,28 @@ internal sealed class VisualGraphToAstConverter
     /// <returns>A reconstructed function definition node.</returns>
     private FunctionDefinitionNode ReconstructFunctionDefinition(FunctionDefinitionNode original, TopsyTurvyVisualNodeModel visualNode, BlazorDiagram diagram)
     {
+        List<TypedParameter> parameters = [.. visualNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.DataIn && port.Label?.StartsWith("Param ") == true)
+            .OrderBy(port => port.Label)
+            .Select(port =>
+            {
+                TopsyTurvyVisualNodeModel? termNode = GetExpressionSourceNode(port);
+                return termNode is not null
+                    ? new TypedParameter(
+                        termNode.SymbolIdentifierNodeName ?? string.Empty,
+                        termNode.NodeLiteralType ?? LiteralType.String,
+                        PlaceholderSpan)
+                    : null;
+            })
+            .OfType<TypedParameter>()];
+
         return new()
         {
             Name = visualNode.SymbolIdentifierNodeName ?? original.Name,
-            Parameters = original.Parameters,
-            ReturnType = original.ReturnType,
-            Body = ReconstructBodyStatements(original.Body, diagram),
+            Parameters = parameters.Count > 0 ? parameters.AsReadOnly() : original.Parameters,
+            ReturnType = visualNode.NodeLiteralType ?? original.ReturnType,
+            Body = this.WalkFlowStatements(visualNode, visualNode.PairedCloserId, diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -831,7 +922,7 @@ internal sealed class VisualGraphToAstConverter
         Expression condition = this.GetExpressionFromDataIn(visualNode, "Cond", diagram)
             ?? this.ReconstructExpressionFromAst(original.Condition, diagram);
 
-        List<Statement> trueBlock = ReconstructBodyStatements(original.TrueBlock, diagram);
+        List<Statement> trueBlock = this.WalkBranchBody(visualNode, "True", diagram);
 
         List<ElseIfBranch> elseIfBlocks = [];
         for (int i = 0; i < original.ElseIfs.Count; i++)
@@ -841,7 +932,11 @@ internal sealed class VisualGraphToAstConverter
                 ? this.GetExpressionFromDataIn(headerNode, "Cond", diagram) ?? this.ReconstructExpressionFromAst(original.ElseIfs[i].Condition, diagram)
                 : this.ReconstructExpressionFromAst(original.ElseIfs[i].Condition, diagram);
 
-            elseIfBlocks.Add(new ElseIfBranch(elseIfCond, ReconstructBodyStatements(original.ElseIfs[i].Block, diagram)));
+            List<Statement> elseIfBody = headerNode is not null
+                ? this.WalkFlowStatements(headerNode, visualNode.PairedCloserId, diagram)
+                : [];
+            
+            elseIfBlocks.Add(new ElseIfBranch(elseIfCond, elseIfBody));
         }
 
         return new()
@@ -849,7 +944,7 @@ internal sealed class VisualGraphToAstConverter
             Condition = condition,
             TrueBlock = trueBlock,
             ElseIfs = elseIfBlocks.AsReadOnly(),
-            ElseBlock = ReconstructBodyStatements(original.ElseBlock, diagram),
+            ElseBlock = this.WalkBranchBody(visualNode, "Else", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -863,17 +958,29 @@ internal sealed class VisualGraphToAstConverter
     /// <returns>A reconstructed loop node.</returns>
     private LoopNode ReconstructLoop(LoopNode original, TopsyTurvyVisualNodeModel visualNode, BlazorDiagram diagram)
     {
-        Expression? condition = original.Condition is not null
-            ? this.GetExpressionFromDataIn(visualNode, "Cond", diagram) ?? this.ReconstructExpressionFromAst(original.Condition, diagram)
+        LoopType loopType = (visualNode.Subtitle ?? string.Empty) switch
+        {
+            string subtitle when subtitle.StartsWith("Ascending") => LoopType.Ascending,
+            string subtitle when subtitle.StartsWith("Descending") => LoopType.Descending,
+            string subtitle when subtitle.StartsWith("Whilst") => LoopType.Whilst,
+            _ => LoopType.Infinite,
+        };
+
+        Expression? condition = loopType != LoopType.Infinite
+            ? this.GetExpressionFromDataIn(visualNode, "Cond", diagram) ?? (original.Condition is not null ? this.ReconstructExpressionFromAst(original.Condition, diagram) : null)
+            : null;
+
+        string? loopVariable = loopType is LoopType.Ascending or LoopType.Descending
+            ? GetTargetNameFromPort(visualNode) ?? original.LoopVariable
             : null;
 
         return new()
         {
             Label = original.Label,
-            Type = original.Type,
-            LoopVariable = original.LoopVariable,
+            Type = loopType,
+            LoopVariable = loopVariable,
             Condition = condition,
-            Body = ReconstructBodyStatements(original.Body, diagram),
+            Body = this.WalkBranchBody(visualNode, "Body", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -929,8 +1036,8 @@ internal sealed class VisualGraphToAstConverter
             Operation = this.GetExpressionFromDataIn(visualNode, "Op", diagram)
                 ?? this.ReconstructExpressionFromAst(original.Operation, diagram),
             CaughtValueName = visualNode.SymbolIdentifierNodeName ?? original.CaughtValueName,
-            SuccessBlock = ReconstructBodyStatements(original.SuccessBlock, diagram),
-            ExceptionBlock = ReconstructBodyStatements(original.ExceptionBlock, diagram),
+            SuccessBlock = this.WalkBranchBody(visualNode, "Success", diagram),
+            ExceptionBlock = this.WalkBranchBody(visualNode, "Error", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -947,13 +1054,13 @@ internal sealed class VisualGraphToAstConverter
         Expression expression = this.GetExpressionFromDataIn(visualNode, "Expr", diagram)
             ?? this.ReconstructExpressionFromAst(original.Expression, diagram);
 
-        List<SwitchCase> cases = [.. original.Cases.Select(switchCase => new SwitchCase(switchCase.Literal, ReconstructBodyStatements(switchCase.Block, diagram)))];
+        List<SwitchCase> cases = [.. original.Cases.Select((switchCase, i) => new SwitchCase(switchCase.Literal, this.WalkBranchBody(visualNode, $"Case {i + 1}", diagram)))];
 
         return new()
         {
             Expression = expression,
             Cases = cases.AsReadOnly(),
-            DefaultBlock = ReconstructBodyStatements(original.DefaultBlock, diagram),
+            DefaultBlock = this.WalkBranchBody(visualNode, "Default", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -986,7 +1093,7 @@ internal sealed class VisualGraphToAstConverter
         {
             Condition = this.GetExpressionFromDataIn(visualNode, "Cond", diagram)
                 ?? this.ReconstructExpressionFromAst(original.Condition, diagram),
-            ElseBlock = ReconstructBodyStatements(original.ElseBlock, diagram),
+            ElseBlock = this.WalkBranchBody(visualNode, "Failure", diagram),
             Span = PlaceholderSpan,
         };
     }
@@ -1260,15 +1367,21 @@ internal sealed class VisualGraphToAstConverter
             ? GetExpressionSourceNode(functionPort)
             : null;
 
-        string functionName = functionNode?.SymbolIdentifierNodeName ?? functionNode?.Title ?? "unknown";
+        string functionName = functionNode?.SymbolIdentifierNodeName
+            ?? functionNode?.Title
+            ?? visualNode.SymbolIdentifierNodeName
+            ?? visualNode.Title
+            ?? "unknown";
 
         List<Expression> arguments = [];
         arguments.Add(new IdentifierNode() { Name = functionName, Span = PlaceholderSpan });
 
-        IEnumerable<TopsyTurvyVisualPortModel> argumentPorts = visualNode.Ports
-            .OfType<TopsyTurvyVisualPortModel>()
-            .Where(port => port.Role == VisualPortRole.DataIn && port.Label != "Function")
-            .OrderBy(port => port.Label);
+        IEnumerable<TopsyTurvyVisualPortModel> argumentPorts = functionNode is not null
+            ? functionNode.Ports
+                .OfType<TopsyTurvyVisualPortModel>()
+                .Where(port => port.Role == VisualPortRole.DataIn)
+                .OrderBy(port => port.Label)
+            : [];
 
         foreach (TopsyTurvyVisualPortModel argumentPort in argumentPorts)
         {

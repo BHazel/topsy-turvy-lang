@@ -10,4 +10,7 @@ public enum VisualSymbolKind
 
     /// <summary>A defined function.</summary>
     Function,
+
+    /// <summary>A function parameter.</summary>
+    Parameter,
 }

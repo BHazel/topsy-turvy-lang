@@ -552,37 +552,52 @@ else
         }
 
         Point position = this.GetDefaultDropPosition();
-        string expressionType = symbol.Kind == VisualSymbolKind.Function
-            ? "SummonNode"
-            : "IdentifierNode";
-        
-        TopsyTurvyVisualNodeModel? visualNode = VisualNodeFactory.CreateExpression(expressionType, position, this.Diagram, ref this.nodeCounter);
-        if (visualNode is not null)
-        {
-            visualNode.SymbolIdentifierNodeName = symbol.Name;
-            visualNode.Title = symbol.Name;
-            this.PreCreateSummonArgumentPorts(visualNode, symbol);
-        }
-
+        TopsyTurvyVisualNodeModel? visualNode = this.CreateSymbolNode(symbol, position);
+        _ = visualNode;
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Pre-creates argument ports for a SUMMON node based on the symbol parameter names.
+    /// Creates a new visual node for the specified symbol at the given position.
     /// </summary>
-    /// <param name="node">The SUMMON node to add ports to.</param>
-    /// <param name="symbol">The symbol entry that defines the parameters.</param>
-    private void PreCreateSummonArgumentPorts(TopsyTurvyVisualNodeModel node, VisualSymbolEntry symbol)
+    /// <param name="symbol">The symbol entry to create a node for.</param>
+    /// <param name="position">The position to place the new node.</param>
+    /// <returns>The newly created visual node, or <c>null</c> if the node could not be created.</returns>
+    private TopsyTurvyVisualNodeModel? CreateSymbolNode(VisualSymbolEntry symbol, Point position)
     {
-        if (symbol.Kind != VisualSymbolKind.Function || node.StatementType != "SummonNode")
+        if (symbol.Kind == VisualSymbolKind.Function)
         {
-            return;
+            TopsyTurvyVisualNodeModel? functionReference = VisualNodeFactory.CreateExpression("FunctionReferenceNode", position, this.Diagram!, ref this.nodeCounter);
+            if (functionReference is null)
+            {
+                return null;
+            }
+
+            functionReference.SymbolIdentifierNodeName = symbol.Name;
+            functionReference.Title = symbol.Name;
+
+            foreach (string paramName in symbol.ParameterNames)
+            {
+                functionReference.AddPort(new TopsyTurvyVisualPortModel(functionReference, PortAlignment.Left, paramName, VisualPortRole.DataIn));
+            }
+
+            return functionReference;
         }
 
-        for (int i = 0; i < symbol.ParameterNames.Count; i++)
+        TopsyTurvyVisualNodeModel? identifier = VisualNodeFactory.CreateExpression("IdentifierNode", position, this.Diagram!, ref this.nodeCounter);
+        if (identifier is null)
         {
-            node.AddPort(new TopsyTurvyVisualPortModel(node, PortAlignment.Left, $"Arg {i + 1}", VisualPortRole.DataIn));
+            return null;
         }
+
+        identifier.SymbolIdentifierNodeName = symbol.Name;
+        identifier.Title = symbol.Name;
+        if (symbol.Kind == VisualSymbolKind.Parameter)
+        {
+            identifier.Kind = VisualNodeKind.Parameter;
+        }
+
+        return identifier;
     }
 
     /// <summary>
@@ -625,18 +640,7 @@ else
         {
             VisualSymbolEntry symbol = this.pendingDragSymbol;
             this.pendingDragSymbol = null;
-
-            string expressionType = symbol.Kind == VisualSymbolKind.Function
-                ? "SummonNode"
-                : "IdentifierNode";
-            
-            TopsyTurvyVisualNodeModel? node = VisualNodeFactory.CreateExpression(expressionType, position, this.Diagram, ref this.nodeCounter);
-            if (node is not null)
-            {
-                node.SymbolIdentifierNodeName = symbol.Name;
-                node.Title = symbol.Name;
-                this.PreCreateSummonArgumentPorts(node, symbol);
-            }
+            this.CreateSymbolNode(symbol, position);
         }
         else if (this.pendingDragNodeType is not null)
         {
@@ -673,6 +677,7 @@ else
         "WovenNode",
         "TernaryNode",
         "SummonNode",
+        "FunctionReferenceNode",
         "ArrayIndexNode",
         "ArrayLengthNode",
         "ExpressionCastNode",
