@@ -12,7 +12,7 @@
     {
       "name": "web-editor",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "interpreter/BWHazel.TopsyTurvy.WebEditor", "--no-launch-profile", "--urls", "http://localhost:5001"],
+      "runtimeArgs": ["run", "--project", "operetta/BWHazel.TopsyTurvy.WebEditor", "--no-launch-profile", "--urls", "http://localhost:5001"],
       "port": 5001,
       "autoPort": false
     }

@@ -24,7 +24,7 @@ export function resolveCliPath(
         '..',
         '..',
         '..',
-        'interpreter',
+        'operetta',
         'BWHazel.TopsyTurvy.Cli',
         'bin',
         'Debug',
