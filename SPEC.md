@@ -1226,4 +1226,4 @@ FINALE.
 
 ---
 
-*Topsy Turvy — Version 0.5.0 — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
+*Topsy Turvy — In the Gilbert & Sullivan tradition of telling a perfectly outrageous story in a completely deadpan way.*
