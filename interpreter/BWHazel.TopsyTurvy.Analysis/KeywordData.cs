@@ -54,6 +54,7 @@ public static class KeywordData
         ("BY A LEGAL FICTION",                       "loop"),
         ("ASCENDING",                                "increment loop variable"),
         ("DESCENDING",                               "decrement loop variable"),
+        ("BY",                                       "loop step (ASCENDING/DESCENDING ... BY <expr>)"),
         ("UNTIL",                                    "loop exit condition"),
         ("WHILST",                                   "loop while condition"),
         ("THE TERM EXPIRES.",                        "end loop"),

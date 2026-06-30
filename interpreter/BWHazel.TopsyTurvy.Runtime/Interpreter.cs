@@ -573,7 +573,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     private void ExecuteAscendingLoop(LoopNode node, TopsyTurvyEnvironment environment)
     {
         string loopVariable = node.LoopVariable!;
-        environment.Assign(loopVariable, TopsyTurvyValue.Integer(0));
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
@@ -582,8 +581,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 return;
             }
 
+            int step = node.Step is not null
+                ? (int)this.EvaluateExpression(node.Step, environment).RawValue!
+                : 1;
+
             TopsyTurvyValue current = environment.Get(loopVariable);
-            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! + 1));
+            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! + step));
         }
     }
 
@@ -603,8 +606,11 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 return;
             }
 
+            int step = node.Step is not null
+                ? (int)this.EvaluateExpression(node.Step, environment).RawValue!
+                : 1;
             TopsyTurvyValue current = environment.Get(loopVariable);
-            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! - 1));
+            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! - step));
         }
     }
 

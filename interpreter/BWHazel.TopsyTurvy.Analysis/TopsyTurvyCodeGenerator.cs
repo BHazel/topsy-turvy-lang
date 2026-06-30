@@ -173,11 +173,25 @@ public sealed class TopsyTurvyCodeGenerator
                 switch (loop.Type)
                 {
                     case LoopType.Ascending:
-                        generatedCodeBuilder.Append($" ASCENDING {loop.LoopVariable} UNTIL ");
+                        generatedCodeBuilder.Append($" ASCENDING {loop.LoopVariable}");
+                        if (loop.Step is not null)
+                        {
+                            generatedCodeBuilder.Append(" BY ");
+                            this.WriteExpression(loop.Step, generatedCodeBuilder);
+                        }
+
+                        generatedCodeBuilder.Append(" UNTIL ");
                         this.WriteExpression(loop.Condition!, generatedCodeBuilder);
                         break;
                     case LoopType.Descending:
-                        generatedCodeBuilder.Append($" DESCENDING {loop.LoopVariable} UNTIL ");
+                        generatedCodeBuilder.Append($" DESCENDING {loop.LoopVariable}");
+                        if (loop.Step is not null)
+                        {
+                            generatedCodeBuilder.Append(" BY ");
+                            this.WriteExpression(loop.Step, generatedCodeBuilder);
+                        }
+
+                        generatedCodeBuilder.Append(" UNTIL ");
                         this.WriteExpression(loop.Condition!, generatedCodeBuilder);
                         break;
                     case LoopType.Whilst:

@@ -536,6 +536,13 @@ public sealed class VisualGraphBuilder
             this.CreateExpressionNode(node.Condition, conditionPort, layout, diagram, anchor: position);
         }
 
+        if (node.Step is not null)
+        {
+            TopsyTurvyVisualPortModel stepPort = this.MakePort(openerNode, "Step", VisualPortRole.DataIn);
+            openerNode.AddPort(stepPort);
+            this.CreateExpressionNode(node.Step, stepPort, layout, diagram, anchor: position);
+        }
+
         TopsyTurvyVisualNodeModel? bodyTail = null;
         if (node.Body.Count > 0)
         {

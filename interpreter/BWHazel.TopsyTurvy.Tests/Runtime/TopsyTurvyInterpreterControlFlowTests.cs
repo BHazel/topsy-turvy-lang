@@ -159,6 +159,85 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
     }
 
     /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method retains an ascending loop variable pre-loop value rather than resetting it to 0.
+    /// </summary>
+    [Fact]
+    public void Execute_WithAscendingLoop_RetainsPreLoopStartValue()
+    {
+        string source = """
+            HARK! "Ascending Loop Retains Start"
+            PRINCIPALS
+              PRAY WELCOME idx AS A PEER BEING 5
+            THE CURTAIN RISES.
+            BY A LEGAL FICTION ASCENDING idx UNTIL ALIKE idx AND 8
+              THAT WILL DO.
+            THE TERM EXPIRES.
+            BEHOLD idx
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("5");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method steps an ascending loop by the evaluated BY expression.
+    /// </summary>
+    [Fact]
+    public void Execute_WithAscendingLoopByStep_CountsByStep()
+    {
+        string source = """
+            HARK! "Ascending Loop By Step"
+            PRINCIPALS
+              PRAY WELCOME idx AS A PEER BEING 5
+            THE CURTAIN RISES.
+            BY A LEGAL FICTION ASCENDING idx BY 3 UNTIL PRE-ADAMITE idx AND 20
+              BEHOLD idx
+            THE TERM EXPIRES.
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldBe(["5", "8", "11", "14", "17", "20"]);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method steps a descending loop by the evaluated BY expression.
+    /// </summary>
+    [Fact]
+    public void Execute_WithDescendingLoopByStep_CountsDownByStep()
+    {
+        string source = """
+            HARK! "Descending Loop By Step"
+            PRINCIPALS
+              PRAY WELCOME idx AS A PEER BEING 10
+            THE CURTAIN RISES.
+            BY A LEGAL FICTION DESCENDING idx BY 2 UNTIL LOWER DEGREE idx AND 0
+              BEHOLD idx
+            THE TERM EXPIRES.
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldBe(["10", "8", "6", "4", "2", "0"]);
+    }
+
+    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method breaks out of an infinite loop when a break is encountered.
     /// </summary>
     [Fact]

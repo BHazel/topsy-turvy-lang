@@ -199,16 +199,26 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Loops
-/// 4 parsers are included for loop statements.
+/// 5 parsers are included for loop statements.
+/// #### Loop Step Parser
+/// The <c>LoopStepParser</c> matches on the optional <c>BY &lt;expr&gt;</c> step clause for ascending and descending loops,
+/// returning a nullable <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>:
+/// * It first matches on required whitespace followed by the <c>BY</c> keyword.
+/// * It then matches on required whitespace followed by any expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * If <c>BY</c> is not present the parser back-tracks and returns <c>null</c>.
+/// </para>
+/// <para>
 /// #### Loop Type Parser
 /// The <c>LoopTypeParser</c> identifies the type of a loop, returning a <see cref="LoopDefinition"/>.
 /// It tries each type in order, back-tracking between them:
 /// * <see cref="LoopType" /><c>.Ascending</c> matches an <c>ASCENDING</c> loop with:
 ///     * A loop variable identifier.
+///     * An optional <c>BY &lt;expr&gt;</c> step clause via <c>LoopStepParser</c>, set to <c>null</c> when absent.
 ///     * The <c>UNTIL</c> keyword.
 ///     * A condition expression.
 /// * <see cref="LoopType" /><c>.Descending</c> matches a <c>DESCENDING</c> loop with:
 ///     * A loop variable identifier.
+///     * An optional <c>BY &lt;expr&gt;</c> step clause via <c>LoopStepParser</c>, set to <c>null</c> when absent.
 ///     * The <c>UNTIL</c> keyword.
 ///     * A condition expression.
 /// * <see cref="LoopType" /><c>.Whilst</c> matches a <c>WHILST</c> loop with:
@@ -230,23 +240,35 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The <c>Loop</c> parser matches on a complete loop statement, returning a <see cref="LoopNode"/>:
 /// * It first matches on the <c>BY A LEGAL FICTION</c> keyword.
 /// * It then tries to match on an optional label introduced by <c>KNOWN AS</c> followed by an identifier, back-tracking if not matched.
-/// * It then matches on the loop type using the <c>LoopTypeParser</c>.
+/// * It then matches on the loop type using the <c>LoopTypeParser</c>, which for ascending/descending loops also captures the optional step expression.
 /// * It then matches on zero or more body statements.
 /// * Finally it matches on required whitespace followed by the closing <c>THE TERM EXPIRES.</c> keyword.
 /// </para>
 /// <para>
-/// In the following Topsy Turvy example:
+/// In the following Topsy Turvy examples:
 /// <code>
 /// BY A LEGAL FICTION KNOWN AS HeavyDragoons ASCENDING count UNTIL ALIKE count AND 7
 ///     BEHOLD "A heavy dragoon!"
 /// THE TERM EXPIRES.
+///
+/// BY A LEGAL FICTION ASCENDING rank BY 3 UNTIL PRE-ADAMITE rank AND 20
+///     BEHOLD rank
+/// THE TERM EXPIRES.
 /// </code>
-/// the statement would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
-/// * The label set to <c>HeavyDragoons</c>.
-/// * The loop type set to <see cref="LoopType.Ascending"/>.
-/// * The loop variable set to <c>count</c>.
-/// * The condition set to the expression <c>ALIKE count AND 7</c>.
-/// * The body containing one print statement.
+/// * The first would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
+///     * The label set to <c>HeavyDragoons</c>.
+///     * The loop type set to <see cref="LoopType.Ascending"/>.
+///     * The loop variable set to <c>count</c>.
+///     * The condition set to the expression <c>ALIKE count AND 7</c>.
+///     * <see cref="LoopNode.Step"/> set to <c>null</c> as no <c>BY</c> clause is included therefore defaults to 1.
+///     * The body containing one print statement.
+/// * The second would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
+///     * No label.
+///     * The loop type set to <see cref="LoopType.Ascending"/>.
+///     * The loop variable set to <c>rank</c>.
+///     * The condition set to the expression <c>PRE-ADAMITE rank AND 20</c>.
+///     * <see cref="LoopNode.Step"/> set to the integer literal expression <c>3</c>, evaluated each iteration.
+///     * The body containing one print statement.
 /// </para>
 /// <para>
 /// ### Guard Clauses
@@ -770,20 +792,31 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses the optional <c>BY &lt;expr&gt;</c> step clause for ascending/descending loops.
+    /// </summary>
+    private static readonly TextParser<Expression?> LoopStepParser =
+        Ws(Lexer.Keyword("BY")).IgnoreThen(Ws(ExpressionParser.Expression))
+            .Select(step => (Expression?)step)
+            .Try()
+            .OptionalOrDefault(null);
+
+    /// <summary>
     /// Parses the loop-type clause following the label.
     /// </summary>
     private static readonly TextParser<LoopDefinition> LoopTypeParser =
         (from _ in Ws(Lexer.Keyword("ASCENDING"))
          from loopVariable in Ws(Lexer.Identifier)
+         from loopStep in LoopStepParser
          from untilKeyword in Ws(Lexer.Keyword("UNTIL"))
          from loopCondition in Ws(ExpressionParser.Expression)
-         select new LoopDefinition(LoopType.Ascending, loopCondition, loopVariable))
+         select new LoopDefinition(LoopType.Ascending, loopCondition, loopVariable, loopStep))
             .Try()
             .Or((from _ in Ws(Lexer.Keyword("DESCENDING"))
                 from loopVariable in Ws(Lexer.Identifier)
+                from loopStep in LoopStepParser
                 from untilKeyword in Ws(Lexer.Keyword("UNTIL"))
                 from loopCondition in Ws(ExpressionParser.Expression)
-                select new LoopDefinition(LoopType.Descending, loopCondition, loopVariable))
+                select new LoopDefinition(LoopType.Descending, loopCondition, loopVariable, loopStep))
                     .Try())
             .Or((from _ in Ws(Lexer.Keyword("WHILST"))
                 from loopCondition in Ws(ExpressionParser.Expression)
@@ -828,6 +861,7 @@ public static class StatementParser
             Type = loopDefinition.Type,
             Condition = loopDefinition.Condition,
             LoopVariable = loopDefinition.Variable,
+            Step = loopDefinition.Step,
             Body = [.. body],
             Span = BuildSpan(startOffset, endOffset)
         };

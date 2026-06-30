@@ -99,6 +99,14 @@ public class LoopNode : Statement
     public string? LoopVariable { get; init; }
 
     /// <summary>
+    /// Gets or initialises the optional step expression for ascending/descending loops.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 1 when omitted.
+    /// </remarks>
+    public Expression? Step { get; init; }
+
+    /// <summary>
     /// Gets or initialises the body of the loop.
     /// </summary>
     public required IReadOnlyList<Statement> Body { get; init; }

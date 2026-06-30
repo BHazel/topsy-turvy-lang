@@ -577,12 +577,17 @@ internal sealed class VisualGraphToAstConverter
             ? (GetTargetNameFromPort(openerNode) ?? "i")
             : null;
 
+        Expression? step = loopType is LoopType.Ascending or LoopType.Descending
+            ? this.GetExpressionFromDataIn(openerNode, "Step", diagram)
+            : null;
+
         return new()
         {
             Label = null,
             Type = loopType,
             LoopVariable = loopVariable,
             Condition = condition,
+            Step = step,
             Body = this.WalkBranchBody(openerNode, "Body", diagram),
             Span = PlaceholderSpan,
         };
@@ -974,12 +979,17 @@ internal sealed class VisualGraphToAstConverter
             ? GetTargetNameFromPort(visualNode) ?? original.LoopVariable
             : null;
 
+        Expression? step = loopType is LoopType.Ascending or LoopType.Descending
+            ? this.GetExpressionFromDataIn(visualNode, "Step", diagram) ?? (original.Step is not null? this.ReconstructExpressionFromAst(original.Step, diagram) : null)
+            : null;
+
         return new()
         {
             Label = original.Label,
             Type = loopType,
             LoopVariable = loopVariable,
             Condition = condition,
+            Step = step,
             Body = this.WalkBranchBody(visualNode, "Body", diagram),
             Span = PlaceholderSpan,
         };

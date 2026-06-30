@@ -40,6 +40,7 @@ window.topsyTurvy = {
             ["BY A LEGAL FICTION",                  "loop"],
             ["ASCENDING",                           "increment loop variable"],
             ["DESCENDING",                          "decrement loop variable"],
+            ["BY",                                   "loop step (ASCENDING/DESCENDING ... BY <expr>)"],
             ["UNTIL",                               "loop exit condition"],
             ["WHILST",                              "loop while condition"],
             ["THE TERM EXPIRES.",                   "end loop"],
@@ -320,6 +321,8 @@ window.topsyTurvy = {
                     [/\bLIBERAL\b/, 'keyword'],
                     [/\bASCENDING\b/, 'keyword'],
                     [/\bDESCENDING\b/, 'keyword'],
+                    // BY A LEGAL FICTION must precede standalone BY (already handled above); bare BY used as loop step
+                    [/\bBY\b/, 'keyword'],
                     [/\bUNTIL\b/, 'keyword'],
                     [/\bWHILST\b/, 'keyword'],
                     [/\bSUMMON\b/, 'keyword'],

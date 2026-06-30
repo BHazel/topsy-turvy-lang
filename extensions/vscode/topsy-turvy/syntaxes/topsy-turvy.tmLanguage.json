@@ -183,6 +183,10 @@
         },
         {
           "name": "keyword.control.loop.topsy",
+          "match": "(?i)\\bBY\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
           "match": "(?i)\\bUNTIL\\b"
         },
         {

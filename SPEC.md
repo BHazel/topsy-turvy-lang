@@ -630,7 +630,8 @@ BY A LEGAL FICTION KNOWN AS counter ASCENDING i UNTIL ALIKE i AND 10
 THE TERM EXPIRES.
 ```
 
-- `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` begins at `0`
+- `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` retains whatever value it already holds on entry to the loop — it is the program's responsibility to initialise it beforehand
+- `BY <expression>` — optional; overrides the default step of `1` with the value of `<expression>`, evaluated once per iteration. `<expression>` may be any `PEER` expression, including `0` or a negative value; no runtime validation is performed
 - `UNTIL <expression>` — exits when the expression is `VERITY` (checked before each iteration); `<expression>` must be of type `DECREE`. From *The Pirates of Penzance* — Frederic's indenture binds him *"until"* his twenty-first birthday.
 
 ### Descending (Counted Down) Loop
@@ -641,7 +642,8 @@ BY A LEGAL FICTION KNOWN AS countdown DESCENDING i UNTIL ALIKE i AND 0
 THE TERM EXPIRES.
 ```
 
-- `DESCENDING <var>` — decrements `<var>` by 1 at the end of each iteration
+- `DESCENDING <var>` — decrements `<var>` by 1 at the end of each iteration; `<var>` retains whatever value it already holds on entry to the loop
+- `BY <expression>` — optional; overrides the default step of `1` with the value of `<expression>`, evaluated once per iteration. `<expression>` may be any `PEER` expression, including `0` or a negative value; no runtime validation is performed
 
 ### While Loop
 

@@ -167,6 +167,7 @@ internal static class VisualNodeFactory
         TopsyTurvyVisualNodeModel openerNode = MakeNode("LoopOpener", "BY A LEGAL FICTION", "Infinite", VisualNodeKind.Loop, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
         openerNode.AddPort(MakePort(openerNode, "Cond", VisualPortRole.DataIn));
+        openerNode.AddPort(MakePort(openerNode, "Step", VisualPortRole.DataIn));
         openerNode.AddPort(MakePort(openerNode, "Body", VisualPortRole.BranchOut));
         diagram.Nodes.Add(openerNode);
 

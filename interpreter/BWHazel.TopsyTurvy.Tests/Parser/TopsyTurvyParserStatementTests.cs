@@ -294,6 +294,59 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that BY A LEGAL FICTION ASCENDING with a BY clause sets the step expression on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_AscendingLoop_WithByStep_SetsStep()
+    {
+        string statements = """
+            BY A LEGAL FICTION ASCENDING i BY 3 UNTIL ALIKE i AND 21
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Type.ShouldBe(LoopType.Ascending);
+        node.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that BY A LEGAL FICTION DESCENDING with a BY clause sets the step expression on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_DescendingLoop_WithByStep_SetsStep()
+    {
+        string statements = """
+            BY A LEGAL FICTION DESCENDING i BY 2 UNTIL ALIKE i AND 0
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Type.ShouldBe(LoopType.Descending);
+        node.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that BY A LEGAL FICTION ASCENDING without a BY clause leaves the step expression null on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_AscendingLoop_WithoutByStep_StepIsNull()
+    {
+        string statements = """
+            BY A LEGAL FICTION ASCENDING i UNTIL ALIKE i AND 5
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Step.ShouldBeNull();
+    }
+
+    /// <summary>
     /// Tests that THAT WILL DO. at the top level produces a <see cref="BreakNode"/>.
     /// </summary>
     [Fact]

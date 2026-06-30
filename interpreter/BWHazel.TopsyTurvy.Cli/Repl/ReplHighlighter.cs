@@ -53,6 +53,7 @@ public static class ReplHighlighter
             ("DESCENDING",                              "deepskyblue1"),
             ("WHILST",                                  "deepskyblue1"),
             ("UNTIL",                                   "deepskyblue1"),
+            ("BY",                                      "deepskyblue1"),
             ("THAT WILL DO.",                           "deepskyblue1"),
             ("ONCE MORE.",                              "deepskyblue1"),
             ("THE TERM EXPIRES.",                       "deepskyblue1"),
