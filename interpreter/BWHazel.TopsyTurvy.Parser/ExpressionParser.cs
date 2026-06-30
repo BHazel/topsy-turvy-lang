@@ -80,6 +80,25 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <c>PRODUCT OF 4 AND 5</c> respectively.
 /// </para>
 /// <para>
+/// #### Single <c>OR</c> Expressions
+/// The <c>SingleOrExpression</c> parser, which is a helper parser not intended to be used directly and documented here for
+/// completeness, matches on a single "OR" keyword
+/// followed by an expression, returning the <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>:
+/// * It first matches on required whitespace, which is then discarded.
+/// * It then matches on the "OR" keyword, which is also discarded.
+/// * It then matches on more required whitespace, which is discarded.
+/// * Finally, it matches on an expression and returns it.
+///
+/// This parser supports back-tracking on failure.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// EITHER VERITY OR NAY
+/// </code>
+/// the <c> OR NAY</c> would be matched by the <c>SingleOrExpression</c> parser, returning the <see cref="LiteralNode"/> <c>NAY</c>.
+/// </para>
+/// <para>
 /// #### Variadic <c>AND</c> Expressions
 /// The <c>AndExpression</c> parser, also a helper parser not intended to be used directly and documented here for completeness,
 ///  matches on a sequence of zero or more <c>SingleAndExpression</c>, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/><c>[]</c> of the matched
@@ -106,7 +125,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Recursive parsing may occur here if the operand is itself an operator expression.
 /// * It then matches the remaining operands, first checking if the operator is variadic (<c>ALL OF</c>, <c>ANY OF</c>, <c>WOVEN OF</c>), thus accepting more than 2 operands.
 ///     * If variadic, parses zero or more <c>AND</c> expressions using the <c>AndExpression</c> parser, returning an array of the matched <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>s or an empty array if none are matched.
-///     * Otherwise, it parses a single <c>AND</c> expression using the <c>SingleAndExpression</c> parser, returning an array of one <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> if matched or an empty array if not matched.
+///     * Otherwise, if the operator is <see cref="Operator.Either"/>, it parses a single <c>OR</c> expression using the <c>SingleOrExpression</c> parser; this is the sole exception where the separator is <c>OR</c> instead of <c>AND</c>.
+///     * For all other non-variadic operators, it parses a single <c>AND</c> expression using the <c>SingleAndExpression</c> parser, returning an array of one <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> if matched or an empty array if not matched.
 ///         * The empty array handles single operand operators such as <c>HARDLY EVER</c>.
 /// * Finally, it matches on the closer of the expression, once again checking if the operator is variadic:
 ///     * If variadic, it matches on the required sequence of whitespace followed by the keyword "IF YOU PLEASE.", which is discarded.
@@ -415,11 +435,25 @@ public static class ExpressionParser
     /// </summary>
     /// <remarks>
     /// Serves as the shared building block for <see cref="AndExpression"/> and the non-variadic branch of
-    /// <see cref="PrefixExpression"/>.
+    /// <see cref="PrefixExpression"/> for all operators except <see cref="Operator.Either"/>.
     /// </remarks>
     private static readonly TextParser<Expression> SingleAndExpression =
         Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("AND"))
+            .IgnoreThen(Lexer.WhitespaceRequired)
+            .IgnoreThen(Parse.Ref(() => Expression!))
+            .Try();
+
+    /// <summary>
+    /// Parses a single OR keyword followed by one expression.
+    /// </summary>
+    /// <remarks>
+    /// Used exclusively as the argument separator for <see cref="Operator.Either"/> — the sole binary operator
+    /// whose separator is <c>OR</c> rather than <c>AND</c>.
+    /// </remarks>
+    private static readonly TextParser<Expression> SingleOrExpression =
+        Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("OR"))
             .IgnoreThen(Lexer.WhitespaceRequired)
             .IgnoreThen(Parse.Ref(() => Expression!))
             .Try();
@@ -440,9 +474,11 @@ public static class ExpressionParser
             .IgnoreThen(Parse.Ref(() => Expression!))
         from remainingExpressions in IsVariadic(theOperator)
             ? AndExpression
-            : SingleAndExpression
-                  .Select(expression => new Expression[] { expression })
-                  .OptionalOrDefault(Array.Empty<Expression>())
+            : (theOperator == Operator.Either
+                ? SingleOrExpression
+                : SingleAndExpression)
+                    .Select(expression => new Expression[] { expression })
+                    .OptionalOrDefault(Array.Empty<Expression>())
         from expressionCloser in IsVariadic(theOperator)
             ? Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("IF YOU PLEASE."))
             : Parse.Return<string>(string.Empty)

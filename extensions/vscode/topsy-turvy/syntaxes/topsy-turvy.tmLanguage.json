@@ -379,6 +379,10 @@
         },
         {
           "name": "keyword.operator.topsy",
+          "match": "(?i)\\bOR\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
           "match": "(?i)\\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER)\\s+OF\\b"
         },
         {

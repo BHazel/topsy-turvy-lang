@@ -74,6 +74,7 @@ window.topsyTurvy = {
             ["WOVEN OF",                            "string concatenation"],
             ["BOTH",                                "logical AND"],
             ["EITHER",                              "logical OR"],
+            ["OR",                                  "logical OR separator (EITHER x OR y)"],
             ["HARDLY EVER",                         "logical NOT"],
             ["ALIKE",                               "equality (==)"],
             ["UNLIKE",                              "inequality (!=)"],
@@ -327,6 +328,8 @@ window.topsyTurvy = {
                     [/\bBEING\b/, 'keyword'],
                     [/\bBOTH\b/, 'keyword'],
                     [/\bEITHER\b/, 'keyword'],
+                    // OR, IF NOT, must precede standalone OR (already handled above); bare OR used as EITHER separator
+                    [/\bOR\b/, 'keyword'],
 
                     // Operators that need to follow their multi-word variants above
                     [/\bAND\b/, 'keyword'],

@@ -98,6 +98,7 @@ public static class ReplHighlighter
             ("UNLIKE",                                  "orange1"),
             ("BOTH",                                    "orange1"),
             ("EITHER",                                  "orange1"),
+            ("OR",                                      "orange1"),
             ("ALL OF",                                  "orange1"),
             ("ANY OF",                                  "orange1"),
             ("WOVEN OF",                                "orange1"),

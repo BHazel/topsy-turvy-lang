@@ -136,6 +136,7 @@ public static class SourceFormatter
         "ANY OF",
         "BOTH",
         "EITHER",
+        "OR",
         "ALIKE",
         "UNLIKE",
         "SUM OF",

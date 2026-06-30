@@ -131,7 +131,7 @@ public class TopsyTurvyParserExpressionTests
     [InlineData("LARGER OF 8 AND 3",        Operator.Larger)]
     [InlineData("SMALLER OF 8 AND 3",       Operator.Smaller)]
     [InlineData("BOTH VERITY AND NAY",      Operator.Both)]
-    [InlineData("EITHER NAY AND VERITY",    Operator.Either)]
+    [InlineData("EITHER NAY OR VERITY",     Operator.Either)]
     [InlineData("ALIKE 1 AND 1",            Operator.Alike)]
     [InlineData("UNLIKE 1 AND 2",           Operator.Unlike)]
     [InlineData("PRE-ADAMITE 5 AND 3",      Operator.PreAdamite)]

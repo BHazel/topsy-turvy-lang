@@ -85,6 +85,7 @@ public static class KeywordData
         ("WOVEN OF",                                 "string concatenation"),
         ("BOTH",                                     "logical AND"),
         ("EITHER",                                   "logical OR"),
+        ("OR",                                       "logical OR separator (EITHER x OR y)"),
         ("HARDLY EVER",                              "logical NOT"),
         ("ALIKE",                                    "equality (==)"),
         ("UNLIKE",                                   "inequality (!=)"),
