@@ -238,6 +238,48 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
     }
 
     /// <summary>
+    /// Tests that the <see cref="Interpreter.ExitCode"/> property is set to the value of a top-level AND SO I FIND statement.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTopLevelAndSoIFind_SetsExitCode()
+    {
+        string source = """
+            HARK! "Exit Code"
+            AND SO I FIND 42
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        interpreter.ExitCode.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.ExitCode"/> property is zero when no top-level AND SO I FIND is present.
+    /// </summary>
+    [Fact]
+    public void Execute_WithoutTopLevelAndSoIFind_ExitCodeIsZero()
+    {
+        string source = """
+            HARK! "No Exit Code"
+            BEHOLD "hello"
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        interpreter.ExitCode.ShouldBe(0);
+    }
+
+    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method breaks out of an infinite loop when a break is encountered.
     /// </summary>
     [Fact]

@@ -104,6 +104,6 @@ public class ProgramRunner
             return ProgramExecutionResult.RuntimeError(diagnostics.Diagnostics);
         }
 
-        return ProgramExecutionResult.Success();
+        return ProgramExecutionResult.Success(interpreter.ExitCode);
     }
 }

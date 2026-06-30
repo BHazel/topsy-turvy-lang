@@ -267,6 +267,11 @@ public sealed class TopsyTurvyCodeGenerator
 
                 generatedCodeBuilder.AppendLine($"{indent}MY DUTY IS DISCHARGED.");
                 break;
+            case ProgrammeReturnNode programmeReturnNode:
+                generatedCodeBuilder.Append($"{indent}AND SO I FIND ");
+                this.WriteExpression(programmeReturnNode.Value, generatedCodeBuilder);
+                generatedCodeBuilder.AppendLine();
+                break;
             case ReturnNode returnNode:
                 if (returnNode.Value is not null)
                 {

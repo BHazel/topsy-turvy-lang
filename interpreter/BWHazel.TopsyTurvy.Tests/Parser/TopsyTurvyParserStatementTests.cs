@@ -892,6 +892,36 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that a top-level AND SO I FIND statement produces a <see cref="ProgrammeReturnNode"/> with the correct value.
+    /// </summary>
+    [Fact]
+    public void Parse_WithTopLevelAndSoIFind_ProducesProgrammeReturnNode()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"T\" AND SO I FIND 42 FINALE.");
+
+        ProgrammeReturnNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ProgrammeReturnNode>();
+        LiteralNode literal = node.Value.ShouldBeOfType<LiteralNode>();
+        literal.Value.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that AND SO I FIND inside a function body produces a <see cref="ReturnNode"/>, not a <see cref="ProgrammeReturnNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAndSoIFindInsideFunction_ProducesReturnNode()
+    {
+        string source = """
+            IT IS MY DUTY TO PERFORM getValue UNDER NO OBLIGATION
+              AND SO I FIND 99
+            MY DUTY IS DISCHARGED.
+            """;
+
+        FunctionDefinitionNode functionNode = this.ParseFirstStatement<FunctionDefinitionNode>(source);
+
+        functionNode.Body.ShouldHaveSingleItem().ShouldBeOfType<ReturnNode>();
+    }
+
+    /// <summary>
     /// Parses a single statement of a specific type from a source string.
     /// </summary>
     /// <typeparam name="T">The type of statement to parse.</typeparam>

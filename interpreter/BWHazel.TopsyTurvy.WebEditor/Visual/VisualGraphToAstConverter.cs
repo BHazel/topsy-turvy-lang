@@ -226,6 +226,7 @@ internal sealed class VisualGraphToAstConverter
             "InputNode" => ReconstructInputFactory(node),
             "BreakNode" => new BreakNode() { Span = PlaceholderSpan },
             "ContinueNode" => new ContinueNode() { Span = PlaceholderSpan },
+            "ProgrammeReturnNode" => this.ReconstructProgrammeReturnFactory(node, diagram),
             "ReturnNode" => this.ReconstructReturnFactory(node, diagram),
             "ThrowNode" => this.ReconstructThrowFactory(node, diagram),
             "ImportNode" => ReconstructImportFactory(node),
@@ -437,6 +438,21 @@ internal sealed class VisualGraphToAstConverter
         {
             Target = GetTargetNameFromPort(node) ?? node.SymbolIdentifierNodeName ?? string.Empty,
             Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a top-level programme return statement from a factory node in the diagram.
+    /// </summary>
+    /// <param name="node">The factory node representing the programme return statement.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
+    /// <returns>The reconstructed programme return statement.</returns>
+    private ProgrammeReturnNode ReconstructProgrammeReturnFactory(TopsyTurvyVisualNodeModel node, BlazorDiagram diagram)
+    {
+        return new()
+        {
+            Value = this.GetExpressionFromDataIn(node, "Value", diagram) ?? Fallback(),
+            Span = PlaceholderSpan
         };
     }
 
@@ -707,6 +723,7 @@ internal sealed class VisualGraphToAstConverter
             LoopNode loop when visualNode is not null => this.ReconstructLoop(loop, visualNode, diagram),
             BreakNode => new BreakNode { Span = PlaceholderSpan },
             ContinueNode => new ContinueNode { Span = PlaceholderSpan },
+            ProgrammeReturnNode programmeReturn when visualNode is not null => this.ReconstructProgrammeReturn(programmeReturn, visualNode, diagram),
             ReturnNode returnNode when visualNode is not null => this.ReconstructReturn(returnNode, visualNode, diagram),
             ThrowNode throwNode when visualNode is not null => this.ReconstructThrow(throwNode, visualNode, diagram),
             TryCatchNode tryCatch when visualNode is not null => this.ReconstructTryCatch(tryCatch, visualNode, diagram),
@@ -992,6 +1009,22 @@ internal sealed class VisualGraphToAstConverter
             Step = step,
             Body = this.WalkBranchBody(visualNode, "Body", diagram),
             Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a top-level programme return statement from the original AST node, its corresponding visual node, and the diagram.
+    /// </summary>
+    /// <param name="original">The original programme return node.</param>
+    /// <param name="visualNode">The visual node corresponding to the programme return statement.</param>
+    /// <param name="diagram">The diagram containing visual node information.</param>
+    /// <returns>A reconstructed programme return node.</returns>
+    private ProgrammeReturnNode ReconstructProgrammeReturn(ProgrammeReturnNode original, TopsyTurvyVisualNodeModel visualNode, BlazorDiagram diagram)
+    {
+        return new()
+        {
+            Value = this.GetExpressionFromDataIn(visualNode, "Value", diagram) ?? this.ReconstructExpressionFromAst(original.Value, diagram),
+            Span = PlaceholderSpan
         };
     }
 

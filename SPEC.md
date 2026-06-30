@@ -31,6 +31,7 @@ FINALE.
 ```
 
 - **`HARK!`** — Opens the program. The string literal that follows is the program title (a comment, not evaluated). The `or,` subtitle line is optional and also a comment.
+- **`AND SO I FIND <value>`** — Optional. Sets the OS exit code returned to the shell when the programme terminates. The expression must evaluate to a `PEER` (integer) value. If omitted, the exit code is `0`. This statement may appear anywhere in the programme body before `FINALE.`; execution unwinds immediately when it is reached.
 - **`FINALE.`** — Closes the program and exits. The full stop is mandatory.
 - Everything between `HARK!` and `FINALE.` is executed in order.
 - Indentation is optional and has no semantic meaning. Indentation in examples follows libretto convention.

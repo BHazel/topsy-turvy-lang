@@ -391,7 +391,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Programme Structure
-/// 2 parsers are included for top-level programme constructs.
+/// 4 parsers are included for top-level programme constructs.
 /// #### Principal Block
 /// The <c>PrincipalBlock</c> parser matches on a variable declaration block, returning a <see cref="PrincipalBlockNode"/>:
 /// * It first matches on the <c>PRINCIPALS</c> keyword.
@@ -418,6 +418,35 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </code>
 /// * The first statement would be matched by the <c>Import</c> parser, returning an <see cref="ImportNode"/> with the file path <c>mikado-punishments.topsy</c>.
 /// * The second block would be matched by the <c>PrincipalBlock</c> parser, returning a <see cref="PrincipalBlockNode"/> with two declarations for the variables <c>Defendant</c> and <c>JurySize</c>.
+/// </para>
+/// <para>
+/// #### Programme Return
+/// The <c>ProgrammeReturn</c> parser matches on a top-level <c>AND SO I FIND &lt;expr&gt;</c> statement,
+/// returning a <see cref="ProgrammeReturnNode"/> carrying the exit-code expression:
+/// * It first matches on the <c>AND SO I FIND</c> keyword.
+/// * It then matches on required whitespace followed by an expression for the OS exit code.
+///
+/// This parser is intentionally separate from <c>Return</c> which produces <see cref="ReturnNode"/> for function bodies.
+/// Placing it outside <c>Statement</c> ensures that a bare <c>AND SO I FIND</c> in the programme body is never
+/// mis-parsed as a function return.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// HARK! "Exit code demo"
+/// AND SO I FIND 42
+/// FINALE.
+/// </code>
+/// * The <c>AND SO I FIND 42</c> statement would be matched by <c>ProgrammeReturn</c>, returning a <see cref="ProgrammeReturnNode"/> with:
+///     * The <c>Value</c> property set to an integer literal of <c>42</c>.
+///     * Execution unwinding immediately, propagating exit code <c>42</c> to the OS.
+/// </para>
+/// <para>
+/// #### Top-Level Statement
+/// The <c>TopLevelStatement</c> parser is the entry point used when parsing the programme body.  It first tries
+/// <c>ProgrammeReturn</c>, which must precede <c>Statement</c> to intercept <c>AND SO I FIND</c> at the top level,
+/// then falls back to <c>Statement</c> for every other construct.  Function bodies continue to use <c>Statement</c>
+/// directly so that <c>AND SO I FIND</c> inside a function is still parsed as <see cref="ReturnNode"/>.
 /// </para>
 /// <para>
 /// ### Expression Statements
@@ -507,8 +536,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// unrecoverable error: there is no multi-error recovery.
 /// </para>
 /// <para>
-/// ### Main Entry Point
-/// The <c>Statement</c> parser is the main entry point that tries every statement parser in turn:
+/// ### Main Entry Points
+/// Two entry points are provided:
+///
+/// **<c>TopLevelStatement</c>** is the entry point used by <see cref="TopsyTurvyParser"/> when parsing the programme body.
+/// It first tries <c>ProgrammeReturn</c>, then falls back to <c>Statement</c>.
+///
+/// **<c>Statement</c>** is the entry point for all other contexts: function bodies, loop bodies, conditional branches, etc..
+/// It tries every statement parser in turn:
 /// * <c>PrincipalBlock</c>
 /// * <c>ArrayDeclaration</c>
 /// * <c>Declaration</c>
@@ -1069,6 +1104,27 @@ public static class StatementParser
                 });
 
     /// <summary>
+    /// Parses an <c>AND SO I FIND &lt;expr&gt;</c> statement at the top level of a programme body setting the OS exit code.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This parser is intentionally separate from the main <see cref="Statement"/> combinator.  At the top level,
+    /// <see cref="TopLevelStatement"/> tries <c>ProgrammeReturn</c> first; inside function bodies the plain
+    /// <see cref="Statement"/> combinator is used, which resolves <c>AND SO I FIND</c> to <see cref="ReturnNode"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly TextParser<Statement> ProgrammeReturn =
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("AND SO I FIND")
+        from exitCodeExpression in Ws(ExpressionParser.Expression)
+        from endOffset in CurrentOffset
+        select (Statement)new ProgrammeReturnNode()
+        {
+            Value = exitCodeExpression,
+            Span = BuildSpan(startOffset, endOffset)
+        };
+
+    /// <summary>
     /// Parses any single Topsy Turvy statement.
     /// </summary>
     public static readonly TextParser<Statement> Statement =
@@ -1093,4 +1149,20 @@ public static class StatementParser
             .Or(Break)
             .Or(Continue)
             .Or(ExpressionStatementParser);
+
+    /// <summary>
+    /// Parses a single top-level statement, trying a programme return before any standard statement.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Used in the programme body, <see cref="BWHazel.TopsyTurvy.Parser.TopsyTurvyParser"/> <c>ProgramParser</c>,
+    /// instead of the plain <see cref="Statement"/> combinator so that a bare
+    /// <c>AND SO I FIND &lt;expr&gt;</c> at the top level is parsed as a <see cref="ProgrammeReturnNode"/> rather
+    /// than a <see cref="ReturnNode"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly TextParser<Statement> TopLevelStatement =
+        ProgrammeReturn
+            .Try()
+            .Or(Statement);
 }

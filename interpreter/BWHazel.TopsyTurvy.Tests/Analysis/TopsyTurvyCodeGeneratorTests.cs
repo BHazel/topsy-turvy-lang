@@ -1135,6 +1135,26 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a top-level AND SO I FIND programme return.
+    /// </summary>
+    [Fact]
+    public void Generate_TopLevelProgrammeReturn_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            AND SO I FIND 42
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        ProgrammeReturnNode programmeReturn = result.Program!.Statements.OfType<ProgrammeReturnNode>().First();
+        ((LiteralNode)programmeReturn.Value).Value.ShouldBe(42);
+    }
+
+    /// <summary>
     /// Generates source from a raw Topsy Turvy programme string by parsing it and re-generating.
     /// </summary>
     /// <param name="source">The input Topsy Turvy source.</param>
