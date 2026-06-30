@@ -4,7 +4,7 @@
     </TitleContent>
     <DialogContent>
         <MudStack Spacing="1" AlignItems="AlignItems.Center" Class="py-2">
-            <MudText Typo="Typo.h5">Topsy Turvy Web Editor</MudText>
+            <MudText Typo="Typo.h5">Operetta Web Theatre</MudText>
             <MudText Typo="Typo.body1">Version @AppVersion</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">Language Spec Version @SpecVersion</MudText>
         </MudStack>
@@ -17,8 +17,8 @@
 </MudDialog>
 
 @code {
-    private const string AppVersion = "0.3.0";
-    private const string SpecVersion = "0.4.0";
+    private const string AppVersion = "0.4.0";
+    private const string SpecVersion = "0.5.0";
 
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = default!;
