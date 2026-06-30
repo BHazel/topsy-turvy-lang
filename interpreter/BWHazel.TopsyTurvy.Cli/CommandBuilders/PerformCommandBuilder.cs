@@ -71,7 +71,7 @@ public static class PerformCommandBuilder
                 PanelHelper.WriteSuccess("Performance Over!", "[lightgreen_1]And a Good Job Too![/]");
             }
 
-            return 0;
+            return result.ExitCode;
         }
 
         PanelHelper.ReportErrors(result, tiptoe);

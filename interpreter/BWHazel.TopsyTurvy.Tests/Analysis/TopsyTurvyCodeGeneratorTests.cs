@@ -804,6 +804,52 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips an ascending counted loop with a BY step.
+    /// </summary>
+    [Fact]
+    public void Generate_AscendingLoopWithByStep_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            BY A LEGAL FICTION ASCENDING count BY 3 UNTIL PRE-ADAMITE count AND 21
+              BEHOLD count
+            THE TERM EXPIRES.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        LoopNode loop = result.Program!.Statements.OfType<LoopNode>().First();
+        loop.Type.ShouldBe(LoopType.Ascending);
+        loop.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a descending counted loop with a BY step.
+    /// </summary>
+    [Fact]
+    public void Generate_DescendingLoopWithByStep_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            BY A LEGAL FICTION DESCENDING count BY 2 UNTIL ALIKE count AND 0
+              BEHOLD count
+            THE TERM EXPIRES.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        LoopNode loop = result.Program!.Statements.OfType<LoopNode>().First();
+        loop.Type.ShouldBe(LoopType.Descending);
+        loop.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips an <c>IN WHICH CAPACITY?</c> switch statement.
     /// </summary>
     [Fact]
@@ -1086,6 +1132,26 @@ public class TopsyTurvyCodeGeneratorTests
         functionDefinition.Name.ShouldBe("announce");
         functionDefinition.ReturnType.ShouldBeNull();
         functionDefinition.Parameters.Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a top-level AND SO I FIND programme return.
+    /// </summary>
+    [Fact]
+    public void Generate_TopLevelProgrammeReturn_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            AND SO I FIND 42
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        ProgrammeReturnNode programmeReturn = result.Program!.Statements.OfType<ProgrammeReturnNode>().First();
+        ((LiteralNode)programmeReturn.Value).Value.ShouldBe(42);
     }
 
     /// <summary>

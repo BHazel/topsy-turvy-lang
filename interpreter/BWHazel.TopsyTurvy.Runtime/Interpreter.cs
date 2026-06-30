@@ -91,6 +91,16 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     public IReadOnlyDictionary<string, FunctionDefinitionNode> Functions => this.functions;
 
     /// <summary>
+    /// Gets the OS exit code produced by the most recent call to <see cref="Execute"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set to <c>0</c> at the start of every <see cref="Execute"/> call and updated if a top-level
+    /// <c>AND SO I FIND &lt;expr&gt;</c> statement is executed.  Callers should read this
+    /// property after <see cref="Execute"/> returns to propagate the exit code to the OS.
+    /// </remarks>
+    public int ExitCode { get; private set; }
+
+    /// <summary>
     /// Executes a parsed programme and returns a collection of runtime diagnostics.
     /// </summary>
     /// <remarks>
@@ -120,6 +130,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <returns>A <see cref="DiagnosticCollection"/> describing any runtime errors.</returns>
     public DiagnosticCollection Execute(ProgramNode program, CancellationToken cancellationToken = default, InterpreterExecutionOptions? options = null, TopsyTurvyEnvironment? sessionEnvironment = null)
     {
+        this.ExitCode = 0;
         this.cancellationToken = cancellationToken;
         this.executionTimeout = options?.ExecutionTimeout.HasValue == true
             ? DateTime.UtcNow + options.ExecutionTimeout.Value
@@ -145,6 +156,10 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         try
         {
             this.ExecuteStatements(program.Statements, environment);
+        }
+        catch (ProgrammeReturnSignalException programmeReturnSignal)
+        {
+            this.ExitCode = programmeReturnSignal.ExitCode;
         }
         catch (TopsyTurvyRuntimeException ex)
         {
@@ -219,6 +234,8 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case FunctionDefinitionNode functionDefinition:
                 this.functions[functionDefinition.Name] = functionDefinition;
                 break;
+            case ProgrammeReturnNode programmeReturnStatement:
+                throw new ProgrammeReturnSignalException((int)this.EvaluateExpression(programmeReturnStatement.Value, environment).RawValue!);
             case ReturnNode returnStatement:
                 throw new ReturnSignalException(returnStatement.Value != null ? this.EvaluateExpression(returnStatement.Value, environment) : null);
             case ThrowNode throwStatement:
@@ -573,7 +590,6 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     private void ExecuteAscendingLoop(LoopNode node, TopsyTurvyEnvironment environment)
     {
         string loopVariable = node.LoopVariable!;
-        environment.Assign(loopVariable, TopsyTurvyValue.Integer(0));
 
         while (!this.EvaluateExpression(node.Condition!, environment).IsTruthy())
         {
@@ -582,8 +598,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 return;
             }
 
+            int step = node.Step is not null
+                ? (int)this.EvaluateExpression(node.Step, environment).RawValue!
+                : 1;
+
             TopsyTurvyValue current = environment.Get(loopVariable);
-            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! + 1));
+            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! + step));
         }
     }
 
@@ -603,8 +623,11 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 return;
             }
 
+            int step = node.Step is not null
+                ? (int)this.EvaluateExpression(node.Step, environment).RawValue!
+                : 1;
             TopsyTurvyValue current = environment.Get(loopVariable);
-            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! - 1));
+            environment.Assign(loopVariable, TopsyTurvyValue.Integer((int)current.RawValue! - step));
         }
     }
 

@@ -198,6 +198,7 @@ public sealed class VisualGraphBuilder
             BreakNode => this.CreateSimpleNode(layout, "THAT WILL DO.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: false, statementType: "BreakNode"),
             ContinueNode => this.CreateSimpleNode(layout, "ONCE MORE.", null, VisualNodeKind.ControlFlow, flowIn: true, flowOut: false, statementType: "ContinueNode"),
             FunctionDefinitionNode node => this.CreateFunctionSignatureNode(node, layout),
+            ProgrammeReturnNode node => this.CreateProgrammeReturnNode(node, layout, diagram),
             ReturnNode node => this.CreateReturnNode(node, layout, diagram),
             ThrowNode node => this.CreateThrowNode(node, layout, diagram),
             TryCatchNode node => this.CreateTryCatchNode(node, layout, diagram),
@@ -536,6 +537,13 @@ public sealed class VisualGraphBuilder
             this.CreateExpressionNode(node.Condition, conditionPort, layout, diagram, anchor: position);
         }
 
+        if (node.Step is not null)
+        {
+            TopsyTurvyVisualPortModel stepPort = this.MakePort(openerNode, "Step", VisualPortRole.DataIn);
+            openerNode.AddPort(stepPort);
+            this.CreateExpressionNode(node.Step, stepPort, layout, diagram, anchor: position);
+        }
+
         TopsyTurvyVisualNodeModel? bodyTail = null;
         if (node.Body.Count > 0)
         {
@@ -675,6 +683,28 @@ public sealed class VisualGraphBuilder
         this.LinkFlow(previousNode, closerNode, diagram);
 
         return bodyCount;
+    }
+
+    /// <summary>
+    /// Creates a visual node for a top-level programme return statement.
+    /// </summary>
+    /// <param name="node">The programme return statement node.</param>
+    /// <param name="layout">The layout context for positioning nodes.</param>
+    /// <param name="diagram">The diagram to which the node will be added.</param>
+    /// <returns>The created visual node model.</returns>
+    private TopsyTurvyVisualNodeModel CreateProgrammeReturnNode(ProgrammeReturnNode node, NodeLayoutContext layout, BlazorDiagram diagram)
+    {
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "AND SO I FIND", null, VisualNodeKind.Function);
+        statementNode.StatementType = "ProgrammeReturnNode";
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+
+        TopsyTurvyVisualPortModel dataInPort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
+        statementNode.AddPort(dataInPort);
+        this.CreateExpressionNode(node.Value, dataInPort, layout, diagram, anchor: statementNode.Position);
+
+        return statementNode;
     }
 
     /// <summary>

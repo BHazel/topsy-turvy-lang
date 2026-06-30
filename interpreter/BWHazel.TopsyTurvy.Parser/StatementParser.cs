@@ -199,16 +199,26 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Loops
-/// 4 parsers are included for loop statements.
+/// 5 parsers are included for loop statements.
+/// #### Loop Step Parser
+/// The <c>LoopStepParser</c> matches on the optional <c>BY &lt;expr&gt;</c> step clause for ascending and descending loops,
+/// returning a nullable <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>:
+/// * It first matches on required whitespace followed by the <c>BY</c> keyword.
+/// * It then matches on required whitespace followed by any expression using the <see cref="ExpressionParser"/><c>.Expression</c> parser.
+/// * If <c>BY</c> is not present the parser back-tracks and returns <c>null</c>.
+/// </para>
+/// <para>
 /// #### Loop Type Parser
 /// The <c>LoopTypeParser</c> identifies the type of a loop, returning a <see cref="LoopDefinition"/>.
 /// It tries each type in order, back-tracking between them:
 /// * <see cref="LoopType" /><c>.Ascending</c> matches an <c>ASCENDING</c> loop with:
 ///     * A loop variable identifier.
+///     * An optional <c>BY &lt;expr&gt;</c> step clause via <c>LoopStepParser</c>, set to <c>null</c> when absent.
 ///     * The <c>UNTIL</c> keyword.
 ///     * A condition expression.
 /// * <see cref="LoopType" /><c>.Descending</c> matches a <c>DESCENDING</c> loop with:
 ///     * A loop variable identifier.
+///     * An optional <c>BY &lt;expr&gt;</c> step clause via <c>LoopStepParser</c>, set to <c>null</c> when absent.
 ///     * The <c>UNTIL</c> keyword.
 ///     * A condition expression.
 /// * <see cref="LoopType" /><c>.Whilst</c> matches a <c>WHILST</c> loop with:
@@ -230,23 +240,35 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The <c>Loop</c> parser matches on a complete loop statement, returning a <see cref="LoopNode"/>:
 /// * It first matches on the <c>BY A LEGAL FICTION</c> keyword.
 /// * It then tries to match on an optional label introduced by <c>KNOWN AS</c> followed by an identifier, back-tracking if not matched.
-/// * It then matches on the loop type using the <c>LoopTypeParser</c>.
+/// * It then matches on the loop type using the <c>LoopTypeParser</c>, which for ascending/descending loops also captures the optional step expression.
 /// * It then matches on zero or more body statements.
 /// * Finally it matches on required whitespace followed by the closing <c>THE TERM EXPIRES.</c> keyword.
 /// </para>
 /// <para>
-/// In the following Topsy Turvy example:
+/// In the following Topsy Turvy examples:
 /// <code>
 /// BY A LEGAL FICTION KNOWN AS HeavyDragoons ASCENDING count UNTIL ALIKE count AND 7
 ///     BEHOLD "A heavy dragoon!"
 /// THE TERM EXPIRES.
+///
+/// BY A LEGAL FICTION ASCENDING rank BY 3 UNTIL PRE-ADAMITE rank AND 20
+///     BEHOLD rank
+/// THE TERM EXPIRES.
 /// </code>
-/// the statement would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
-/// * The label set to <c>HeavyDragoons</c>.
-/// * The loop type set to <see cref="LoopType.Ascending"/>.
-/// * The loop variable set to <c>count</c>.
-/// * The condition set to the expression <c>ALIKE count AND 7</c>.
-/// * The body containing one print statement.
+/// * The first would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
+///     * The label set to <c>HeavyDragoons</c>.
+///     * The loop type set to <see cref="LoopType.Ascending"/>.
+///     * The loop variable set to <c>count</c>.
+///     * The condition set to the expression <c>ALIKE count AND 7</c>.
+///     * <see cref="LoopNode.Step"/> set to <c>null</c> as no <c>BY</c> clause is included therefore defaults to 1.
+///     * The body containing one print statement.
+/// * The second would be matched by the <c>Loop</c> parser, returning a <see cref="LoopNode"/> with:
+///     * No label.
+///     * The loop type set to <see cref="LoopType.Ascending"/>.
+///     * The loop variable set to <c>rank</c>.
+///     * The condition set to the expression <c>PRE-ADAMITE rank AND 20</c>.
+///     * <see cref="LoopNode.Step"/> set to the integer literal expression <c>3</c>, evaluated each iteration.
+///     * The body containing one print statement.
 /// </para>
 /// <para>
 /// ### Guard Clauses
@@ -369,7 +391,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// ### Programme Structure
-/// 2 parsers are included for top-level programme constructs.
+/// 4 parsers are included for top-level programme constructs.
 /// #### Principal Block
 /// The <c>PrincipalBlock</c> parser matches on a variable declaration block, returning a <see cref="PrincipalBlockNode"/>:
 /// * It first matches on the <c>PRINCIPALS</c> keyword.
@@ -396,6 +418,35 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </code>
 /// * The first statement would be matched by the <c>Import</c> parser, returning an <see cref="ImportNode"/> with the file path <c>mikado-punishments.topsy</c>.
 /// * The second block would be matched by the <c>PrincipalBlock</c> parser, returning a <see cref="PrincipalBlockNode"/> with two declarations for the variables <c>Defendant</c> and <c>JurySize</c>.
+/// </para>
+/// <para>
+/// #### Programme Return
+/// The <c>ProgrammeReturn</c> parser matches on a top-level <c>AND SO I FIND &lt;expr&gt;</c> statement,
+/// returning a <see cref="ProgrammeReturnNode"/> carrying the exit-code expression:
+/// * It first matches on the <c>AND SO I FIND</c> keyword.
+/// * It then matches on required whitespace followed by an expression for the OS exit code.
+///
+/// This parser is intentionally separate from <c>Return</c> which produces <see cref="ReturnNode"/> for function bodies.
+/// Placing it outside <c>Statement</c> ensures that a bare <c>AND SO I FIND</c> in the programme body is never
+/// mis-parsed as a function return.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// HARK! "Exit code demo"
+/// AND SO I FIND 42
+/// FINALE.
+/// </code>
+/// * The <c>AND SO I FIND 42</c> statement would be matched by <c>ProgrammeReturn</c>, returning a <see cref="ProgrammeReturnNode"/> with:
+///     * The <c>Value</c> property set to an integer literal of <c>42</c>.
+///     * Execution unwinding immediately, propagating exit code <c>42</c> to the OS.
+/// </para>
+/// <para>
+/// #### Top-Level Statement
+/// The <c>TopLevelStatement</c> parser is the entry point used when parsing the programme body.  It first tries
+/// <c>ProgrammeReturn</c>, which must precede <c>Statement</c> to intercept <c>AND SO I FIND</c> at the top level,
+/// then falls back to <c>Statement</c> for every other construct.  Function bodies continue to use <c>Statement</c>
+/// directly so that <c>AND SO I FIND</c> inside a function is still parsed as <see cref="ReturnNode"/>.
 /// </para>
 /// <para>
 /// ### Expression Statements
@@ -485,8 +536,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// unrecoverable error: there is no multi-error recovery.
 /// </para>
 /// <para>
-/// ### Main Entry Point
-/// The <c>Statement</c> parser is the main entry point that tries every statement parser in turn:
+/// ### Main Entry Points
+/// Two entry points are provided:
+///
+/// **<c>TopLevelStatement</c>** is the entry point used by <see cref="TopsyTurvyParser"/> when parsing the programme body.
+/// It first tries <c>ProgrammeReturn</c>, then falls back to <c>Statement</c>.
+///
+/// **<c>Statement</c>** is the entry point for all other contexts: function bodies, loop bodies, conditional branches, etc..
+/// It tries every statement parser in turn:
 /// * <c>PrincipalBlock</c>
 /// * <c>ArrayDeclaration</c>
 /// * <c>Declaration</c>
@@ -770,20 +827,31 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses the optional <c>BY &lt;expr&gt;</c> step clause for ascending/descending loops.
+    /// </summary>
+    private static readonly TextParser<Expression?> LoopStepParser =
+        Ws(Lexer.Keyword("BY")).IgnoreThen(Ws(ExpressionParser.Expression))
+            .Select(step => (Expression?)step)
+            .Try()
+            .OptionalOrDefault(null);
+
+    /// <summary>
     /// Parses the loop-type clause following the label.
     /// </summary>
     private static readonly TextParser<LoopDefinition> LoopTypeParser =
         (from _ in Ws(Lexer.Keyword("ASCENDING"))
          from loopVariable in Ws(Lexer.Identifier)
+         from loopStep in LoopStepParser
          from untilKeyword in Ws(Lexer.Keyword("UNTIL"))
          from loopCondition in Ws(ExpressionParser.Expression)
-         select new LoopDefinition(LoopType.Ascending, loopCondition, loopVariable))
+         select new LoopDefinition(LoopType.Ascending, loopCondition, loopVariable, loopStep))
             .Try()
             .Or((from _ in Ws(Lexer.Keyword("DESCENDING"))
                 from loopVariable in Ws(Lexer.Identifier)
+                from loopStep in LoopStepParser
                 from untilKeyword in Ws(Lexer.Keyword("UNTIL"))
                 from loopCondition in Ws(ExpressionParser.Expression)
-                select new LoopDefinition(LoopType.Descending, loopCondition, loopVariable))
+                select new LoopDefinition(LoopType.Descending, loopCondition, loopVariable, loopStep))
                     .Try())
             .Or((from _ in Ws(Lexer.Keyword("WHILST"))
                 from loopCondition in Ws(ExpressionParser.Expression)
@@ -828,6 +896,7 @@ public static class StatementParser
             Type = loopDefinition.Type,
             Condition = loopDefinition.Condition,
             LoopVariable = loopDefinition.Variable,
+            Step = loopDefinition.Step,
             Body = [.. body],
             Span = BuildSpan(startOffset, endOffset)
         };
@@ -1035,6 +1104,27 @@ public static class StatementParser
                 });
 
     /// <summary>
+    /// Parses an <c>AND SO I FIND &lt;expr&gt;</c> statement at the top level of a programme body setting the OS exit code.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This parser is intentionally separate from the main <see cref="Statement"/> combinator.  At the top level,
+    /// <see cref="TopLevelStatement"/> tries <c>ProgrammeReturn</c> first; inside function bodies the plain
+    /// <see cref="Statement"/> combinator is used, which resolves <c>AND SO I FIND</c> to <see cref="ReturnNode"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly TextParser<Statement> ProgrammeReturn =
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("AND SO I FIND")
+        from exitCodeExpression in Ws(ExpressionParser.Expression)
+        from endOffset in CurrentOffset
+        select (Statement)new ProgrammeReturnNode()
+        {
+            Value = exitCodeExpression,
+            Span = BuildSpan(startOffset, endOffset)
+        };
+
+    /// <summary>
     /// Parses any single Topsy Turvy statement.
     /// </summary>
     public static readonly TextParser<Statement> Statement =
@@ -1059,4 +1149,20 @@ public static class StatementParser
             .Or(Break)
             .Or(Continue)
             .Or(ExpressionStatementParser);
+
+    /// <summary>
+    /// Parses a single top-level statement, trying a programme return before any standard statement.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Used in the programme body, <see cref="BWHazel.TopsyTurvy.Parser.TopsyTurvyParser"/> <c>ProgramParser</c>,
+    /// instead of the plain <see cref="Statement"/> combinator so that a bare
+    /// <c>AND SO I FIND &lt;expr&gt;</c> at the top level is parsed as a <see cref="ProgrammeReturnNode"/> rather
+    /// than a <see cref="ReturnNode"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly TextParser<Statement> TopLevelStatement =
+        ProgrammeReturn
+            .Try()
+            .Or(Statement);
 }

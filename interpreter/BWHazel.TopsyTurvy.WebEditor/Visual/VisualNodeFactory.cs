@@ -45,6 +45,7 @@ internal static class VisualNodeFactory
             "InputNode" => [SimpleStatement(statementType, "PRAY TELL", null, VisualNodeKind.Input, position, diagram, ref nodeCounter, dataInLabels: ["Variable"])],
             "BreakNode" => [SimpleStatement(statementType, "THAT WILL DO.", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter, shouldFlowOut: false)],
             "ContinueNode" => [SimpleStatement(statementType, "ONCE MORE.", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter, shouldFlowOut: false)],
+            "ProgrammeReturnNode" => [SimpleStatement(statementType, "AND SO I FIND", null, VisualNodeKind.Function, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ReturnNode" => [SimpleStatement(statementType, "AND SO I FIND", null, VisualNodeKind.Function, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ThrowNode" => [SimpleStatement(statementType, "A HIDEOUS CURSE ON", null, VisualNodeKind.ErrorHandling, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ImportNode" => [SimpleStatement(statementType, "PRAY ADMIT", null, VisualNodeKind.Other, position, diagram, ref nodeCounter)],
@@ -167,6 +168,7 @@ internal static class VisualNodeFactory
         TopsyTurvyVisualNodeModel openerNode = MakeNode("LoopOpener", "BY A LEGAL FICTION", "Infinite", VisualNodeKind.Loop, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
         openerNode.AddPort(MakePort(openerNode, "Cond", VisualPortRole.DataIn));
+        openerNode.AddPort(MakePort(openerNode, "Step", VisualPortRole.DataIn));
         openerNode.AddPort(MakePort(openerNode, "Body", VisualPortRole.BranchOut));
         diagram.Nodes.Add(openerNode);
 

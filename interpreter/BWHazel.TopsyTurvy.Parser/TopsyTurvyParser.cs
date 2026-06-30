@@ -30,7 +30,7 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * It matches required whitespace followed by the <c>or,</c> keyword.
 ///     * It then matches required whitespace followed by a string literal for the subtitle.
 ///     * If no subtitle is present, a default value of <c>null</c> is used.
-/// * It then matches zero or more statements, each preceded by required whitespace, back-tracking on each attempt that does not match a known statement form.
+/// * It then matches zero or more top-level statements using <see cref="StatementParser.TopLevelStatement"/>, each preceded by required whitespace, back-tracking on each attempt that does not match a known statement form.  <c>TopLevelStatement</c> tries <see cref="StatementParser.ProgrammeReturn"/> first so that a bare <c>AND SO I FIND &lt;expr&gt;</c> in the programme body is parsed as a <see cref="ProgrammeReturnNode"/> rather than a <see cref="ReturnNode"/>.
 /// * Finally, it matches the <c>FINALE.</c> keyword that closes every programme.
 /// </para>
 /// <para>
@@ -186,7 +186,7 @@ public class TopsyTurvyParser
             .IgnoreThen(Ws(Lexer.StringLiteral)))
             .Try()
             .OptionalOrDefault(null!)
-        from body in WsMany(StatementParser.Statement)
+        from body in WsMany(StatementParser.TopLevelStatement)
         from closer in Ws(Lexer.Keyword("FINALE.")
             .Named("FINALE. (program end)"))
         from endOffset in CurrentOffset

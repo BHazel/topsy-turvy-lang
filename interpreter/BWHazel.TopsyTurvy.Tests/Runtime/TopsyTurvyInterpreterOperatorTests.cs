@@ -391,7 +391,7 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
             PRINCIPALS
               PRAY WELCOME result AS A DECREE
             THE CURTAIN RISES.
-            result IS APPOINTED EITHER VERITY AND NAY
+            result IS APPOINTED EITHER VERITY OR NAY
             BEHOLD result
             FINALE.
             """;
@@ -416,7 +416,7 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
             PRINCIPALS
               PRAY WELCOME result AS A DECREE
             THE CURTAIN RISES.
-            result IS APPOINTED EITHER NAY AND NAY
+            result IS APPOINTED EITHER NAY OR NAY
             BEHOLD result
             FINALE.
             """;

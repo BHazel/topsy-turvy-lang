@@ -14,6 +14,11 @@ public class ProgramExecutionResult
     public bool IsSuccess { get; set; }
 
     /// <summary>
+    /// Gets or sets the OS exit code produced by the programme, valid only when <see cref="IsSuccess"/> is <c>true</c>.
+    /// </summary>
+    public int ExitCode { get; set; }
+
+    /// <summary>
     /// Gets or sets an error message if the execution failed due to a general error.
     /// </summary>
     public string? ErrorMessage { get; set; }
@@ -41,13 +46,15 @@ public class ProgramExecutionResult
     }
 
     /// <summary>
-    /// Creates a successful execution result.
+    /// Creates a successful execution result with the programme OS exit code.
     /// </summary>
+    /// <param name="exitCode">The OS exit code returned by the programme (0 if not set).</param>
     /// <returns>A <see cref="ProgramExecutionResult"/> representing a successful execution.</returns>
-    public static ProgramExecutionResult Success() =>
+    public static ProgramExecutionResult Success(int exitCode = 0) =>
         new()
         {
-            IsSuccess = true
+            IsSuccess = true,
+            ExitCode = exitCode
         };
 
     /// <summary>

@@ -183,6 +183,10 @@
         },
         {
           "name": "keyword.control.loop.topsy",
+          "match": "(?i)\\bBY\\b"
+        },
+        {
+          "name": "keyword.control.loop.topsy",
           "match": "(?i)\\bUNTIL\\b"
         },
         {
@@ -376,6 +380,10 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\bEITHER\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bOR\\b"
         },
         {
           "name": "keyword.operator.topsy",

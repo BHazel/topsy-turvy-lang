@@ -40,6 +40,7 @@ window.topsyTurvy = {
             ["BY A LEGAL FICTION",                  "loop"],
             ["ASCENDING",                           "increment loop variable"],
             ["DESCENDING",                          "decrement loop variable"],
+            ["BY",                                   "loop step (ASCENDING/DESCENDING ... BY <expr>)"],
             ["UNTIL",                               "loop exit condition"],
             ["WHILST",                              "loop while condition"],
             ["THE TERM EXPIRES.",                   "end loop"],
@@ -74,6 +75,7 @@ window.topsyTurvy = {
             ["WOVEN OF",                            "string concatenation"],
             ["BOTH",                                "logical AND"],
             ["EITHER",                              "logical OR"],
+            ["OR",                                  "logical OR separator (EITHER x OR y)"],
             ["HARDLY EVER",                         "logical NOT"],
             ["ALIKE",                               "equality (==)"],
             ["UNLIKE",                              "inequality (!=)"],
@@ -319,6 +321,8 @@ window.topsyTurvy = {
                     [/\bLIBERAL\b/, 'keyword'],
                     [/\bASCENDING\b/, 'keyword'],
                     [/\bDESCENDING\b/, 'keyword'],
+                    // BY A LEGAL FICTION must precede standalone BY (already handled above); bare BY used as loop step
+                    [/\bBY\b/, 'keyword'],
                     [/\bUNTIL\b/, 'keyword'],
                     [/\bWHILST\b/, 'keyword'],
                     [/\bSUMMON\b/, 'keyword'],
@@ -327,6 +331,8 @@ window.topsyTurvy = {
                     [/\bBEING\b/, 'keyword'],
                     [/\bBOTH\b/, 'keyword'],
                     [/\bEITHER\b/, 'keyword'],
+                    // OR, IF NOT, must precede standalone OR (already handled above); bare OR used as EITHER separator
+                    [/\bOR\b/, 'keyword'],
 
                     // Operators that need to follow their multi-word variants above
                     [/\bAND\b/, 'keyword'],

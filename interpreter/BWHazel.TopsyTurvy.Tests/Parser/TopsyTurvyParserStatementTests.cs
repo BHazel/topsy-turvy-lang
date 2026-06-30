@@ -294,6 +294,59 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that BY A LEGAL FICTION ASCENDING with a BY clause sets the step expression on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_AscendingLoop_WithByStep_SetsStep()
+    {
+        string statements = """
+            BY A LEGAL FICTION ASCENDING i BY 3 UNTIL ALIKE i AND 21
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Type.ShouldBe(LoopType.Ascending);
+        node.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that BY A LEGAL FICTION DESCENDING with a BY clause sets the step expression on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_DescendingLoop_WithByStep_SetsStep()
+    {
+        string statements = """
+            BY A LEGAL FICTION DESCENDING i BY 2 UNTIL ALIKE i AND 0
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Type.ShouldBe(LoopType.Descending);
+        node.Step.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that BY A LEGAL FICTION ASCENDING without a BY clause leaves the step expression null on a <see cref="LoopNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_AscendingLoop_WithoutByStep_StepIsNull()
+    {
+        string statements = """
+            BY A LEGAL FICTION ASCENDING i UNTIL ALIKE i AND 5
+              BEHOLD i
+            THE TERM EXPIRES.
+            """;
+
+        LoopNode node = this.ParseFirstStatement<LoopNode>(statements);
+
+        node.Step.ShouldBeNull();
+    }
+
+    /// <summary>
     /// Tests that THAT WILL DO. at the top level produces a <see cref="BreakNode"/>.
     /// </summary>
     [Fact]
@@ -836,6 +889,36 @@ public class TopsyTurvyParserStatementTests
         program.Span.Start.Line.ShouldBe(1);
         program.Span.Start.Column.ShouldBe(1);
         (program.Span.End.Line >= 3).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that a top-level AND SO I FIND statement produces a <see cref="ProgrammeReturnNode"/> with the correct value.
+    /// </summary>
+    [Fact]
+    public void Parse_WithTopLevelAndSoIFind_ProducesProgrammeReturnNode()
+    {
+        ProgramNode program = this.parser.Parse("HARK! \"T\" AND SO I FIND 42 FINALE.");
+
+        ProgrammeReturnNode node = program.Statements.ShouldHaveSingleItem().ShouldBeOfType<ProgrammeReturnNode>();
+        LiteralNode literal = node.Value.ShouldBeOfType<LiteralNode>();
+        literal.Value.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that AND SO I FIND inside a function body produces a <see cref="ReturnNode"/>, not a <see cref="ProgrammeReturnNode"/>.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAndSoIFindInsideFunction_ProducesReturnNode()
+    {
+        string source = """
+            IT IS MY DUTY TO PERFORM getValue UNDER NO OBLIGATION
+              AND SO I FIND 99
+            MY DUTY IS DISCHARGED.
+            """;
+
+        FunctionDefinitionNode functionNode = this.ParseFirstStatement<FunctionDefinitionNode>(source);
+
+        functionNode.Body.ShouldHaveSingleItem().ShouldBeOfType<ReturnNode>();
     }
 
     /// <summary>
