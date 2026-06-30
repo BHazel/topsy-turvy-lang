@@ -41,37 +41,6 @@ public class TopsyTurvyInterpreterControlFlowTests : TopsyTurvyInterpreterTestBa
     }
 
     /// <summary>
-    /// Tests that the <see cref="Interpreter.Execute"/> method uses the JUST SO register as the condition when none is supplied.
-    /// </summary>
-    [Fact]
-    public void Execute_WithImplicitJustSoConditional_EvaluatesJustSoAsBranchCondition()
-    {
-        string source = """
-            HARK! "JustSo Conditional"
-            PRINCIPALS
-              PRAY WELCOME result AS A YARN
-            THE CURTAIN RISES.
-            ALIKE 5 AND 5
-            SHOULD IT TRANSPIRE THAT
-              QUITE SO.
-                result IS APPOINTED "equal"
-              OTHERWISE,
-                result IS APPOINTED "not equal"
-            SO MUCH FOR THAT.
-            BEHOLD result
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
-        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
-
-        DiagnosticCollection diagnostics = interpreter.Execute(program);
-
-        diagnostics.HasErrors.ShouldBeFalse();
-        output[0].ShouldBe("equal");
-    }
-
-    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method evaluates the else-if branch when the first condition is false.
     /// </summary>
     [Fact]

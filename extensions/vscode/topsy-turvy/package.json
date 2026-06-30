@@ -3,7 +3,7 @@
   "publisher": "bwhazel",
   "displayName": "Topsy Turvy",
   "description": "Rich language support for Topsy Turvy (.topsy) files, including syntax highlighting, completions and more.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/bhazel/topsy-turvy-lang.git"

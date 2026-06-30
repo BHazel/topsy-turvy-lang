@@ -8,31 +8,6 @@ namespace BWHazel.TopsyTurvy.Tests.Runtime;
 public class TopsyTurvyEnvironmentTests
 {
     /// <summary>
-    /// Tests that the <see cref="TopsyTurvyEnvironment.JustSo"/> property is initialised to null.
-    /// </summary>
-    [Fact]
-    public void JustSo_AfterCreation_IsNull()
-    {
-        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
-
-        environment.JustSo.LiteralType.ShouldBe(TopsyTurvyValue.Null().LiteralType);
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="TopsyTurvyEnvironment.JustSo"/> property can be written and re-read.
-    /// </summary>
-    [Fact]
-    public void JustSo_WhenSet_ReturnsNewValue()
-    {
-        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
-        TopsyTurvyValue expectedValue = TopsyTurvyValue.Integer(99);
-
-        environment.JustSo = expectedValue;
-
-        environment.JustSo.ShouldBeSameAs(expectedValue);
-    }
-
-    /// <summary>
     /// Tests that the <see cref="TopsyTurvyEnvironment.Declare"/> method stores a variable retrievable by name.
     /// </summary>
     [Fact]
@@ -138,21 +113,6 @@ public class TopsyTurvyEnvironmentTests
         TopsyTurvyEnvironment nestedEnvironment = enclosingEnvironment.CreateNested();
 
         TopsyTurvyValue result = nestedEnvironment.Get("x");
-
-        result.ShouldBeSameAs(value);
-    }
-
-    /// <summary>
-    /// Tests that the <see cref="TopsyTurvyEnvironment.Get"/> method returns the JustSo register for the special name JUST SO.
-    /// </summary>
-    [Fact]
-    public void Get_WithJustSoName_ReturnsJustSoRegister()
-    {
-        TopsyTurvyEnvironment environment = TopsyTurvyEnvironment.CreateGlobal();
-        TopsyTurvyValue value = TopsyTurvyValue.Integer(55);
-        environment.JustSo = value;
-
-        TopsyTurvyValue result = environment.Get("JUST SO");
 
         result.ShouldBeSameAs(value);
     }

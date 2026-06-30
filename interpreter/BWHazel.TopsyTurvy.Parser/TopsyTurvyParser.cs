@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Superpower;
 using Superpower.Model;
 using BWHazel.TopsyTurvy.Ast;
@@ -17,6 +16,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The Topsy Turvy Parser is the top and main entry point for the Parser which builds on top of the lexer and expression and
 /// statement parsers to build a single <see cref="ProgramNode"/> AST component.  It comprises a single parser for a programme,
 /// which is made up of parsers from lower levels for statements and expressions.
+/// </para>
+/// <para>
+/// Please note that for brevity the capture of spans and committed-parse semantics are not documented for each parser individually.  Please see the **Source Span Lifecycle** and **Committed Parse Semantics** sections below for descriptions of how spans are captured and how block-body parsers handle partial matches.
 /// </para>
 /// <para>
 /// ### Programme Parser
@@ -52,6 +54,26 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// both would return a <see cref="ProgramNode"/> and for each example:
 /// * The first would have the title <c>The Mikado</c>, a subtitle of <c>The Town of Titipu</c> and a single <c>BEHOLD</c> statement.
 /// * The second would have the title <c>Patience</c>, no subtitle and a single declaration statement.
+/// </para>
+/// <para>
+/// ### Source Span Lifecycle
+/// Before calling any parser combinator, both the <see cref="Parse"/> and <see cref="TryParse"/> methods assign
+/// <see cref="ParserHelpers.ActiveSourceMap"/> to the <see cref="SourceMap"/> produced by the pre-processor pipeline.
+/// This thread-local field is the communication channel that allows the <c>static readonly</c> parser fields in
+/// <see cref="ExpressionParser"/> and <see cref="StatementParser"/> to translate pre-processed cursor offsets back to
+/// original source line and column pairs at node construction time via <see cref="ParserHelpers.BuildSpan"/>.
+/// The field is cleared to <c>null</c> in a <c>finally</c> block after the parse completes so that it does not
+/// persist into subsequent parses on the same thread.
+/// </para>
+/// <para>
+/// ### Committed Parse Semantics
+/// The <c>ProgramParser</c> uses committed parse semantics to match the sequence of top-level statements
+/// in the programme body: once the opening keyword of a statement has been consumed,
+/// any subsequent failure is propagated at the actual position of the error rather than
+/// backtracking to before the whitespace that preceded the keyword.  As a result, syntax errors in top-level
+/// statements are reported at the line where the error occurs, not at the start of the programme body.  Parsing
+/// still stops at the first unrecoverable error: there is no multi-error recovery.  All block-body parsers
+/// within <see cref="StatementParser"/> apply the same approach so please see its remarks for details.
 /// </para>
 /// <para>
 /// ### Parsing Process
@@ -156,6 +178,7 @@ public class TopsyTurvyParser
     /// Top-level parser for a complete Topsy Turvy program.
     /// </summary>
     private static readonly TextParser<ProgramNode> ProgramParser =
+        from startOffset in CurrentOffset
         from harkKeyword in Lexer.Keyword("HARK!")
         from title in Ws(Lexer.StringLiteral
             .Named("program title"))
@@ -163,17 +186,16 @@ public class TopsyTurvyParser
             .IgnoreThen(Ws(Lexer.StringLiteral)))
             .Try()
             .OptionalOrDefault(null!)
-        from body in Ws(StatementParser.Statement)
-            .Try()
-            .Many()
+        from body in WsMany(StatementParser.Statement)
         from closer in Ws(Lexer.Keyword("FINALE.")
             .Named("FINALE. (program end)"))
+        from endOffset in CurrentOffset
         select new ProgramNode()
         {
             Title = title,
             Subtitle = subtitle,
             Statements = body.ToList(),
-            Span = PlaceholderSpan
+            Span = BuildSpan(startOffset, endOffset)
         };
 
     /// <summary>
@@ -187,13 +209,23 @@ public class TopsyTurvyParser
         PreProcessorPipeline preProcessorPipeline = BuildPreProcessorPipeline();
         PreProcessResult preProcessorResult = preProcessorPipeline.Execute(source);
 
-        Result<ProgramNode> parseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        Result<ProgramNode> parseResult;
+        ActiveSourceMap = preProcessorResult.SourceMap;
+        try
+        {
+            parseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        }
+        finally
+        {
+            ActiveSourceMap = null;
+        }
+
         if (!parseResult.HasValue)
         {
             throw new TopsyTurvySyntaxException([parseResult.ToString()]);
         }
 
-        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(parseResult.Value, source);
+        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(parseResult.Value);
         if (semanticErrors.Count > 0)
         {
             throw new TopsyTurvySyntaxException(semanticErrors.Select(diagnostic => diagnostic.Message).ToArray());
@@ -229,7 +261,17 @@ public class TopsyTurvyParser
         PreProcessorPipeline preProcessorPipeline = BuildPreProcessorPipeline();
         PreProcessResult preProcessorResult = preProcessorPipeline.Execute(source);
 
-        Result<ProgramNode> programmeParseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        Result<ProgramNode> programmeParseResult;
+        ActiveSourceMap = preProcessorResult.SourceMap;
+        try
+        {
+            programmeParseResult = ProgramParser.TryParse(preProcessorResult.TransformedText);
+        }
+        finally
+        {
+            ActiveSourceMap = null;
+        }
+
         if (!programmeParseResult.HasValue)
         {
             // Search forward from reported error position, which is the start of the invalid statement, to find
@@ -319,7 +361,7 @@ public class TopsyTurvyParser
             return new(null, [diagnostic]);
         }
 
-        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(programmeParseResult.Value, source);
+        IReadOnlyList<Diagnostic> semanticErrors = ValidateSymbolNames(programmeParseResult.Value);
         if (semanticErrors.Count > 0)
         {
             return new(programmeParseResult.Value, semanticErrors);
@@ -344,12 +386,10 @@ public class TopsyTurvyParser
     /// Validates that no variable or function name in the programme uses a reserved keyword.
     /// </summary>
     /// <param name="program">The parsed programme AST.</param>
-    /// <param name="originalSource">The original (pre-processed) source text, used for span recovery.</param>
     /// <returns>A list of diagnostics, one per violation, empty when all names are valid.</returns>
-    private static IReadOnlyList<Diagnostic> ValidateSymbolNames(ProgramNode program, string originalSource)
+    private static IReadOnlyList<Diagnostic> ValidateSymbolNames(ProgramNode program)
     {
         List<Diagnostic> diagnostics = [];
-        string[] sourceLines = originalSource.Split('\n');
 
         foreach (Statement statement in program.Statements)
         {
@@ -360,23 +400,23 @@ public class TopsyTurvyParser
                     {
                         if (declaration is DeclarationNode scalarDeclaration)
                         {
-                            CheckDeclarationName(scalarDeclaration.Name, "variable", sourceLines, diagnostics);
+                            CheckDeclarationName(scalarDeclaration.Name, "variable", scalarDeclaration.Span, diagnostics);
                         }
                         else if (declaration is ArrayDeclarationNode arrayDeclaration)
                         {
-                            CheckDeclarationName(arrayDeclaration.Name, "variable", sourceLines, diagnostics);
+                            CheckDeclarationName(arrayDeclaration.Name, "variable", arrayDeclaration.Span, diagnostics);
                         }
                     }
 
                     break;
                 case DeclarationNode declaration:
-                    CheckDeclarationName(declaration.Name, "variable", sourceLines, diagnostics);
+                    CheckDeclarationName(declaration.Name, "variable", declaration.Span, diagnostics);
                     break;
                 case FunctionDefinitionNode functionDefinition:
-                    CheckDeclarationName(functionDefinition.Name, "function", sourceLines, diagnostics);
-                    foreach (string parameter in functionDefinition.Parameters)
+                    CheckDeclarationName(functionDefinition.Name, "function", functionDefinition.Span, diagnostics);
+                    foreach (TypedParameter parameter in functionDefinition.Parameters)
                     {
-                        CheckDeclarationName(parameter, "parameter", sourceLines, diagnostics);
+                        CheckDeclarationName(parameter.Name, "parameter", parameter.Span, diagnostics);
                     }
 
                     break;
@@ -390,10 +430,10 @@ public class TopsyTurvyParser
     /// Checks whether a declared name is a reserved keyword and, if so, appends a diagnostic.
     /// </summary>
     /// <param name="name">The declared name to check.</param>
-    /// <param name="kind">Either <c>variable</c> or <c>function</c>, used in the error message.</param>
-    /// <param name="sourceLines">The original source split into lines, for span recovery.</param>
+    /// <param name="kind">Either <c>variable</c>, <c>function</c>, or <c>parameter</c>, used in the error message.</param>
+    /// <param name="span">The source span of the declaration, taken directly from the AST node.</param>
     /// <param name="diagnostics">The diagnostic list to append to on a violation.</param>
-    private static void CheckDeclarationName(string name, string kind, string[] sourceLines, List<Diagnostic> diagnostics)
+    private static void CheckDeclarationName(string name, string kind, SourceSpan span, List<Diagnostic> diagnostics)
     {
         if (!ReservedWords.Contains(name))
         {
@@ -401,47 +441,6 @@ public class TopsyTurvyParser
         }
 
         string errorMessage = $"'{name}' is a reserved keyword and cannot be used as a {kind} name.";
-        SourceSpan span = FindDeclarationSpan(name, kind, sourceLines);
         diagnostics.Add(new(errorMessage, DiagnosticSeverity.Error, span));
-    }
-
-    /// <summary>
-    /// Scans the source lines for a declaration and returns its span.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This is a temporary work-around to determine the span of a declaration until the parser is enhanced to provide
-    /// this information directly.
-    /// </para>
-    /// <para>
-    /// The span is determined using regular expressions to match a specific declaration and type.
-    /// </para>
-    /// </remarks>
-    /// <param name="name">The declared name to locate.</param>
-    /// <param name="kind">Either <c>variable</c> or <c>function</c>.</param>
-    /// <param name="sourceLines">The original source split into lines.</param>
-    /// <returns>A <see cref="SourceSpan"/> covering the name token, or a fallback span at (1,1).</returns>
-    private static SourceSpan FindDeclarationSpan(string name, string kind, string[] sourceLines)
-    {
-        string pattern = kind switch
-        {
-            "function" => $@"(?i)\bIT\s+IS\s+MY\s+DUTY\s+TO\s+PERFORM\s+({Regex.Escape(name)})\b",
-            "parameter" => $@"(?i)\bUNDER\s+THE\s+TERMS\s+OF\b.*\b({Regex.Escape(name)})\b",
-            _ => $@"(?i)\bPRAY\s+WELCOME\s+({Regex.Escape(name)})\b",
-        };
-
-        for (int lineIndex = 0; lineIndex < sourceLines.Length; lineIndex++)
-        {
-            Match match = Regex.Match(sourceLines[lineIndex], pattern);
-            if (match.Success)
-            {
-                int line = lineIndex + 1;
-                int startColumn = match.Groups[1].Index + 1;
-                int endColumn = startColumn + name.Length;
-                return new(new(line, startColumn), new(line, endColumn));
-            }
-        }
-
-        return new(new(1, 1), new(1, 2));
     }
 }

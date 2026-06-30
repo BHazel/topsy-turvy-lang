@@ -17,7 +17,7 @@ public class CompletionHandlerTests : LanguageServerTestBase
         PRINCIPALS
           PRAY WELCOME myVar AS A PEER BEING 1
         THE CURTAIN RISES.
-        IT IS MY DUTY TO PERFORM myFunc UNDER THE TERMS OF param
+        IT IS MY DUTY TO PERFORM myFunc UNDER THE TERMS OF param AS A PEER TO FIND PEER
           AND SO I FIND param
         MY DUTY IS DISCHARGED.
         BEHOLD myVar

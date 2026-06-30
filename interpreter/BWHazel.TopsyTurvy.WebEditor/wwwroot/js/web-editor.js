@@ -526,3 +526,30 @@ Object.assign(window.topsyTurvy, {
         }
     },
 });
+
+window.visualSymbolPanel = {
+    /**
+     * Starts a drag operation to resize the visual symbol panel.
+     * @param {number} startX The initial X coordinate of the mouse when the drag starts.
+     * @param {number} initialWidth The initial width of the panel.
+     * @param {object} dotNetRef A reference to the .NET object for invoking methods.
+     */
+    startResize(startX, initialWidth, dotNetRef) {
+        const onMouseMove = (e) => {
+            const width = Math.round(initialWidth + (e.clientX - startX));
+            dotNetRef.invokeMethodAsync('SetPanelWidth', width);
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+        
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    },
+};

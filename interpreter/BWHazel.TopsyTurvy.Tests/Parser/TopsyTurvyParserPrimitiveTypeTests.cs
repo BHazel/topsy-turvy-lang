@@ -60,34 +60,6 @@ public class TopsyTurvyParserPrimitiveTypeTests
     }
 
     /// <summary>
-    /// Tests that an <c>IS HENCEFORTH A</c> in-place cast to each type keyword maps to the correct
-    /// <see cref="LiteralType"/> on the <see cref="InPlaceCastNode"/>.
-    /// </summary>
-    /// <param name="keyword">The Topsy Turvy type keyword or keyword phrase.</param>
-    /// <param name="expectedType">The expected <see cref="LiteralType"/> corresponding to the keyword.</param>
-    [Theory]
-    [InlineData("PEER",                   LiteralType.Integer)]
-    [InlineData("CHANCELLOR",             LiteralType.Long)]
-    [InlineData("PIRATE",                 LiteralType.Short)]
-    [InlineData("SAUSAGE-ROLL",           LiteralType.SignedByte)]
-    [InlineData("STANDING PEER",          LiteralType.UnsignedInteger)]
-    [InlineData("STANDING CHANCELLOR",    LiteralType.UnsignedLong)]
-    [InlineData("STANDING PIRATE",        LiteralType.UnsignedShort)]
-    [InlineData("STANDING SAUSAGE-ROLL",  LiteralType.Byte)]
-    [InlineData("FATHOM",                 LiteralType.Double)]
-    [InlineData("FOOT",                   LiteralType.Single)]
-    [InlineData("YARN",                   LiteralType.String)]
-    [InlineData("STITCH",                 LiteralType.Char)]
-    [InlineData("DECREE",                 LiteralType.Boolean)]
-    [InlineData("NAUGHT",                 LiteralType.Null)]
-    public void Parse_WithInPlaceCast_MapsToCorrectLiteralType(string keyword, LiteralType expectedType)
-    {
-        InPlaceCastNode node = this.ParseInPlaceCast($"x IS HENCEFORTH A {keyword}");
-
-        node.NewType.ShouldBe(expectedType);
-    }
-
-    /// <summary>
     /// Parses a print expression from the given source test.
     /// </summary>
     /// <typeparam name="T">The expected type of the expression.</typeparam>
@@ -109,16 +81,5 @@ public class TopsyTurvyParserPrimitiveTypeTests
     {
         ProgramNode program = this.parser.Parse($"HARK! \"T\" {declarationSource} FINALE.");
         return program.Statements.ShouldHaveSingleItem().ShouldBeOfType<DeclarationNode>();
-    }
-
-    /// <summary>
-    /// Parses an in-place cast from the given source text.
-    /// </summary>
-    /// <param name="statementSource">The source code of the in-place cast statement.</param>
-    /// <returns>The parsed in-place cast node.</returns>
-    private InPlaceCastNode ParseInPlaceCast(string statementSource)
-    {
-        ProgramNode program = this.parser.Parse($"HARK! \"T\" {statementSource} FINALE.");
-        return program.Statements.ShouldHaveSingleItem().ShouldBeOfType<InPlaceCastNode>();
     }
 }

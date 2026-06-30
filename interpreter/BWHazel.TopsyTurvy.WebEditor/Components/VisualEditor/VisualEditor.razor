@@ -1,0 +1,685 @@
+@using Blazor.Diagrams.Components
+@using Blazor.Diagrams.Core.Anchors;
+@using Blazor.Diagrams.Core.Geometry;
+@using Blazor.Diagrams.Core.Models
+@using Blazor.Diagrams.Core.Models.Base
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
+
+@if (this.Diagram is null)
+{
+    <div class="visual-empty-state">
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            An error occurred while parsing the programme.
+        </MudText>
+    </div>
+}
+else
+{
+    <div class="visual-editor-container">
+        <VisualSymbolPanel IsOpen="@this.IsPanelOpen"
+                           Symbols="@this.VisualSymbols"
+                           OnNodeTypeDragStarted="this.OnNodeTypeDragStarted"
+                           OnSymbolDragStarted="this.OnSymbolDragStarted"
+                           OnNodeTypeDoubleClicked="this.OnNodeTypeDoubleClickedAsync"
+                           OnSymbolDoubleClicked="this.OnSymbolDoubleClickedAsync" />
+
+        <div class="visual-editor-wrapper"
+             tabindex="0"
+             @oncontextmenu="this.OnContextMenuAsync"
+             @oncontextmenu:preventDefault="true"
+             @onkeydown="this.OnKeyDownAsync"
+             @onclick="this.CloseContextMenu"
+             @ondragover:preventDefault="true"
+             @ondrop="this.OnDropAsync">
+            <CascadingValue Value="@this.Diagram">
+                <CascadingValue Name="IsReadOnly" Value="@this.IsReadOnly">
+                    <CascadingValue Name="OnNodeChanged" Value="@this.OnNodeChanged">
+                        <DiagramCanvas @key="@this.Diagram" Class="visual-diagram-canvas" />
+                    </CascadingValue>
+                </CascadingValue>
+            </CascadingValue>
+
+            <div class="visual-canvas-panel-toggle">
+                <MudTooltip Text="@(this.IsPanelOpen ? "Hide Node Panel" : "Show Node Panel")">
+                    <MudIconButton Icon="@Icons.Material.Outlined.ViewSidebar"
+                                   Size="MudBlazor.Size.Small"
+                                   Variant="Variant.Filled"
+                                   Color="@(this.IsPanelOpen ? Color.Primary : Color.Default)"
+                                   OnClick="this.OnTogglePanelOpen" />
+                </MudTooltip>
+            </div>
+
+            @if (!this.IsReadOnly || this.OnToggleReadOnly.HasDelegate)
+            {
+                <div class="visual-canvas-controls">
+                    <MudTooltip Text="@(this.IsReadOnly ? "Unlock to Edit Graph" : "Lock to Prevent Edits")">
+                        <MudIconButton Icon="@(this.IsReadOnly ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.Lock)"
+                                       Size="MudBlazor.Size.Small"
+                                       Variant="Variant.Filled"
+                                       Color="@(this.IsReadOnly ? Color.Default : Color.Warning)"
+                                       OnClick="this.OnToggleReadOnly" />
+                    </MudTooltip>
+                </div>
+            }
+
+            <VisualContextMenu IsVisible="@this.isContextMenuVisible"
+                               X="@this.contextMenuX"
+                               Y="@this.contextMenuY"
+                               TargetNode="@this.contextMenuTargetNode"
+                               Symbols="@this.symbolNames"
+                               OnAddStatementNode="this.OnAddStatementNodeAsync"
+                               OnAddExpressionNode="this.OnAddExpressionNodeAsync"
+                               OnUseSymbolNode="this.OnUseSymbolNodeAsync"
+                               OnDeleteNodeClicked="this.OnDeleteNodeAsync"
+                               OnDeleteBlockClicked="this.OnDeleteBlockAsync" />
+        </div>
+    </div>
+}
+
+@code {
+    private BlazorDiagram? previousDiagram;
+    private bool isContextMenuVisible;
+    private double contextMenuX;
+    private double contextMenuY;
+    private TopsyTurvyVisualNodeModel? contextMenuTargetNode;
+    private double contextMenuDiagramX;
+    private double contextMenuDiagramY;
+    private int nodeCounter;
+    private IReadOnlyList<string> symbolNames = [];
+    private string? pendingDragNodeType;
+    private VisualSymbolEntry? pendingDragSymbol;
+
+    /// <summary>
+    /// Gets or sets the diagram to render, or <c>null</c> to show the empty-state message.
+    /// </summary>
+    [Parameter]
+    public BlazorDiagram? Diagram { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the visual editor is in read-only mode.
+    /// </summary>
+    [Parameter]
+    public bool IsReadOnly { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the callback invoked when a node property is changed via an editing control.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnNodeChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of declared symbol names to show in the context menu "Use symbol" section.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> Symbols { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the node panel is open.
+    /// </summary>
+    [Parameter]
+    public bool IsPanelOpen { get; set; }
+
+    /// <summary>
+    /// Gets or sets the declared symbols to show in the node panel.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<VisualSymbolEntry> VisualSymbols { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user clicks the Edit/Lock toggle button on the canvas.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnToggleReadOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user clicks the panel toggle button on the canvas.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnTogglePanelOpen { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.symbolNames = this.Symbols;
+        if (this.Diagram != this.previousDiagram)
+        {
+            if (this.previousDiagram is not null)
+            {
+                this.previousDiagram.Links.Added -= this.OnLinkAdded;
+            }
+
+            if (this.Diagram is not null)
+            {
+                this.Diagram.RegisterComponent<TopsyTurvyVisualNodeModel, VisualNodeWidget>();
+                this.Diagram.Links.Added += this.OnLinkAdded;
+            }
+
+            this.previousDiagram = this.Diagram;
+        }
+    }
+
+    /// <summary>
+    /// Handles right-click events on the diagram canvas to show the context menu.
+    /// </summary>
+    /// <param name="e">Information about the mouse event.</param>
+    private void OnContextMenuAsync(MouseEventArgs e)
+    {
+        if (this.IsReadOnly || this.Diagram is null)
+        {
+            return;
+        }
+
+        this.contextMenuX = e.ClientX;
+        this.contextMenuY = e.ClientY;
+
+        this.contextMenuDiagramX = (e.OffsetX - this.Diagram.Pan.X) / this.Diagram.Zoom;
+        this.contextMenuDiagramY = (e.OffsetY - this.Diagram.Pan.Y) / this.Diagram.Zoom;
+
+        this.contextMenuTargetNode = this.HitTestNode(this.contextMenuDiagramX, this.contextMenuDiagramY);
+        this.isContextMenuVisible = true;
+    }
+
+    /// <summary>
+    /// Closes the context menu when the user clicks anywhere on the canvas.
+    /// </summary>
+    /// <param name="e">Information about the mouse event.</param>
+    private void CloseContextMenu(MouseEventArgs e)
+    {
+        this.isContextMenuVisible = false;
+    }
+
+    /// <summary>
+    /// Returns the node at the given diagram coordinates, or <c>null</c> if no node is hit.
+    /// </summary>
+    /// <param name="diagramX">The X coordinate in the diagram coordinate system.</param>
+    /// <param name="diagramY">The Y coordinate in the diagram coordinate system.</param>
+    /// <returns>The node at the given coordinates, or <c>null</c> if no node is hit.</returns>
+    private TopsyTurvyVisualNodeModel? HitTestNode(double diagramX, double diagramY)
+    {
+        if (this.Diagram is null)
+        {
+            return null;
+        }
+
+        foreach (TopsyTurvyVisualNodeModel node in this.Diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>())
+        {
+            if (node.Position is null || node.Size is null)
+            {
+                continue;
+            }
+
+            if (diagramX >= node.Position.X && diagramX <= node.Position.X + node.Size.Width
+             && diagramY >= node.Position.Y && diagramY <= node.Position.Y + node.Size.Height)
+            {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Adds a new statement node of the specified type at the context menu position.
+    /// </summary>
+    /// <param name="statementType">The type of statement to add.</param>
+    /// <remarks>
+    /// OnNodeChanged should not be invoked at the end of this method as the factory node has no AST node and the converter
+    /// would ignore it, causing the content-change timer to rebuild the diagram and erase the node.
+    /// Monaco updates when the node is wired into the flow via a link: OnLinkAdded fires OnNodeChanged.
+    /// </remarks>
+    private void OnAddStatementNodeAsync(string statementType)
+    {
+        this.isContextMenuVisible = false;
+        if (this.Diagram is null)
+        {
+            return;
+        }
+
+        Point position = new(this.contextMenuDiagramX, this.contextMenuDiagramY);
+        VisualNodeFactory.CreateStatement(statementType, position, this.Diagram, ref this.nodeCounter);
+    }
+
+    /// <summary>
+    /// Adds a new expression node of the specified type at the context menu position.
+    /// </summary>
+    /// <param name="statementType">The type of expression to add.</param>
+    /// <remarks>
+    /// OnNodeChanged should not be invoked at the end of this method as the factory node has no AST node and the converter
+    /// would ignore it, causing the content-change timer to rebuild the diagram and erase the node.
+    /// Monaco updates when the node is wired into the flow via a link: OnLinkAdded fires OnNodeChanged.
+    /// </remarks>
+    private void OnAddExpressionNodeAsync(string statementType)
+    {
+        this.isContextMenuVisible = false;
+        if (this.Diagram is null)
+        {
+            return;
+        }
+
+        Point position = new(this.contextMenuDiagramX, this.contextMenuDiagramY);
+        VisualNodeFactory.CreateExpression(statementType, position, this.Diagram, ref this.nodeCounter);
+    }
+
+    /// <summary>
+    /// Adds a new identifier node for the specified symbol at the context menu position.
+    /// </summary>
+    /// <param name="symbolName">The name of the symbol.</param>
+    /// <remarks>
+    /// OnNodeChanged should not be invoked at the end of this method as the factory node has no AST node and the converter
+    /// would ignore it, causing the content-change timer to rebuild the diagram and erase the node.
+    /// Monaco updates when the node is wired into the flow via a link: OnLinkAdded fires OnNodeChanged.
+    /// </remarks>
+    private void OnUseSymbolNodeAsync(string symbolName)
+    {
+        this.isContextMenuVisible = false;
+        if (this.Diagram is null)
+        {
+            return;
+        }
+
+        Point position = new(this.contextMenuDiagramX, this.contextMenuDiagramY);
+        TopsyTurvyVisualNodeModel? node = VisualNodeFactory.CreateExpression("IdentifierNode", position, this.Diagram, ref this.nodeCounter);
+        if (node is not null)
+        {
+            node.SymbolIdentifierNodeName = symbolName;
+            node.Title = symbolName;
+        }
+    }
+
+    /// <summary>
+    /// Deletes the specified node from the diagram.
+    /// </summary>
+    /// <param name="node">The node to delete.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnDeleteNodeAsync(TopsyTurvyVisualNodeModel node)
+    {
+        this.isContextMenuVisible = false;
+        if (this.Diagram is null)
+        {
+            return;
+        }
+
+        this.Diagram.Nodes.Remove(node);
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Deletes the specified block from the diagram, including all nodes in the block body.
+    /// </summary>
+    /// <param name="openerNode">The opener node of the block to delete.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnDeleteBlockAsync(TopsyTurvyVisualNodeModel openerNode)
+    {
+        this.isContextMenuVisible = false;
+        if (this.Diagram is null)
+        {
+            return;
+        }
+
+        // Collect all nodes reachable from the opener Branch Out ports (the body nodes), plus the closer.
+        HashSet<string> toRemove = [];
+        toRemove.Add(openerNode.Id);
+
+        if (openerNode.PairedCloserId is not null)
+        {
+            toRemove.Add(openerNode.PairedCloserId);
+        }
+
+        CollectBlockBody(openerNode, toRemove, this.Diagram);
+
+        List<NodeModel> nodesToRemove = this.Diagram.Nodes
+            .Where(node => toRemove.Contains(node.Id))
+            .ToList();
+
+        foreach (NodeModel node in nodesToRemove)
+        {
+            this.Diagram.Nodes.Remove(node);
+        }
+
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Collects all nodes reachable from the opener Branch Out ports.
+    /// </summary>
+    /// <param name="openerNode">The opener node of the block.</param>
+    /// <param name="ids">The set of node IDs to add to.</param>
+    /// <param name="diagram">The diagram containing the nodes.</param>
+    private static void CollectBlockBody(TopsyTurvyVisualNodeModel openerNode, HashSet<string> ids, BlazorDiagram diagram)
+    {
+        foreach (TopsyTurvyVisualPortModel branchPort in openerNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.BranchOut))
+        {
+            foreach (BaseLinkModel link in branchPort.Links)
+            {
+                NodeModel? target = (link.Target as SinglePortAnchor)?.Port?.Parent;
+                if (target is TopsyTurvyVisualNodeModel targetNode && !ids.Contains(target.Id))
+                {
+                    ids.Add(target.Id);
+                    WalkFlowChain(targetNode, ids, diagram, openerNode.PairedCloserId);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Walks the flow chain starting from the given node, adding all reachable nodes to the specified set of IDs.
+    /// </summary>
+    /// <param name="openerNode">The starting node.</param>
+    /// <param name="ids">The set of node IDs to add to.</param>
+    /// <param name="diagram">The diagram containing the nodes.</param>
+    /// <param name="stopAtId">The ID of the node at which to stop walking the flow chain, or <c>null</c> to walk until the end of the flow.</param>
+    private static void WalkFlowChain(TopsyTurvyVisualNodeModel openerNode, HashSet<string> ids, BlazorDiagram diagram, string? stopAtId)
+    {
+        TopsyTurvyVisualPortModel? flowOut = openerNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .FirstOrDefault(port => port.Role == VisualPortRole.FlowOut);
+
+        if (flowOut is null)
+        {
+            return;
+        }
+
+        foreach (BaseLinkModel link in flowOut.Links)
+        {
+            NodeModel? next = (link.Target as SinglePortAnchor)?.Port?.Parent;
+            if (next is null || next.Id == stopAtId || ids.Contains(next.Id))
+            {
+                continue;
+            }
+
+            ids.Add(next.Id);
+            if (next is TopsyTurvyVisualNodeModel nextTyped)
+            {
+                WalkFlowChain(nextTyped, ids, diagram, stopAtId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles keydown events on the diagram canvas to delete selected nodes and links when the Delete or Backspace key is pressed.
+    /// </summary>
+    /// <param name="e">Information about the keyboard event.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (this.IsReadOnly || this.Diagram is null)
+        {
+            return;
+        }
+
+        // Do not intercept Delete/Backspace while the user is typing in an input or textarea.
+        if (e.Key is "Delete" or "Backspace")
+        {
+            string tag = await this.JSRuntime.InvokeAsync<string>("eval", "document.activeElement?.tagName?.toLowerCase() ?? ''");
+            if (tag is "input" or "textarea" or "select")
+            {
+                return;
+            }
+
+            List<NodeModel> selectedNodes = this.Diagram.Nodes.Where(n => n.Selected).ToList();
+            List<BaseLinkModel> selectedLinks = this.Diagram.Links.Where(l => l.Selected).ToList();
+
+            foreach (NodeModel node in selectedNodes)
+            {
+                this.Diagram.Nodes.Remove(node);
+            }
+
+            foreach (BaseLinkModel link in selectedLinks)
+            {
+                this.Diagram.Links.Remove(link);
+            }
+
+            if (selectedNodes.Count > 0 || selectedLinks.Count > 0)
+            {
+                await this.OnNodeChanged.InvokeAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles the event when a new link is added to the diagram.
+    /// </summary>
+    /// <param name="link">The link that was added.</param>
+    /// <remarks>
+    /// Port validation is deferred until after a link is attached to a target node.
+    /// </remarks>
+    private void OnLinkAdded(BaseLinkModel link)
+    {
+        link.TargetAttached += this.OnLinkTargetAttached;
+    }
+
+    /// <summary>
+    /// Handles the event when a link target port is attached.
+    /// </summary>
+    /// <param name="link">The link whose target port was just attached.</param>
+    /// <remarks>
+    /// Validates the port compatibility of a newly connected link.
+    /// </remarks>
+    private void OnLinkTargetAttached(BaseLinkModel link)
+    {
+        if (link.Source is not SinglePortAnchor sourceAnchor || link.Target is not SinglePortAnchor targetAnchor)
+        {
+            return;
+        }
+
+        TopsyTurvyVisualPortModel? sourcePort = sourceAnchor.Port as TopsyTurvyVisualPortModel;
+        TopsyTurvyVisualPortModel? targetPort = targetAnchor.Port as TopsyTurvyVisualPortModel;
+
+        if (sourcePort is null || targetPort is null)
+        {
+            return;
+        }
+
+        bool isCompatible = (sourcePort.Role, targetPort.Role) switch
+        {
+            (VisualPortRole.FlowOut, VisualPortRole.FlowIn) => true,
+            (VisualPortRole.BranchOut, VisualPortRole.FlowIn) => true,
+            (VisualPortRole.DataOut, VisualPortRole.DataIn) => true,
+            _ => false,
+        };
+
+        if (!isCompatible)
+        {
+            this.Diagram?.Links.Remove(link);
+            this.Snackbar.Add("Incompatible Port Types: Connect Flow→Flow or Data→Data.", Severity.Warning);
+            return;
+        }
+
+        this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Gets a default drop position for new nodes.
+    /// </summary>
+    /// <remarks>
+    /// Offsets each new node slightly to avoid overlap.
+    /// </remarks>
+    private Point GetDefaultDropPosition()
+    {
+        if (this.Diagram is null)
+        {
+            return new(200, 200);
+        }
+
+        int slot = this.nodeCounter % 6;
+        double x = (-this.Diagram.Pan.X + 120 + slot * 30) / this.Diagram.Zoom;
+        double y = (-this.Diagram.Pan.Y + 120 + slot * 30) / this.Diagram.Zoom;
+        return new(x, y);
+    }
+
+    /// <summary>
+    /// Handles a double-click on a node-type chip in the symbol panel by creating that node at a default canvas position.
+    /// </summary>
+    /// <param name="nodeType">The node type identifier string.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnNodeTypeDoubleClickedAsync(string nodeType)
+    {
+        if (this.IsReadOnly || this.Diagram is null)
+        {
+            return;
+        }
+
+        Point position = this.GetDefaultDropPosition();
+        if (ExpressionNodeTypes.Contains(nodeType))
+        {
+            VisualNodeFactory.CreateExpression(nodeType, position, this.Diagram, ref this.nodeCounter);
+        }
+        else
+        {
+            VisualNodeFactory.CreateStatement(nodeType, position, this.Diagram, ref this.nodeCounter);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handles a double-click on a symbol entry in the symbol panel by creating an identifier or SUMMON node at a default canvas position.
+    /// </summary>
+    /// <param name="symbol">The symbol entry that was double-clicked.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnSymbolDoubleClickedAsync(VisualSymbolEntry symbol)
+    {
+        if (this.IsReadOnly || this.Diagram is null)
+        {
+            return;
+        }
+
+        Point position = this.GetDefaultDropPosition();
+        TopsyTurvyVisualNodeModel? visualNode = this.CreateSymbolNode(symbol, position);
+        _ = visualNode;
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Creates a new visual node for the specified symbol at the given position.
+    /// </summary>
+    /// <param name="symbol">The symbol entry to create a node for.</param>
+    /// <param name="position">The position to place the new node.</param>
+    /// <returns>The newly created visual node, or <c>null</c> if the node could not be created.</returns>
+    private TopsyTurvyVisualNodeModel? CreateSymbolNode(VisualSymbolEntry symbol, Point position)
+    {
+        if (symbol.Kind == VisualSymbolKind.Function)
+        {
+            TopsyTurvyVisualNodeModel? functionReference = VisualNodeFactory.CreateExpression("FunctionReferenceNode", position, this.Diagram!, ref this.nodeCounter);
+            if (functionReference is null)
+            {
+                return null;
+            }
+
+            functionReference.SymbolIdentifierNodeName = symbol.Name;
+            functionReference.Title = symbol.Name;
+
+            foreach (string paramName in symbol.ParameterNames)
+            {
+                functionReference.AddPort(new TopsyTurvyVisualPortModel(functionReference, PortAlignment.Left, paramName, VisualPortRole.DataIn));
+            }
+
+            return functionReference;
+        }
+
+        TopsyTurvyVisualNodeModel? identifier = VisualNodeFactory.CreateExpression("IdentifierNode", position, this.Diagram!, ref this.nodeCounter);
+        if (identifier is null)
+        {
+            return null;
+        }
+
+        identifier.SymbolIdentifierNodeName = symbol.Name;
+        identifier.Title = symbol.Name;
+        if (symbol.Kind == VisualSymbolKind.Parameter)
+        {
+            identifier.Kind = VisualNodeKind.Parameter;
+        }
+
+        return identifier;
+    }
+
+    /// <summary>
+    /// Stores the node type being dragged from the symbol panel so it can be used on drop.
+    /// </summary>
+    /// <param name="nodeType">The node type identifier string.</param>
+    private void OnNodeTypeDragStarted(string nodeType)
+    {
+        this.pendingDragNodeType = nodeType;
+        this.pendingDragSymbol = null;
+    }
+
+    /// <summary>
+    /// Stores the symbol entry being dragged from the symbol panel so it can be used on drop.
+    /// </summary>
+    /// <param name="symbol">The symbol entry being dragged.</param>
+    private void OnSymbolDragStarted(VisualSymbolEntry symbol)
+    {
+        this.pendingDragSymbol = symbol;
+        this.pendingDragNodeType = null;
+    }
+
+    /// <summary>
+    /// Handles a drop event on the diagram canvas creating the appropriate node at the drop position.
+    /// </summary>
+    /// <param name="e">Information about the drop event.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnDropAsync(DragEventArgs e)
+    {
+        if (this.IsReadOnly || this.Diagram is null)
+        {
+            return;
+        }
+
+        double diagramX = (e.OffsetX - this.Diagram.Pan.X) / this.Diagram.Zoom;
+        double diagramY = (e.OffsetY - this.Diagram.Pan.Y) / this.Diagram.Zoom;
+        Point position = new(diagramX, diagramY);
+
+        if (this.pendingDragSymbol is not null)
+        {
+            VisualSymbolEntry symbol = this.pendingDragSymbol;
+            this.pendingDragSymbol = null;
+            this.CreateSymbolNode(symbol, position);
+        }
+        else if (this.pendingDragNodeType is not null)
+        {
+            string nodeType = this.pendingDragNodeType;
+            this.pendingDragNodeType = null;
+
+            bool isExpression = ExpressionNodeTypes.Contains(nodeType);
+            if (isExpression)
+            {
+                VisualNodeFactory.CreateExpression(nodeType, position, this.Diagram, ref this.nodeCounter);
+            }
+            else
+            {
+                VisualNodeFactory.CreateStatement(nodeType, position, this.Diagram, ref this.nodeCounter);
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private static readonly HashSet<string> ExpressionNodeTypes =
+    [
+        "LiteralNode",
+        "IdentifierNode",
+        "OperatorNode",
+        "ArithmeticNode",
+        "BitwiseNode",
+        "LogicalNode",
+        "VariadicNode",
+        "WovenNode",
+        "TernaryNode",
+        "SummonNode",
+        "FunctionReferenceNode",
+        "ArrayIndexNode",
+        "ArrayLengthNode",
+        "ExpressionCastNode",
+    ];
+}

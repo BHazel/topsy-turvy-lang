@@ -69,6 +69,16 @@ The `ParseResult` type returned from the `TryParse()` method contains:
 * A `Diagnostics` collection with a list of parsing diagnostics, such as errors or warnings, even on a successful parse.
 * A `Success` property indicating whether a successful parse occurred.
 
+### Source Span Capture
+
+As the parser builds each AST node it captures the absolute character offset at the start and end of each parsed construct using a position-capture parser that reads the cursor position without consuming any input.  These offsets are translated to original source line and column positions via the `SourceMap` produced by the [Pre-Processor](./pre-processor.md).
+
+The `SourceMap` is communicated to the parser static combinator fields through a thread-local field set by `TopsyTurvyParser` immediately before the parse begins and cleared in a `finally` block once the parse completes.  Parsing is always synchronous and single-file per call, so this is safe.  When no `SourceMap` is available, for example in specific and intended situations such as isolated tests that call the parser directly, a `PlaceholderSpan` of `(Line: 0, Column: 0)` / `(Line: 0, Column: 0)` is used as a fallback.  Please see the [AST](./ast.md) page for more information on source spans.
+
+### Committed Parse Semantics
+
+When parsing the parser is able to backtrack on failure but on some occasions, such as parsing a statement, this can lead to errors being reported in incorrect locations, i.e. at the start of a line or whole block rather than the actual error location.  By implementing committed parse semantics, errors in a statement are reported at the location of the error allowing for a better development experience.  It should be noted, however, that subsequent errors are not reported.
+
 ## Creating a Parser
 
 Parsers should only be added to _Operetta_ when changes to the Topsy Turvy language occur, however, a couple of examples are included below.  They demonstrate the use of both method-chaining, which is best suited for simple linear matches, and LINQ query notation, which is more readable for sequences of several parsers.  For more complicated examples please see the code base and refer to the [Superpower](https://github.com/datalust/superpower) documentation.  At its core a parser is a cursor through the source code moving forwards during the parsing although, as will be seen, may need to backtrack.

@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Analysis
@@ -15,6 +15,7 @@ In the _Operetta Toolchain_ the Analysis layer is implemented in the `BWHazel.To
 * **`SymbolTable`:** All declared names built from the AST on each successful parse.
 * **`HoverMarkdownBuilder`:** Formats symbol information as Markdown for hover tooltips.
 * **`SourceFormatter`:** Formats code according to language standards.
+* **`TopsyTurvyCodeGenerator`:** Converts an AST back into valid Topsy Turvy source code.
 * **`SourceAnalyser`:** Finds occurrences of a symbol by scanning source text.
     * This is used as a workaround for missing AST position information as outlined in the Known Limitations section on the [Language Server](./language-server.md) page.
 * **`KeywordData`:** The authoritative list of all Topsy Turvy keywords, used for completions and formatting.
@@ -34,8 +35,8 @@ Each entry in the table is a `SymbolInfo` object, which records the following pr
 |-|-|-|
 |`Name`|`string`|The declared name, e.g. `TotalLords`.|
 |`Kind`|`SymbolKind`|Whether the symbol is a variable, function or parameter (please see below).|
-|`TypeDisplayName`|`string?`|The Topsy Turvy type keyword for variables: `PEER`, `FATHOM`, `YARN`, `DECREE` or `NAUGHT`.|
-|`Parameters`|`IReadOnlyList<string>?`|The list of parameter names for function symbols.|
+|`TypeDisplayName`|`string?`|The Topsy Turvy type keyword for variables, for example `PEER` or `FATHOM`.|
+|`TypedParameters`|`IReadOnlyList<TypedParameter>?`|The typed parameters for function symbols.  Each `TypedParameter` record carries the parameter `Name`, declared `LiteralType` and source `Span`.|
 |`DefinitionLine`|`int`|The 1-indexed source line where the symbol is declared.  `0` means the position could not be determined.|
 |`DefinitionColumn`|`int`|The 1-indexed source column where the symbol name begins.  `0` means the position could not be determined.|
 |`Documentation`|`DocumentationComment?`|The documentation associated with the symbol.|
@@ -57,8 +58,6 @@ The build proceeds in two steps:
 1. **Walk the AST**: The builder traverses every statement recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.
 2. **Scan the source for positions**: Because AST span tracking is not yet wired into the parser (please see the Source Positions section on the [AST](./ast.md#source-positions) page), the builder recovers definition positions by searching the raw source text line by line for the declaration keyword followed by the symbol name.  For variables it searches for `PRAY WELCOME` ... `Name` and for functions it searches for `IT IS MY DUTY TO PERFORM` ... `Name`.
 
-The `JUST SO` implicit variable is pre-populated automatically with a kind of `Variable` and a `TypeDisplayName` of `implicit variable` so hover tooltips and completions work for it without it appearing in the AST.
-
 #### Example
 
 Given the following programme:
@@ -67,7 +66,7 @@ Given the following programme:
 HARK! "The Lords"
 
 PRAY WELCOME AllLords AS A PEER
-IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AND Liberals
+IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AS A PEER AND Liberals AS A PEER TO FIND PEER
     AND SO I FIND SUM OF Conservatives AND Liberals
 MY DUTY IS DISCHARGED.
 
@@ -76,12 +75,12 @@ FINALE.
 
 the symbol table would contain four entries:
 
-|Name|Kind|TypeDisplayName|Parameters|DefinitionLine|DefinitionColumn|
+|Name|Kind|TypeDisplayName|TypedParameters|DefinitionLine|DefinitionColumn|
 |-|-|-|-|-|-|
 |`AllLords`|`Variable`|`PEER`|_(none)_|3|14|
-|`TotalLords`|`Function`|_(none)_|`Conservatives`, `Liberals`|4|26|
-|`Conservatives`|`Parameter`|_(none)_|_(none)_|4|26|
-|`Liberals`|`Parameter`|_(none)_|_(none)_|4|26|
+|`TotalLords`|`Function`|_(none)_|`Conservatives AS A PEER`, `Liberals AS A PEER`|4|26|
+|`Conservatives`|`Parameter`|`PEER`|_(none)_|4|26|
+|`Liberals`|`Parameter`|`PEER`|_(none)_|4|26|
 
 Note that `Conservatives` and `Liberals` both report the same position as `TotalLords`.  Parameters are assigned the position of the function name itself rather than their own position within the `UNDER THE TERMS OF` clause, as the position scan uses the function declaration keyword to find the function, and parameters reuse that result.
 
@@ -137,6 +136,42 @@ The `DepthAction` enum records what depth adjustment each line requires:
 |`PreDecrease2`|`SO MUCH FOR THAT.` / `NOTHING COULD BE MORE SATISFACTORY.`|Indent decreases by 2 before the line is written.|
 |`MidBlock`|Mid-block transitions such as `OR, IF NOT,` / `OTHERWISE,`|Indent decreases by 1, the line is written, then increases by 1.|
 
+### Code Generator
+
+The `TopsyTurvyCodeGenerator` converts an AST back into valid Topsy Turvy source code, effectively a reverse of the [Parser](./parser.md).  It provides a single `Generate()` method which takes a complete `ProgramNode` node and walks the complete AST, node by node, emitting source code formatted according to the source formatter regardless of how it was originally written: the AST does not store original code formatting or style.  The generated source code will parse back to a structurally identical AST.
+
+As an example, given the following AST, as constructed by the parser from any source that expresses the same programme:
+
+```csharp
+new ProgramNode()
+{
+    Title = "Demo Programme",
+    Statements =
+    [
+        new DeclarationNode()
+        {
+            Name = "Count",
+            Type = LiteralType.Integer,
+            InitialValue = new LiteralNode() { Type = LiteralType.Integer, Value = 0 },
+        },
+        new PrintNode()
+        {
+            Expression = new IdentifierNode { Name = "Count" },
+        },
+    ],
+}
+```
+
+the code generator produces:
+
+```
+HARK! "Demo Programme"
+
+PRAY WELCOME Count AS A PEER BEING 0
+BEHOLD Count
+FINALE.
+```
+
 ### Source Analyser
 
 The `SourceAnalyser` provides stateless source-text scanning utilities shared across the Language Server and Web Editor.  Its primary purpose is to locate occurrences of a symbol by name across the source text when AST position information is unavailable.
@@ -166,4 +201,4 @@ Variables and functions in Topsy Turvy can have in-line documentation applied ab
 
 `HoverMarkdownBuilder` produces the Markdown string displayed in a hover tooltip when the cursor rests over a symbol.  It has a single entry point, `Build(symbolInfo)`, which switches on the symbol kind.  The output is passed directly to the Language Server `HoverHandler`, which wraps it in an LSP `MarkupContent` response for the editor to display.
 
-When present on a symbol, any documentation is appended to the Markdown string for display in the hover tooltip.
+Function signatures are rendered with their full typed parameter list drawn from `TypedParameters`, so tooltips reflects the declared types of each parameter rather than bare names.  When present on a symbol, any documentation is appended to the Markdown string for display in the hover tooltip.

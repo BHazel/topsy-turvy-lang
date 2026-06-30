@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Analysis;
 
@@ -40,11 +41,16 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// {
 ///     Name = "TotalLords",
 ///     Kind = SymbolKind.Function,
-///     Parameters = ["Conservatives", "Liberals"],
+///     TypedParameters =
+///     [
+///         new TypedParameter("Conservatives", LiteralType.Integer, new() { /* ... */ }),
+///         new TypedParameter("Liberals", LiteralType.Integer, new() { /* ... */ })
+///     ],
+///     DeclaredType = LiteralType.Integer,
 ///     DefinitionLine = 2,
 ///     DefinitionColumn = 1
 /// };
-/// 
+///
 /// SymbolInfo conservativesSymbol = new()
 /// {
 ///     Name = "Conservatives",
@@ -102,7 +108,12 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// {
 ///     Name = "TotalLords",
 ///     Kind = SymbolKind.Function,
-///     Parameters = ["Conservatives", "Liberals"],
+///     TypedParameters =
+///     [
+///         new TypedParameter("Conservatives", LiteralType.Integer, new() { /* ... */ }),
+///         new TypedParameter("Liberals", LiteralType.Integer, new() { /* ... */ })
+///     ],
+///     DeclaredType = LiteralType.Integer,
 ///     DefinitionLine = 2,
 ///     DefinitionColumn = 1,
 ///     Documentation = new DocumentationComment
@@ -148,12 +159,21 @@ public class SymbolInfo
     public string? TypeDisplayName { get; init; }
 
     /// <summary>
-    /// Gets or initialises the list of parameter names.
+    /// Gets or initialises the declared <see cref="LiteralType"/> of the symbol.
     /// </summary>
     /// <remarks>
-    /// Only populated for <see cref="SymbolKind.Function"/>.
+    /// Populated for variables from the declaration, parameters from their type annotation and functions
+    /// from the <c>TO FIND</c> return type or <c>null</c> for void functions.
     /// </remarks>
-    public IReadOnlyList<string>? Parameters { get; init; }
+    public LiteralType? DeclaredType { get; init; }
+
+    /// <summary>
+    /// Gets or initialises the typed parameter list for a function symbol.
+    /// </summary>
+    /// <remarks>
+    /// Populated for <see cref="SymbolKind.Function"/> symbols and <c>null</c> for variables and parameters.
+    /// </remarks>
+    public IReadOnlyList<TypedParameter>? TypedParameters { get; init; }
 
     /// <summary>
     /// Gets or initialises the 1-indexed line number of the symbol definition in the original source.

@@ -1,0 +1,56 @@
+@using System.Threading.Tasks
+
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.TopsyTurvyCodeEditor
+
+<StandaloneCodeEditor @ref="this.monacoEditor"
+                      Id="@this.Id"
+                      CssClass="@this.CssClass"
+                      ConstructionOptions="@this.ConstructionOptions"
+                      OnDidChangeModelContent="@this.OnDidChangeModelContent" />
+
+@code {
+    private StandaloneCodeEditor? monacoEditor;
+
+    /// <summary>
+    /// Gets or sets the HTML element ID passed to the Monaco editor instance.
+    /// </summary>
+    [Parameter]
+    public string Id { get; set; } = "topsy-turvy-editor";
+
+    /// <summary>
+    /// Gets or sets the CSS class applied to the Monaco editor container.
+    /// </summary>
+    [Parameter]
+    public string CssClass { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the factory function that returns the editor construction options.
+    /// </summary>
+    [Parameter]
+    public Func<StandaloneCodeEditor, StandaloneEditorConstructionOptions>? ConstructionOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked whenever the editor model content changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<ModelContentChangedEvent> OnDidChangeModelContent { get; set; }
+
+    /// <summary>
+    /// Exposes the underlying Monaco editor instance so that the host page can call
+    /// methods such as <c>GetValue</c> and <c>SetValue</c> via <c>@ref</c>.
+    /// </summary>
+    public StandaloneCodeEditor? Editor => this.monacoEditor;
+
+    /// <summary>
+    /// Sets the text content of the editor.
+    /// </summary>
+    /// <param name="value">The new source text.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task SetValueAsync(string value)
+    {
+        if (this.monacoEditor is not null)
+        {
+            await this.monacoEditor.SetValue(value);
+        }
+    }
+}

@@ -74,11 +74,43 @@
 
     <div class="panes-container">
         <div class="editor-pane">
-            <StandaloneCodeEditor @ref="monacoEditor"
-                                  Id="topsy-turvy-editor"
-                                  CssClass="topsy-turvy-monaco"
-                                  ConstructionOptions="GetEditorOptions"
-                                  OnDidChangeModelContent="OnContentChangedAsync" />
+            <div class="editor-content-area">
+                <div style="@(this.activeEditorMode == EditorMode.Code ? "height:100%" : "display:none;height:100%")">
+                    <TopsyTurvyCodeEditor @ref="this.codeEditor"
+                                     Id="topsy-turvy-editor"
+                                     CssClass="topsy-turvy-monaco"
+                                     ConstructionOptions="this.GetEditorOptions"
+                                     OnDidChangeModelContent="this.OnContentChangedAsync" />
+                </div>
+                @if (this.visualTabEverActivated)
+                {
+                    <div style="@(this.activeEditorMode == EditorMode.Visual ? "height:100%;position:relative" : "display:none;height:100%")">
+                        <VisualEditor Diagram="this.visualDiagram"
+                                      IsReadOnly="this.isVisualReadOnly"
+                                      OnNodeChanged="this.OnVisualNodeChangedAsync"
+                                      IsPanelOpen="this.isSymbolPanelOpen"
+                                      VisualSymbols="this.visualSymbols"
+                                      OnToggleReadOnly="this.ToggleVisualReadOnlyAsync"
+                                      OnTogglePanelOpen="@(() => { this.isSymbolPanelOpen = !this.isSymbolPanelOpen; this.StateHasChanged(); })" />
+                        @if (this.visualGraphHasErrors)
+                        {
+                            <div class="visual-graph-error-overlay" title="The graph is not currently parseable. Connect all required ports to update the code editor.">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                                <span>Programme contains errors: please check values and connect all required ports.</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <MudTabs ActivePanelIndex="@((int)this.activeEditorMode)"
+                     ActivePanelIndexChanged="this.OnEditorModeChangedAsync"
+                     Class="editor-mode-tabs"
+                     Color="Color.Default"
+                     Rounded="false">
+                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Libretto" : "Code")" PanelClass="d-none" />
+                <MudTabPanel Text="@(this.areGsLabelsEnabled ? "Stage (Experimental)" : "Visual (Experimental)")" PanelClass="d-none" />
+            </MudTabs>
         </div>
         <div class="pane-divider"></div>
         <div class="output-pane">
@@ -119,12 +151,21 @@
     [CascadingParameter(Name = "ToggleDarkMode")]
     private Action? ToggleDarkMode { get; set; }
 
-    private StandaloneCodeEditor? monacoEditor;
+    private TopsyTurvyCodeEditor? codeEditor;
+    private StandaloneCodeEditor? monacoEditor => this.codeEditor?.Editor;
+    private EditorMode activeEditorMode = EditorMode.Code;
+    private bool visualTabEverActivated = false;
+    private BlazorDiagram? visualDiagram;
+    private bool isVisualReadOnly = true;
+    private string lastBuiltVisualSource = string.Empty;
     private Xterm? terminal;
     private bool editorReady = false;
     private string commandLineArgumentsText = string.Empty;
     private string stdinText = string.Empty;
     private bool isRunning = false;
+    private bool visualGraphHasErrors = false;
+    private bool isSymbolPanelOpen = false;
+    private IReadOnlyList<VisualSymbolEntry> visualSymbols = [];
     private string lastRunOutput = string.Empty;
     private bool previousIsDarkMode = true;
     private bool areGsLabelsEnabled = true;
@@ -319,11 +360,192 @@
             }
 
             await this.UpdateDiagnosticsAsync(source);
+
+            // If the content matches what the visual editor just generated, this is a visual-driven
+            // update: skip invalidating the cache to prevent `RebuildVisualGraphAsync` from erasing
+            // any unsaved factory nodes that are not yet part of the AST.
+            if (source == this.lastBuiltVisualSource)
+            {
+                await this.SavePreferencesAsync();
+                return;
+            }
+
+            // Invalidate the visual graph cache so the next switch to the Visual tab rebuilds it.
+            this.lastBuiltVisualSource = string.Empty;
+            if (this.activeEditorMode == EditorMode.Visual)
+            {
+                await this.RebuildVisualGraphAsync();
+            }
+
             await this.SavePreferencesAsync();
         }
         catch (OperationCanceledException)
         {
         }
+    }
+
+    /// <summary>
+    /// Handles switching between the Code and Visual editor mode tabs.
+    /// </summary>
+    /// <param name="index">The newly selected tab index matching <see cref="EditorMode"/>.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnEditorModeChangedAsync(int index)
+    {
+        this.activeEditorMode = (EditorMode)index;
+
+        if (this.activeEditorMode == EditorMode.Visual)
+        {
+            this.visualTabEverActivated = true;
+            await this.RebuildVisualGraphAsync();
+        }
+    }
+
+    /// <summary>
+    /// Re-parses the active file and rebuilds the visual diagram from the resulting AST,
+    /// skipping the rebuild if the source text has not changed since the last build.
+    /// </summary>
+    private async Task RebuildVisualGraphAsync()
+    {
+        string source = await this.JSRuntime.InvokeAsync<string>("blazorMonaco.editor.getValue", "topsy-turvy-editor", false, null);
+        if (source == this.lastBuiltVisualSource && this.visualDiagram is not null)
+        {
+            return;
+        }
+
+        TopsyTurvyParser parser = new();
+        ParseResult result = parser.TryParse(source);
+        if (result.Program is not null)
+        {
+            VisualGraphBuilder builder = new();
+            this.visualDiagram = builder.Build(result.Program, this.isVisualReadOnly);
+            this.lastBuiltVisualSource = source;
+            this.visualSymbols = VisualSymbolScanner.Scan(this.visualDiagram);
+        }
+        else
+        {
+            this.visualDiagram = null;
+            this.lastBuiltVisualSource = string.Empty;
+            this.visualSymbols = [];
+        }
+
+        this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Toggles the visual editor between read-only and edit modes and rebuilds the diagram.
+    /// </summary>
+    private async Task ToggleVisualReadOnlyAsync()
+    {
+        // When locking, sync Monaco from the current visual diagram first so connected
+        // factory nodes that updated the graph are not lost when the diagram rebuilds.
+        if (this.isVisualReadOnly == false && this.visualDiagram is not null && !this.visualGraphHasErrors)
+        {
+            await this.OnVisualNodeChangedAsync();
+        }
+
+        this.isVisualReadOnly = !this.isVisualReadOnly;
+        this.lastBuiltVisualSource = string.Empty;
+        await this.RebuildVisualGraphAsync();
+    }
+
+    /// <summary>
+    /// Regenerates the Monaco editor source from the current visual diagram state and updates diagnostics.
+    /// </summary>
+    /// <remarks>If the generated source is not parseable the Monaco editor is not updated and a warning icon is shown.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private async Task OnVisualNodeChangedAsync()
+    {
+        if (this.visualDiagram is null)
+        {
+            return;
+        }
+
+        VisualGraphToAstConverter converter = new();
+        ProgramNode program = converter.Convert(this.visualDiagram);
+
+        TopsyTurvyCodeGenerator generator = new();
+        string source;
+        try
+        {
+            source = generator.Generate(program);
+        }
+        catch
+        {
+            this.visualGraphHasErrors = true;
+            this.StateHasChanged();
+            return;
+        }
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        if (!parseResult.Success)
+        {
+            this.visualGraphHasErrors = true;
+            this.StateHasChanged();
+            return;
+        }
+
+        this.visualGraphHasErrors = false;
+        this.lastBuiltVisualSource = source;
+        this.visualSymbols = [.. VisualSymbolScanner.Scan(this.visualDiagram), .. this.GetImportedFunctionSymbols(this.visualDiagram)];
+
+        await this.JSRuntime.InvokeVoidAsync("blazorMonaco.editor.setValue", "topsy-turvy-editor", source);
+        await this.UpdateDiagnosticsAsync(source);
+        await this.SavePreferencesAsync();
+    }
+
+    /// <summary>
+    /// Gets any defined functions from imported files referenced in the visual diagram.
+    /// </summary>
+    /// <param name="diagram">The visual diagram to scan for import nodes.</param>
+    /// <returns>A list of visual symbol entries representing the functions defined in the imported files.</returns>
+    private IReadOnlyList<VisualSymbolEntry> GetImportedFunctionSymbols(BlazorDiagram diagram)
+    {
+        List<VisualSymbolEntry> symbols = [];
+        TopsyTurvyParser importParser = new();
+
+        foreach (TopsyTurvyVisualNodeModel visualNode in diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>())
+        {
+            if (visualNode.StatementType != "ImportNode")
+            {
+                continue;
+            }
+
+            string? filePath = visualNode.SymbolIdentifierNodeName;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                continue;
+            }
+
+            VirtualFile? file = this.files.Find(file =>
+                file.Name.Equals(filePath, StringComparison.OrdinalIgnoreCase) ||
+                file.Name.Equals(filePath + ".topsy", StringComparison.OrdinalIgnoreCase));
+            
+            if (file is null)
+            {
+                continue;
+            }
+
+            ParseResult parseResult = importParser.TryParse(file.Content);
+            if (parseResult.Program is null)
+            {
+                continue;
+            }
+
+            foreach (Statement statement in parseResult.Program.Statements)
+            {
+                if (statement is not FunctionDefinitionNode func)
+                {
+                    continue;
+                }
+
+                List<string> parameterNames = [.. func.Parameters.Select(parameter => parameter.Name)];
+                symbols.Add(new VisualSymbolEntry(func.Name, VisualSymbolKind.Function, null, parameterNames));
+            }
+        }
+
+        return symbols;
     }
 
     /// <summary>
@@ -365,7 +587,7 @@
                     });
         }
 
-        IEnumerable<object> markers = result.Diagnostics
+        IEnumerable<object> parseMarkers = result.Diagnostics
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .Select(diagnostic => (object)new
             {
@@ -375,8 +597,25 @@
                 endColumn = diagnostic.Span.End.Column,
                 message = diagnostic.Message,
                 severity = 8,
-            })
-            .Concat(deprecatedWarningMarkers);
+            });
+
+        IEnumerable<object> typeMarkers = [];
+        if (result.Success && result.Program is not null)
+        {
+            TopsyTurvyTypeChecker typeChecker = new();
+            TypeCheckResult typeCheckResult = typeChecker.Check(result.Program);
+            typeMarkers = typeCheckResult.Diagnostics.Select(diagnostic => (object)new
+            {
+                startLineNumber = diagnostic.Span.Start.Line,
+                startColumn = diagnostic.Span.Start.Column,
+                endLineNumber = diagnostic.Span.End.Line,
+                endColumn = diagnostic.Span.End.Column,
+                message = diagnostic.Message,
+                severity = diagnostic.Severity == DiagnosticSeverity.Error ? 8 : 4,
+            });
+        }
+
+        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }
@@ -446,7 +685,7 @@
                 detail = info.Kind switch
                 {
                     SymbolKind.Variable  => info.TypeDisplayName ?? string.Empty,
-                    SymbolKind.Function  => $"({string.Join(", ", info.Parameters ?? Array.Empty<string>())})",
+                    SymbolKind.Function  => $"({string.Join(", ", info.TypedParameters?.Select(static parameter => parameter.Name) ?? Array.Empty<string>())})",
                     _                    => string.Empty
                 }
             })
@@ -589,6 +828,19 @@
                 .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
             {
                 await terminal!.WriteLine($"\x1b[31mSyntax error (line {diagnostic.Span.Start.Line}): {diagnostic.Message}\x1b[0m");
+            }
+
+            return;
+        }
+
+        TopsyTurvyTypeChecker typeChecker = new();
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseResult.Program!);
+        if (!typeCheckResult.Success)
+        {
+            foreach (Diagnostic diagnostic in typeCheckResult.Diagnostics
+                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            {
+                await terminal!.WriteLine($"\x1b[31mType error (line {diagnostic.Span.Start.Line}): {diagnostic.Message}\x1b[0m");
             }
 
             return;

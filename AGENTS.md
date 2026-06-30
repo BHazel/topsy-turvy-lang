@@ -41,36 +41,31 @@ are not valid without it:
 `THE TERM EXPIRES.` `MY DUTY IS DISCHARGED.`
 `MY DUTY IS PREMATURELY DISCHARGED.` `IF YOU PLEASE.`
 
-**I4 — `JUST SO` is the sole implicit variable.**
-No other implicit variable exists. `JUST SO` receives the result of any
-expression not explicitly assigned. Conditionals and switch always read from
-`JUST SO`.
-
-**I5 — Loop labels are optional.**
+**I4 — Loop labels are optional.**
 `BY A LEGAL FICTION` may optionally be followed by `KNOWN AS <label>` in all
 loop forms (infinite, ascending, descending, whilst). When present, the label
 has no semantic effect beyond documentation. The loop is valid with or without
 a label.
 
-**I6 — Switch operates on literals only.**
+**I5 — Switch operates on literals only.**
 `WHEN ACTING AS` accepts literal values only — strings, integers, floats,
 `VERITY`, `NAY`. Expressions are not valid as case labels.
 
-**I7 — Functions are not closures.**
+**I6 — Functions are not closures.**
 Functions receive values exclusively through their declared parameters.
 Global variables declared in `PRINCIPALS` are accessible everywhere except
 inside functions.
 
-**I8 — `PRAY WELCOME` is the sole declaration form.**
+**I7 — `PRAY WELCOME` is the sole declaration form.**
 Variables may only be declared with `PRAY WELCOME ... AS A ... [BEING ...]`.
 There is no implicit declaration; using an undeclared name is an error.
 
-**I9 — The boolean type is `DECREE`; its literals are `VERITY` and `NAY`.**
-`VERITY` and `NAY` are not interchangeable with `1`/`0` or `NAUGHT` in typed
-contexts. Truthiness coercion applies only when a non-`DECREE` value is used
-in a boolean context.
+**I8 — The boolean type is `DECREE`; its literals are `VERITY` and `NAY`.**
+`VERITY` and `NAY` are the only valid boolean values. Using a non-`DECREE`
+expression in any boolean context (conditions, logical operators, guard clauses)
+is a compile-time type error. Truthiness coercion has been removed in v0.5.0.
 
-**I10 — `.topsy` is the sole source file extension.**
+**I9 — `.topsy` is the sole source file extension.**
 No other extension is valid. The language name is Topsy Turvy; the extension
 remains `.topsy`.
 
@@ -111,6 +106,8 @@ The following keywords appeared in earlier drafts and versions of the language a
 | `VERITY` (type name) | `DECREE` | Boolean type |
 | `WIN` | `VERITY` | Boolean true literal |
 | `FAIL` | `NAY` | Boolean false literal |
+| `IS HENCEFORTH A` | `AS IT WERE` | In-place type cast (removed in v0.5.0; use expression cast `AS IT WERE <expr> AS A <type>` instead) |
+| `JUST SO` | *(removed)* | Implicit result variable (removed in v0.5.0; standalone expression statements now produce a warning) |
 
 ### Specific Files
 
@@ -166,6 +163,32 @@ These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
 * **Superpower Combinators:** Call them directly as delegates using `new TextSpan("input")` from `Superpower.Model`; no direct `PackageReference` to Superpower is required in the test project as it is available transitively via the Parser project reference.
 * **What not to Test:** `Lexer.Whitespace`, `Lexer.WhitespaceRequired`, and `Lexer.IntegerLiteral` are intentionally untested; each is a single-line delegation to a Superpower library primitive with no custom logic.
 
+### Visual Editor Conventions
+
+These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/Visual/` and `Components/VisualEditor/`. Read §2 of `DEVELOPMENT.md` for the full constraint set.
+
+**Port Alignment:** `VisualPortRole` determines `PortAlignment` inside `MakePort`; never pass an alignment explicitly:
+
+| `VisualPortRole` | `PortAlignment` | Edge Type |
+|---|---|---|
+| `FlowIn` | Top | Programme Flow (execution enters node from above) |
+| `FlowOut` | Bottom | Programme Flow (execution continues below) |
+| `BranchOut` | Bottom | Programme Flow (branch choice exits below) |
+| `DataIn` | Left | Data / Expression (value flows in from the left) |
+| `DataOut` | Right | Data / Expression (value flows out to the right) |
+
+**Block Closer Pattern:** For any block node (Conditional, Loop, TryCatch, Switch, Guard):
+1. Build all branches first, collecting each tail node.
+2. `maxTailY = branches.Max(t => t.Position.Y)`
+3. Place closer at `(openerX, maxTailY + NodeLayoutContext.RowSpacing)`.
+4. Call `layout.AdvancePrimaryYTo(closerY + NodeLayoutContext.RowSpacing)`.
+
+**Branch Centreing** Branch `i` of `N` branches is placed at `openerX + (i - (N-1)/2.0) * spacing`. Default spacing: 660 px (Conditional, TryCatch), 440 px (Switch).
+
+**Expression Anchoring:** Expression nodes are placed at `(anchor.X - ExprColumnWidth, anchor.Y + portIndex * ExprPortSpacingY)` relative to their consuming statement node. `ExprColumnWidth = 210.0`, `ExprPortSpacingY = 80.0`.
+
+**CSS Prefix:** All visual node CSS classes use `visual-node-` (e.g. `visual-node-header`, `visual-node-flow-top`). The retired `vn-` prefix must not be re-introduced.
+
 ### Web Editor Conventions
 
 These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
@@ -190,6 +213,8 @@ Several areas of the codebase must be kept consistent whenever related changes a
 ### New Language Keyword or Construct
 
 Use the `/implement-language-feature` skill as it is the single source of truth for layer order, build checkpoints and per-layer constraints.  Do not attempt a language change without it: the change touches at least eight files across four projects and several invariants must hold simultaneously.
+
+The skill also covers the visual editor layer (`VisualGraphBuilder`). Every new or renamed AST node type that produces a statement or expression needs a corresponding `Create*` or expression branch in `VisualGraphBuilder.cs`: consult the node-mapping table in the skill for the full list.
 
 ### New REPL Command
 
