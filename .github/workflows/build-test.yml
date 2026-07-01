@@ -34,6 +34,12 @@ jobs:
       - name: Run Web Editor E2E Tests
         run: |
           dotnet test operetta/BWHazel.TopsyTurvy.WebEditor.E2ETests
+      - name: Run UtopIR Unit Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.UtopIR.Tests
+      - name: Run UtopIR E2E Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.UtopIR.E2ETests
   vscode-extension:
     name: VS Code Extension
     runs-on: ubuntu-latest
