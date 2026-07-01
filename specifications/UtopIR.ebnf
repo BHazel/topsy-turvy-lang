@@ -1,0 +1,101 @@
+(* UtopIR Formal Grammar v0.0.1-preview1 *)
+(* Based on UtopIR.md v0.0.1-preview1 *)
+
+(*----------------------------------------------------------------------------*)
+(* Lexical Tokens                                                              *)
+(*----------------------------------------------------------------------------*)
+Identifier      = [a-zA-Z], { [a-zA-Z0-9_] } ;
+(* UtopIR identifiers begin with a letter, followed by any mix of letters, digits,
+   and underscores.  Hyphens are excluded (cf. Topsy Turvy identifiers) because
+   they would be ambiguous with arithmetic notation. *)
+
+Variable        = "£", Identifier ;
+(* The £ sigil is a dedicated prefix and is not considered part of Identifier.
+   Temporary registers produced by the transformer begin with £_
+   (e.g. £_sum_Peer1_Peer2). *)
+
+IntegerLiteral  = [ "-" ], Digit, { Digit } ;
+FloatLiteral    = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
+StringLiteral   = '"', { AnyCharExceptQuoteOrTilde | "~", AnyChar }, '"' ;
+(* Escape sequences use the same ~ convention as Topsy Turvy: ~" for a literal
+   double-quote, ~n for newline, ~t for horizontal tab, ~~ for a literal ~. *)
+CharLiteral     = "'", ( AnyCharExceptSingleQuoteOrTilde | "~", AnyChar ), "'" ;
+(* CharLiteral holds exactly one character or one escape sequence. *)
+BooleanLiteral  = "true" | "false" ;
+(* Boolean literals are lowercase in UtopIR; Topsy Turvy's VERITY and NAY are
+   not used. *)
+
+Comment         = "@", { AnyCharExceptNewline } ;
+(* A comment spans from @ to the end of the current line and is discarded by
+   the parser. *)
+
+Digit           = [0-9] ;
+
+(*----------------------------------------------------------------------------*)
+(* Programme Structure                                                        *)
+(*----------------------------------------------------------------------------*)
+Programme       = { Line } ;
+Line            = [ Instruction | Comment ], Newline ;
+(* Blank lines and comment-only lines are permitted anywhere in a programme. *)
+
+(*----------------------------------------------------------------------------*)
+(* Instructions                                                               *)
+(*----------------------------------------------------------------------------*)
+Instruction     = AssignmentInstruction | StandaloneInstruction ;
+
+(* Assignment form: £<var> = <rhs> *)
+AssignmentInstruction = Variable, "=", AssignmentRhs ;
+AssignmentRhs         = WelcomeRhs
+                      | AppointRhs
+                      | ArithmeticRhs
+                      | LeaveRhs ;
+
+WelcomeRhs      = "welcome", Type ;
+AppointRhs      = "appoint", Operand ;
+ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
+LeaveRhs        = "leave" ;
+
+(* Standalone form: no assignment target *)
+StandaloneInstruction = PrenticeInstruction | FindInstruction ;
+PrenticeInstruction   = "prentice", Operand ;
+FindInstruction       = "find", [ Operand ] ;
+(* When no token follows "find" before the next newline or EOF the instruction
+   is a void return; when an Operand follows it is a valued return.  The parser
+   commits to "no operand" on encountering a newline or EOF immediately after
+   the "find" keyword. *)
+
+(*----------------------------------------------------------------------------*)
+(* Operands                                                                   *)
+(*----------------------------------------------------------------------------*)
+Operand         = Variable | Literal ;
+Literal         = IntegerLiteral
+                | FloatLiteral
+                | StringLiteral
+                | CharLiteral
+                | BooleanLiteral ;
+
+(*----------------------------------------------------------------------------*)
+(* Arithmetic Operations                                                      *)
+(*----------------------------------------------------------------------------*)
+ArithmeticOp    = "sum" | "diff" | "prod" | "quot" | "rem" | "max" | "min" ;
+
+(*----------------------------------------------------------------------------*)
+(* Types                                                                      *)
+(*----------------------------------------------------------------------------*)
+Type            = SignedIntegerType
+                | UnsignedIntegerType
+                | FloatType
+                | "decree"
+                | "stitch"
+                | "yarn" ;
+
+SignedIntegerType   = "chancellor" | "peer" | "pirate" | "sausageroll" ;
+
+UnsignedIntegerType = "standingchancellor" | "standingpeer"
+                    | "standingpirate"     | "standingsausageroll" ;
+(* Unsigned types are single compound tokens — "standing" is fused directly to
+   the base type name with no whitespace, e.g. standingpeer, not "standing peer".
+   This mirrors the Topsy Turvy convention of "STANDING PEER" collapsing to
+   a single UtopIR keyword. *)
+
+FloatType           = "fathom" | "foot" ;
