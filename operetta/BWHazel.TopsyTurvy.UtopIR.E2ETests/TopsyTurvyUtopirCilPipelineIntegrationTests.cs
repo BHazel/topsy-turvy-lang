@@ -145,4 +145,64 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
             }
         }
     }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme with mixed-type arithmetic (<c>peer</c> + <c>chancellor</c>) through the complete pipeline, verifying the transformer widens the narrower operand and the compiled assembly produces the correct exit code.
+    /// </summary>
+    [Fact]
+    public void Pipeline_MixedTypeArithmeticProgramme_WidensAndProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The Chancellor's Arithmetical Engine"
+
+            PRINCIPALS
+              PRAY WELCOME small_number AS A PEER
+              PRAY WELCOME large_number AS A CHANCELLOR
+            THE CURTAIN RISES.
+
+            small_number IS APPOINTED 10
+            large_number IS APPOINTED AS IT WERE 200 AS A CHANCELLOR
+            AND SO I FIND SUM OF small_number AND large_number
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("were £small_number, chancellor");
+        utopIrSource.ShouldContain("sum ");
+
+        string assemblyName = $"TopsyTurvyMixedTypeTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            CilEmitResult emitResult = new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            emitResult.IlSource.ShouldContain("conv.i8");
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(210);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
 }

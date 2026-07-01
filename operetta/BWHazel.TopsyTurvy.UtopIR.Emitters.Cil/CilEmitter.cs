@@ -250,6 +250,9 @@ public sealed class CilEmitter
             case FindInstruction find:
                 this.EmitFind(find, ilGenerator, locals, localTypes);
                 break;
+            case WereInstruction were:
+                this.EmitWere(were, ilGenerator, cilGenerator, locals, localTypes);
+                break;
         }
     }
 
@@ -295,11 +298,19 @@ public sealed class CilEmitter
     /// <summary>
     /// Emits CIL for an <see cref="ArithmeticInstruction"/>.
     /// </summary>
+    /// <remarks>
+    /// The Transformer guarantees both operands always share the same type by this point by inserting
+    /// a <see cref="WereInstruction"/> to widen the narrower operand beforehand when they originally
+    /// differ: this is validated defensively here rather than trusted blindly, in case a future or
+    /// hand-built <see cref="ArithmeticInstruction"/> reaches the emitter without going through the
+    /// Transformer.
+    /// </remarks>
     /// <param name="arithmeticInstruction">The arithmetic instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the two operands have different inferred types.</exception>
     private void EmitArithmetic(
         ArithmeticInstruction arithmeticInstruction,
         ILGenerator ilGenerator,
@@ -307,15 +318,24 @@ public sealed class CilEmitter
         Dictionary<string, LocalBuilder> locals,
         Dictionary<string, UtopIRType> localTypes)
     {
-        // If the target local has not yet been declared, infer its type from the first operand and declare it.
-        // Arithmetic instructions in UtopIR can be thought of as "auto"-declaring the target register.
+        UtopIRType operand1Type = this.InferOperandType(arithmeticInstruction.Operand1, localTypes);
+        UtopIRType operand2Type = this.InferOperandType(arithmeticInstruction.Operand2, localTypes);
+        if (operand1Type != operand2Type)
+        {
+            throw new InvalidOperationException(
+                $"Arithmetic instruction targeting '£{arithmeticInstruction.Target.Name}' has mismatched " +
+                $"operand types ('{operand1Type}' and '{operand2Type}').");
+        }
+
+        // If the target local has not yet been declared, declare it using the operand type.
+        // Arithmetic instructions in UtopIR can be thought of as "auto"-declaring the
+        // target register.
         if (!locals.TryGetValue(arithmeticInstruction.Target.Name, out LocalBuilder? declaredLocal))
         {
-            UtopIRType inferredType = this.InferOperandType(arithmeticInstruction.Operand1, localTypes);
-            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(inferredType));
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(operand1Type));
             cilGenerator.RegisterLocalName(declaredLocal, arithmeticInstruction.Target.Name);
             locals[arithmeticInstruction.Target.Name] = declaredLocal;
-            localTypes[arithmeticInstruction.Target.Name] = inferredType;
+            localTypes[arithmeticInstruction.Target.Name] = operand1Type;
         }
 
         LocalBuilder target = declaredLocal;
@@ -362,9 +382,9 @@ public sealed class CilEmitter
         string methodName = arithmeticOperations == UtopIRArithmeticOperation.Max ? "Max" : "Min";
 
         this.EmitStackLoadOperand(operand1, ilGenerator, locals);
-        this.EmitNarrowConversion(type, ilGenerator);
+        this.EmitConversion(type, ilGenerator);
         this.EmitStackLoadOperand(operand2, ilGenerator, locals);
-        this.EmitNarrowConversion(type, ilGenerator);
+        this.EmitConversion(type, ilGenerator);
 
         MethodInfo mathMethod = typeof(Math).GetMethod(methodName, [clrType, clrType])
             ?? throw new InvalidOperationException(
@@ -401,6 +421,36 @@ public sealed class CilEmitter
         Dictionary<string, LocalBuilder> locals)
     {
         ilGenerator.Emit(OpCodes.Stloc, locals[leave.Target.Name]);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="WereInstruction"/> by loading the source operand, converting it to
+    /// the declared destination type and storing it into the target local.
+    /// </summary>
+    /// <param name="were">The were instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    private void EmitWere(
+        WereInstruction were,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        this.EmitStackLoadOperand(were.Value, ilGenerator, locals);
+        this.EmitConversion(were.Type, ilGenerator);
+
+        if (!locals.TryGetValue(were.Target.Name, out LocalBuilder? target))
+        {
+            target = ilGenerator.DeclareLocal(this.MapToClrType(were.Type));
+            cilGenerator.RegisterLocalName(target, were.Target.Name);
+            locals[were.Target.Name] = target;
+        }
+
+        localTypes[were.Target.Name] = were.Type;
+        ilGenerator.Emit(OpCodes.Stloc, target);
     }
 
     /// <summary>
@@ -569,37 +619,34 @@ public sealed class CilEmitter
     }
 
     /// <summary>
-    /// Emits a narrowing conversion from the CIL evaluation stack widened <c>int32</c>
-    /// representation back to the actual CLR type, required before calling <c>Math.Max</c>
-    /// or <c>Math.Min</c> overloads for narrow integer types.
+    /// Emits the <c>conv.*</c> opcode that converts whatever is currently on the CIL evaluation stack
+    /// to the given target type true CLR width and signedness.
     /// </summary>
     /// <remarks>
-    /// The CIL evaluation stack widens <c>short</c>, <c>ushort</c>, <c>sbyte</c>, and <c>byte</c>
-    /// to <c>int32</c> on load.  <c>int</c>, <c>uint</c>, <c>long</c>, and <c>ulong</c> are
-    /// already at their correct stack widths.
+    /// Covers all integer <see cref="UtopIRType"/> variants.  A single target-only conversion is
+    /// sufficient regardless of the original type of the value.  <c>conv.*</c> opcodes convert whatever is on
+    /// the stack so this also serves the <see cref="EmitWere"/> general widen/narrow cast between any
+    /// pair of integer types, not just the narrowing case <see cref="EmitMaxMin"/> uses.
     /// </remarks>
-    /// <param name="type">The UtopIR type of the value currently on the stack.</param>
+    /// <param name="targetType">The UtopIR type to convert the top-of-stack value to.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
-    private void EmitNarrowConversion(UtopIRType type, ILGenerator ilGenerator)
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="targetType"/> has no supported conversion in this version.</exception>
+    private void EmitConversion(UtopIRType targetType, ILGenerator ilGenerator)
     {
-        switch (type)
+        OpCode opcode = targetType switch
         {
-            case UtopIRType.Pirate:
-                ilGenerator.Emit(OpCodes.Conv_I2);
-                break;
-            case UtopIRType.SausageRoll:
-                ilGenerator.Emit(OpCodes.Conv_I1);
-                break;
-            case UtopIRType.StandingPeer:
-                ilGenerator.Emit(OpCodes.Conv_U4);
-                break;
-            case UtopIRType.StandingPirate:
-                ilGenerator.Emit(OpCodes.Conv_U2);
-                break;
-            case UtopIRType.StandingSausageRoll:
-                ilGenerator.Emit(OpCodes.Conv_U1);
-                break;
-        }
+            UtopIRType.Chancellor => OpCodes.Conv_I8,
+            UtopIRType.Peer => OpCodes.Conv_I4,
+            UtopIRType.Pirate => OpCodes.Conv_I2,
+            UtopIRType.SausageRoll => OpCodes.Conv_I1,
+            UtopIRType.StandingChancellor => OpCodes.Conv_U8,
+            UtopIRType.StandingPeer => OpCodes.Conv_U4,
+            UtopIRType.StandingPirate => OpCodes.Conv_U2,
+            UtopIRType.StandingSausageRoll => OpCodes.Conv_U1,
+            _ => throw new NotSupportedException($"UtopIR type '{targetType}' is not supported by the CIL emitter conversion in this version.")
+        };
+
+        ilGenerator.Emit(opcode);
     }
 
     /// <summary>

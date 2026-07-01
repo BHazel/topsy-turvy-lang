@@ -279,6 +279,39 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that a <c>were</c> instruction is emitted with its value operand and destination type.
+    /// </summary>
+    [Fact]
+    public void Generate_WereInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new WereInstruction(
+                new UtopIRVariable("Lords"),
+                new VariableOperand(new UtopIRVariable("LovesickMaidens")),
+                UtopIRType.Chancellor)
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£Lords = were £LovesickMaidens, chancellor");
+    }
+
+    /// <summary>
+    /// Tests that a <c>were</c> instruction with a literal operand is emitted correctly.
+    /// </summary>
+    [Fact]
+    public void Generate_WereInstruction_WithLiteralOperand_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new WereInstruction(new UtopIRVariable("x"), new LiteralOperand(10), UtopIRType.Chancellor)
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£x = were 10, chancellor");
+    }
+
+    /// <summary>
     /// Tests that a <c>prentice</c> instruction with a variable operand is emitted correctly.
     /// </summary>
     [Fact]

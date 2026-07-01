@@ -634,4 +634,126 @@ public class CilEmitterTests
         // would have thrown DirectoryNotFoundException before reaching this point.
         Directory.Exists(Path.GetDirectoryName(nonExistentDirectoryOutputPath)).ShouldBeFalse();
     }
+
+    /// <summary>
+    /// Tests that <c>were</c> widens <c>peer</c> to <c>chancellor</c> by emitting <c>conv.i8</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_WidensPeerToChancellor_EmitsConvI8()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
+            new AppointInstruction(new("a"), new LiteralOperand(-5)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Chancellor),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.i8");
+        exitCode.ShouldBe(-5);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> narrows <c>chancellor</c> to <c>peer</c> by truncating via <c>conv.i4</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_NarrowsChancellorToPeer_TruncatesToLow32Bits()
+    {
+        const long outOfRangeValue = (1L << 32) + 100_000;
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
+            new WelcomeInstruction(new("b"), UtopIRType.Peer),
+            new AppointInstruction(new("a"), new LiteralOperand(outOfRangeValue)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Peer),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.i4");
+        exitCode.ShouldBe(100_000);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> to <c>standingpeer</c> emits <c>conv.u4</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsPeerToStandingPeer_EmitsConvU4()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
+            new AppointInstruction(new("a"), new LiteralOperand(7)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.StandingPeer),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.u4");
+        exitCode.ShouldBe(7);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> narrows a <c>chancellor</c> value above <see cref="int.MaxValue"/> into <c>standingpeer</c> correctly.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_NarrowsChancellorToStandingPeer_RoundTripsValueAboveIntMaxValue()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
+            new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
+            new AppointInstruction(new("a"), new LiteralOperand(4_000_000_000L)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.StandingPeer),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        RunProgram(program).ShouldBe(unchecked((int)4_000_000_000u));
+    }
+
+    /// <summary>
+    /// Tests that a <c>were</c> instruction whose target has no prior <see cref="WelcomeInstruction"/> auto-declares it with the destination type.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_UndeclaredTarget_AutoDeclaresWithDestinationType()
+    {
+        UtopIRProgram program = new([
+            new WereInstruction(new("_were_11_chancellor"), new LiteralOperand(11), UtopIRType.Chancellor),
+            new FindInstruction(new VariableOperand(new("_were_11_chancellor")))
+        ]);
+
+        RunProgram(program).ShouldBe(11);
+    }
+
+    /// <summary>
+    /// Emits, runs and returns both the exit code and the emitted IL source text.
+    /// </summary>
+    /// <param name="program">The UtopIR programme to emit and run.</param>
+    /// <returns>The integer exit code and the <see cref="CilEmitResult.IlSource"/> text.</returns>
+    private static (int ExitCode, string IlSource) RunProgramWithIlSource(UtopIRProgram program)
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            CilEmitter emitter = new();
+            CilEmitResult result = emitter.Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+            return (exitCode, result.IlSource);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
 }

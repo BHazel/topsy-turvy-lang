@@ -83,6 +83,9 @@ public static class UtopIRKeywords
         /// <summary>The <c>leave</c> instruction.</summary>
         public const string Leave = "leave";
 
+        /// <summary>The <c>were</c> instruction.</summary>
+        public const string Were = "were";
+
         /// <summary>The <c>find</c> instruction.</summary>
         public const string Find = "find";
 

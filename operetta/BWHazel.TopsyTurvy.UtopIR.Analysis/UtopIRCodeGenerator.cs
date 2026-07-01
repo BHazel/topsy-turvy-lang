@@ -55,6 +55,9 @@ public sealed class UtopIRCodeGenerator
             case LeaveInstruction leave:
                 builder.AppendLine($"£{leave.Target.Name} = {UtopIRKeywords.Instructions.Leave}");
                 break;
+            case WereInstruction were:
+                builder.AppendLine($"£{were.Target.Name} = {UtopIRKeywords.Instructions.Were} {this.FormatOperand(were.Value)}, {this.TypeKeyword(were.Type)}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {

@@ -77,6 +77,7 @@ The following operations work with variables and their values.
 |-|-|-|-|
 |`welcome <type>`|Variable Declaration|Virtual Register|`£Lords = welcome peer`|
 |`appoint <value>`|Variable Assignment|Virtual Register|`£Lords = appoint 42`|
+|`were <value>, <type>`|Variable Cast|Virtual Register|`£Lords = were £LovesickMaidens, chancellor`|
 
 #### 4.1.1 `welcome` Instruction
 
@@ -136,6 +137,35 @@ the following UtopIR is equivalent:
 ```utopir
 £LovesickMaidens = appoint 20
 £PoemSubject = appoint "Hollow"
+```
+
+#### 4.1.3. `were` Instruction
+
+The `were` instruction casts a value to a different type and assign it to a declared virtual register.
+
+**Operands**
+
+* **`<value>`:** The value to assign to a variable; it can be a literal or a variable.
+* **`<type>`:** The type of the variable with options being any supported type; please see Appendix B for the complete type list.
+
+**Format**
+
+```utopir
+£<var-name> = were <value>, <type>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+LovesickMaidens IS APPOINTED AS IT WERE Lords AS A CHANCELLOR
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£LovesickMaidens = were £Lords, chancellor
 ```
 
 ### 4.2. Arithmetic Operations
@@ -497,6 +527,7 @@ find £PeerResultB
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
 |`appoint <value>`|Variable Assignment|`£LovesickMaidens = appoint 20`|
+|`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
 |`leave`|Pop off Stack|`£LovesickMaidens = leave`|
 |`sum <op1>, <op2>`|Addition|`£Lords = sum 10, 20`|

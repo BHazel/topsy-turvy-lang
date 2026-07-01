@@ -48,11 +48,13 @@ AssignmentInstruction = Variable, "=", AssignmentRhs ;
 AssignmentRhs         = WelcomeRhs
                       | AppointRhs
                       | ArithmeticRhs
+                      | WereRhs
                       | LeaveRhs ;
 
 WelcomeRhs      = "welcome", Type ;
 AppointRhs      = "appoint", Operand ;
 ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
+WereRhs         = "were", Operand, ",", Type ;
 LeaveRhs        = "leave" ;
 
 (* Standalone form: no assignment target *)
