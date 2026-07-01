@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const serverOptions: ServerOptions = {
         command: cliPath,
-        args: ['sorcerer', 'incantation'],
+        args: ['incantation'],
         transport: TransportKind.stdio,
     };
 
@@ -317,7 +317,7 @@ export function activate(context: vscode.ExtensionContext): void {
             try {
                 const { stdout } = await execFileAsync(
                     cueCliPath,
-                    ['sorcerer', 'cue', filePath, '--tiptoe'],
+                    ['sorcerer', filePath, '--emit', 'preprocess', '--tiptoe'],
                     { maxBuffer: 10 * 1024 * 1024 },
                 );
 
@@ -474,7 +474,7 @@ export function activate(context: vscode.ExtensionContext): void {
             try {
                 const { stdout } = await execFileAsync(
                     promptbookCliPath,
-                    ['sorcerer', 'promptbook', filePath, '--tiptoe'],
+                    ['sorcerer', filePath, '--emit', 'ast', '--tiptoe'],
                     { maxBuffer: 10 * 1024 * 1024 },
                 );
                 

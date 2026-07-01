@@ -12,7 +12,8 @@ RootCommand rootCommand = new(rootDescription)
     PerformCommandBuilder.Build(),
     PlaybillCommandBuilder.Build(),
     CadenzaCommandBuilder.Build(),
-    SorcererCommandBuilder.Build()
+    SorcererCommandBuilder.Build(),
+    IncantationCommandBuilder.Build()
 };
 
 return await rootCommand.Parse(args).InvokeAsync();

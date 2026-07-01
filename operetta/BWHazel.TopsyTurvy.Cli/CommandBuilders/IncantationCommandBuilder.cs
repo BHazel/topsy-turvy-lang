@@ -11,12 +11,12 @@ using OmniSharpServer = OmniSharp.Extensions.LanguageServer.Server.LanguageServe
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
 /// <summary>
-/// Builder for the <c>incantation</c> subcommand of <c>sorcerer</c>.
+/// Builder for the <c>incantation</c> command.
 /// </summary>
 public static class IncantationCommandBuilder
 {
     /// <summary>
-    /// Builds and configures the <c>incantation</c> subcommand.
+    /// Builds and configures the <c>incantation</c> command.
     /// </summary>
     /// <remarks>
     /// The --stdio flag is included for compatibility with language clients that automatically
