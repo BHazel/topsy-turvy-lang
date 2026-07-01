@@ -14,7 +14,7 @@ The language is designed around virtual registers and a stack.
 
 ## 1. File Structure
 
-> TODO: Needed for impl 1?
+> TODO: The `duty ... discharged` block structure is currently not in scope for development.  The current implementation are only concerned with instructions themselves that will eventually sit within this block.
 
 Unlike in Topsy Turvy, UtopIR does not have an equivalent to the `HARK!`...`FINALE.` keywords.  Instead a file must have an `Opera` function which serves as the entry point to a programme.
 
@@ -493,10 +493,6 @@ find £PeerResultB
 
 ## Appendix A. Instruction Reference
 
-> QUERIES
-> Pop: Should it be assigned to a virtual register first, then assigned to a variable?
-> Return: This could just be a push seeing as the result is popped to be used, but a dedicated instruction feels nicer.
-
 |Instruction|Description|Example|
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
@@ -524,4 +520,5 @@ find £PeerResultB
 |Character|`STITCH`|`stitch`|
 |String|`YARN`|`yarn`|
 
-For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
+* For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
+* The Boolean `decree` type defines its _true_ and _false_ literals as `verity` and `nay`.

@@ -21,9 +21,9 @@ StringLiteral   = '"', { AnyCharExceptQuoteOrTilde | "~", AnyChar }, '"' ;
    double-quote, ~n for newline, ~t for horizontal tab, ~~ for a literal ~. *)
 CharLiteral     = "'", ( AnyCharExceptSingleQuoteOrTilde | "~", AnyChar ), "'" ;
 (* CharLiteral holds exactly one character or one escape sequence. *)
-BooleanLiteral  = "true" | "false" ;
-(* Boolean literals are lowercase in UtopIR; Topsy Turvy's VERITY and NAY are
-   not used. *)
+BooleanLiteral  = "verity" | "nay" ;
+(* Boolean literals in UtopIR mirror Topsy Turvy's VERITY and NAY, lowercased:
+   "verity" for true, "nay" for false. *)
 
 Comment         = "@", { AnyCharExceptNewline } ;
 (* A comment spans from @ to the end of the current line and is discarded by

@@ -21,4 +21,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
+  </ItemGroup>
+
 </Project>
