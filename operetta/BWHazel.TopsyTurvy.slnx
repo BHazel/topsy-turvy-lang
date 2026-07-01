@@ -12,5 +12,6 @@
   <Project Path="BWHazel.TopsyTurvy.WebEditor.E2ETests/BWHazel.TopsyTurvy.WebEditor.E2ETests.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Analysis/BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Ast/BWHazel.TopsyTurvy.UtopIR.Ast.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.UtopIR.Transformer/BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Tests/BWHazel.TopsyTurvy.UtopIR.Tests.csproj" />
 </Solution>

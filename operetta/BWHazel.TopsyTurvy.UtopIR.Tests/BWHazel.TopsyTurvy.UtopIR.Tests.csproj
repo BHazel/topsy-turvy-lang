@@ -22,7 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Transformer\BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />
   </ItemGroup>
 
 </Project>
