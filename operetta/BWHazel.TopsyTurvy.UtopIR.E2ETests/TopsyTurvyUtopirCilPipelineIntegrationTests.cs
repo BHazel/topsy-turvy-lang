@@ -205,4 +205,61 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
             }
         }
     }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme that appoints a bare in-range integer literal to a <c>chancellor</c> variable, verifying the transformer inserts a widening cast rather than storing a mismatched-width value.
+    /// </summary>
+    [Fact]
+    public void Pipeline_LiteralAppointedToWiderDeclaredType_WidensAndProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The Widening Appointment"
+
+            PRINCIPALS
+              PRAY WELCOME big_number AS A CHANCELLOR
+            THE CURTAIN RISES.
+
+            big_number IS APPOINTED 200
+            AND SO I FIND big_number
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("were 200, chancellor");
+
+        string assemblyName = $"TopsyTurvyAppointWidenTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            CilEmitResult emitResult = new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            emitResult.IlSource.ShouldContain("conv.i8");
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(200);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
 }

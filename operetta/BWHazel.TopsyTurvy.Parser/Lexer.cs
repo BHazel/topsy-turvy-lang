@@ -48,8 +48,15 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// 
 /// This parser supports back-tracking on failure.
 /// #### Integer Literals
-/// The <c>IntegerLiteral</c> parser matches on a signed integer, returning it as an <c>int</c>.
+/// The <c>IntegerLiteral</c> parser matches on a signed integer, returning it as a <c>long</c> so
+/// literals wider than <c>Int32</c> parse without wrapping.  Callers decide the final <c>LiteralType</c>
+/// (<c>Integer</c> vs <c>Long</c>) from the parsed magnitude.
 /// * It matches on any signed integer.
+///
+/// The <c>BoxIntegerLiteralValue</c> helper turns the raw <c>long</c> into the boxed value callers
+/// actually store: a boxed <c>int</c> if it fits, otherwise a boxed <c>long</c>.  Every caller of
+/// <c>IntegerLiteral</c> that needs a CLR-typed value (rather than the raw <c>long</c>) goes through this
+/// helper, so an integer literal boxed runtime type is resolved identically everywhere.
 /// </para>
 /// <para>
 /// ### Boolean Literals
@@ -164,8 +171,25 @@ public static class Lexer
     /// <summary>
     /// Parses a signed integer literal.
     /// </summary>
-    public static readonly TextParser<int> IntegerLiteral =
-        Numerics.IntegerInt32;
+    public static readonly TextParser<long> IntegerLiteral =
+        Numerics.IntegerInt64;
+
+    /// <summary>
+    /// Boxes a value parsed by <see cref="IntegerLiteral"/> as an <see cref="int"/> when it fits in
+    /// the <see cref="int"/> range, otherwise as a <see cref="long"/>.
+    /// </summary>
+    /// <remarks>
+    /// Shared by every caller of <see cref="IntegerLiteral"/> that needs a CLR-typed literal value as
+    /// opposed to the raw parsed <see cref="long"/>.  It keeps the same magnitude-based
+    /// <c>Integer</c>-vs-<c>Long</c> resolution consistent wherever an integer literal boxed runtime
+    /// type matters, e.g. for <c>object.Equals</c> comparisons against other boxed integer literals.
+    /// </remarks>
+    /// <param name="value">The raw value parsed by <see cref="IntegerLiteral"/>.</param>
+    /// <returns>A boxed <see cref="int"/> if <paramref name="value"/> fits, otherwise a boxed <see cref="long"/>.</returns>
+    public static object BoxIntegerLiteralValue(long value) =>
+        value is >= int.MinValue and <= int.MaxValue
+            ? (object)(int)value
+            : value;
 
     /// <summary>
     /// Parses a boolean literal.

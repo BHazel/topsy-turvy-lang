@@ -71,12 +71,64 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that appointing an in-range integer literal to a <c>chancellor</c> declaration inserts a widening <see cref="WereInstruction"/> so the literal type matches the declared target type.
+    /// </summary>
+    [Fact]
+    public void Transform_DeclarationWithMismatchedLiteralType_InsertsWereInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode()
+            {
+                Name = "big_number",
+                Type = LiteralType.Long,
+                InitialValue = new LiteralNode() { Value = 200, Type = LiteralType.Integer, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(3);
+        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("big_number");
+        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(200);
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        appoint.Target.Name.ShouldBe("big_number");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+    }
+
+    /// <summary>
+    /// Tests that assigning an in-range integer literal to an already-declared <c>chancellor</c> variable inserts a widening <see cref="WereInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_AssignmentWithMismatchedLiteralType_InsertsWereInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "big_number", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "big_number",
+                Value = new LiteralNode() { Value = 200, Type = LiteralType.Integer, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(3);
+        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+    }
+
+    /// <summary>
     /// Tests that a declaration whose initial value is an identifier reference emits <c>welcome</c> followed by <c>appoint</c> with a <see cref="VariableOperand"/>.
     /// </summary>
     [Fact]
     public void Transform_DeclarationWithIdentifierInitialValue_EmitsWelcomeThenAppointWithVariable()
     {
         ProgramNode program = Programme(
+            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode()
             {
                 Name = "y",
@@ -87,8 +139,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        result.Instructions.Count.ShouldBe(3);
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
         VariableOperand variable = appoint.Value.ShouldBeOfType<VariableOperand>();
         variable.Variable.Name.ShouldBe("x");
     }
@@ -124,6 +176,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithLiteralValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
+            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "x",
@@ -133,8 +186,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(1);
-        AppointInstruction appoint = result.Instructions[0].ShouldBeOfType<AppointInstruction>();
+        result.Instructions.Count.ShouldBe(2);
+        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("x");
         appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(99);
     }
@@ -146,6 +199,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithIdentifierValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
+            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "y", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "y",
@@ -155,8 +210,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(1);
-        AppointInstruction appoint = result.Instructions[0].ShouldBeOfType<AppointInstruction>();
+        result.Instructions.Count.ShouldBe(3);
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("y");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("x");
     }
@@ -219,6 +274,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -237,7 +293,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction arithmetic = result.Instructions[2].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operation.ShouldBe(expectedUtopirOperation);
     }
 
@@ -250,6 +306,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode() { Name = "Peer1", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "Peer2", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -268,12 +325,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(4);
-        ArithmeticInstruction arithmetic = result.Instructions[2].ShouldBeOfType<ArithmeticInstruction>();
+        result.Instructions.Count.ShouldBe(5);
+        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Target.Name.ShouldBe("_sum_Peer1_Peer2");
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Peer1");
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Peer2");
-        AppointInstruction appoint = result.Instructions[3].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Instructions[4].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum_Peer1_Peer2");
     }
@@ -285,6 +342,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ExpressionCast_EmitsWereInstruction()
     {
         ProgramNode program = Programme(
+            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -299,11 +357,11 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        WereInstruction were = result.Instructions[0].ShouldBeOfType<WereInstruction>();
+        result.Instructions.Count.ShouldBe(3);
+        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Chancellor);
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Lords");
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
@@ -319,6 +377,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode() { Name = "a", Type = aType, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "b", Type = bType, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -337,10 +396,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[2].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(narrowerOperandName);
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
         (arithmetic.Operand1 as VariableOperand)!.Variable.Name.ShouldBe(narrowerOperandName == "a" ? were.Target.Name : "a");
         (arithmetic.Operand2 as VariableOperand)!.Variable.Name.ShouldBe(narrowerOperandName == "b" ? were.Target.Name : "b");
     }
@@ -354,6 +413,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -373,7 +433,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         UtopIRProgram result = this.transformer.Transform(program);
 
         result.Instructions.ShouldNotContain(instruction => instruction is WereInstruction);
-        ArithmeticInstruction arithmetic = result.Instructions[2].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
     }
@@ -385,6 +445,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOnTwoLiterals_EmbedLiteralValuesInTempName()
     {
         ProgramNode program = Programme(
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -403,7 +464,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction arithmetic = result.Instructions[0].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Instructions[1].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Target.Name.ShouldBe("_sum_3_4");
     }
 
@@ -418,6 +479,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode() { Name = "c", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -445,16 +507,16 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(6);
-        ArithmeticInstruction prod = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        result.Instructions.Count.ShouldBe(7);
+        ArithmeticInstruction prod = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
         prod.Operation.ShouldBe(UtopIRArithmeticOperation.Prod);
         prod.Target.Name.ShouldBe("_prod_a_b");
-        ArithmeticInstruction sum = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction sum = result.Instructions[5].ShouldBeOfType<ArithmeticInstruction>();
         sum.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
         sum.Target.Name.ShouldBe("_sum__prod_a_b_c");
         sum.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_prod_a_b");
         sum.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("c");
-        result.Instructions[5].ShouldBeOfType<AppointInstruction>()
+        result.Instructions[6].ShouldBeOfType<AppointInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum__prod_a_b_c");
     }
 

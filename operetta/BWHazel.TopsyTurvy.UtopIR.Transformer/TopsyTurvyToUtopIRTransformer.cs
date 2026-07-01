@@ -119,6 +119,13 @@ public sealed class TopsyTurvyToUtopIRTransformer
     /// Transforms a <see cref="DeclarationNode"/> into a <see cref="WelcomeInstruction"/>
     /// followed by an optional <see cref="AppointInstruction"/> when an initial value is present.
     /// </summary>
+    /// <remarks>
+    /// When the declared type is an integer type and the initial value inferred type differs (most
+    /// commonly because integer literals default to <see cref="UtopIRType.Peer"/>/<see cref="UtopIRType.Chancellor"/>
+    /// regardless of the declared target type), a <see cref="WereInstruction"/> cast is inserted via
+    /// <see cref="CastOperandIfNeeded"/> so the emitted <see cref="AppointInstruction"/> never stores a
+    /// mismatched-width value directly.
+    /// </remarks>
     /// <param name="declaration">The declaration statement to transform.</param>
     /// <param name="instructions">The instruction list being built.</param>
     /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
@@ -132,6 +139,12 @@ public sealed class TopsyTurvyToUtopIRTransformer
         if (declaration.InitialValue is not null)
         {
             UtopIROperand value = this.TransformExpression(declaration.InitialValue, instructions, declaredTypes);
+            if (this.IsIntegerType(type))
+            {
+                UtopIRType valueType = this.InferOperandType(value, declaredTypes);
+                value = this.CastOperandIfNeeded(value, valueType, type, instructions, declaredTypes);
+            }
+
             instructions.Add(new AppointInstruction(target, value));
         }
     }
@@ -140,6 +153,10 @@ public sealed class TopsyTurvyToUtopIRTransformer
     /// Transforms an <see cref="AssignmentNode"/> into an <see cref="AppointInstruction"/>,
     /// flattening the right-hand-side expression first if needed.
     /// </summary>
+    /// <remarks>
+    /// Casts the value to the target declared type when needed, mirroring <see cref="TransformDeclaration"/>.
+    /// The target is already declared by the time an assignment can reference it.
+    /// </remarks>
     /// <param name="assignment">The assignment statement to transform.</param>
     /// <param name="instructions">The instruction list being built.</param>
     /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
@@ -147,6 +164,13 @@ public sealed class TopsyTurvyToUtopIRTransformer
     {
         UtopIRVariable target = new(assignment.Target);
         UtopIROperand value = this.TransformExpression(assignment.Value, instructions, declaredTypes);
+        UtopIRType targetType = declaredTypes[assignment.Target];
+        if (this.IsIntegerType(targetType))
+        {
+            UtopIRType valueType = this.InferOperandType(value, declaredTypes);
+            value = this.CastOperandIfNeeded(value, valueType, targetType, instructions, declaredTypes);
+        }
+
         instructions.Add(new AppointInstruction(target, value));
     }
 
@@ -218,8 +242,8 @@ public sealed class TopsyTurvyToUtopIRTransformer
         UtopIRType type2 = this.InferOperandType(operand2, declaredTypes);
         UtopIRType widenedType = this.Widen(type1, type2);
 
-        operand1 = this.WidenOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
-        operand2 = this.WidenOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
+        operand1 = this.CastOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
+        operand2 = this.CastOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
 
         string temporaryVariableName = $"_{mnemonic}_{this.OperandName(operand1)}_{this.OperandName(operand2)}";
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
@@ -250,28 +274,43 @@ public sealed class TopsyTurvyToUtopIRTransformer
     }
 
     /// <summary>
-    /// Casts and operand into a new temporary register via an inserted <see cref="WereInstruction"/>
-    /// when its type differs from the widened type.
+    /// Casts an operand into a new temporary register via an inserted <see cref="WereInstruction"/>
+    /// when its type differs from <paramref name="targetType"/>.
     /// </summary>
-    /// <param name="operand">The operand to widen if needed.</param>
+    /// <param name="operand">The operand to cast if needed.</param>
     /// <param name="operandType">The operand already-known type.</param>
-    /// <param name="widenedType">The type the operand must be cast to.</param>
+    /// <param name="targetType">The type the operand must be cast to.</param>
     /// <param name="instructions">The instruction list being built.</param>
     /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
-    /// <returns><paramref name="operand"/> unchanged if already of <paramref name="widenedType"/>, otherwise a <see cref="VariableOperand"/> referencing the new temporary register.</returns>
-    private UtopIROperand WidenOperandIfNeeded(UtopIROperand operand, UtopIRType operandType, UtopIRType widenedType, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
+    /// <returns><paramref name="operand"/> unchanged if already of <paramref name="targetType"/>, otherwise a <see cref="VariableOperand"/> referencing the new temporary register.</returns>
+    private UtopIROperand CastOperandIfNeeded(UtopIROperand operand, UtopIRType operandType, UtopIRType targetType, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
     {
-        if (operandType == widenedType)
+        if (operandType == targetType)
         {
             return operand;
         }
 
-        string temporaryVariableName = $"_{UtopIRKeywords.Instructions.Were}_{this.OperandName(operand)}_{widenedType.ToString().ToLowerInvariant()}";
+        string temporaryVariableName = $"_{UtopIRKeywords.Instructions.Were}_{this.OperandName(operand)}_{targetType.ToString().ToLowerInvariant()}";
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
-        instructions.Add(new WereInstruction(temporaryVariable, operand, widenedType));
-        declaredTypes[temporaryVariableName] = widenedType;
+        instructions.Add(new WereInstruction(temporaryVariable, operand, targetType));
+        declaredTypes[temporaryVariableName] = targetType;
         return new VariableOperand(temporaryVariable);
     }
+
+    /// <summary>
+    /// Determines whether the given <see cref="UtopIRType"/> is one of the integer types.
+    /// </summary>
+    /// <param name="type">The type to test.</param>
+    /// <returns><c>true</c> if <paramref name="type"/> is an integer type, otherwise <c>false</c>.</returns>
+    private bool IsIntegerType(UtopIRType type) =>
+        type is UtopIRType.Chancellor
+            or UtopIRType.Peer
+            or UtopIRType.Pirate
+            or UtopIRType.SausageRoll
+            or UtopIRType.StandingChancellor
+            or UtopIRType.StandingPeer
+            or UtopIRType.StandingPirate
+            or UtopIRType.StandingSausageRoll;
 
     /// <summary>
     /// Returns a short name string for a <see cref="UtopIROperand"/>, used when constructing

@@ -167,7 +167,11 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * It then matches on zero or more body statements.
 ///         * A <c>THAT WILL DO.</c> break is parsed as a <c>Break</c> statement within the body rather than as a separate construct.
 /// * It then tries to match on an optional <c>FAILING ALL OF THE ABOVE,</c> default block, back-tracking if not matched, followed by zero or more statements.
-/// 
+///
+/// Each case literal boxed value comes from <see cref="Lexer.BoxIntegerLiteralValue(long)"/> for integer
+/// literals so it always has the same boxed CLR type, <c>int</c> or <c>long</c> depending on magnitude,
+/// as the value being switched on, allowing case matching to compare them correctly.
+///
 /// Please see the **Switch** section below for an example.
 /// </para>
 /// <para>
@@ -473,6 +477,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * It then matches the <c>LITTLE LIST OF</c> keyword.
 ///     * This does not match <c>A LITTLE LIST OF</c>, because the <c>A</c> was already consumed with <c>AS A</c> above.
 /// * It optionally matches an integer size literal, back-tracking if absent.
+///     * Since <see cref="Lexer.IntegerLiteral"/> returns a <c>long</c>, the parsed size is narrowed to <c>int?</c> via a <c>checked</c> cast: an
+///     out-of-range size (larger than <see cref="int.MaxValue"/>) fails this parser alternative rather than silently wrapping, which is equivalent
+///     to no size being given.
 /// * It then matches a scalar type keyword using <see cref="ExpressionParser.TypeKeyword"/>.
 /// * Finally it tries to match the optional <c>BEING ... IF YOU PLEASE.</c> initialiser clause via the <c>ArrayInitialiser</c> parser.
 /// </para>
@@ -612,7 +619,7 @@ public static class StatementParser
              .Try()))
              .OptionalOrDefault(null!)
          from littleListOfKeyword in Ws(Lexer.Keyword("LITTLE LIST OF"))
-         from sizeValue in Ws(Lexer.IntegerLiteral).Select(value => (int?)value)
+         from sizeValue in Ws(Lexer.IntegerLiteral).Select(value => checked((int?)value))
             .Try()
             .OptionalOrDefault(null)
          from elementType in Ws(ExpressionParser.TypeKeyword)
@@ -789,7 +796,7 @@ public static class StatementParser
                 Lexer.NullLiteral.Select(value => (object?)value)
                     .Or(Lexer.BooleanLiteral.Select(value => (object?)value))
                     .Or(Lexer.FloatLiteral.Select(value => (object?)value))
-                    .Or(Lexer.IntegerLiteral.Select(value => (object?)value))
+                    .Or(Lexer.IntegerLiteral.Select(value => (object?)Lexer.BoxIntegerLiteralValue(value)))
                     .Or(Lexer.StringLiteral.Select(value => (object?)value)))
             from caseBody in WsMany(Parse.Ref(() => Statement!))
             select new SwitchCase(literalValue, [.. caseBody])
