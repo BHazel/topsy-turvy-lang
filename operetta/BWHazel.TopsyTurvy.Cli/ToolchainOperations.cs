@@ -5,6 +5,7 @@ using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Parser;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 using TopsyParseResult = BWHazel.TopsyTurvy.Parser.ParseResult;
 
@@ -38,8 +39,9 @@ public static class ToolchainOperations
     /// </summary>
     /// <param name="filename">The filename to compile.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="formatter">The formatter used to name temporary virtual registers when transforming Topsy Turvy source; unused for <c>.utopir</c> input, which has no transform step.</param>
     /// <returns>The UtopIR programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
-    public static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe)
+    public static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe, ITemporaryVariableNameFormatter formatter)
     {
         if (filename.EndsWith(FileManager.UtopirFileExtension, StringComparison.OrdinalIgnoreCase))
         {
@@ -67,7 +69,7 @@ public static class ToolchainOperations
         ProgramNode? program = ParseAndCheck(filename, tiptoe);
         return program is null
             ? null
-            : new TopsyTurvyToUtopIRTransformer().Transform(program);
+            : new TopsyTurvyToUtopIRTransformer(formatter).Transform(program);
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 
@@ -13,39 +14,45 @@ namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 /// </summary>
 /// <remarks>
 /// ### Command-Line Configuration
-/// _None_
+/// <c>varFormat</c>: Specifies how temporary variables are named during transformation and displayed in emitted CIL.
+/// * <c>verbose</c>: Descriptive variable names comprising instruction and operand information; implemented by <see cref="InstructionDetailVariableFormatter"/>.
+/// * <c>numeric</c> (default). Short incrementing integer variable names; implemented by <see cref="IncrementingIntVariableFormatter"/>.
 /// 
+/// Ignored for <c>.utopir</c> input, which has no transformation step.
+///
 /// ### Additional Configuration
 /// A <see cref="CilEmitOptions"/> instance is populated directly from the dedicated <c>--output</c> flag.
 /// </remarks>
-public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilEmitOptions>
+public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTargetOptions>
 {
     /// <inheritdoc/>
     public IReadOnlyCollection<string> GetAllowedExtensions() => [FileManager.TopsyTurvyFileExtension, FileManager.UtopirFileExtension];
 
     /// <inheritdoc/>
-    public CilEmitOptions Apply(CilEmitOptions baseOptions, IReadOnlyDictionary<string, string> config, bool tiptoe)
+    public CilTargetOptions Apply(CilTargetOptions baseOptions, IReadOnlyDictionary<string, string> config, bool tiptoe)
     {
-        if (config.Count > 0)
+        VariableNameFormat format = VariableFormatConfig.Resolve(config, tiptoe, "The .NET CIL emitter/target", baseOptions.Format);
+        return baseOptions with
         {
-            string keys = string.Join(", ", config.Keys);
-            PanelHelper.ReportUserWarning(tiptoe, $"The .NET CIL emitter/target does not use any --config keys yet; ignoring: {keys}.");
-        }
-
-        return baseOptions;
+            Format = format
+        };
     }
 
     /// <inheritdoc/>
-    public int Emit(string filename, CilEmitOptions options, bool tiptoe)
+    public int Emit(string filename, CilTargetOptions options, bool tiptoe)
     {
-        UtopIRProgram? program = ToolchainOperations.GetUtopIrProgram(filename, tiptoe);
+        VariableFormatConfig.WarnIfIgnoredForUtopIrInput(filename, options.Format, tiptoe);
+
+        ITemporaryVariableNameFormatter formatter = VariableFormatConfig.CreateFormatter(options.Format);
+        UtopIRProgram? program = ToolchainOperations.GetUtopIrProgram(filename, tiptoe, formatter);
         if (program is null)
         {
             return 1;
         }
 
-        CilEmitResult emitResult = new CilEmitter().Emit(program, options);
-        switch (options.OutputKind)
+        CilEmitOptions emitOptions = options.EmitOptions;
+        CilEmitResult emitResult = new CilEmitter().Emit(program, emitOptions);
+        switch (emitOptions.OutputKind)
         {
             case CilOutputKind.IlSourceOnly:
                 Console.WriteLine(emitResult.IlSource);
@@ -55,7 +62,7 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilEmitOp
                 {
                     PanelHelper.WriteSuccess(
                         "Poured!",
-                        $"[cyan]{options.OutputPath}[/]\nRun it with [lightgreen_1]dotnet {options.OutputPath}[/]");
+                        $"[cyan]{emitOptions.OutputPath}[/]\nRun it with [lightgreen_1]dotnet {emitOptions.OutputPath}[/]");
                 }
 
                 break;
@@ -67,26 +74,26 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilEmitOp
     }
 
     /// <summary>
-    /// Builds the base <see cref="CilEmitOptions"/> for <c>--emit dotnet-cil</c>, before any <c>--config</c> values are applied.
+    /// Builds the base <see cref="CilTargetOptions"/> for <c>--emit dotnet-cil</c>, before any <c>--config</c> values are applied.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <returns>The base options.</returns>
-    public static CilEmitOptions BuildEmitOptions(string filename)
+    public static CilTargetOptions BuildEmitOptions(string filename)
     {
         string assemblyName = Path.GetFileNameWithoutExtension(filename);
-        return new CilEmitOptions(assemblyName, string.Empty, CilOutputKind.IlSourceOnly);
+        return new CilTargetOptions(new CilEmitOptions(assemblyName, string.Empty, CilOutputKind.IlSourceOnly));
     }
 
     /// <summary>
-    /// Builds the base <see cref="CilEmitOptions"/> for <c>--target dotnet</c>, before any <c>--config</c> values are applied.
+    /// Builds the base <see cref="CilTargetOptions"/> for <c>--target dotnet</c>, before any <c>--config</c> values are applied.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <param name="output">The requested output path, or <c>null</c> for the default.</param>
     /// <returns>The base options.</returns>
-    public static CilEmitOptions BuildTargetOptions(string filename, string? output)
+    public static CilTargetOptions BuildTargetOptions(string filename, string? output)
     {
         string outputPath = output ?? Path.ChangeExtension(filename, ".dll");
         string assemblyName = Path.GetFileNameWithoutExtension(outputPath);
-        return new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable);
+        return new CilTargetOptions(new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable));
     }
 }

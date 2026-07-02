@@ -7,6 +7,7 @@ using BWHazel.TopsyTurvy.UtopIR.Analysis;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 namespace BWHazel.TopsyTurvy.UtopIR.E2ETests;
 
@@ -46,7 +47,7 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
         parseResult.Diagnostics.ShouldBeEmpty();
         parseResult.Program.ShouldNotBeNull();
 
-        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(parseResult.Program!);
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
 
         string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
         utopIrSource.ShouldContain("£lhs = welcome peer");

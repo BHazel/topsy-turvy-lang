@@ -2,6 +2,7 @@ using System;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 namespace BWHazel.TopsyTurvy.UtopIR.Tests.Transformer;
 
@@ -10,7 +11,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Tests.Transformer;
 /// </summary>
 public class TopsyTurvyToUtopIRTransformerTests
 {
-    private readonly TopsyTurvyToUtopIRTransformer transformer = new();
+    private readonly TopsyTurvyToUtopIRTransformer transformer = new(new InstructionDetailVariableFormatter());
 
     /// <summary>A zero-origin span used for all synthetic test AST nodes.</summary>
     private static readonly SourceSpan PlaceholderSpan = new(new(0, 0), new(0, 0));

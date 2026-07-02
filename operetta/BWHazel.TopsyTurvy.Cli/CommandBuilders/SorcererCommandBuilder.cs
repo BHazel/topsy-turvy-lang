@@ -165,7 +165,7 @@ public static class SorcererCommandBuilder
             "ast" or "a" or "promptbook" or "b" =>
                 RunResolver(new AstResolver(), filename, new JsonEmitOptions(abridged, chromatic), config, tiptoe),
             "utopir" or "u" =>
-                RunResolver(new UtopIrResolver(), filename, NoOptions.Default, config, tiptoe),
+                RunResolver(new UtopIrResolver(), filename, VariableNameFormat.Numeric, config, tiptoe),
             "utopir-ast" or "s" =>
                 RunResolver(new UtopIrAstResolver(), filename, new JsonEmitOptions(abridged, chromatic), config, tiptoe),
             "dotnet-cil" or "d" =>

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 
@@ -9,7 +10,11 @@ namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 /// </summary>
 /// <remarks>
 /// ### Command-Line Configuration
-/// _None_
+/// <c>varFormat</c>: Specifies how temporary variables are named during transformation and displayed in emitted CIL.
+/// * <c>verbose</c>: Descriptive variable names comprising instruction and operand information; implemented by <see cref="InstructionDetailVariableFormatter"/>.
+/// * <c>numeric</c> (default). Short incrementing integer variable names; implemented by <see cref="IncrementingIntVariableFormatter"/>.
+/// 
+/// Ignored for <c>.utopir</c> input, which has no transformation step.
 /// 
 /// ### Additional Configuration
 /// _None_
@@ -22,18 +27,20 @@ public sealed class UtopIrAstResolver : IEmitterOptionsResolver<JsonEmitOptions>
     /// <inheritdoc/>
     public JsonEmitOptions Apply(JsonEmitOptions baseOptions, IReadOnlyDictionary<string, string> config, bool tiptoe)
     {
-        if (config.Count > 0)
+        VariableNameFormat format = VariableFormatConfig.Resolve(config, tiptoe, "--emit utopir-ast", baseOptions.Format);
+        return baseOptions with
         {
-            PanelHelper.ReportUserWarning(tiptoe, $"--emit utopir-ast does not use any --config keys; ignoring: {string.Join(", ", config.Keys)}.");
-        }
-
-        return baseOptions;
+            Format = format
+        };
     }
 
     /// <inheritdoc/>
     public int Emit(string filename, JsonEmitOptions options, bool tiptoe)
     {
-        UtopIRProgram? utopIrProgram = ToolchainOperations.GetUtopIrProgram(filename, tiptoe);
+        VariableFormatConfig.WarnIfIgnoredForUtopIrInput(filename, options.Format, tiptoe);
+
+        ITemporaryVariableNameFormatter formatter = VariableFormatConfig.CreateFormatter(options.Format);
+        UtopIRProgram? utopIrProgram = ToolchainOperations.GetUtopIrProgram(filename, tiptoe, formatter);
         if (utopIrProgram is null)
         {
             return 1;

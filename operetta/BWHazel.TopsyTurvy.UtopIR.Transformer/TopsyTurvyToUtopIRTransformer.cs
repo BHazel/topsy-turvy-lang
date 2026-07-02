@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
+using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
 
 namespace BWHazel.TopsyTurvy.UtopIR.Transformer;
 
@@ -18,8 +19,8 @@ namespace BWHazel.TopsyTurvy.UtopIR.Transformer;
 /// <para>
 /// Nested expressions such as <c>SUM OF PRODUCT OF a AND b AND c</c> are flattened into
 /// a sequence of arithmetic instructions using auto-generated temporary virtual registers.
-/// Temporary names follow the pattern <c>_&lt;mnemonic&gt;_&lt;op1&gt;_&lt;op2&gt;</c>,
-/// e.g. <c>_prod_a_b</c>, <c>_sum__prod_a_b_c</c>.
+/// Naming is delegated to an <see cref="ITemporaryVariableNameFormatter"/>, supplied via
+/// the constructor, by default an <see cref="IncrementingIntVariableFormatter"/>.
 /// </para>
 /// <para>
 /// ## Widening
@@ -45,8 +46,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Transformer;
 /// its literal value) requires a full symbol-table pass and is deferred.
 /// </para>
 /// </remarks>
-public sealed class TopsyTurvyToUtopIRTransformer
+/// <param name="formatter">The formatter used to name temporary virtual registers, or <c>null</c> to use a fresh <see cref="IncrementingIntVariableFormatter"/>.
+/// </param>
+public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatter? formatter = null)
 {
+    private readonly ITemporaryVariableNameFormatter formatter = formatter ?? new IncrementingIntVariableFormatter();
+
     /// <summary>
     /// Defines the order of numeric <see cref="UtopIRType"/> variants for widening conversions
     /// where index 0 is widest, mirroring <c>TypeCheckVisitor.NumericWideningOrder</c>.
@@ -245,7 +250,7 @@ public sealed class TopsyTurvyToUtopIRTransformer
         operand1 = this.CastOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
         operand2 = this.CastOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
 
-        string temporaryVariableName = $"_{mnemonic}_{this.OperandName(operand1)}_{this.OperandName(operand2)}";
+        string temporaryVariableName = this.formatter.CreateName(mnemonic, this.OperandName(operand1), this.OperandName(operand2));
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
         instructions.Add(new ArithmeticInstruction(operation, temporaryVariable, operand1, operand2));
         declaredTypes[temporaryVariableName] = widenedType;
@@ -266,7 +271,7 @@ public sealed class TopsyTurvyToUtopIRTransformer
         UtopIROperand value = this.TransformExpression(cast.Expression, instructions, declaredTypes);
         UtopIRType targetType = this.MapType(cast.NewType);
 
-        string temporaryVariableName = $"_{UtopIRKeywords.Instructions.Were}_{this.OperandName(value)}_{targetType.ToString().ToLowerInvariant()}";
+        string temporaryVariableName = this.formatter.CreateName(UtopIRKeywords.Instructions.Were, this.OperandName(value), targetType.ToString().ToLowerInvariant());
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
         instructions.Add(new WereInstruction(temporaryVariable, value, targetType));
         declaredTypes[temporaryVariableName] = targetType;
@@ -290,7 +295,7 @@ public sealed class TopsyTurvyToUtopIRTransformer
             return operand;
         }
 
-        string temporaryVariableName = $"_{UtopIRKeywords.Instructions.Were}_{this.OperandName(operand)}_{targetType.ToString().ToLowerInvariant()}";
+        string temporaryVariableName = this.formatter.CreateName(UtopIRKeywords.Instructions.Were, this.OperandName(operand), targetType.ToString().ToLowerInvariant());
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
         instructions.Add(new WereInstruction(temporaryVariable, operand, targetType));
         declaredTypes[temporaryVariableName] = targetType;

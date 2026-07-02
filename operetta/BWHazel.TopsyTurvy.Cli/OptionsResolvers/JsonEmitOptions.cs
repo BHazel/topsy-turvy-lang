@@ -5,9 +5,10 @@ namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 /// </summary>
 /// <param name="Abridged">A value indicating whether to compact the JSON output.</param>
 /// <param name="Chromatic">A value indicating whether to syntax-highlight the JSON output.</param>
+/// <param name="Format">The temporary variable naming scheme to use when transforming Topsy Turvy source.</param>
 /// <remarks>
-/// These values come from the dedicated <c>--abridged</c> and <c>--chromatic</c> command-line flags, not from
-/// <c>--config</c>.  A resolver using this type still rejects any <c>--config</c> key via
-/// <see cref="IEmitterOptionsResolver{TOptions}.Apply"/>, the same as a resolver using <see cref="NoOptions"/>.
+/// The <paramref name="Abridged"/> and <paramref name="Chromatic"/> parameters come from the dedicated <c>--abridged</c>
+/// and <c>--chromatic</c> command-line flags, not from <c>--config</c>.  The <paramref name="Format"/> parameter is
+/// resolved from <c>--config varFormat</c> and handled by relevant resolvers handling UtopIR code.
 /// </remarks>
-public sealed record JsonEmitOptions(bool Abridged, bool Chromatic);
+public sealed record JsonEmitOptions(bool Abridged, bool Chromatic, VariableNameFormat Format = VariableNameFormat.Numeric);

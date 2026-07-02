@@ -351,4 +351,60 @@ public sealed class SorcererCommandTests(CliFixture fixture)
         exitCode.ShouldBe(0);
         stdout.ShouldContain("HARK!");
     }
+
+    /// <summary>
+    /// Tests that <c>--config varFormat:numeric</c> (the default) produces incrementing temporary variable names.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_VarFormatNumeric_ProducesIncrementingTempNames()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("sorcerer prog.topsy --emit utopir --config varFormat:numeric --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("£_0");
+    }
+
+    /// <summary>
+    /// Tests that <c>--config varFormat:verbose</c> produces descriptive temporary variable names.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_VarFormatVerbose_ProducesDescriptiveTempNames()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("sorcerer prog.topsy --emit utopir --config varFormat:verbose --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("£_sum_10_3");
+    }
+
+    /// <summary>
+    /// Tests that an invalid <c>varFormat</c> value is rejected as a real error.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_VarFormatInvalidValue_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.topsy --emit utopir --config varFormat:bogus --tiptoe");
+
+        exitCode.ShouldBe(1);
+        stderr.ShouldContain("varFormat");
+    }
+
+    /// <summary>
+    /// Tests that <c>varFormat</c> is reported as ignored, but does not fail the operation, for <c>.utopir</c> input.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_VarFormatVerboseWithUtopIrInput_WarnsButStillSucceeds()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), ValidUtopIrSource);
+
+        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.utopir --emit utopir-ast --config varFormat:verbose --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stderr.ShouldContain("ignored for .utopir input");
+    }
 }

@@ -19,6 +19,17 @@ public class DotNetCilOptionsResolverTests
         find £result
         """;
 
+    private const string SampleTopsyTurvySource =
+        """
+        HARK! "Test"
+        PRINCIPALS
+          PRAY WELCOME result AS A PEER
+        THE CURTAIN RISES.
+        result IS APPOINTED SUM OF 10 AND 3
+        AND SO I FIND result
+        FINALE.
+        """;
+
     /// <summary>
     /// Tests that <see cref="DotNetCilOptionsResolver.GetAllowedExtensions"/> and the default <see cref="IEmitterOptionsResolver{TOptions}.CanEmit"/> implementation accept both <c>.topsy</c> and <c>.utopir</c> files.
     /// </summary>
@@ -28,7 +39,7 @@ public class DotNetCilOptionsResolverTests
     [InlineData("prog.txt", false)]
     public void CanEmit_WithVariousExtensions_ReturnsExpectedResult(string filename, bool expectedResult)
     {
-        IEmitterOptionsResolver<CilEmitOptions> resolver = new DotNetCilOptionsResolver();
+        IEmitterOptionsResolver<CilTargetOptions> resolver = new DotNetCilOptionsResolver();
 
         resolver.CanEmit(filename).ShouldBe(expectedResult);
     }
@@ -40,21 +51,52 @@ public class DotNetCilOptionsResolverTests
     public void Apply_WithEmptyConfig_ReturnsBaseOptionsUnchanged()
     {
         DotNetCilOptionsResolver resolver = new();
-        CilEmitOptions baseOptions = new("prog", "prog.dll", CilOutputKind.Executable);
+        CilTargetOptions baseOptions = new(new CilEmitOptions("prog", "prog.dll", CilOutputKind.Executable));
 
-        CilEmitOptions result = resolver.Apply(baseOptions, new Dictionary<string, string>(), tiptoe: true);
+        CilTargetOptions result = resolver.Apply(baseOptions, new Dictionary<string, string>(), tiptoe: true);
 
         result.ShouldBe(baseOptions);
     }
 
     /// <summary>
-    /// Tests that <see cref="DotNetCilOptionsResolver.Apply"/> warns and returns the base options unchanged when any <c>--config</c> value is given, rather than throwing.
+    /// Tests that <see cref="DotNetCilOptionsResolver.Apply"/> resolves a valid <c>varFormat</c> value.
     /// </summary>
-    [Fact]
-    public void Apply_WithAnyConfigKey_WarnsAndReturnsBaseOptionsUnchanged()
+    [Theory]
+    [InlineData("numeric", VariableNameFormat.Numeric)]
+    [InlineData("verbose", VariableNameFormat.Verbose)]
+    public void Apply_WithValidVarFormat_ReturnsResolvedFormat(string value, VariableNameFormat expected)
     {
         DotNetCilOptionsResolver resolver = new();
-        CilEmitOptions baseOptions = new("prog", "prog.dll", CilOutputKind.Executable);
+        CilTargetOptions baseOptions = new(new CilEmitOptions("prog", "prog.dll", CilOutputKind.Executable));
+        Dictionary<string, string> config = new() { ["varFormat"] = value };
+
+        CilTargetOptions result = resolver.Apply(baseOptions, config, tiptoe: true);
+
+        result.Format.ShouldBe(expected);
+        result.EmitOptions.ShouldBe(baseOptions.EmitOptions);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DotNetCilOptionsResolver.Apply"/> throws <see cref="ToolchainConfigException"/> for an invalid <c>varFormat</c> value.
+    /// </summary>
+    [Fact]
+    public void Apply_WithInvalidVarFormatValue_ThrowsToolchainConfigException()
+    {
+        DotNetCilOptionsResolver resolver = new();
+        CilTargetOptions baseOptions = new(new CilEmitOptions("prog", "prog.dll", CilOutputKind.Executable));
+        Dictionary<string, string> config = new() { ["varFormat"] = "bogus" };
+
+        Should.Throw<ToolchainConfigException>(() => resolver.Apply(baseOptions, config, tiptoe: true));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DotNetCilOptionsResolver.Apply"/> warns and returns the base options unchanged when an unrecognised <c>--config</c> key is given, rather than throwing.
+    /// </summary>
+    [Fact]
+    public void Apply_WithUnrecognisedConfigKey_WarnsAndReturnsBaseOptionsUnchanged()
+    {
+        DotNetCilOptionsResolver resolver = new();
+        CilTargetOptions baseOptions = new(new CilEmitOptions("prog", "prog.dll", CilOutputKind.Executable));
         Dictionary<string, string> config = new()
         {
             ["optimise"] = "true"
@@ -63,7 +105,7 @@ public class DotNetCilOptionsResolverTests
         TextWriter originalError = Console.Error;
         StringWriter capturedError = new();
         Console.SetError(capturedError);
-        CilEmitOptions result;
+        CilTargetOptions result;
         try
         {
             result = resolver.Apply(baseOptions, config, tiptoe: true);
@@ -87,7 +129,7 @@ public class DotNetCilOptionsResolverTests
         File.WriteAllText(sourcePath, SampleUtopIrSource);
 
         DotNetCilOptionsResolver resolver = new();
-        CilEmitOptions options = new("prog", string.Empty, CilOutputKind.IlSourceOnly);
+        CilTargetOptions options = new(new CilEmitOptions("prog", string.Empty, CilOutputKind.IlSourceOnly));
 
         TextWriter originalOut = Console.Out;
         StringWriter capturedOut = new();
@@ -117,7 +159,7 @@ public class DotNetCilOptionsResolverTests
 
         string outputPath = Path.Combine(Path.GetTempPath(), $"DotNetCilOptionsResolverTests_{Guid.NewGuid():N}.dll");
         DotNetCilOptionsResolver resolver = new();
-        CilEmitOptions options = new("prog", outputPath, CilOutputKind.Executable);
+        CilTargetOptions options = new(new CilEmitOptions("prog", outputPath, CilOutputKind.Executable));
 
         try
         {
@@ -133,6 +175,35 @@ public class DotNetCilOptionsResolverTests
             {
                 File.Delete(outputPath);
             }
+        }
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DotNetCilOptionsResolver.Emit"/> uses the requested <see cref="VariableNameFormat"/> when transforming Topsy Turvy source.
+    /// </summary>
+    [Fact]
+    public void Emit_WithVerboseFormatAndTopsyTurvySource_UsesDescriptiveTempNames()
+    {
+        string sourcePath = Path.Combine(Path.GetTempPath(), $"DotNetCilOptionsResolverTests_{Guid.NewGuid():N}.topsy");
+        File.WriteAllText(sourcePath, SampleTopsyTurvySource);
+
+        DotNetCilOptionsResolver resolver = new();
+        CilTargetOptions options = new(new CilEmitOptions("prog", string.Empty, CilOutputKind.IlSourceOnly), VariableNameFormat.Verbose);
+
+        TextWriter originalOut = Console.Out;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        try
+        {
+            int exitCode = resolver.Emit(sourcePath, options, tiptoe: true);
+
+            exitCode.ShouldBe(0);
+            capturedOut.ToString().ShouldContain("'£_sum_10_3'");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            File.Delete(sourcePath);
         }
     }
 }
