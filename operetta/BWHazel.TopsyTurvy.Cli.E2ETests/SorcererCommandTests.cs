@@ -26,6 +26,13 @@ public sealed class SorcererCommandTests(CliFixture fixture)
         FINALE.
         """;
 
+    private const string ValidUtopIrSource =
+        """
+        £result = welcome peer
+        £result = appoint 13
+        find £result
+        """;
+
     /// <summary>
     /// Tests that <c>sorcerer</c> returns exit code 1 when the specified file does not exist.
     /// </summary>
@@ -261,45 +268,60 @@ public sealed class SorcererCommandTests(CliFixture fixture)
     }
 
     /// <summary>
-    /// Tests that a <c>.utopir</c> file provided to <c>--emit utopir-ast</c> reports "not yet supported" rather than attempting to parse it.
+    /// Tests that a <c>.utopir</c> file provided to <c>--emit utopir-ast</c> is parsed and its AST emitted as JSON.
     /// </summary>
     [Fact]
-    public async Task Sorcerer_UtopIrFileForUtopIrAst_ReturnsNotYetSupportedError()
+    public async Task Sorcerer_UtopIrFileForUtopIrAst_WritesJsonToStdout()
     {
-        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), "£x = welcome peer");
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), ValidUtopIrSource);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("sorcerer prog.utopir --emit utopir-ast --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("WelcomeInstruction");
+    }
+
+    /// <summary>
+    /// Tests that a <c>.utopir</c> file provided to <c>--emit dotnet-cil</c> is parsed and its CIL disassembly emitted.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_UtopIrFileForDotNetCil_WritesIlTextToStdout()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), ValidUtopIrSource);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync("sorcerer prog.utopir --emit dotnet-cil --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("ldc.i4");
+        stdout.ShouldContain("ret");
+    }
+
+    /// <summary>
+    /// Tests that a <c>.utopir</c> file provided to <c>--target dotnet</c> is parsed and compiled to a runnable assembly.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_UtopIrFileForTargetDotNet_BuildsDotNetExecutable()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), ValidUtopIrSource);
+
+        (int exitCode, string _, string _) = await this.RunAsync("sorcerer prog.utopir --target dotnet --tiptoe");
+
+        exitCode.ShouldBe(0);
+        File.Exists(Path.Combine(this.WorkingDirectory, "prog.dll")).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that a malformed <c>.utopir</c> file reports a syntax error diagnostic rather than crashing.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_MalformedUtopIrFile_ReportsSyntaxError()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), "£x = bogus 5");
 
         (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.utopir --emit utopir-ast --tiptoe");
 
         exitCode.ShouldBe(1);
-        stderr.ShouldContain("not yet supported");
-    }
-
-    /// <summary>
-    /// Tests that a <c>.utopir</c> file provided to <c>--emit dotnet-cil</c> reports "not yet supported".
-    /// </summary>
-    [Fact]
-    public async Task Sorcerer_UtopIrFileForDotNetCil_ReturnsNotYetSupportedError()
-    {
-        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), "£x = welcome peer");
-
-        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.utopir --emit dotnet-cil --tiptoe");
-
-        exitCode.ShouldBe(1);
-        stderr.ShouldContain("not yet supported");
-    }
-
-    /// <summary>
-    /// Tests that a <c>.utopir</c> file provided to <c>--target dotnet</c> reports "not yet supported".
-    /// </summary>
-    [Fact]
-    public async Task Sorcerer_UtopIrFileForTargetDotNet_ReturnsNotYetSupportedError()
-    {
-        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.utopir"), "£x = welcome peer");
-
-        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.utopir --target dotnet --tiptoe");
-
-        exitCode.ShouldBe(1);
-        stderr.ShouldContain("not yet supported");
+        stderr.ShouldNotBeEmpty();
     }
 
     /// <summary>

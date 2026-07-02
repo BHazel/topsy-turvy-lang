@@ -4,15 +4,17 @@
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
 (*----------------------------------------------------------------------------*)
-Identifier      = [a-zA-Z], { [a-zA-Z0-9_] } ;
-(* UtopIR identifiers begin with a letter, followed by any mix of letters, digits,
-   and underscores.  Hyphens are excluded (cf. Topsy Turvy identifiers) because
-   they would be ambiguous with arithmetic notation. *)
+Identifier      = ( "_" | [a-zA-Z] ), { [a-zA-Z0-9_-] } ;
+(* UtopIR identifiers begin with a letter or underscore, followed by any mix of
+   letters, digits, hyphens, and underscores.  Unlike Topsy Turvy identifiers,
+   hyphens are unambiguous here because UtopIR arithmetic uses keyword mnemonics
+   (sum, diff, prod, ...) rather than symbolic operators. *)
 
 Variable        = "£", Identifier ;
 (* The £ sigil is a dedicated prefix and is not considered part of Identifier.
-   Temporary registers produced by the transformer begin with £_
-   (e.g. £_sum_Peer1_Peer2). *)
+   By convention (not a grammar requirement), temporary registers produced by
+   the transformer begin with £_ (e.g. £_sum_Peer1_Peer2) to visually
+   distinguish them from user-declared variables. *)
 
 IntegerLiteral  = [ "-" ], Digit, { Digit } ;
 FloatLiteral    = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;

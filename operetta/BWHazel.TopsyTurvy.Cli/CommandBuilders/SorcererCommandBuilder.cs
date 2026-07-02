@@ -9,6 +9,7 @@ using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Analysis;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
+using BWHazel.TopsyTurvy.UtopIR.Parser;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
 
 using TopsyParseResult = BWHazel.TopsyTurvy.Parser.ParseResult;
@@ -20,10 +21,9 @@ namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 /// </summary>
 public static class SorcererCommandBuilder
 {
-    /// <summary>
-    /// The UtopIR source file extension.
-    /// </summary>
     private const string UtopIrFileExtension = ".utopir";
+    private const string CompilingTitle = "Pouring...";
+    private const string CompiledTitle = "Poured!";
 
     /// <summary>
     /// Builds and configures the <c>sorcerer</c> command.
@@ -51,6 +51,8 @@ public static class SorcererCommandBuilder
         };
 
         emitOption.Aliases.Add("-e");
+        emitOption.Aliases.Add("--pour");
+        emitOption.Aliases.Add("-p");
 
         Option<string> targetOption = new("--target")
         {
@@ -59,6 +61,8 @@ public static class SorcererCommandBuilder
         };
 
         targetOption.Aliases.Add("-t");
+        targetOption.Aliases.Add("--philtre");
+        targetOption.Aliases.Add("-f");
         targetOption.DefaultValueFactory = _ => "dotnet";
 
         Option<string?> outputOption = new("--output")
@@ -206,23 +210,17 @@ public static class SorcererCommandBuilder
     }
 
     /// <summary>
-    /// Validates that the filename has either the Topsy Turvy or UtopIR source
-    /// extension, then shows a "not yet supported" panel for UtopIR source files (no UtopIR
-    /// source parser exists yet) before invoking the specified action for Topsy Turvy files.
+    /// Validates that the filename has either the Topsy Turvy or UtopIR source extension
+    /// before invoking the specified action.
     /// </summary>
     /// <param name="filename">The filename to validate.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <param name="modeDescription">A human-readable description of the requested mode, for the error message.</param>
-    /// <param name="action">The action to invoke for a Topsy Turvy source file.</param>
+    /// <param name="action">The action to invoke for a supported source file.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
     private static int WithValidExtensionAllowingUtopIr(string filename, bool tiptoe, string modeDescription, Func<int> action)
     {
-        if (filename.EndsWith(UtopIrFileExtension, StringComparison.OrdinalIgnoreCase))
-        {
-            return ReportUserError(tiptoe, "UtopIR source files are not yet supported: no UtopIR source parser has been implemented yet.");
-        }
-
-        return WithValidExtension(filename, tiptoe, modeDescription, [FileManager.FileExtension], action);
+        return WithValidExtension(filename, tiptoe, modeDescription, [FileManager.FileExtension, UtopIrFileExtension], action);
     }
 
     /// <summary>
@@ -273,7 +271,7 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
         (bool success, string? errorMessage) = FileManager.TryReadSource(filename, out string source);
@@ -304,7 +302,7 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
         ProgramNode? program = ParseAndCheck(filename, tiptoe);
@@ -336,7 +334,7 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
         ProgramNode? program = ParseAndCheck(filename, tiptoe);
@@ -352,6 +350,44 @@ public static class SorcererCommandBuilder
     }
 
     /// <summary>
+    /// Obtains a <see cref="UtopIRProgram"/> for either a Topsy Turvy or UtopIR source file
+    /// reporting any errors encountered.
+    /// </summary>
+    /// <param name="filename">The filename to compile.</param>
+    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <returns>The UtopIR programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
+    private static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe)
+    {
+        if (filename.EndsWith(UtopIrFileExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            (bool success, string? errorMessage) = FileManager.TryReadSource(filename, out string source);
+            if (!success)
+            {
+                PanelHelper.ReportErrors(ProgramExecutionResult.Failure(errorMessage!), tiptoe);
+                return null;
+            }
+
+            UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
+            if (!parseResult.Success)
+            {
+                foreach (UtopIRDiagnostic diagnostic in parseResult.Diagnostics)
+                {
+                    ReportUserError(tiptoe, $"[{diagnostic.Line}:{diagnostic.Column}] {diagnostic.Message}");
+                }
+
+                return null;
+            }
+
+            return parseResult.Program;
+        }
+
+        ProgramNode? program = ParseAndCheck(filename, tiptoe);
+        return program is null
+            ? null
+            : new TopsyTurvyToUtopIRTransformer().Transform(program);
+    }
+
+    /// <summary>
     /// Emits the UtopIR AST as JSON to STDOUT.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
@@ -363,16 +399,14 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        if (program is null)
+        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
+        if (utopIrProgram is null)
         {
             return 1;
         }
-
-        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(program);
 
         JsonSerializerOptions jsonOptions = new()
         {
@@ -398,16 +432,15 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        if (program is null)
+        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
+        if (utopIrProgram is null)
         {
             return 1;
         }
 
-        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(program);
         string assemblyName = Path.GetFileNameWithoutExtension(filename);
         CilEmitResult emitResult = new CilEmitter().Emit(
             utopIrProgram,
@@ -428,11 +461,11 @@ public static class SorcererCommandBuilder
     {
         if (!tiptoe)
         {
-            PanelHelper.WriteDefault("Conjuring...", $"[cyan]{filename}[/]");
+            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        if (program is null)
+        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
+        if (utopIrProgram is null)
         {
             return 1;
         }
@@ -440,14 +473,13 @@ public static class SorcererCommandBuilder
         string outputPath = output ?? Path.ChangeExtension(filename, ".dll");
         string assemblyName = Path.GetFileNameWithoutExtension(outputPath);
 
-        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(program);
         new CilEmitter().Emit(
             utopIrProgram,
             new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable));
 
         if (!tiptoe)
         {
-            PanelHelper.WriteSuccess("Conjured!", $"[cyan]{outputPath}[/]\nRun it with [lightgreen_1]dotnet {outputPath}[/]");
+            PanelHelper.WriteSuccess(CompiledTitle, $"[cyan]{outputPath}[/]\nRun it with [lightgreen_1]dotnet {outputPath}[/]");
         }
 
         return 0;

@@ -26,6 +26,7 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Transformer\BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Parser\BWHazel.TopsyTurvy.UtopIR.Parser.csproj" />
   </ItemGroup>
 
 </Project>

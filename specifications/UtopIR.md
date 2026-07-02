@@ -43,11 +43,11 @@ UtopIR instructions all take a similar format of `instruction [<operand1>, <oper
 
 ### 3.2. Variables
 
-Variables all start with the `£` character and can have any valid name supported in Topsy Turvy following the `£` character.  All variables in UtopIR should be considered virtual registers.
+Variables all start with the `£` character, followed by the variable name which can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.  All variables in UtopIR should be considered virtual registers.
 
 ### 3.2.2. Temporary Variables
 
-Although not enforced variables starting with `£_` should be considered temporary variables and used in larger statements and expressions comprised of other expressions, for example, multiple arithmetic operations.
+Temporart variables are intended for use in larger statements and experssions comprised of other expressions, for example, multiple arithmetic operations.  While they can be named any valid identifier, a naming convention of starting these variables with `£_` visually distinguishes them from user-declared variables.
 
 As an example, the arithmetic expression `3 + 4 - 5` in Topsy Turvy would be:
 
