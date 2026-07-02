@@ -312,6 +312,7 @@ public sealed class ReplSession
         Panel panel = new(new Markup($"[grey]{escaped}[/]"))
         {
             Expand = true,
+            Border = BoxBorder.Rounded,
             BorderStyle = new(Color.Grey),
             Header = new("In")
         };
@@ -328,6 +329,7 @@ public sealed class ReplSession
         Panel panel = new(new Markup(content))
         {
             Expand = true,
+            Border = BoxBorder.Rounded,
             BorderStyle = new(Color.LightGreen_1),
             Header = new("Out")
         };
@@ -344,6 +346,7 @@ public sealed class ReplSession
             "[cyan]Topsy Turvy Interactive REPL[/]\n" +
             "[dim]Type [bold]:entracte[/] for help or [bold]:exit[/] to quit.[/]"))
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new(Color.Cyan),
             Header = new("Cadenza")
         };

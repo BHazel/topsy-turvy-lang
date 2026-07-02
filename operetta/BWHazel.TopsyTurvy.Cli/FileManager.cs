@@ -15,7 +15,12 @@ public static class FileManager
     /// <summary>
     /// The file extension for Topsy Turvy source files.
     /// </summary>
-    public const string FileExtension = ".topsy";
+    public const string TopsyTurvyFileExtension = ".topsy";
+
+    /// <summary>
+    /// The file extension for UtopIR source files.
+    /// </summary>
+    public const string UtopirFileExtension = ".utopir";
 
     /// <summary>
     /// The default title used for commissioned programmes when no title is provided.
@@ -132,7 +137,7 @@ public static class FileManager
             if (!hollow)
             {
                 string directoryName = fs.Path.GetFileName(project.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                string filename = fs.Path.Combine(project, $"{directoryName}{FileExtension}");
+                string filename = fs.Path.Combine(project, $"{directoryName}{TopsyTurvyFileExtension}");
                 string fileContent = BuildFileContent(title, subtitle);
                 fs.File.WriteAllText(filename, fileContent, Utf8NoBom);
             }

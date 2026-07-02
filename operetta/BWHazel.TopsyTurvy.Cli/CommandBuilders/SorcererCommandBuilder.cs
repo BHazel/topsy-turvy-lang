@@ -1,18 +1,7 @@
-using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
-using System.Text.Json;
-using Spectre.Console;
-using Spectre.Console.Json;
-using BWHazel.TopsyTurvy.Ast;
-using BWHazel.TopsyTurvy.Parser;
-using BWHazel.TopsyTurvy.UtopIR.Ast;
-using BWHazel.TopsyTurvy.UtopIR.Analysis;
-using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
-using BWHazel.TopsyTurvy.UtopIR.Parser;
-using BWHazel.TopsyTurvy.UtopIR.Transformer;
-
-using TopsyParseResult = BWHazel.TopsyTurvy.Parser.ParseResult;
+using BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 
 namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 
@@ -21,9 +10,7 @@ namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 /// </summary>
 public static class SorcererCommandBuilder
 {
-    private const string UtopIrFileExtension = ".utopir";
     private const string CompilingTitle = "Pouring...";
-    private const string CompiledTitle = "Poured!";
 
     /// <summary>
     /// Builds and configures the <c>sorcerer</c> command.
@@ -91,6 +78,16 @@ public static class SorcererCommandBuilder
             Description = "Only prints program output and thus chooses to discard aestheticism."
         };
 
+        Option<string[]> configOption = new("--config")
+        {
+            Description = "A key:value pair passed to the emitter/target to configure its behaviour, " +
+                "e.g. --config optimise:true.  May be given multiple times."
+        };
+
+        configOption.Aliases.Add("-g");
+        configOption.Aliases.Add("--tablet");
+        configOption.Aliases.Add("-l");
+
         sorcererCommand.Arguments.Add(fileArgument);
         sorcererCommand.Options.Add(emitOption);
         sorcererCommand.Options.Add(targetOption);
@@ -98,6 +95,7 @@ public static class SorcererCommandBuilder
         sorcererCommand.Options.Add(abridgedOption);
         sorcererCommand.Options.Add(chromaticOption);
         sorcererCommand.Options.Add(tiptoeOption);
+        sorcererCommand.Options.Add(configOption);
 
         sorcererCommand.SetAction(parseResult =>
             HandleSorcerer(
@@ -107,14 +105,14 @@ public static class SorcererCommandBuilder
                 parseResult.GetValue(outputOption),
                 parseResult.GetValue(abridgedOption),
                 parseResult.GetValue(chromaticOption),
+                parseResult.GetValue(configOption) ?? [],
                 parseResult.GetValue(tiptoeOption)));
 
         return sorcererCommand;
     }
 
     /// <summary>
-    /// Handles the execution of the <c>sorcerer</c> command, dispatching to the requested
-    /// <c>--emit</c> format or <c>--target</c>.
+    /// Handles the execution of the <c>sorcerer</c> command.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <param name="emit">The requested emit format, or <c>null</c> if not given.</param>
@@ -122,384 +120,131 @@ public static class SorcererCommandBuilder
     /// <param name="output">The requested output path for a built target, or <c>null</c> for the default.</param>
     /// <param name="abridged">A value indicating whether to compact JSON output.</param>
     /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
+    /// <param name="configEntries">The raw <c>key:value</c> configuration entries, if any.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <remarks>
+    /// Checks the file exists, parses <c>--config</c>, then dispatches to the requested <c>--emit</c> or <c>--target</c> format.
+    /// </remarks>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleSorcerer(string filename, string? emit, string target, string? output, bool abridged, bool chromatic, bool tiptoe)
+    private static int HandleSorcerer(string filename, string? emit, string target, string? output, bool abridged, bool chromatic, string[] configEntries, bool tiptoe)
     {
-        if (!string.IsNullOrEmpty(emit))
+        if (!File.Exists(filename))
         {
-            return HandleEmit(filename, emit, abridged, chromatic, tiptoe);
+            return PanelHelper.ReportUserError(tiptoe, $"File not found: {filename}");
         }
 
-        return HandleTarget(filename, target, output, tiptoe);
+        Dictionary<string, string>? config = ParseConfig(configEntries, tiptoe);
+        if (config is null)
+        {
+            return 1;
+        }
+
+        if (!string.IsNullOrEmpty(emit))
+        {
+            return HandleEmit(filename, emit, abridged, chromatic, config, tiptoe);
+        }
+
+        return HandleTarget(filename, target, output, config, tiptoe);
     }
 
     /// <summary>
-    /// Handles the <c>--emit</c> pathway, dispatching to the requested format.
+    /// Handles the <c>--emit</c> pathway.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <param name="emit">The requested emit format.</param>
     /// <param name="abridged">A value indicating whether to compact JSON output.</param>
     /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
+    /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleEmit(string filename, string emit, bool abridged, bool chromatic, bool tiptoe)
-    {
-        return emit.ToLowerInvariant() switch
+    private static int HandleEmit(string filename, string emit, bool abridged, bool chromatic, IReadOnlyDictionary<string, string> config, bool tiptoe) =>
+        emit.ToLowerInvariant() switch
         {
             "preprocess" or "p" or "cue" or "c" =>
-                WithValidExtension(filename, tiptoe, "--emit preprocess", [FileManager.FileExtension],
-                    () => EmitPreprocess(filename, tiptoe)),
+                RunResolver(new PreprocessResolver(), filename, NoOptions.Default, config, tiptoe),
             "ast" or "a" or "promptbook" or "b" =>
-                WithValidExtension(filename, tiptoe, "--emit ast", [FileManager.FileExtension],
-                    () => EmitAst(filename, abridged, chromatic, tiptoe)),
+                RunResolver(new AstResolver(), filename, new JsonEmitOptions(abridged, chromatic), config, tiptoe),
             "utopir" or "u" =>
-                WithValidExtension(filename, tiptoe, "--emit utopir", [FileManager.FileExtension],
-                    () => EmitUtopIr(filename, tiptoe)),
+                RunResolver(new UtopIrResolver(), filename, NoOptions.Default, config, tiptoe),
             "utopir-ast" or "s" =>
-                WithValidExtensionAllowingUtopIr(filename, tiptoe, "--emit utopir-ast",
-                    () => EmitUtopIrAst(filename, abridged, chromatic, tiptoe)),
+                RunResolver(new UtopIrAstResolver(), filename, new JsonEmitOptions(abridged, chromatic), config, tiptoe),
             "dotnet-cil" or "d" =>
-                WithValidExtensionAllowingUtopIr(filename, tiptoe, "--emit dotnet-cil",
-                    () => EmitDotNetCil(filename, tiptoe)),
-            _ => ReportUserError(tiptoe, $"Unknown --emit format: '{emit}'.")
+                RunResolver(new DotNetCilOptionsResolver(), filename, DotNetCilOptionsResolver.BuildEmitOptions(filename), config, tiptoe),
+            _ => PanelHelper.ReportUserError(tiptoe, $"Unknown --emit format: '{emit}'.")
         };
-    }
 
     /// <summary>
-    /// Handles the <c>--target</c> pathway, dispatching to the requested target.
+    /// Handles the <c>--target</c> pathway.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <param name="target">The requested target.</param>
     /// <param name="output">The requested output path, or <c>null</c> for the default.</param>
+    /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleTarget(string filename, string target, string? output, bool tiptoe)
-    {
-        return target.ToLowerInvariant() switch
+    private static int HandleTarget(string filename, string target, string? output, IReadOnlyDictionary<string, string> config, bool tiptoe) =>
+        target.ToLowerInvariant() switch
         {
             "dotnet" =>
-                WithValidExtensionAllowingUtopIr(filename, tiptoe, "--target dotnet",
-                    () => TargetDotNet(filename, output, tiptoe)),
-            _ => ReportUserError(tiptoe, $"Unknown --target: '{target}'.")
-        };
-    }
-
-    /// <summary>
-    /// Validates that <paramref name="filename"/> has one of the allowed extensions
-    /// before invoking the specified action.
-    /// </summary>
-    /// <param name="filename">The filename to validate.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <param name="modeDescription">A human-readable description of the requested mode, for the error message.</param>
-    /// <param name="allowedExtensions">The extensions accepted by the requested mode.</param>
-    /// <param name="action">The action to invoke when the extension is valid.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int WithValidExtension(string filename, bool tiptoe, string modeDescription, string[] allowedExtensions, Func<int> action)
-    {
-        foreach (string extension in allowedExtensions)
-        {
-            if (filename.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-            {
-                return action();
-            }
-        }
-
-        string extensionList = string.Join(" or ", allowedExtensions);
-        return ReportUserError(tiptoe, $"Invalid file extension: '{filename}'. Only {extensionList} files are supported for {modeDescription}.");
-    }
-
-    /// <summary>
-    /// Validates that the filename has either the Topsy Turvy or UtopIR source extension
-    /// before invoking the specified action.
-    /// </summary>
-    /// <param name="filename">The filename to validate.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <param name="modeDescription">A human-readable description of the requested mode, for the error message.</param>
-    /// <param name="action">The action to invoke for a supported source file.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int WithValidExtensionAllowingUtopIr(string filename, bool tiptoe, string modeDescription, Func<int> action)
-    {
-        return WithValidExtension(filename, tiptoe, modeDescription, [FileManager.FileExtension, UtopIrFileExtension], action);
-    }
-
-    /// <summary>
-    /// Reports a user error via a panel or, in <c>--tiptoe</c> mode, plain text to STDERR.
-    /// </summary>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <param name="message">The error message.</param>
-    /// <returns><c>1</c>, the failure exit code.</returns>
-    private static int ReportUserError(bool tiptoe, string message)
-    {
-        if (tiptoe)
-        {
-            Console.Error.WriteLine(message);
-        }
-        else
-        {
-            PanelHelper.WriteUserError(message);
-        }
-
-        return 1;
-    }
-
-    /// <summary>
-    /// Parses and type-checks a Topsy Turvy source file, reporting any errors encountered.
-    /// </summary>
-    /// <param name="filename">The filename to parse.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>The parsed programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
-    private static ProgramNode? ParseAndCheck(string filename, bool tiptoe)
-    {
-        (ProgramExecutionResult result, TopsyParseResult? parseData) = ProgramRunner.ParseFile(filename);
-        if (!result.IsSuccess)
-        {
-            PanelHelper.ReportErrors(result, tiptoe);
-            return null;
-        }
-
-        return parseData!.Program;
-    }
-
-    /// <summary>
-    /// Emits the preprocessed Topsy Turvy source text to STDOUT.
-    /// </summary>
-    /// <param name="filename">The filename of the file to compile.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int EmitPreprocess(string filename, bool tiptoe)
-    {
-        if (!tiptoe)
-        {
-            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
-        }
-
-        (bool success, string? errorMessage) = FileManager.TryReadSource(filename, out string source);
-        if (!success)
-        {
-            PanelHelper.ReportErrors(ProgramExecutionResult.Failure(errorMessage!), tiptoe);
-            return 1;
-        }
-
-        PreProcessorPipeline pipeline = new();
-        pipeline.AddProcessor(new CommentsPreProcessor());
-        pipeline.AddProcessor(new VictorianFlourishPreProcessor());
-        PreProcessResult result = pipeline.Execute(source);
-        Console.Write(result.TransformedText);
-
-        return 0;
-    }
-
-    /// <summary>
-    /// Emits the Topsy Turvy AST as JSON to STDOUT.
-    /// </summary>
-    /// <param name="filename">The filename of the file to compile.</param>
-    /// <param name="abridged">A value indicating whether to compact JSON output.</param>
-    /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int EmitAst(string filename, bool abridged, bool chromatic, bool tiptoe)
-    {
-        if (!tiptoe)
-        {
-            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
-        }
-
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        if (program is null)
-        {
-            return 1;
-        }
-
-        JsonSerializerOptions jsonOptions = new()
-        {
-            WriteIndented = !abridged,
-            Converters =
-            {
-                new NodeJsonConverter()
-            }
+                RunResolver(new DotNetCilOptionsResolver(), filename, DotNetCilOptionsResolver.BuildTargetOptions(filename, output), config, tiptoe),
+            _ => PanelHelper.ReportUserError(tiptoe, $"Unknown --target: '{target}'.")
         };
 
-        WriteJson(JsonSerializer.Serialize(program, jsonOptions), chromatic);
-        return 0;
-    }
-
     /// <summary>
-    /// Emits the UtopIR source text (transformed from the Topsy Turvy source) to STDOUT.
+    /// Runs the given emit or target resolver.
     /// </summary>
+    /// <typeparam name="TOptions">The resolver options type.</typeparam>
+    /// <param name="resolver">The resolver to run.</param>
     /// <param name="filename">The filename of the file to compile.</param>
+    /// <param name="baseOptions">The options already determined from CLI arguments, before any configuration values are applied.</param>
+    /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int EmitUtopIr(string filename, bool tiptoe)
+    private static int RunResolver<TOptions>(IEmitterOptionsResolver<TOptions> resolver, string filename, TOptions baseOptions, IReadOnlyDictionary<string, string> config, bool tiptoe)
     {
+        if (!resolver.CanEmit(filename))
+        {
+            string extensionList = string.Join(" or ", resolver.GetAllowedExtensions());
+            return PanelHelper.ReportUserError(tiptoe, $"Invalid file extension: '{filename}'. Only {extensionList} files are supported.");
+        }
+
         if (!tiptoe)
         {
             PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        if (program is null)
+        try
         {
-            return 1;
+            TOptions options = resolver.Apply(baseOptions, config, tiptoe);
+            return resolver.Emit(filename, options, tiptoe);
         }
-
-        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer().Transform(program);
-        Console.Write(new UtopIRCodeGenerator().Generate(utopIrProgram));
-
-        return 0;
+        catch (ToolchainConfigException exception)
+        {
+            return PanelHelper.ReportUserError(tiptoe, exception.Message);
+        }
     }
 
     /// <summary>
-    /// Obtains a <see cref="UtopIRProgram"/> for either a Topsy Turvy or UtopIR source file
-    /// reporting any errors encountered.
+    /// Parses configuration entries into a dictionary, reporting a user error for any entry that is not in the <c>key:value</c> form.
     /// </summary>
-    /// <param name="filename">The filename to compile.</param>
+    /// <param name="rawEntries">The raw <c>key:value</c> entries.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>The UtopIR programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
-    private static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe)
+    /// <returns>The parsed configuration, or <c>null</c> if a malformed entry was reported.</returns>
+    private static Dictionary<string, string>? ParseConfig(string[] rawEntries, bool tiptoe)
     {
-        if (filename.EndsWith(UtopIrFileExtension, StringComparison.OrdinalIgnoreCase))
+        Dictionary<string, string> config = [];
+        foreach (string entry in rawEntries)
         {
-            (bool success, string? errorMessage) = FileManager.TryReadSource(filename, out string source);
-            if (!success)
+            int separatorIndex = entry.IndexOf(':');
+            if (separatorIndex <= 0)
             {
-                PanelHelper.ReportErrors(ProgramExecutionResult.Failure(errorMessage!), tiptoe);
+                PanelHelper.ReportUserError(tiptoe, $"Invalid --config entry: '{entry}'. Expected the form key:value.");
                 return null;
             }
 
-            UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
-            if (!parseResult.Success)
-            {
-                foreach (UtopIRDiagnostic diagnostic in parseResult.Diagnostics)
-                {
-                    ReportUserError(tiptoe, $"[{diagnostic.Line}:{diagnostic.Column}] {diagnostic.Message}");
-                }
-
-                return null;
-            }
-
-            return parseResult.Program;
+            config[entry[..separatorIndex]] = entry[(separatorIndex + 1)..];
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
-        return program is null
-            ? null
-            : new TopsyTurvyToUtopIRTransformer().Transform(program);
-    }
-
-    /// <summary>
-    /// Emits the UtopIR AST as JSON to STDOUT.
-    /// </summary>
-    /// <param name="filename">The filename of the file to compile.</param>
-    /// <param name="abridged">A value indicating whether to compact JSON output.</param>
-    /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int EmitUtopIrAst(string filename, bool abridged, bool chromatic, bool tiptoe)
-    {
-        if (!tiptoe)
-        {
-            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
-        }
-
-        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
-        if (utopIrProgram is null)
-        {
-            return 1;
-        }
-
-        JsonSerializerOptions jsonOptions = new()
-        {
-            WriteIndented = !abridged,
-            Converters =
-            {
-                new UtopIRInstructionJsonConverter(),
-                new UtopIROperandJsonConverter()
-            }
-        };
-
-        WriteJson(JsonSerializer.Serialize(utopIrProgram, jsonOptions), chromatic);
-        return 0;
-    }
-
-    /// <summary>
-    /// Emits the .NET CIL disassembly text to STDOUT.
-    /// </summary>
-    /// <param name="filename">The filename of the file to compile.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int EmitDotNetCil(string filename, bool tiptoe)
-    {
-        if (!tiptoe)
-        {
-            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
-        }
-
-        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
-        if (utopIrProgram is null)
-        {
-            return 1;
-        }
-
-        string assemblyName = Path.GetFileNameWithoutExtension(filename);
-        CilEmitResult emitResult = new CilEmitter().Emit(
-            utopIrProgram,
-            new CilEmitOptions(assemblyName, string.Empty, CilOutputKind.IlSourceOnly));
-
-        Console.WriteLine(emitResult.IlSource);
-        return 0;
-    }
-
-    /// <summary>
-    /// Compiles the Topsy Turvy programme to a runnable .NET executable assembly.
-    /// </summary>
-    /// <param name="filename">The filename of the file to compile.</param>
-    /// <param name="output">The output filename for the compiled assembly.</param>
-    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
-    /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int TargetDotNet(string filename, string? output, bool tiptoe)
-    {
-        if (!tiptoe)
-        {
-            PanelHelper.WriteDefault(CompilingTitle, $"[cyan]{filename}[/]");
-        }
-
-        UtopIRProgram? utopIrProgram = GetUtopIrProgram(filename, tiptoe);
-        if (utopIrProgram is null)
-        {
-            return 1;
-        }
-
-        string outputPath = output ?? Path.ChangeExtension(filename, ".dll");
-        string assemblyName = Path.GetFileNameWithoutExtension(outputPath);
-
-        new CilEmitter().Emit(
-            utopIrProgram,
-            new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable));
-
-        if (!tiptoe)
-        {
-            PanelHelper.WriteSuccess(CompiledTitle, $"[cyan]{outputPath}[/]\nRun it with [lightgreen_1]dotnet {outputPath}[/]");
-        }
-
-        return 0;
-    }
-
-    /// <summary>
-    /// Writes JSON text to STDOUT, syntax-highlighted via Spectre.Console when requested.
-    /// </summary>
-    /// <param name="json">The JSON text to write.</param>
-    /// <param name="chromatic">A value indicating whether to syntax-highlight the output.</param>
-    private static void WriteJson(string json, bool chromatic)
-    {
-        if (chromatic)
-        {
-            AnsiConsole.Write(new JsonText(json));
-            Console.WriteLine();
-        }
-        else
-        {
-            Console.WriteLine(json);
-        }
+        return config;
     }
 }
