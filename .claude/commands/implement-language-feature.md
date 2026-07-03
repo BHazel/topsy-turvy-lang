@@ -97,7 +97,7 @@ file, namespace mirrors folder path, positional records for data-only nodes).
 
 **Build checkpoint** — after completing the parser layer, run:
 ```
-dotnet build interpreter/BWHazel.TopsyTurvy.slnx --no-incremental
+dotnet build operetta/BWHazel.TopsyTurvy.slnx --no-incremental
 ```
 Fix all errors before continuing. It is much easier to diagnose parse errors
 before the runtime is tangled in.
@@ -132,7 +132,7 @@ symbol kinds, or adds keywords that need special treatment:
 
 ### 3g. Monaco tokenizer: `topsy-turvy-language.js`
 
-Two things to update in `interpreter/BWHazel.TopsyTurvy.WebEditor/wwwroot/js/topsy-turvy-language.js`:
+Two things to update in `operetta/BWHazel.TopsyTurvy.WebEditor/wwwroot/js/topsy-turvy-language.js`:
 
 **Keyword completion list** — append new keyword/description pairs to the
 `keywords` array so it exactly mirrors `KeywordData.Keywords`. The arrays
@@ -272,7 +272,7 @@ no highlighting is applied there.
 
 ## Step 4: Write tests
 
-Add tests to `interpreter/BWHazel.TopsyTurvy.Tests/` following project
+Add tests to `operetta/BWHazel.TopsyTurvy.Tests/` following project
 conventions:
 
 * One test class per production type, in a subdirectory that mirrors the project it covers.
@@ -291,8 +291,8 @@ Cover at minimum:
 
 **Full test run checkpoint:**
 ```
-dotnet test interpreter/BWHazel.TopsyTurvy.Tests
-dotnet test interpreter/BWHazel.TopsyTurvy.Cli.E2ETests
+dotnet test operetta/BWHazel.TopsyTurvy.Tests
+dotnet test operetta/BWHazel.TopsyTurvy.Cli.E2ETests
 ```
 Check `DEVELOPMENT.md` for the current baseline — it is updated after each session. New tests should push the numbers up, never down.
 
@@ -304,7 +304,7 @@ If the feature is substantial enough to warrant a standalone demonstration,
 add a `.topsy` file to `examples/`. All four existing examples
 (`hello_world.topsy`, `fizzbuzz.topsy`, `fibonacci.topsy`,
 `pirates_calculator.topsy`) must continue to execute correctly — run them
-with `dotnet run --project interpreter/BWHazel.TopsyTurvy.Cli -- perform
+with `dotnet run --project operetta/BWHazel.TopsyTurvy.Cli -- perform
 examples/<name>.topsy` to verify.
 
 ---

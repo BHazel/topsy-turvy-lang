@@ -1,0 +1,159 @@
+@namespace BWHazel.TopsyTurvy.WebEditor.Components.VisualEditor
+
+@if (this.IsVisible)
+{
+    <div class="visual-context-menu" style="left:@(this.X)px;top:@(this.Y)px" @onclick:stopPropagation="true">
+        @if (this.TargetNode is not null)
+        {
+            <div class="visual-context-menu-item visual-context-menu-item--danger" @onclick="this.OnDeleteNode">Delete node</div>
+            @if (this.TargetNode.PairedCloserId is not null)
+            {
+                <div class="visual-context-menu-item visual-context-menu-item--danger" @onclick="this.OnDeleteBlock">Delete block</div>
+            }
+        }
+        else
+        {
+            <div class="visual-context-menu-section-label">Statement</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("DeclarationNode"))">PRAY WELCOME (variable)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ArrayDeclarationNode"))">PRAY WELCOME (LITTLE LIST)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("AssignmentNode"))">IS APPOINTED</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ArrayElementAssignmentNode"))">IS APPOINTED (LITTLE LIST element)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("PrintNode"))">BEHOLD</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("InputNode"))">PRAY TELL</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ImportNode"))">PRAY ADMIT</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("AssertNode"))">THE LAW IS</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ProgrammeReturnNode"))">AND SO I FIND (programme exit code)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ExpressionStatement"))">EXPRESSION</div>
+
+            <div class="visual-context-menu-section-label">Control Flow</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ConditionalOpener"))">SHOULD IT TRANSPIRE THAT (block)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("LoopOpener"))">BY A LEGAL FICTION (block)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("GuardOpener"))">YEOMAN (block)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("BreakNode"))">THAT WILL DO.</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ContinueNode"))">ONCE MORE.</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ReturnNode"))">AND SO I FIND</div>
+
+            <div class="visual-context-menu-section-label">Error Handling</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("TryCatchOpener"))">WITH THE GREATEST RESPECT, (block)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ThrowNode"))">A HIDEOUS CURSE ON</div>
+
+            <div class="visual-context-menu-section-label">Function</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("FunctionBodyOpener"))">IT IS MY DUTY TO PERFORM (body)</div>
+
+            <div class="visual-context-menu-section-label">Expression</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("LiteralNode"))">Literal value</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("IdentifierNode"))">Identifier</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("OperatorNode"))">Operator (SUM OF …)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("TernaryNode"))">Ternary</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("SummonNode"))">SUMMON</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ArrayIndexNode"))">LITTLE LIST index</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ArrayLengthNode"))">RECKONING OF</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ExpressionCastNode"))">AS IT WERE (cast)</div>
+
+            @if (this.Symbols.Count > 0)
+            {
+                <div class="visual-context-menu-section-label">Use symbol</div>
+                @foreach (string symbol in this.Symbols)
+                {
+                    string theSymbol = symbol;
+                    <div class="visual-context-menu-item" @onclick="@(() => this.OnUseSymbol(theSymbol))">@theSymbol</div>
+                }
+            }
+        }
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets a value indicating whether the menu is visible.
+    /// </summary>
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// Gets or sets the menu X position in CSS pixels relative to the visual editor container.
+    /// </summary>
+    [Parameter]
+    public double X { get; set; }
+
+    /// <summary>
+    /// Gets or sets the menu Y position in CSS pixels relative to the visual editor container.
+    /// </summary>
+    [Parameter]
+    public double Y { get; set; }
+
+    /// <summary>
+    /// Gets or sets the node that was right-clicked, or <c>null</c> when clicking the canvas.
+    /// </summary>
+    [Parameter]
+    public TopsyTurvyVisualNodeModel? TargetNode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of declared symbol names shown in the "Use symbol" section.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> Symbols { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user chooses to add a statement node.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnAddStatementNode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user chooses to add an expression node.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnAddExpressionNode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user chooses to use an existing symbol (adds identifier node).
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnUseSymbolNode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user deletes the target node.
+    /// </summary>
+    [Parameter]
+    public EventCallback<TopsyTurvyVisualNodeModel> OnDeleteNodeClicked { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user deletes the target block (opener + closer).
+    /// </summary>
+    [Parameter]
+    public EventCallback<TopsyTurvyVisualNodeModel> OnDeleteBlockClicked { get; set; }
+
+    /// <summary>
+    /// Invokes the <see cref="OnAddStatementNode"/> callback with the given statement type.
+    /// </summary>
+    /// <param name="statementType">The type of statement to add.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task OnAddNode(string statementType) => this.OnAddStatementNode.InvokeAsync(statementType);
+
+    /// <summary>
+    /// Invokes the <see cref="OnAddExpressionNode"/> callback with the given expression type.
+    /// </summary>
+    /// <param name="expressionType">The type of expression to add.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task OnAddExpression(string expressionType) => this.OnAddExpressionNode.InvokeAsync(expressionType);
+
+    /// <summary>
+    /// Invokes the <see cref="OnUseSymbolNode"/> callback with the given symbol name.
+    /// </summary>
+    /// <param name="name">The name of the symbol to use.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task OnUseSymbol(string name) => this.OnUseSymbolNode.InvokeAsync(name);
+
+    /// <summary>
+    /// Invokes the <see cref="OnDeleteNodeClicked"/> callback with the target node.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task OnDeleteNode() => this.OnDeleteNodeClicked.InvokeAsync(this.TargetNode);
+
+    /// <summary>
+    /// Invokes the <see cref="OnDeleteBlockClicked"/> callback with the target block.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task OnDeleteBlock() => this.OnDeleteBlockClicked.InvokeAsync(this.TargetNode);
+}

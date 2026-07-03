@@ -125,9 +125,9 @@ The following keywords appeared in earlier drafts and versions of the language a
 
 ### Project Structure
 
-* **Root Directory:** `interpreter/`
+* **Root Directory:** `operetta/`
 * **Solution File:** `BWHazel.TopsyTurvy.slnx`
-* **Project Layout:** Each project in its own directory: `interpreter/[ProjectName]/[ProjectName].csproj`.
+* **Project Layout:** Each project in its own directory: `operetta/[ProjectName]/[ProjectName].csproj`.
 * **Namespace Mirroring:** Folder structure must strictly mirror the namespace hierarchy.
 
 ### Coding Style
@@ -148,7 +148,7 @@ The following keywords appeared in earlier drafts and versions of the language a
 
 ### Test Project Conventions
 
-These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
+These rules apply to all files under `operetta/BWHazel.TopsyTurvy.Tests/`.
 
 * **Test Class Naming:** `{TestedClass}Tests`, one test class per production type, one file per test class.
 * **Test Method Naming:** `{MethodOrProperty}_{Condition}_{ExpectedOutcome}` (e.g. `StringLiteral_WithoutClosingQuote_Fails`).
@@ -165,7 +165,7 @@ These rules apply to all files under `interpreter/BWHazel.TopsyTurvy.Tests/`.
 
 ### Visual Editor Conventions
 
-These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/Visual/` and `Components/VisualEditor/`. Read §2 of `DEVELOPMENT.md` for the full constraint set.
+These rules apply to `operetta/BWHazel.TopsyTurvy.WebEditor/Visual/` and `Components/VisualEditor/`. Read §2 of `DEVELOPMENT.md` for the full constraint set.
 
 **Port Alignment:** `VisualPortRole` determines `PortAlignment` inside `MakePort`; never pass an alignment explicitly:
 
@@ -191,7 +191,7 @@ These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/Visual/` and `Com
 
 ### Web Editor Conventions
 
-These rules apply to `interpreter/BWHazel.TopsyTurvy.WebEditor/`.
+These rules apply to `operetta/BWHazel.TopsyTurvy.WebEditor/`.
 
 * **JS Interop — Inbound (JS → C#):** Methods invoked from JavaScript must be `public` and marked `[JSInvokable]`.  They are called via `dotNetRef` (`DotNetObjectReference<Editor>`), which is created in `OnAfterRenderAsync` on first render and disposed in `Dispose()`.
 * **JS interop — Outbound (C# → JS):** Call JavaScript via `JSRuntime.InvokeAsync`; keep all JS logic in `web-editor.js` (or `topsy-turvy-language.js` for language registration). Do not scatter JS calls across multiple Razor files.

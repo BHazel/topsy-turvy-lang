@@ -13,7 +13,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 
 const extensionRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const cliProjectPath = path.resolve(extensionRoot, '..', '..', '..', 'interpreter', 'BWHazel.TopsyTurvy.Cli');
+const cliProjectPath = path.resolve(extensionRoot, '..', '..', '..', 'operetta', 'BWHazel.TopsyTurvy.Cli');
 const outputDirectory = path.join(extensionRoot, 'bin');
 
 function resolveRid() {

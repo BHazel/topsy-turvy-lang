@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.5.0
+### Language Specification — Version 0.6.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -31,6 +31,7 @@ FINALE.
 ```
 
 - **`HARK!`** — Opens the program. The string literal that follows is the program title (a comment, not evaluated). The `or,` subtitle line is optional and also a comment.
+- **`AND SO I FIND <value>`** — Optional. Sets the OS exit code returned to the shell when the programme terminates. The expression must evaluate to a `PEER` (integer) value. If omitted, the exit code is `0`. This statement may appear anywhere in the programme body before `FINALE.`; execution unwinds immediately when it is reached.
 - **`FINALE.`** — Closes the program and exits. The full stop is mandatory.
 - Everything between `HARK!` and `FINALE.` is executed in order.
 - Indentation is optional and has no semantic meaning. Indentation in examples follows libretto convention.
@@ -630,7 +631,8 @@ BY A LEGAL FICTION KNOWN AS counter ASCENDING i UNTIL ALIKE i AND 10
 THE TERM EXPIRES.
 ```
 
-- `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` begins at `0`
+- `ASCENDING <var>` — increments `<var>` by 1 at the end of each iteration; `<var>` retains whatever value it already holds on entry to the loop — it is the program's responsibility to initialise it beforehand
+- `BY <expression>` — optional; overrides the default step of `1` with the value of `<expression>`, evaluated once per iteration. `<expression>` may be any `PEER` expression, including `0` or a negative value; no runtime validation is performed
 - `UNTIL <expression>` — exits when the expression is `VERITY` (checked before each iteration); `<expression>` must be of type `DECREE`. From *The Pirates of Penzance* — Frederic's indenture binds him *"until"* his twenty-first birthday.
 
 ### Descending (Counted Down) Loop
@@ -641,7 +643,8 @@ BY A LEGAL FICTION KNOWN AS countdown DESCENDING i UNTIL ALIKE i AND 0
 THE TERM EXPIRES.
 ```
 
-- `DESCENDING <var>` — decrements `<var>` by 1 at the end of each iteration
+- `DESCENDING <var>` — decrements `<var>` by 1 at the end of each iteration; `<var>` retains whatever value it already holds on entry to the loop
+- `BY <expression>` — optional; overrides the default step of `1` with the value of `<expression>`, evaluated once per iteration. `<expression>` may be any `PEER` expression, including `0` or a negative value; no runtime validation is performed
 
 ### While Loop
 

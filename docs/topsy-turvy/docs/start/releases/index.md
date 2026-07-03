@@ -14,6 +14,7 @@ All Topsy Turvy releases are listed below.  Select one to view the detailed rele
 
 ||Date|Highlights|
 |-|-|-|
+|🔥🔮|[2026-07-03](./2026-07-03)|Flexible Loops, Programme-Level Return, Repurposed `sorcerer` Command, UtopIR (Preview 1)|
 |🔥⚠️|[2026-06-30](./2026-06-30)|Static Typing, Enhanced Parser, Visual Editor in Web Editor|
 ||[2026-06-24](./2026-06-24)|New Types and Operators, New CLI Commands, REPL, Richer Commands in VS Code|
 ||[2026-06-19](./2026-06-19)|Arrays, Constants, Documentation Comments, Command-Line Arguments, Other Language Enhancements|

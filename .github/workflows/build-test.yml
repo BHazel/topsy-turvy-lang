@@ -14,26 +14,32 @@ jobs:
         with:
           dotnet-version: '10.0.x'
           cache: true
-          cache-dependency-path: 'interpreter/**/*.csproj'
+          cache-dependency-path: 'operetta/**/*.csproj'
       - name: Install PowerShell
         run: |
           dotnet tool update -g powershell
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
       - name: Build Solution
         run: |
-          dotnet build interpreter/BWHazel.TopsyTurvy.slnx --no-incremental      
+          dotnet build operetta/BWHazel.TopsyTurvy.slnx --no-incremental      
       - name: Install Playwright Browsers
         run: |
-          pwsh interpreter/BWHazel.TopsyTurvy.WebEditor.E2ETests/bin/Debug/net10.0/playwright.ps1 install chromium --with-deps
+          pwsh operetta/BWHazel.TopsyTurvy.WebEditor.E2ETests/bin/Debug/net10.0/playwright.ps1 install chromium --with-deps
       - name: Run Unit Tests
         run: |
-          dotnet test interpreter/BWHazel.TopsyTurvy.Tests
+          dotnet test operetta/BWHazel.TopsyTurvy.Tests
       - name: Run CLI E2E Tests
         run: |
-          dotnet test interpreter/BWHazel.TopsyTurvy.Cli.E2ETests
+          dotnet test operetta/BWHazel.TopsyTurvy.Cli.E2ETests
       - name: Run Web Editor E2E Tests
         run: |
-          dotnet test interpreter/BWHazel.TopsyTurvy.WebEditor.E2ETests
+          dotnet test operetta/BWHazel.TopsyTurvy.WebEditor.E2ETests
+      - name: Run UtopIR Unit Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.UtopIR.Tests
+      - name: Run UtopIR E2E Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.UtopIR.E2ETests
   vscode-extension:
     name: VS Code Extension
     runs-on: ubuntu-latest
@@ -45,7 +51,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
           cache: true
-          cache-dependency-path: 'interpreter/**/*.csproj'
+          cache-dependency-path: 'operetta/**/*.csproj'
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -54,7 +60,7 @@ jobs:
           cache-dependency-path: 'extensions/vscode/topsy-turvy/package-lock.json'
       - name: Build CLI
         run: |
-          dotnet build interpreter/BWHazel.TopsyTurvy.Cli
+          dotnet build operetta/BWHazel.TopsyTurvy.Cli
       - name: Install NPM Dependencies
         working-directory: extensions/vscode/topsy-turvy
         run: |
@@ -97,10 +103,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
           cache: true
-          cache-dependency-path: 'interpreter/**/*.csproj'
+          cache-dependency-path: 'operetta/**/*.csproj'
       - name: Build Solution
         run: |
-          dotnet build interpreter/BWHazel.TopsyTurvy.slnx --no-incremental
+          dotnet build operetta/BWHazel.TopsyTurvy.slnx --no-incremental
       - name: Install dotnetmd
         run: |
           dotnet tool install -g pierodetomi.dotnetmd

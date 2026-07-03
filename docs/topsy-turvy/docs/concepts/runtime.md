@@ -78,9 +78,9 @@ An additional buffered IO implementation, `BufferedWebIO`, is provided in the We
 
 ### Control Flow Signalling
 
-Control flow via `THAT WILL DO.` break and `ONCE MORE.` continue statements as well as `AND SO I FIND` and `MY DUTY IS PREMATURELY DISCHARGED.` function return statements use .NET exceptions as signalling of these events, implemented directly in the interpreter.  Throwing a Topsy Turvy exception via `A HIDEOUS CURSE ON` also uses an exception, in standard .NET convention, caught by the interpreter and handled using Topsy Turvy language constructs.
+Control flow via `THAT WILL DO.` break and `ONCE MORE.` continue statements as well as `AND SO I FIND` and `MY DUTY IS PREMATURELY DISCHARGED.` function return statements as well as the `AND SO I FIND` programme return statement use .NET exceptions as signalling of these events, implemented directly in the interpreter.  Throwing a Topsy Turvy exception via `A HIDEOUS CURSE ON` also uses an exception, in standard .NET convention, caught by the interpreter and handled using Topsy Turvy language constructs.
 
-These are all implemented as exception types in the `BWHazel.TopsyTurvy.Runtime` namespace: `BreakSignalException`, `ContinueSignalException`, `ReturnSignalException` and `TopsyTurvyThrowException`.
+These are all implemented as exception types in the `BWHazel.TopsyTurvy.Runtime` namespace: `BreakSignalException`, `ContinueSignalException`, `ProgrammeReturnSignalException`, `ReturnSignalException` and `TopsyTurvyThrowException`.
 
 ### Interpreter
 

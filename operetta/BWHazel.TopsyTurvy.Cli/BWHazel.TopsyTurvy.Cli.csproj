@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>operetta</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>0.5.0</Version>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Analysis\BWHazel.TopsyTurvy.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.LanguageServer\BWHazel.TopsyTurvy.LanguageServer.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.TypeChecker\BWHazel.TopsyTurvy.TypeChecker.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Ast\BWHazel.TopsyTurvy.UtopIR.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Parser\BWHazel.TopsyTurvy.UtopIR.Parser.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Transformer\BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.9" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+    <PackageReference Include="Testably.Abstractions" Version="3.*" />
+    <PackageReference Include="Spectre.Console.Json" Version="0.55.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.8" />
+  </ItemGroup>
+
+</Project>

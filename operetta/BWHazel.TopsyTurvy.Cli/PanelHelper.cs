@@ -1,0 +1,303 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using BWHazel.TopsyTurvy.Ast;
+using Spectre.Console;
+
+namespace BWHazel.TopsyTurvy.Cli;
+
+/// <summary>
+/// Creates and writes standard Spectre.Console panels used in the Topsy Turvy CLI.
+/// </summary>
+public static class PanelHelper
+{
+    private static readonly Color DefaultBorderColour = Color.Cyan;
+    private static readonly Color SuccessBorderColour = Color.LightGreen_1;
+    private static readonly Color WarningBorderColour = Color.Yellow;
+    private static readonly Color ErrorBorderColour = Color.Red;
+
+    private static readonly string WarningColour = "yellow";
+    private static readonly string TableRowValueColour = "lightgreen_1";
+
+    /// <summary>
+    /// Writes a default information panel to the console.
+    /// </summary>
+    /// <param name="header">The panel header text.</param>
+    /// <param name="body">The panel body as a Spectre.Console markup string.</param>
+    public static void WriteDefault(string header, string body)
+    {
+        Panel panel = new(body)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(DefaultBorderColour),
+            Header = new PanelHeader(header)
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes a success panel to the console.
+    /// </summary>
+    /// <param name="header">The panel header text.</param>
+    /// <param name="body">The panel body as a Spectre.Console markup string.</param>
+    public static void WriteSuccess(string header, string body)
+    {
+        Panel panel = new(body)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(SuccessBorderColour),
+            Header = new PanelHeader(header)
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes a warning panel to the console for non-fatal issues that do not stop execution.
+    /// </summary>
+    /// <param name="header">The panel header text.</param>
+    /// <param name="body">The panel body as a Spectre.Console markup string.</param>
+    public static void WriteWarning(string header, string body)
+    {
+        Panel panel = new(body)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(WarningBorderColour),
+            Header = new PanelHeader(header)
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes an error panel to the console for user errors.
+    /// </summary>
+    /// <param name="message">The plain-text error message to display.</param>
+    public static void WriteUserError(string message)
+    {
+        Panel panel = new(new Markup($"[red]Error: {Markup.Escape(message)}[/]"))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(ErrorBorderColour),
+            Header = new PanelHeader("Why, Damme!")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes an error panel to the console for syntax errors.
+    /// </summary>
+    /// <param name="errors">The collection of plain-text syntax error messages.</param>
+    public static void WriteSyntaxErrors(IEnumerable<string> errors)
+    {
+        string escapedErrors = Markup.Escape(string.Join("\n", errors));
+        Panel panel = new(new Markup($"[red]Syntax Error:\n{escapedErrors}[/]"))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(ErrorBorderColour),
+            Header = new PanelHeader("Crushed Again!")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes an error panel to the console for runtime errors.
+    /// </summary>
+    /// <param name="diagnostics">The collection of runtime diagnostics to display.</param>
+    public static void WriteRuntimeErrors(IEnumerable<Diagnostic> diagnostics)
+    {
+        string body = string.Join("\n", diagnostics.Select(
+            diagnostic => $"[[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}]] {Markup.Escape(diagnostic.Message)}"));
+
+        WriteRuntimeErrorPanel(body);
+    }
+
+    /// <summary>
+    /// Writes an error panel to the console for a runtime error as a plain-text message.
+    /// </summary>
+    /// <param name="message">The plain-text runtime error message.</param>
+    public static void WriteRuntimeErrors(string message)
+    {
+        WriteRuntimeErrorPanel(Markup.Escape(message));
+    }
+
+    /// <summary>
+    /// Writes a type error panel to the console for type errors found during the type-check pass.
+    /// </summary>
+    /// <param name="diagnostics">The type-check diagnostics to display.</param>
+    public static void WriteTypeErrors(IEnumerable<Diagnostic> diagnostics)
+    {
+        string body = string.Join("\n", diagnostics.Select(
+            diagnostic => $"[[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}]] {Markup.Escape(diagnostic.Message)}"));
+
+        Panel panel = new(new Markup($"[red]Type Error:\n{body}[/]"))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(ErrorBorderColour),
+            Header = new PanelHeader("Oh Horror!")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes a runtime error panel to the console with the given pre-escaped body text.
+    /// </summary>
+    /// <param name="escapedBody">The pre-escaped body text.</param>
+    private static void WriteRuntimeErrorPanel(string escapedBody)
+    {
+        Panel panel = new(new Markup($"[red]Runtime Error:\n{escapedBody}[/]"))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(ErrorBorderColour),
+            Header = new PanelHeader("A Hideous Curse!")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes a panel displaying the version information of the Topsy Turvy CLI.
+    /// </summary>
+    /// <param name="version">The CLI version.</param>
+    /// <param name="commitHash">The commit SHA hash.</param>
+    /// <param name="topsyTurvySpecVersion">The supported Topsy Turvy language spec version.</param>
+    /// <param name="utopirSpecVersion">The supported UtopIR language spec version.</param>
+    public static void WriteVersionInfo(string version, string commitHash, string topsyTurvySpecVersion, string utopirSpecVersion)
+    {
+        Table table = new()
+        {
+            Border = TableBorder.None,
+            ShowHeaders = false
+        };
+
+        table.AddColumn(new TableColumn(string.Empty));
+        table.AddColumn(new TableColumn(string.Empty));
+
+        table.AddRow("CLI Version", $"[{TableRowValueColour}]{Markup.Escape(version)}[/]");
+        table.AddRow("Commit SHA", $"[{TableRowValueColour}]{Markup.Escape(commitHash)}[/]");
+        table.AddRow("Topsy Turvy Spec", $"[{TableRowValueColour}]{Markup.Escape(topsyTurvySpecVersion)}[/]");
+        table.AddRow("UtopIR Spec", $"[{TableRowValueColour}]{Markup.Escape(utopirSpecVersion)}[/]");
+
+        Rows content = new(
+            new Markup($"[{WarningColour}]I’ve information vegetable, animal, and mineral:[/]"),
+            table);
+
+        Panel panel = new(content)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(DefaultBorderColour),
+            Header = new PanelHeader("The Topsy Turvy Programming Language")
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Reports a user error to the console.
+    /// </summary>
+    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="message">The error message.</param>
+    /// <returns><c>1</c>, the failure exit code.</returns>
+    public static int ReportUserError(bool tiptoe, string message)
+    {
+        if (tiptoe)
+        {
+            Console.Error.WriteLine(message);
+        }
+        else
+        {
+            WriteUserError(message);
+        }
+
+        return 1;
+    }
+
+    /// <summary>
+    /// Reports a non-fatal warning to the console.
+    /// </summary>
+    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="message">The warning message.</param>
+    public static void ReportUserWarning(bool tiptoe, string message)
+    {
+        if (tiptoe)
+        {
+            Console.Error.WriteLine($"Warning: {message}");
+        }
+        else
+        {
+            WriteWarning("Heigh-ho!", $"[{WarningColour}]{Markup.Escape(message)}[/]");
+        }
+    }
+
+    /// <summary>
+    /// Reports errors from a <see cref="ProgramExecutionResult"/> to the console.
+    /// </summary>
+    /// <param name="result">The execution result containing the errors to report.</param>
+    /// <param name="isPlainText">A value indicating whether to report errors as plain text or as styled panels.</param>
+    /// <remarks>
+    /// Errors are reported using either plain-text output or rich Spectre.Console panels.
+    /// </remarks>
+    public static void ReportErrors(ProgramExecutionResult result, bool isPlainText)
+    {
+        if (result.ErrorMessage != null)
+        {
+            if (isPlainText)
+            {
+                Console.Error.WriteLine(result.ErrorMessage);
+            }
+            else
+            {
+                WriteUserError(result.ErrorMessage);
+            }
+        }
+
+        if (result.SyntaxErrors != null)
+        {
+            if (isPlainText)
+            {
+                foreach (string error in result.SyntaxErrors)
+                {
+                    Console.Error.WriteLine(error);
+                }
+            }
+            else
+            {
+                WriteSyntaxErrors(result.SyntaxErrors);
+            }
+        }
+
+        if (result.TypeDiagnostics != null)
+        {
+            if (isPlainText)
+            {
+                foreach (Diagnostic diagnostic in result.TypeDiagnostics)
+                {
+                    Console.Error.WriteLine($"[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}] {diagnostic.Message}");
+                }
+            }
+            else
+            {
+                WriteTypeErrors(result.TypeDiagnostics);
+            }
+        }
+
+        if (result.RuntimeDiagnostics != null)
+        {
+            if (isPlainText)
+            {
+                foreach (Diagnostic diagnostic in result.RuntimeDiagnostics)
+                {
+                    Console.Error.WriteLine($"[{diagnostic.Span.Start.Line}:{diagnostic.Span.Start.Column}] {diagnostic.Message}");
+                }
+            }
+            else
+            {
+                WriteRuntimeErrors(result.RuntimeDiagnostics);
+            }
+        }
+    }
+}

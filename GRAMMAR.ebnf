@@ -1,5 +1,4 @@
-(* Topsy Turvy Formal Grammar v0.4.0 *)
-(* Based on SPEC.md v0.5.0 *)
+(* Topsy Turvy Formal Grammar v0.5.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -116,18 +115,23 @@ ArrayLengthExpression = "RECKONING OF", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 
-PrefixExpression = FixedOpExpression | VariadicExpression ;
+PrefixExpression = EitherExpression | OtherFixedOpExpression | VariadicExpression ;
 
-FixedOpExpression = FixedOp, Expression, { "AND", Expression } ;
+EitherExpression       = "EITHER", Expression, "OR", Expression ;
+(* EITHER is the sole binary operator that uses "OR" as its argument separator.
+   All other fixed-arity operators use "AND". *)
+
+OtherFixedOpExpression = OtherFixedOp, Expression, [ "AND", Expression ] ;
+(* HARDLY EVER is unary so the second operand is optional. *)
 
 VariadicExpression = VariadicOp, Expression, { "AND", Expression }, "IF YOU PLEASE." ;
 
-FixedOp         = ArithmeticOp | BooleanOp | ComparisonOp | BitwiseOp ;
+OtherFixedOp    = ArithmeticOp | OtherBooleanOp | ComparisonOp | BitwiseOp ;
 
 ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF"
                 | "QUOTIENT OF" | "REMAINDER OF" | "LARGER OF" | "SMALLER OF" ;
 
-BooleanOp       = "BOTH" | "EITHER" | "HARDLY EVER" ;
+OtherBooleanOp  = "BOTH" | "HARDLY EVER" ;
 
 ComparisonOp    = "ALIKE" | "UNLIKE" | "PRE-ADAMITE" | "LOWER DEGREE" ;
 
