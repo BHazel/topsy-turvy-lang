@@ -62,7 +62,7 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
                 {
                     PanelHelper.WriteSuccess(
                         "Poured!",
-                        $"[cyan]{emitOptions.OutputPath}[/]\nRun it with [lightgreen_1]dotnet {emitOptions.OutputPath}[/]");
+                        $"Run it with [lightgreen_1]dotnet {emitOptions.OutputPath}[/]");
                 }
 
                 break;

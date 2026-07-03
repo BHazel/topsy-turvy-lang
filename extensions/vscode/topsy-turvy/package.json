@@ -86,6 +86,11 @@
           "type": "boolean",
           "default": false,
           "description": "Skip the subtitle input step when mounting a new project."
+        },
+        "topsy-turvy.enableUtopirPreviewCommands": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable UtopIR preview commands in the toolbar and context menus."
         }
       }
     },
@@ -148,6 +153,30 @@
         "title": "View the AST Promptbook",
         "icon": "$(json)",
         "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.pourUtopIr",
+        "title": "Pour UtopIR",
+        "icon": "$(sparkle)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.viewUtopIrAstPromptbook",
+        "title": "View the UtopIR AST Promptbook",
+        "icon": "$(list-tree)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.pourDotNetCil",
+        "title": "Pour .NET CIL",
+        "icon": "$(circuit-board)",
+        "category": "Topsy Turvy"
+      },
+      {
+        "command": "topsy-turvy.prepareDotNetAssembly",
+        "title": "Prepare .NET Assembly Philtre",
+        "icon": "$(package)",
+        "category": "Topsy Turvy"
       }
     ],
     "keybindings": [
@@ -162,37 +191,57 @@
         {
           "command": "topsy-turvy.runFile",
           "when": "editorLangId == topsy-turvy && !topsyTurvyRunning",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "topsy-turvy.stopFile",
           "when": "topsyTurvyRunning",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "topsy-turvy.rehearseFile",
           "when": "editorLangId == topsy-turvy && !topsyTurvyRunning",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "topsy-turvy.startCadenza",
           "when": "editorLangId == topsy-turvy",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
           "command": "topsy-turvy.cuePreProcessor",
           "when": "editorLangId == topsy-turvy",
-          "group": "navigation"
+          "group": "navigation@4"
         },
         {
           "command": "topsy-turvy.generatePlaybill",
           "when": "editorLangId == topsy-turvy",
-          "group": "navigation"
+          "group": "navigation@5"
         },
         {
           "command": "topsy-turvy.viewAstPromptbook",
           "when": "editorLangId == topsy-turvy",
-          "group": "navigation"
+          "group": "navigation@6"
+        },
+        {
+          "command": "topsy-turvy.pourUtopIr",
+          "when": "editorLangId == topsy-turvy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "navigation@7"
+        },
+        {
+          "command": "topsy-turvy.viewUtopIrAstPromptbook",
+          "when": "editorLangId == topsy-turvy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "navigation@8"
+        },
+        {
+          "command": "topsy-turvy.pourDotNetCil",
+          "when": "editorLangId == topsy-turvy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "navigation@9"
+        },
+        {
+          "command": "topsy-turvy.prepareDotNetAssembly",
+          "when": "editorLangId == topsy-turvy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "navigation@10"
         }
       ],
       "editor/context": [
@@ -225,6 +274,26 @@
           "command": "topsy-turvy.viewAstPromptbook",
           "when": "resourceExtname == .topsy",
           "group": "2_topsy-turvy@3"
+        },
+        {
+          "command": "topsy-turvy.pourUtopIr",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@4"
+        },
+        {
+          "command": "topsy-turvy.viewUtopIrAstPromptbook",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@5"
+        },
+        {
+          "command": "topsy-turvy.pourDotNetCil",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@6"
+        },
+        {
+          "command": "topsy-turvy.prepareDotNetAssembly",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@7"
         }
       ],
       "explorer/context": [
@@ -252,6 +321,26 @@
           "command": "topsy-turvy.viewAstPromptbook",
           "when": "resourceExtname == .topsy",
           "group": "2_topsy-turvy@3"
+        },
+        {
+          "command": "topsy-turvy.pourUtopIr",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@4"
+        },
+        {
+          "command": "topsy-turvy.viewUtopIrAstPromptbook",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@5"
+        },
+        {
+          "command": "topsy-turvy.pourDotNetCil",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@6"
+        },
+        {
+          "command": "topsy-turvy.prepareDotNetAssembly",
+          "when": "resourceExtname == .topsy && config.topsy-turvy.enableUtopirPreviewCommands",
+          "group": "2_topsy-turvy@7"
         }
       ]
     },
