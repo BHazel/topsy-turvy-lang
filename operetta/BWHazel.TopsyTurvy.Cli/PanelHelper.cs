@@ -164,8 +164,9 @@ public static class PanelHelper
     /// </summary>
     /// <param name="version">The CLI version.</param>
     /// <param name="commitHash">The commit SHA hash.</param>
-    /// <param name="specVersion">The supported language spec version.</param>
-    public static void WriteVersionInfo(string version, string commitHash, string specVersion)
+    /// <param name="topsyTurvySpecVersion">The supported Topsy Turvy language spec version.</param>
+    /// <param name="utopirSpecVersion">The supported UtopIR language spec version.</param>
+    public static void WriteVersionInfo(string version, string commitHash, string topsyTurvySpecVersion, string utopirSpecVersion)
     {
         Table table = new()
         {
@@ -178,7 +179,8 @@ public static class PanelHelper
 
         table.AddRow("CLI Version", $"[{TableRowValueColour}]{Markup.Escape(version)}[/]");
         table.AddRow("Commit SHA", $"[{TableRowValueColour}]{Markup.Escape(commitHash)}[/]");
-        table.AddRow("Language Spec", $"[{TableRowValueColour}]{Markup.Escape(specVersion)}[/]");
+        table.AddRow("Topsy Turvy Spec", $"[{TableRowValueColour}]{Markup.Escape(topsyTurvySpecVersion)}[/]");
+        table.AddRow("UtopIR Spec", $"[{TableRowValueColour}]{Markup.Escape(utopirSpecVersion)}[/]");
 
         Rows content = new(
             new Markup($"[{WarningColour}]I’ve information vegetable, animal, and mineral:[/]"),

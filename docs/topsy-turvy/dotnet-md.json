@@ -1,10 +1,16 @@
 {
   "assemblies": [
-    "../../operetta/BWHazel.TopsyTurvy.Ast/bin/Debug/net10.0/BWHazel.TopsyTurvy.Ast.dll",
     "../../operetta/BWHazel.TopsyTurvy.Analysis/bin/Debug/net10.0/BWHazel.TopsyTurvy.Analysis.dll",
+    "../../operetta/BWHazel.TopsyTurvy.Ast/bin/Debug/net10.0/BWHazel.TopsyTurvy.Ast.dll",
     "../../operetta/BWHazel.TopsyTurvy.LanguageServer/bin/Debug/net10.0/BWHazel.TopsyTurvy.LanguageServer.dll",
     "../../operetta/BWHazel.TopsyTurvy.Parser/bin/Debug/net10.0/BWHazel.TopsyTurvy.Parser.dll",
-    "../../operetta/BWHazel.TopsyTurvy.Runtime/bin/Debug/net10.0/BWHazel.TopsyTurvy.Runtime.dll"
+    "../../operetta/BWHazel.TopsyTurvy.Runtime/bin/Debug/net10.0/BWHazel.TopsyTurvy.Runtime.dll",
+    "../../operetta/BWHazel.TopsyTurvy.TypeChecker/bin/Debug/net10.0/BWHazel.TopsyTurvy.TypeChecker.dll",
+    "../../operetta/BWHazel.TopsyTurvy.UtopIR.Analysis/bin/Debug/net10.0/BWHazel.TopsyTurvy.UtopIR.Analysis.dll",
+    "../../operetta/BWHazel.TopsyTurvy.UtopIR.Ast/bin/Debug/net10.0/BWHazel.TopsyTurvy.UtopIR.Ast.dll",
+    "../../operetta/BWHazel.TopsyTurvy.UtopIR.Emitters.Cil/bin/Debug/net10.0/BWHazel.TopsyTurvy.UtopIR.Emitters.Cil.dll",
+    "../../operetta/BWHazel.TopsyTurvy.UtopIR.Parser/bin/Debug/net10.0/BWHazel.TopsyTurvy.UtopIR.Parser.dll",
+    "../../operetta/BWHazel.TopsyTurvy.UtopIR.Transformer/bin/Debug/net10.0/BWHazel.TopsyTurvy.UtopIR.Transformer.dll"
   ],
   "outputPath": "./docs/api/dotnet",
   "outputStyle": "default",
