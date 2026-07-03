@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Shouldly" Version="4.*" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Shouldly" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil\BWHazel.TopsyTurvy.UtopIR.Emitters.Cil.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Transformer\BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Parser\BWHazel.TopsyTurvy.UtopIR.Parser.csproj" />
+  </ItemGroup>
+
+</Project>

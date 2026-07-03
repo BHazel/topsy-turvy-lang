@@ -47,6 +47,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// with the appropriate type and value as an expression.
 /// </para>
 /// <para>
+/// For an integer literal, <see cref="Lexer.IntegerLiteral"/> returns the parsed value as a <c>long</c>
+/// so magnitude is never lost and this parser then resolves the literal final <see cref="LiteralType"/>,
+/// <c>Integer</c> or <c>Long</c>, from that magnitude via <see cref="Lexer.BoxIntegerLiteralValue(long)"/>,
+/// which boxes the value as an <c>int</c> when it fits or as a <c>long</c> otherwise.  This is why a literal
+/// like <c>200</c> is typed <c>Integer</c> but <c>5000000000</c> (too large for <c>Int32</c>) is typed
+/// <c>Long</c> with no explicit type suffix required in Topsy Turvy source.
+/// </para>
+/// <para>
 /// ### Identifier Expressions
 /// 3 parsers are included for identifiers, all returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> which is an <see cref="IdentifierNode"/>.
 /// * <c>JustSoExpression</c> matches on the implicit variable keyword "JUST SO", returning an <see cref="IdentifierNode"/> with the name "JUST SO".
@@ -372,7 +380,18 @@ public static class ExpressionParser
                 .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Double, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
             .Or(Lexer.IntegerLiteral
                 .WithOffsets()
-                .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.Integer, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))
+                .Select(valueWithOffsets =>
+                {
+                    object boxedValue = Lexer.BoxIntegerLiteralValue(valueWithOffsets.Value);
+                    return new LiteralNode()
+                    {
+                        Value = boxedValue,
+                        Type = boxedValue is int
+                            ? LiteralType.Integer
+                            : LiteralType.Long,
+                        Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset)
+                    };
+                }))
             .Or(Lexer.StringLiteral
                 .WithOffsets()
                 .Select(valueWithOffsets => new LiteralNode() { Value = valueWithOffsets.Value, Type = LiteralType.String, Span = BuildSpan(valueWithOffsets.StartOffset, valueWithOffsets.EndOffset) }))

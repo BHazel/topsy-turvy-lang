@@ -64,9 +64,9 @@ public static class CommissionCommandBuilder
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
     private static int HandleCommission(string filename, string title, string? subtitle, bool tiptoe)
     {
-        if (!filename.EndsWith(FileManager.FileExtension, StringComparison.OrdinalIgnoreCase))
+        if (!filename.EndsWith(FileManager.TopsyTurvyFileExtension, StringComparison.OrdinalIgnoreCase))
         {
-            string message = $"Invalid file extension: '{filename}'. Only {FileManager.FileExtension} files are supported.";
+            string message = $"Invalid file extension: '{filename}'. Only {FileManager.TopsyTurvyFileExtension} files are supported.";
             if (tiptoe)
             {
                 Console.Error.WriteLine(message);

@@ -13,9 +13,10 @@ public static class PanelHelper
 {
     private static readonly Color DefaultBorderColour = Color.Cyan;
     private static readonly Color SuccessBorderColour = Color.LightGreen_1;
+    private static readonly Color WarningBorderColour = Color.Yellow;
     private static readonly Color ErrorBorderColour = Color.Red;
 
-    private static readonly string WarningColour = "lightgoldenrod2_2";
+    private static readonly string WarningColour = "yellow";
     private static readonly string TableRowValueColour = "lightgreen_1";
 
     /// <summary>
@@ -27,6 +28,7 @@ public static class PanelHelper
     {
         Panel panel = new(body)
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(DefaultBorderColour),
             Header = new PanelHeader(header)
         };
@@ -43,7 +45,25 @@ public static class PanelHelper
     {
         Panel panel = new(body)
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(SuccessBorderColour),
+            Header = new PanelHeader(header)
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Writes a warning panel to the console for non-fatal issues that do not stop execution.
+    /// </summary>
+    /// <param name="header">The panel header text.</param>
+    /// <param name="body">The panel body as a Spectre.Console markup string.</param>
+    public static void WriteWarning(string header, string body)
+    {
+        Panel panel = new(body)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(WarningBorderColour),
             Header = new PanelHeader(header)
         };
 
@@ -58,6 +78,7 @@ public static class PanelHelper
     {
         Panel panel = new(new Markup($"[red]Error: {Markup.Escape(message)}[/]"))
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(ErrorBorderColour),
             Header = new PanelHeader("Why, Damme!")
         };
@@ -74,6 +95,7 @@ public static class PanelHelper
         string escapedErrors = Markup.Escape(string.Join("\n", errors));
         Panel panel = new(new Markup($"[red]Syntax Error:\n{escapedErrors}[/]"))
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(ErrorBorderColour),
             Header = new PanelHeader("Crushed Again!")
         };
@@ -113,6 +135,7 @@ public static class PanelHelper
 
         Panel panel = new(new Markup($"[red]Type Error:\n{body}[/]"))
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(ErrorBorderColour),
             Header = new PanelHeader("Oh Horror!")
         };
@@ -128,6 +151,7 @@ public static class PanelHelper
     {
         Panel panel = new(new Markup($"[red]Runtime Error:\n{escapedBody}[/]"))
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(ErrorBorderColour),
             Header = new PanelHeader("A Hideous Curse!")
         };
@@ -162,11 +186,49 @@ public static class PanelHelper
 
         Panel panel = new(content)
         {
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(DefaultBorderColour),
             Header = new PanelHeader("The Topsy Turvy Programming Language")
         };
 
         AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Reports a user error to the console.
+    /// </summary>
+    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="message">The error message.</param>
+    /// <returns><c>1</c>, the failure exit code.</returns>
+    public static int ReportUserError(bool tiptoe, string message)
+    {
+        if (tiptoe)
+        {
+            Console.Error.WriteLine(message);
+        }
+        else
+        {
+            WriteUserError(message);
+        }
+
+        return 1;
+    }
+
+    /// <summary>
+    /// Reports a non-fatal warning to the console.
+    /// </summary>
+    /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="message">The warning message.</param>
+    public static void ReportUserWarning(bool tiptoe, string message)
+    {
+        if (tiptoe)
+        {
+            Console.Error.WriteLine($"Warning: {message}");
+        }
+        else
+        {
+            WriteWarning("Heigh-ho!", $"[{WarningColour}]{Markup.Escape(message)}[/]");
+        }
     }
 
     /// <summary>

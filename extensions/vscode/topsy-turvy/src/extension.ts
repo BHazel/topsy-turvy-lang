@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const serverOptions: ServerOptions = {
         command: cliPath,
-        args: ['sorcerer', 'incantation'],
+        args: ['incantation'],
         transport: TransportKind.stdio,
     };
 
@@ -317,7 +317,7 @@ export function activate(context: vscode.ExtensionContext): void {
             try {
                 const { stdout } = await execFileAsync(
                     cueCliPath,
-                    ['sorcerer', 'cue', filePath, '--tiptoe'],
+                    ['sorcerer', filePath, '--emit', 'preprocess', '--tiptoe'],
                     { maxBuffer: 10 * 1024 * 1024 },
                 );
 
@@ -474,7 +474,7 @@ export function activate(context: vscode.ExtensionContext): void {
             try {
                 const { stdout } = await execFileAsync(
                     promptbookCliPath,
-                    ['sorcerer', 'promptbook', filePath, '--tiptoe'],
+                    ['sorcerer', filePath, '--emit', 'ast', '--tiptoe'],
                     { maxBuffer: 10 * 1024 * 1024 },
                 );
                 
@@ -483,6 +483,197 @@ export function activate(context: vscode.ExtensionContext): void {
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
                 vscode.window.showErrorMessage(`Topsy Turvy: AST Promptbook failed — ${message}`);
+            }
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.pourUtopIr', async (uri?: vscode.Uri) => {
+            const fileUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!fileUri) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            await vscode.workspace.save(fileUri);
+            const filePath = fileUri.fsPath;
+            const pourUtopIrCliPath = resolveConfiguredCliPath(context);
+            if (!fs.existsSync(pourUtopIrCliPath)) {
+                vscode.window.showWarningMessage(
+                    `Topsy Turvy: CLI not found at "${pourUtopIrCliPath}". ` +
+                        `Please build the project or set topsy-turvy.cliPath in settings.`,
+                );
+
+                return;
+            }
+
+            try {
+                const { stdout } = await execFileAsync(
+                    pourUtopIrCliPath,
+                    ['sorcerer', filePath, '--emit', 'utopir', '--tiptoe'],
+                    { maxBuffer: 10 * 1024 * 1024 },
+                );
+
+                const doc = await vscode.workspace.openTextDocument({ content: stdout, language: 'plaintext' });
+                await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                vscode.window.showErrorMessage(`Topsy Turvy: Pour UtopIR failed — ${message}`);
+            }
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.viewUtopIrAstPromptbook', async (uri?: vscode.Uri) => {
+            const fileUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!fileUri) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            await vscode.workspace.save(fileUri);
+            const filePath = fileUri.fsPath;
+            const utopIrAstCliPath = resolveConfiguredCliPath(context);
+            if (!fs.existsSync(utopIrAstCliPath)) {
+                vscode.window.showWarningMessage(
+                    `Topsy Turvy: CLI not found at "${utopIrAstCliPath}". ` +
+                        `Please build the project or set topsy-turvy.cliPath in settings.`,
+                );
+
+                return;
+            }
+
+            try {
+                const { stdout } = await execFileAsync(
+                    utopIrAstCliPath,
+                    ['sorcerer', filePath, '--emit', 'utopir-ast', '--tiptoe'],
+                    { maxBuffer: 10 * 1024 * 1024 },
+                );
+
+                const doc = await vscode.workspace.openTextDocument({ content: stdout, language: 'json' });
+                await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                vscode.window.showErrorMessage(`Topsy Turvy: UtopIR AST Promptbook failed — ${message}`);
+            }
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.pourDotNetCil', async (uri?: vscode.Uri) => {
+            const fileUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!fileUri) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            await vscode.workspace.save(fileUri);
+            const filePath = fileUri.fsPath;
+            const cilCliPath = resolveConfiguredCliPath(context);
+            if (!fs.existsSync(cilCliPath)) {
+                vscode.window.showWarningMessage(
+                    `Topsy Turvy: CLI not found at "${cilCliPath}". ` +
+                        `Please build the project or set topsy-turvy.cliPath in settings.`,
+                );
+
+                return;
+            }
+
+            try {
+                const { stdout } = await execFileAsync(
+                    cilCliPath,
+                    ['sorcerer', filePath, '--emit', 'dotnet-cil', '--tiptoe'],
+                    { maxBuffer: 10 * 1024 * 1024 },
+                );
+
+                const doc = await vscode.workspace.openTextDocument({ content: stdout, language: 'plaintext' });
+                await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                vscode.window.showErrorMessage(`Topsy Turvy: Pour .NET CIL failed — ${message}`);
+            }
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('topsy-turvy.prepareDotNetAssembly', async (uri?: vscode.Uri) => {
+            const fileUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!fileUri) {
+                vscode.window.showWarningMessage('Topsy Turvy: No active editor.');
+                return;
+            }
+
+            await vscode.workspace.save(fileUri);
+            const filePath = fileUri.fsPath;
+            const assemblyCliPath = resolveConfiguredCliPath(context);
+            if (!fs.existsSync(assemblyCliPath)) {
+                vscode.window.showWarningMessage(
+                    `Topsy Turvy: CLI not found at "${assemblyCliPath}". ` +
+                        `Please build the project or set topsy-turvy.cliPath in settings.`,
+                );
+
+                return;
+            }
+
+            const defaultUri = vscode.Uri.file(
+                path.join(path.dirname(filePath), `${path.basename(filePath, path.extname(filePath))}.dll`),
+            );
+
+            const saveUri = await vscode.window.showSaveDialog({
+                filters: { '.NET Assembly': ['dll'] },
+                defaultUri,
+            });
+
+            if (!saveUri) {
+                return;
+            }
+
+            const task = new vscode.Task(
+                { type: 'topsy-turvy-prepare-dotnet-assembly' },
+                vscode.TaskScope.Global,
+                'Prepare .NET Assembly Philtre',
+                'Topsy Turvy',
+                new vscode.ProcessExecution(assemblyCliPath, [
+                    'sorcerer',
+                    filePath,
+                    '--target',
+                    'dotnet',
+                    '--output',
+                    saveUri.fsPath,
+                ]),
+            );
+
+            task.presentationOptions = {
+                reveal: vscode.TaskRevealKind.Always,
+                focus: false,
+                panel: vscode.TaskPanelKind.Shared,
+                showReuseMessage: false,
+                clear: true,
+            };
+
+            const execution = await vscode.tasks.executeTask(task);
+            const exitCode = await new Promise<number | undefined>((resolve) => {
+                const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
+                    if (e.execution === execution) {
+                        disposable.dispose();
+                        resolve(e.exitCode);
+                    }
+                });
+            });
+
+            if (exitCode === 0) {
+                const choice = await vscode.window.showInformationMessage(
+                    `Topsy Turvy: .NET assembly philtre prepared at "${saveUri.fsPath}".`,
+                    'Open File Location',
+                );
+
+                if (choice === 'Open File Location') {
+                    await vscode.commands.executeCommand('revealFileInOS', saveUri);
+                }
+            } else {
+                vscode.window.showErrorMessage(
+                    `Topsy Turvy: Prepare .NET Assembly Philtre failed — see the terminal output for details.`,
+                );
             }
         }),
     );
