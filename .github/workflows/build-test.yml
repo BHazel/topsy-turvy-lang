@@ -92,6 +92,33 @@ jobs:
         with:
           run: npm run test:integration
           working-directory: extensions/vscode/topsy-turvy
+  apple-app:
+    name: Apple Platforms App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: 'operetta/**/*.csproj'
+      - name: Install iOS Workload
+        run: |
+          dotnet workload install ios
+      - name: Run Embedded Unit Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.Tests --filter "FullyQualifiedName~BWHazel.TopsyTurvy.Tests.Embedded"
+      - name: Build XCFramework
+        run: |
+          scripts/build-embedded-xcframework.sh
+      - name: Run Swift Smoke Tests
+        run: |
+          xcodebuild test \
+            -project apps/apple/TopsyTurvy/TopsyTurvy.xcodeproj \
+            -scheme TopsyTurvyToolchainTests \
+            -destination 'platform=iOS Simulator,name=iPhone 16'
   docs:
     name: Documentation
     runs-on: ubuntu-latest

@@ -1,0 +1,362 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5E2543D62FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; };
+		5E2543D72FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5E2543E32FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; };
+		5E2543EB2FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5E2543DB2FF7A0B3009F3A51 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5E2543D72FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543EA2FF7A0B3009F3A51 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5E2543EB2FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5E2543D12FF7A0B3009F3A51 /* Theatre.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Theatre.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TopsyTurvyToolchain.xcframework; path = Frameworks/TopsyTurvyToolchain.xcframework; sourceTree = "<group>"; };
+		5E2543E12FF7A0B3009F3A51 /* TopsyTurvyToolchainTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TopsyTurvyToolchainTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5E2543D32FF7A0B3009F3A51 /* Theatre */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Theatre;
+			sourceTree = "<group>";
+		};
+		5E2543E22FF7A0B3009F3A51 /* TopsyTurvyToolchainTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TopsyTurvyToolchainTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5E2543D92FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E2543D62FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E42FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E2543E32FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5E2543C32FF7A0B3009F3A51 = {
+			isa = PBXGroup;
+			children = (
+				5E2543D32FF7A0B3009F3A51 /* Theatre */,
+				5E2543E22FF7A0B3009F3A51 /* TopsyTurvyToolchainTests */,
+				5E2543D42FF7A0B3009F3A51 /* Frameworks */,
+				5E2543D22FF7A0B3009F3A51 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5E2543D22FF7A0B3009F3A51 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5E2543D12FF7A0B3009F3A51 /* Theatre.app */,
+				5E2543E12FF7A0B3009F3A51 /* TopsyTurvyToolchainTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E2543D42FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5E2543D02FF7A0B3009F3A51 /* Theatre */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E2543DE2FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "Theatre" */;
+			buildPhases = (
+				5E2543D82FF7A0B3009F3A51 /* Sources */,
+				5E2543D92FF7A0B3009F3A51 /* Frameworks */,
+				5E2543DA2FF7A0B3009F3A51 /* Resources */,
+				5E2543DB2FF7A0B3009F3A51 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5E2543D32FF7A0B3009F3A51 /* Theatre */,
+			);
+			name = Theatre;
+			productName = Theatre;
+			productReference = 5E2543D12FF7A0B3009F3A51 /* Theatre.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5E2543E02FF7A0B3009F3A51 /* TopsyTurvyToolchainTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E2543E92FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "TopsyTurvyToolchainTests" */;
+			buildPhases = (
+				5E2543E52FF7A0B3009F3A51 /* Sources */,
+				5E2543E42FF7A0B3009F3A51 /* Frameworks */,
+				5E2543E62FF7A0B3009F3A51 /* Resources */,
+				5E2543EA2FF7A0B3009F3A51 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5E2543E22FF7A0B3009F3A51 /* TopsyTurvyToolchainTests */,
+			);
+			name = TopsyTurvyToolchainTests;
+			productName = TopsyTurvyToolchainTests;
+			productReference = 5E2543E12FF7A0B3009F3A51 /* TopsyTurvyToolchainTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5E2543C42FF7A0B3009F3A51 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2660;
+			};
+			buildConfigurationList = 5E2543C72FF7A0B3009F3A51 /* Build configuration list for PBXProject "TopsyTurvy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5E2543C32FF7A0B3009F3A51;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5E2543D02FF7A0B3009F3A51 /* Theatre */,
+				5E2543E02FF7A0B3009F3A51 /* TopsyTurvyToolchainTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5E2543DA2FF7A0B3009F3A51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E62FF7A0B3009F3A51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5E2543D82FF7A0B3009F3A51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E52FF7A0B3009F3A51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5E2543C82FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = A2588FL9GM;
+			};
+			name = Debug;
+		};
+		5E2543C92FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = A2588FL9GM;
+			};
+			name = Release;
+		};
+		5E2543DC2FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwhazel.operetta.Theatre;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5E2543DD2FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwhazel.operetta.Theatre;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5E2543E72FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwhazel.operetta.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5E2543E82FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwhazel.operetta.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5E2543C72FF7A0B3009F3A51 /* Build configuration list for PBXProject "TopsyTurvy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543C82FF7A0B3009F3A51 /* Debug */,
+				5E2543C92FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E2543DE2FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "Theatre" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543DC2FF7A0B3009F3A51 /* Debug */,
+				5E2543DD2FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E2543E92FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "TopsyTurvyToolchainTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543E72FF7A0B3009F3A51 /* Debug */,
+				5E2543E82FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5E2543C42FF7A0B3009F3A51 /* Project object */;
+}
