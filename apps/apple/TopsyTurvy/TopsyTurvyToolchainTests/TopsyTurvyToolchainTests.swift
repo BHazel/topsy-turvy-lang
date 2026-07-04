@@ -42,6 +42,46 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         XCTAssertTrue(TestCallbackCapture.outputLines.contains("Hello"))
     }
 
+    /// Tests that `topsyturvy_tokens` reports a single "comment" token spanning multiple lines for a block comment.
+    func testTokensReturnsCommentTokenSpanningMultipleLines() {
+        let session = topsyturvy_session_create(captureOutputLine, resolveImportStub, nil)
+        XCTAssertNotNil(session)
+        defer {
+            topsyturvy_session_destroy(session)
+        }
+
+        let source = "HARK! \"Test\"\n\n(ASIDE, AT SOME LENGTH:\nspans several\nlines\nEND OF ASIDE.)\n\nFINALE.\n"
+        let result = tokens(session: session, source: source)
+
+        let commentTokens = result.Tokens.filter { $0.Category == "comment" }
+        XCTAssertEqual(commentTokens.count, 1)
+        XCTAssertNotEqual(commentTokens.first?.StartLine, commentTokens.first?.EndLine)
+    }
+
+    /// Calls `topsyturvy_tokens` and decodes its JSON result.
+    /// - Parameter session: The session to tokenise in.
+    /// - Parameter source: The source code to tokenise.
+    /// - Returns: The decoded `TokenResult`.
+    private func tokens(session: UnsafeMutableRawPointer?, source: String) -> TokenResult {
+        let tokenResultJson = source.withCString { sourcePointer -> String in
+            sourcePointer.withMemoryRebound(to: UInt8.self, capacity: source.utf8.count + 1) { utf8Pointer in
+                guard let resultPointer = topsyturvy_tokens(session, utf8Pointer) else {
+                    XCTFail("topsyturvy_tokens returned a null pointer")
+                    return "{}"
+                }
+
+                defer {
+                    topsyturvy_free(resultPointer)
+                }
+
+                return String(cString: resultPointer)
+            }
+        }
+
+        let data = tokenResultJson.data(using: .utf8)!
+        return try! JSONDecoder().decode(TokenResult.self, from: data)
+    }
+
     /// Calls `topsyturvy_analyse` and decodes its JSON result.
     /// - Parameter session: The session to analyse in.
     /// - Parameter source: The source code to analyse.
