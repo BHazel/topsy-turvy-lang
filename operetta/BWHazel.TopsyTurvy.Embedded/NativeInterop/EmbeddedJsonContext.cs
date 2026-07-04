@@ -16,6 +16,8 @@ namespace BWHazel.TopsyTurvy.Embedded.NativeInterop;
 [JsonSerializable(typeof(HoverResult))]
 [JsonSerializable(typeof(CompletionResult))]
 [JsonSerializable(typeof(CompletionItemPayload))]
+[JsonSerializable(typeof(TokenResult))]
+[JsonSerializable(typeof(TokenInfo))]
 [JsonSerializable(typeof(string[]))]
 public sealed partial class EmbeddedJsonContext : JsonSerializerContext
 {

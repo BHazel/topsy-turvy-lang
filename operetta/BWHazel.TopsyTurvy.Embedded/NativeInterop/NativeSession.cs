@@ -1,5 +1,4 @@
 using System.Threading;
-using BWHazel.TopsyTurvy.Runtime;
 
 namespace BWHazel.TopsyTurvy.Embedded.NativeInterop;
 
@@ -19,11 +18,6 @@ public sealed unsafe class NativeSession(NativeCallbacks callbacks)
     /// Gets the output and import-resolution callbacks registered at session creation.
     /// </summary>
     public NativeCallbacks Callbacks { get; } = callbacks;
-
-    /// <summary>
-    /// Gets the persistent execution environment reused across calls to <see cref="NativeExports.ExecuteProgramme"/>.
-    /// </summary>
-    public TopsyTurvyEnvironment Environment { get; } = TopsyTurvyEnvironment.CreateGlobal();
 
     /// <summary>
     /// Gets or sets the cancellation source for the currently running, or most recently run, execution.

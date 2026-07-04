@@ -3,11 +3,13 @@
  *
  * Matches the C# export surface of operetta/BWHazel.TopsyTurvy.Embedded/NativeExports.cs.
  *
- * @remark JSON diagnostic spans (`topsyturvy_analyse` `DiagnosticInfo`) use 1-indexed, half-open line/column
- * pairs, matching the toolchain `SourceSpan` and `SourceLocation` convention.
+ * @remark JSON diagnostic spans (`topsyturvy_analyse` `DiagnosticInfo`) and token spans (`topsyturvy_tokens`
+ * `TokenInfo`) use 1-indexed, half-open line/column pairs, matching the toolchain `SourceSpan` and
+ * `SourceLocation` convention: both describe a span of source text, not a cursor position.
  *
  * @remark JSON hover and completion results (`topsyturvy_hover` `HoverResult` and `topsyturvy_complete` `CompletionResult`)
- * use 0-indexed line/column pairs, matching the LSP convention already used elsewhere in the toolchain.
+ * use 0-indexed line/column pairs, matching the LSP convention already used elsewhere in the toolchain: both
+ * describe a cursor position, not a span.
  */
 
 #ifndef TOPSYTURVYTOOLCHAIN_H
@@ -112,6 +114,17 @@ uint8_t *topsyturvy_complete(topsyturvy_session session, const uint8_t *source_u
  * @return uint8_t* The formatted source text that must be released via `topsyturvy_free`, or `NULL` if an error occurred.
  */
 uint8_t *topsyturvy_format(topsyturvy_session session, const uint8_t *source_utf8);
+
+/**
+ * @brief Scans the given null-terminated, UTF-8 encoded Topsy Turvy source into categorised token spans for
+ * editor syntax highlighting, returning a JSON `TokenResult` that must be released via `topsyturvy_free`.
+ * This is a lexical scan, not a parse: it succeeds even when the source does not currently form valid
+ * syntax.  Returns `NULL` if the session handle is invalid or an exception was thrown.
+ * @param session The session handle.
+ * @param source_utf8 The null-terminated, UTF-8 encoded Topsy Turvy source.
+ * @return uint8_t* A JSON `TokenResult` that must be released via `topsyturvy_free`, or `NULL` if an error occurred.
+ */
+uint8_t *topsyturvy_tokens(topsyturvy_session session, const uint8_t *source_utf8);
 
 /**
  * @brief Parses, type-checks and interprets the given null-terminated, UTF-8 encoded Topsy Turvy source.

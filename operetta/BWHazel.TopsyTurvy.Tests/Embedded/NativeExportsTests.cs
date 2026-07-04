@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -195,6 +196,57 @@ public class NativeExportsTests
     }
 
     /// <summary>
+    /// Tests that <see cref="NativeExports.GetTokens"/> reports a single "comment" token spanning multiple lines for a block comment, including one left unterminated at end-of-source.
+    /// </summary>
+    [Fact]
+    public void GetTokens_WithBlockComment_ReturnsSingleTokenSpanningMultipleLines()
+    {
+        nint session = CreateSession();
+
+        try
+        {
+            TokenResult terminated = Tokens(session, "HARK! \"Test\"\n\n(ASIDE, AT SOME LENGTH:\nspans several\nlines\nEND OF ASIDE.)\n\nFINALE.\n");
+            TokenInfo terminatedComment = terminated.Tokens.Where(token => token.Category == "comment").ShouldHaveSingleItem();
+            terminatedComment.StartLine.ShouldNotBe(terminatedComment.EndLine);
+
+            TokenResult unterminated = Tokens(session, "HARK! \"Test\"\n\n(ASIDE, AT SOME LENGTH:\nnever closed\n");
+            TokenInfo unterminatedComment = unterminated.Tokens.Where(token => token.Category == "comment").ShouldHaveSingleItem();
+            unterminatedComment.StartLine.ShouldNotBe(unterminatedComment.EndLine);
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
+    /// Tests that <see cref="NativeExports.GetTokens"/> categorises a string literal, a keyword phrase, a
+    /// type keyword, <c>THE PROPS</c> and a plain identifier correctly.
+    /// </summary>
+    [Fact]
+    public void GetTokens_WithMixedSource_CategorisesEachTokenKind()
+    {
+        nint session = CreateSession();
+
+        try
+        {
+            const string source =
+                "HARK! \"Test\"\n\nPRINCIPALS\nPRAY WELCOME peerVariable AS A PEER BEING 1\nTHE CURTAIN RISES.\n\nBEHOLD THE PROPS\n\nFINALE.\n";
+            TokenResult result = Tokens(session, source);
+
+            result.Tokens.ShouldContain(token => token.Category == "string");
+            result.Tokens.ShouldContain(token => token.Category == "keyword");
+            result.Tokens.ShouldContain(token => token.Category == "type");
+            result.Tokens.ShouldContain(token => token.Category == "variable");
+            result.Tokens.ShouldContain(token => token.Category == "identifier");
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
     /// Tests that <see cref="NativeExports.ExecuteProgramme"/> invokes the registered output callback for a <c>BEHOLD</c> statement.
     /// </summary>
     [Fact]
@@ -209,6 +261,52 @@ public class NativeExportsTests
 
             status.ShouldBe(0);
             TestCallbackCapture.OutputLines.ShouldContain("Hello");
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
+    /// Tests that <see cref="NativeExports.ExecuteProgramme"/> declares <c>THE PROPS</c> from the arguments passed in <c>args_json_utf8</c>.
+    /// </summary>
+    [Fact]
+    public void ExecuteProgramme_WithArguments_DeclaresThePropsFromArguments()
+    {
+        TestCallbackCapture.Reset();
+        nint session = CreateSession();
+
+        try
+        {
+            int status = Execute(session, "HARK! \"Test\"\n\nBEHOLD VICTIM 1 ON THE PROPS\n\nFINALE.\n", ["first-argument"]);
+
+            status.ShouldBe(0);
+            TestCallbackCapture.OutputLines.ShouldContain("first-argument");
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
+    /// Tests that <see cref="NativeExports.ExecuteProgramme"/> can run the same session declarations twice without an "already declared" runtime error.
+    /// </summary>
+    [Fact]
+    public void ExecuteProgramme_CalledTwiceOnSameSession_DoesNotThrowAlreadyDeclared()
+    {
+        TestCallbackCapture.Reset();
+        nint session = CreateSession();
+        string source = "HARK! \"Test\"\n\nPRINCIPALS\nPRAY WELCOME count AS A PEER BEING 0\nTHE CURTAIN RISES.\n\nBEHOLD count\n\nFINALE.\n";
+
+        try
+        {
+            int firstStatus = Execute(session, source);
+            int secondStatus = Execute(session, source);
+
+            firstStatus.ShouldBe(0);
+            secondStatus.ShouldBe(0);
         }
         finally
         {
@@ -366,6 +464,31 @@ public class NativeExportsTests
     }
 
     /// <summary>
+    /// Calls <see cref="NativeExports.GetTokens"/>.
+    /// </summary>
+    /// <param name="session">The session handle.</param>
+    /// <param name="source">The Topsy Turvy source text.</param>
+    /// <returns>The decoded <see cref="TokenResult"/>.</returns>
+    private static unsafe TokenResult Tokens(nint session, string source)
+    {
+        delegate* unmanaged<nint, byte*, byte*> getTokens = &NativeExports.GetTokens;
+        delegate* unmanaged<byte*, void> freeBuffer = &NativeExports.FreeBuffer;
+
+        nint sourcePointer = Marshal.StringToCoTaskMemUTF8(source);
+        try
+        {
+            byte* resultPointer = getTokens(session, (byte*)sourcePointer);
+            string tokenResultJson = Marshal.PtrToStringUTF8((nint)resultPointer) ?? "{}";
+            freeBuffer(resultPointer);
+            return JsonSerializer.Deserialize(tokenResultJson, EmbeddedJsonContext.Default.TokenResult)!;
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(sourcePointer);
+        }
+    }
+
+    /// <summary>
     /// Calls <see cref="NativeExports.FormatSource"/>.
     /// </summary>
     /// <param name="session">The session handle.</param>
@@ -396,18 +519,34 @@ public class NativeExportsTests
     /// <param name="session">The session handle.</param>
     /// <param name="source">The Topsy Turvy source text.</param>
     /// <returns>The execution status code.</returns>
-    private static unsafe int Execute(nint session, string source)
+    private static unsafe int Execute(nint session, string source) => Execute(session, source, arguments: null);
+
+    /// <summary>
+    /// Calls <see cref="NativeExports.ExecuteProgramme"/> with a JSON-encoded <c>THE PROPS</c> argument array.
+    /// </summary>
+    /// <param name="session">The session handle.</param>
+    /// <param name="source">The Topsy Turvy source text.</param>
+    /// <param name="arguments">The arguments exposed as <c>THE PROPS</c>, or <c>null</c> for none.</param>
+    /// <returns>The execution status code.</returns>
+    private static unsafe int Execute(nint session, string source, string[]? arguments)
     {
         delegate* unmanaged<nint, byte*, byte*, byte*, int> executeProgramme = &NativeExports.ExecuteProgramme;
 
         nint sourcePointer = Marshal.StringToCoTaskMemUTF8(source);
+        nint argumentsPointer = arguments is null
+            ? 0
+            : Marshal.StringToCoTaskMemUTF8(JsonSerializer.Serialize(arguments));
         try
         {
-            return executeProgramme(session, (byte*)sourcePointer, null, null);
+            return executeProgramme(session, (byte*)sourcePointer, (byte*)argumentsPointer, null);
         }
         finally
         {
             Marshal.FreeCoTaskMem(sourcePointer);
+            if (argumentsPointer != 0)
+            {
+                Marshal.FreeCoTaskMem(argumentsPointer);
+            }
         }
     }
 

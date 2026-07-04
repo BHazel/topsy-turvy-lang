@@ -34,6 +34,7 @@ namespace BWHazel.TopsyTurvy.Embedded;
 /// * <see cref="FormatSource"/>
 /// * <see cref="GetHover"/>
 /// * <see cref="GetCompletions"/>
+/// * <see cref="GetTokens"/>
 /// * <see cref="GetLastError"/>
 /// </para>
 /// </remarks>
@@ -136,7 +137,9 @@ public static unsafe class NativeExports
 
             if (parseResult.Program is not null)
             {
-                TypeCheckResult typeCheckResult = new TopsyTurvyTypeChecker().Check(parseResult.Program);
+                TypeCheckResult typeCheckResult = new TopsyTurvyTypeChecker()
+                    .Check(parseResult.Program, NativeImportResolver.Create(nativeSession.Callbacks));
+
                 diagnostics.AddRange(typeCheckResult.Diagnostics.Select(ToDiagnosticInfo));
                 success = success && typeCheckResult.Success;
             }
@@ -293,6 +296,45 @@ public static unsafe class NativeExports
     }
 
     /// <summary>
+    /// Scans the given Topsy Turvy source into categorised token spans for editor syntax highlighting.
+    /// </summary>
+    /// <param name="session">The session handle.</param>
+    /// <param name="sourceUtf8">A null-terminated, UTF-8 encoded pointer to the Topsy Turvy source text.</param>
+    /// <returns>
+    /// A null-terminated, UTF-8 encoded pointer to a JSON-serialised <see cref="TokenResult"/>, which the
+    /// caller must release via <see cref="FreeBuffer"/>, or a null pointer if the session handle is invalid
+    /// or an exception was thrown.
+    /// </returns>
+    /// <remarks>
+    /// This is a lexical scan via <see cref="SourceTokeniser"/>, not a parse: it succeeds even when the
+    /// source does not currently form valid syntax, since the editor calls it continuously while the user
+    /// types.
+    /// </remarks>
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tokens")]
+    public static byte* GetTokens(nint session, byte* sourceUtf8)
+    {
+        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            string source = Marshal.PtrToStringUTF8((nint)sourceUtf8) ?? string.Empty;
+            List<TokenInfo> tokens = [.. SourceTokeniser.Tokenise(source).Select(ToTokenInfo)];
+
+            TokenResult result = new(tokens);
+            string tokenResultJson = JsonSerializer.Serialize(result, EmbeddedJsonContext.Default.TokenResult);
+            return AllocateUtf8String(tokenResultJson);
+        }
+        catch (Exception ex)
+        {
+            nativeSession.LastError = ex.Message;
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Parses, type-checks and executes the given Topsy Turvy source through the interpreter.
     /// </summary>
     /// <param name="session">The session handle.</param>
@@ -327,7 +369,8 @@ public static unsafe class NativeExports
                 return 1;
             }
 
-            TypeCheckResult typeCheckResult = new TopsyTurvyTypeChecker().Check(parseResult.Program);
+            Func<string, string?> importResolver = NativeImportResolver.Create(nativeSession.Callbacks);
+            TypeCheckResult typeCheckResult = new TopsyTurvyTypeChecker().Check(parseResult.Program, importResolver);
             if (!typeCheckResult.Success)
             {
                 return 2;
@@ -345,10 +388,10 @@ public static unsafe class NativeExports
             InterpreterExecutionOptions options = new(
                 ExecutionTimeout: null,
                 SourceFilePath: null,
-                SourceFileResolver: NativeImportResolver.Create(nativeSession.Callbacks),
+                SourceFileResolver: importResolver,
                 CommandLineArguments: commandLineArguments);
 
-            DiagnosticCollection runtimeDiagnostics = interpreter.Execute(parseResult.Program, cancellationTokenSource.Token, options, nativeSession.Environment);
+            DiagnosticCollection runtimeDiagnostics = interpreter.Execute(parseResult.Program, cancellationTokenSource.Token, options);
             if (cancellationTokenSource.IsCancellationRequested)
             {
                 nativeSession.LastError = "Execution was cancelled.";
@@ -477,6 +520,19 @@ public static unsafe class NativeExports
             diagnostic.Span.Start.Column,
             diagnostic.Span.End.Line,
             diagnostic.Span.End.Column);
+
+    /// <summary>
+    /// Maps a <see cref="SourceToken"/> to its native-ready representation.
+    /// </summary>
+    /// <param name="token">The token to map.</param>
+    /// <returns>The equivalent <see cref="TokenInfo"/>.</returns>
+    private static TokenInfo ToTokenInfo(SourceToken token) =>
+        new(
+            token.Category,
+            token.Span.Start.Line,
+            token.Span.Start.Column,
+            token.Span.End.Line,
+            token.Span.End.Column);
 
     /// <summary>
     /// Builds a completion candidate from a symbol.

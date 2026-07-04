@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Parser;
 
 namespace BWHazel.TopsyTurvy.TypeChecker;
 
@@ -107,8 +108,9 @@ internal sealed class TypeCheckVisitor
     /// Runs both passes over the programme and returns the type-check result.
     /// </summary>
     /// <param name="program">The programme to check.</param>
+    /// <param name="sourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to leave imported functions unresolved.</param>
     /// <returns>The populated <see cref="TypeCheckResult"/>.</returns>
-    internal TypeCheckResult Visit(ProgramNode program)
+    internal TypeCheckResult Visit(ProgramNode program, Func<string, string?>? sourceFileResolver = null)
     {
         Dictionary<string, LiteralType> rootScope = new(StringComparer.Ordinal)
         {
@@ -119,11 +121,11 @@ internal sealed class TypeCheckVisitor
         {
             [Keywords.SpecialNames.TheProps] = LiteralType.String,
         };
-        
+
         this.scopeStack.Push(rootScope);
         this.arrayElementTypeStack.Push(rootArrayElementScope);
 
-        this.CollectFunctionSignatures(program.Statements);
+        this.CollectFunctionSignatures(program.Statements, sourceFileResolver, visitedImports: []);
         this.CheckStatements(program.Statements);
 
         this.scopeStack.Pop();
@@ -132,10 +134,16 @@ internal sealed class TypeCheckVisitor
     }
 
     /// <summary>
-    /// Walks the AST to collect all function signatures, including nested functions, and stores them in the <see cref="SemanticModel"/>.
+    /// Walks the AST to collect all function signatures, including nested functions and those defined in
+    /// imported files and stores them in the <see cref="SemanticModel"/>.
     /// </summary>
     /// <param name="statements">The list of statements to process.</param>
-    private void CollectFunctionSignatures(IReadOnlyList<Statement> statements)
+    /// <param name="sourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to leave imported functions unresolved.</param>
+    /// <param name="visitedImports">
+    /// The filenames already imported in this pass, so a circular <c>PRAY ADMIT</c> chain terminates rather
+    /// than recursing indefinitely.
+    /// </param>
+    private void CollectFunctionSignatures(IReadOnlyList<Statement> statements, Func<string, string?>? sourceFileResolver, HashSet<string> visitedImports)
     {
         foreach (Statement statement in statements)
         {
@@ -146,8 +154,38 @@ internal sealed class TypeCheckVisitor
                     function.ReturnType);
 
                 this.model.SetFunctionSignature(function.Name, signature);
-                this.CollectFunctionSignatures(function.Body);
+                this.CollectFunctionSignatures(function.Body, sourceFileResolver, visitedImports);
             }
+            else if (statement is ImportNode importNode && sourceFileResolver is not null && visitedImports.Add(importNode.FilePath))
+            {
+                this.CollectImportedFunctionSignatures(importNode.FilePath, sourceFileResolver, visitedImports);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves and parses a <c>PRAY ADMIT</c> import and collects its function signatures.
+    /// </summary>
+    /// <remarks>
+    /// An unresolvable or unparsable import is silently skipped here, since it will surface as
+    /// a proper runtime diagnostic at execution time.  The first pass makes already-valid
+    /// imported functions known.
+    /// </remarks>
+    /// <param name="filePath">The imported file's path, as written in the <c>PRAY ADMIT</c> statement.</param>
+    /// <param name="sourceFileResolver">Resolves an import's filename to its source text.</param>
+    /// <param name="visitedImports">The filenames already imported in this pass.</param>
+    private void CollectImportedFunctionSignatures(string filePath, Func<string, string?> sourceFileResolver, HashSet<string> visitedImports)
+    {
+        string? importedSource = sourceFileResolver(filePath);
+        if (importedSource is null)
+        {
+            return;
+        }
+
+        ParseResult parseResult = new TopsyTurvyParser().TryParse(importedSource);
+        if (parseResult.Success && parseResult.Program is not null)
+        {
+            this.CollectFunctionSignatures(parseResult.Program.Statements, sourceFileResolver, visitedImports);
         }
     }
 
