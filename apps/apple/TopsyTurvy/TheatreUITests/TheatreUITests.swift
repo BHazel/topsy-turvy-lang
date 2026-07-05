@@ -60,7 +60,7 @@ final class TheatreUITests: XCTestCase {
 
         typeIntoEditor(app, text: "hark! \"Test\"\n\nfinale.\n")
 
-        app.buttons["TheatreDocumentView.formatButton"].tap()
+        app.buttons["WorkspaceEditorHostView.formatButton"].tap()
 
         let editor = app.textViews.firstMatch
         let formatted = expectation(for: NSPredicate(format: "value CONTAINS 'HARK!'"), evaluatedWith: editor)

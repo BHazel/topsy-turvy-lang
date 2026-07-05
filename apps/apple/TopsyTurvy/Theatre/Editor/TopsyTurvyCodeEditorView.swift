@@ -9,9 +9,9 @@ import SwiftUI
 /// iPhone-width screen where every point of editing width matters more than a birds-eye overview of a
 /// typically short programme.
 ///
-/// `position` is owned by the caller (`TheatreDocumentView`), not this view, so that external UI — the iOS
-/// on-demand completion toolbar button and the issues list's row-tap-to-navigate — can both read the current
-/// selection and move it.
+/// `position` is owned by the caller (`WorkspaceEditorHostView`), not this view, so that external UI — the
+/// iOS on-demand completion toolbar button and the issues list's row-tap-to-navigate — can both read the
+/// current selection and move it.
 struct TopsyTurvyCodeEditorView: View {
     @Binding var text: String
     @Binding var position: CodeEditor.Position

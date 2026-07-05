@@ -22,6 +22,13 @@ struct OutputDrawerView: View {
                         OutputPaneView(lines: lines)
                             .navigationTitle("Output")
                             .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    Button("Close") {
+                                        isPresented = false
+                                    }
+                                }
+                            }
                     }
                     .presentationDetents([.medium, .large])
                 }

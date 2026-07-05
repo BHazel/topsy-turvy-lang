@@ -18,6 +18,13 @@ private struct IssuesInspectorModifier: ViewModifier {
                         IssuesListView(diagnostics: diagnostics, onSelect: onSelect)
                             .navigationTitle("Issues")
                             .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    Button("Close") {
+                                        isPresented = false
+                                    }
+                                }
+                            }
                     }
                     .presentationDetents([.medium, .large])
                 }

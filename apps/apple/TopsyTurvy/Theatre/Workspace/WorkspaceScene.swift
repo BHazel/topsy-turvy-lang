@@ -73,7 +73,7 @@ struct WorkspaceScene: View {
     @ViewBuilder
     private var detail: some View {
         if let selectedFileURL {
-            WorkspaceEditorHostView(fileURL: selectedFileURL, session: session)
+            WorkspaceFileEditorView(fileURL: selectedFileURL, session: session)
                 .id(selectedFileURL)
         } else {
             ContentUnavailableView("Select a File", systemImage: "doc.text")

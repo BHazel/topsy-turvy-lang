@@ -9,6 +9,8 @@ struct RunInputsView: View {
     @Binding var args: [String]
     @Binding var stdinLines: [String]
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         NavigationStack {
             List {
@@ -53,6 +55,13 @@ struct RunInputsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Arguments & Input")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }

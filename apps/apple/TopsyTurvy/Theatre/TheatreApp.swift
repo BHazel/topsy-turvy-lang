@@ -5,7 +5,7 @@ import SwiftUI
 struct TheatreApp: App {
     var body: some Scene {
         DocumentGroup(newDocument: TheatreDocument()) { configuration in
-            TheatreDocumentView(text: configuration.$document.text, documentURL: configuration.fileURL)
+            SingleFileEditorHostView(text: configuration.$document.text, documentURL: configuration.fileURL)
         }
         .defaultSize(width: 1100, height: 750)
         .commands {
