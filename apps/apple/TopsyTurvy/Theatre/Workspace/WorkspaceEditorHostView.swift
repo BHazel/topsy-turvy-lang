@@ -41,46 +41,54 @@ struct WorkspaceEditorHostView<ExtraToolbarContent: ToolbarContent>: View {
     @State private var isIssuesPresented = false
     @State private var position = CodeEditor.Position()
     @State private var diagnostics: Set<TextLocated<Message>> = []
+    @State private var completionBarController = CompletionBarController()
     @AppStorage("editorFontSize") private var fontSize: Double = EditorFontSize.default
     @StateObject private var keyboardObserver = KeyboardObserver()
 
-    /// Backs an invisible focus proxy (below) — see its comment for why one is needed at all.
-    @FocusState private var isFocusProxyFocused: Bool
+    /// This instance's token for `TheatreActiveScene` publishing — see that type's doc comment.
+    private let activeSceneToken = UUID()
+
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         editor
-            // `CodeEditorView` wraps its own `UITextView`, which never participates in SwiftUI's focus
-            // system — nothing in this scene ever becomes a SwiftUI-recognised focused element. Without one,
-            // iPadOS never considers this scene "focused" for `@FocusedValue` purposes, so `.focusedSceneValue`
-            // below never activates and `TheatreCommands`' menu items stay permanently disabled. This
-            // invisible, zero-size proxy grabs focus as soon as the view appears purely to give the scene
-            // something to recognise.
-            .background {
-                Color.clear
-                    .focusable()
-                    .focused($isFocusProxyFocused)
-                    .frame(width: 0, height: 0)
-            }
-            .onAppear {
-                isFocusProxyFocused = true
-            }
+            // Both the completion bar and the output drawer sit in one `.safeAreaInset` — the same mechanism
+            // `OutputDrawerView` already relies on correctly riding above the software keyboard on its own; a
+            // separate `.overlay` with manual `keyboardHeight` padding was tried first and confirmed live
+            // (2026-07-05, iPhone and detached-keyboard iPad) to get covered by the keyboard/drawer instead of
+            // riding above them. Not `ToolbarItemGroup(placement: .keyboard)`, which is unreliable over
+            // `CodeEditorView`'s wrapped `UITextView` (a `UIViewRepresentable`).
             .safeAreaInset(edge: .bottom) {
-                OutputDrawerView(lines: runViewModel.outputLines, statusMessage: runViewModel.statusMessage, isPresented: $isOutputPresented)
+                VStack(spacing: 0) {
+                    CompletionBarView(candidates: completionBarController.candidates, onSelect: insertCompletion)
+                    OutputDrawerView(lines: runViewModel.outputLines, statusMessage: runViewModel.statusMessage, isPresented: $isOutputPresented)
+                }
             }
             .issuesInspector(diagnostics: diagnostics, isPresented: $isIssuesPresented, onSelect: navigateToDiagnostic)
             .toolbar {
                 toolbarContent
                 extraToolbarContent()
             }
-            .focusedSceneValue(
-                \.theatreDocumentActions,
-                TheatreDocumentActions(
-                    isRunning: runViewModel.isRunning,
-                    perform: runProgramme,
-                    stop: stopProgramme,
-                    format: formatSource
-                )
-            )
+            .onAppear {
+                publishActiveDocumentActions()
+            }
+            .onDisappear {
+                TheatreActiveScene.shared.clearDocumentActions(token: activeSceneToken)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    publishActiveDocumentActions()
+                }
+            }
+            .onChange(of: runViewModel.isRunning) {
+                publishActiveDocumentActions()
+            }
+            .onChange(of: text) {
+                scheduleCompletionUpdate()
+            }
+            .onChange(of: position.selections) {
+                scheduleCompletionUpdate()
+            }
             .task {
                 // Re-registers the import resolver for this file's directory on the shared session — the
                 // session itself is already open, owned by the caller for its whole lifetime.
@@ -172,6 +180,36 @@ struct WorkspaceEditorHostView<ExtraToolbarContent: ToolbarContent>: View {
         return try? String(contentsOf: siblingURL, encoding: .utf8)
     }
 
+    /// Publishes this file's actions to `TheatreActiveScene`, so the menu bar and hardware-keyboard shortcuts
+    /// reach whichever document/workspace scene is currently active.
+    private func publishActiveDocumentActions() {
+        TheatreActiveScene.shared.publishDocumentActions(
+            TheatreDocumentActions(isRunning: runViewModel.isRunning, perform: runProgramme, stop: stopProgramme, format: formatSource),
+            token: activeSceneToken
+        )
+    }
+
+    /// Recomputes the completion bar's candidates for the current cursor position, after `CompletionBarController`'s
+    /// own debounce.
+    private func scheduleCompletionUpdate() {
+        guard let location = position.selections.first?.location else { return }
+        let (line, column) = Self.lineColumn(forOffset: location, in: text)
+        completionBarController.scheduleUpdate(session: session, source: text, line: Int32(line), column: Int32(column))
+    }
+
+    /// Splices a tapped completion chip into `text`, replacing the already-typed word it completes (not
+    /// appending after it — `InsertText` is always the *full* replacement text, e.g. a symbol's is
+    /// unconditionally its whole name per `NativeExports.BuildSymbolItem`, never trimmed by what's already
+    /// typed), and advances the cursor past the inserted text.
+    private func insertCompletion(_ item: CompletionItemPayload) {
+        guard let cursor = position.selections.first else { return }
+        let lastWordLength = completionBarController.lastWord.utf16.count
+        let replaceRange = NSRange(location: cursor.location - lastWordLength, length: lastWordLength)
+        let result = TopsyTurvyCompletionInserter.insert(item, into: text, at: replaceRange)
+        text = result.text
+        position.selections = [result.selection]
+    }
+
     private func runProgramme() {
         keyboardObserver.dismiss()
         onSave?()
@@ -208,6 +246,23 @@ struct WorkspaceEditorHostView<ExtraToolbarContent: ToolbarContent>: View {
             offset += lines[index].utf16.count + 1
         }
         return offset + column
+    }
+
+    /// Converts an absolute UTF-16 character offset into `text` into a 0-indexed line/column — the inverse of
+    /// `characterOffset(forZeroBasedLine:column:in:)`, used to feed the completion bar's cursor position
+    /// directly from `text`/`position`, without depending on `TopsyTurvyLanguageService`'s own asynchronously
+    /// populated `locationService`.
+    private static func lineColumn(forOffset offset: Int, in text: String) -> (line: Int, column: Int) {
+        let lines = text.components(separatedBy: "\n")
+        var remaining = offset
+        for (index, line) in lines.enumerated() {
+            let lineLength = line.utf16.count + 1
+            if remaining < lineLength || index == lines.count - 1 {
+                return (index, remaining)
+            }
+            remaining -= lineLength
+        }
+        return (max(0, lines.count - 1), 0)
     }
 }
 

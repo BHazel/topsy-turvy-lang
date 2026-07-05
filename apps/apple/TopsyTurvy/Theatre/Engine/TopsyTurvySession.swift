@@ -97,6 +97,16 @@ actor TopsyTurvySession {
         }
     }
 
+    /// Builds keyword and symbol completion candidates for the given 0-indexed line/column. Keywords are
+    /// always offered, even when the source fails to parse.
+    func complete(source: String, line: Int32, column: Int32) -> CompletionResult {
+        guard let session else { return CompletionResult(Items: []) }
+        return withUTF8CString(source) { sourcePointer in
+            decodeJSON(CompletionResult.self, from: topsyturvy_complete(session, sourcePointer, line, column))
+                ?? CompletionResult(Items: [])
+        }
+    }
+
     /// Formats `source` with canonical keyword casing and libretto indentation.
     /// - Returns: The formatted source text, or `nil` if the session is not open or an exception was thrown.
     func format(source: String) -> String? {

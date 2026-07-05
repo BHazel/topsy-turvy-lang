@@ -139,6 +139,18 @@ final class TopsyTurvySessionTests: XCTestCase {
         XCTAssertTrue(formatted?.contains("FINALE.") ?? false)
     }
 
+    /// Tests that `complete` offers the matching keyword for a partially typed word, exercising the real
+    /// `topsyturvy_complete` round-trip (not just JSON decoding of a canned payload).
+    func testCompleteOffersMatchingKeywordForPartialWord() async {
+        let session = TopsyTurvySession()
+        await session.open()
+        addTeardownBlock { await session.close() }
+
+        let result = await session.complete(source: "HAR", line: 0, column: 3)
+
+        XCTAssertTrue(result.Items.contains { $0.Label == "HARK!" })
+    }
+
     /// Tests that repeatedly resolving `PRAY ADMIT` imports via `execute` does not crash across many calls,
     /// exercising the cached-buffer-freed-on-next-call ownership pattern.
     func testRepeatedImportResolutionDoesNotCrash() async {

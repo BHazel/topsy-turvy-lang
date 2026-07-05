@@ -42,6 +42,11 @@ struct OpenFolderButton: View {
     @State private var bookmarkStore = WorkspaceBookmarkStore()
     @State private var presentedEntry: WorkspaceBookmarkEntry?
 
+    /// This instance's token for `TheatreActiveScene` publishing — see that type's doc comment.
+    private let activeSceneToken = UUID()
+
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         Button {
             isPickerPresented = true
@@ -58,6 +63,30 @@ struct OpenFolderButton: View {
             WorkspaceScene(entry: entry)
         }
         .accessibilityIdentifier("OpenFolderButton")
+        .onAppear {
+            publishActiveFolderActions()
+        }
+        .onDisappear {
+            TheatreActiveScene.shared.clearFolderActions(token: activeSceneToken)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                publishActiveFolderActions()
+            }
+        }
+    }
+
+    /// Publishes this button's actions to `TheatreActiveScene`, so the menu bar and hardware-keyboard
+    /// shortcuts reach whichever single-file document window is currently active.
+    private func publishActiveFolderActions() {
+        TheatreActiveScene.shared.publishFolderActions(
+            TheatreFolderActions(
+                openFolder: { isPickerPresented = true },
+                recents: bookmarkStore.recents,
+                openRecent: { presentedEntry = $0 }
+            ),
+            token: activeSceneToken
+        )
     }
 
     /// Creates a security-scoped bookmark for the picked folder and presents the workspace cover onto it.
