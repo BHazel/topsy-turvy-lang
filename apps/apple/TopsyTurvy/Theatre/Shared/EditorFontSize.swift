@@ -2,14 +2,8 @@ import SwiftUI
 
 /// Shared default and presets for the editor's user-adjustable font size, persisted via `@AppStorage`.
 enum EditorFontSize {
-    /// The default point size: larger on iPhone/iPad, where `CodeEditorView`'s own default reads very small.
-    static var `default`: Double {
-        #if os(iOS)
-        16
-        #else
-        13
-        #endif
-    }
+    /// The default point size — larger than `CodeEditorView`'s own default, which reads very small on iPhone/iPad.
+    static let `default`: Double = 16
 
     static let presets: [Double] = [12, 13, 14, 16, 18, 20, 24, 28]
 }

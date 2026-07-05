@@ -16,7 +16,7 @@ struct OutputPaneView: View {
             .padding(8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.primary.opacity(0.05))
+        .background(Color(.secondarySystemBackground))
         .accessibilityIdentifier("OutputPaneView.scrollView")
     }
 }

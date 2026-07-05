@@ -1,7 +1,5 @@
-import SwiftUI
-
-#if os(iOS)
 import Combine
+import SwiftUI
 import UIKit
 
 /// Tracks whether the software keyboard is currently visible, via `UIResponder`'s show/hide notifications.
@@ -33,4 +31,3 @@ final class KeyboardObserver: ObservableObject {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
-#endif

@@ -3,9 +3,9 @@ import SwiftUI
 /// Renders hover Markdown content in a compact popover, for `TopsyTurvyCodeEditorView`'s iOS/iPadOS long-press
 /// hover gesture.
 ///
-/// On macOS, hover is handled automatically by `CodeEditorView`'s own `InfoPopover` (`CodeActions.swift`,
-/// AppKit-only) via `TopsyTurvyLanguageService.info(at:)` — this view exists purely for the platforms that
-/// mechanism doesn't reach, since the package's iOS/visionOS `CodeActions` branch is an unimplemented stub.
+/// `CodeEditorView` only automates hover via its own `InfoPopover` (`CodeActions.swift`) on macOS, which this
+/// app does not target — its iOS/visionOS `CodeActions` branch is an unimplemented upstream stub — so this
+/// view builds the equivalent by hand for iOS/iPadOS.
 struct TopsyTurvyHoverPopoverView: View {
     let markdown: String
 

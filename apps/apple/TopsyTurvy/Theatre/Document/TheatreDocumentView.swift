@@ -3,19 +3,17 @@ import Combine
 import LanguageSupport
 import SwiftUI
 
-/// The main per-document window: editor above, output below. On macOS the split is a native `VSplitView`
-/// (a real `NSSplitView` — proper resize cursor and drag behaviour). On iOS, which has no system split
-/// control, the divider is a plain dark hairline that can be dragged to resize the output pane — visually
-/// just a separator, with a generous invisible hit area, rather than a drawn "handle". On compact-width iOS
-/// (iPhone, or a narrow iPad multitasking pane) the output pane also hides itself while the keyboard is
-/// visible, since the docked pane and the keyboard would otherwise compete for the limited space above it,
-/// leaving very little room to actually type; regular-width iPad keeps output visible while typing, since
-/// there's enough headroom above the keyboard there for it not to matter.
+/// The main per-document window: editor above, output below. The divider is a plain dark hairline that can
+/// be dragged to resize the output pane — visually just a separator, with a generous invisible hit area,
+/// rather than a drawn "handle". On compact-width screens (iPhone, or a narrow iPad multitasking pane) the
+/// output pane also hides itself while the keyboard is visible, since the docked pane and the keyboard would
+/// otherwise compete for the limited space above it, leaving very little room to actually type; regular-width
+/// iPad keeps output visible while typing, since there's enough headroom above the keyboard there for it not
+/// to matter.
 ///
-/// Multiple open `.topsy` files are handled by native macOS window tabs (`preferWindowTabbing()`), not a
-/// custom in-window tab bar. `PRAY ADMIT` resolves a sibling filename directly from this document's own
-/// on-disk directory, so a second file never needs to be explicitly "opened into" this window to be
-/// importable — only present alongside it on disk.
+/// `PRAY ADMIT` resolves a sibling filename directly from this document's own on-disk directory, so a second
+/// file never needs to be explicitly "opened into" this window to be importable — only present alongside it
+/// on disk.
 struct TheatreDocumentView: View {
     @Binding var text: String
     let documentURL: URL?
@@ -30,11 +28,7 @@ struct TheatreDocumentView: View {
     @State private var diagnostics: Set<TextLocated<Message>> = []
     @AppStorage("editorFontSize") private var fontSize: Double = EditorFontSize.default
 
-    #if os(iOS) || os(visionOS)
     @State private var isIssuesListVisible = false
-    #endif
-
-    #if os(iOS)
     @State private var outputHeight: CGFloat = 200
     @State private var outputHeightAtDragStart: CGFloat?
     @StateObject private var keyboardObserver = KeyboardObserver()
@@ -48,12 +42,10 @@ struct TheatreDocumentView: View {
     private var shouldHideOutputForKeyboard: Bool {
         keyboardObserver.isKeyboardVisible && horizontalSizeClass == .compact
     }
-    #endif
 
     var body: some View {
         content
             .toolbar {
-                #if os(iOS)
                 if keyboardObserver.isKeyboardVisible {
                     ToolbarItemGroup {
                         Button {
@@ -63,7 +55,6 @@ struct TheatreDocumentView: View {
                         }
                     }
                 }
-                #endif
                 ToolbarItemGroup {
                     RunToolbarButtons(isRunning: runViewModel.isRunning, onRun: runProgramme, onStop: stopProgramme)
                 }
@@ -73,16 +64,16 @@ struct TheatreDocumentView: View {
                 ToolbarItemGroup {
                     formatButton
                 }
-                #if os(iOS) || os(visionOS)
                 ToolbarItemGroup {
                     issuesListToggleButton
                 }
-                #endif
                 ToolbarItemGroup {
                     EditorFontSizeMenu(fontSize: $fontSize)
                 }
+                ToolbarItemGroup {
+                    OpenFolderButton()
+                }
             }
-            .preferWindowTabbing()
             .focusedSceneValue(
                 \.theatreDocumentActions,
                 TheatreDocumentActions(
@@ -108,20 +99,8 @@ struct TheatreDocumentView: View {
             }
     }
 
-    /// The inputs button, presenting `RunInputsView` in each platform's native idiom: a popover anchored to
-    /// the toolbar button on macOS, a medium-detent sheet on iOS.
-    @ViewBuilder
+    /// The inputs button, presenting `RunInputsView` as a medium-detent sheet.
     private var inputsButton: some View {
-        #if os(macOS)
-        Button {
-            isInputsPresented = true
-        } label: {
-            Label("Arguments & Input", systemImage: "text.append")
-        }
-        .popover(isPresented: $isInputsPresented) {
-            RunInputsView(args: $args, stdinLines: $stdinLines)
-        }
-        #else
         Button {
             isInputsPresented = true
         } label: {
@@ -131,13 +110,10 @@ struct TheatreDocumentView: View {
             RunInputsView(args: $args, stdinLines: $stdinLines)
                 .presentationDetents([.medium, .large])
         }
-        #endif
     }
 
-    /// The format command button, cross-platform: replaces the buffer with `topsyturvy_format`'s canonically
-    /// cased, correctly indented output. Not routed through `LanguageService.extraActions`, since that
-    /// mechanism is only ever consumed by `CodeEditorView` on macOS — a plain toolbar button works identically
-    /// on every platform.
+    /// The format command button: replaces the buffer with `topsyturvy_format`'s canonically cased, correctly
+    /// indented output.
     private var formatButton: some View {
         Button {
             formatSource()
@@ -147,10 +123,8 @@ struct TheatreDocumentView: View {
         .accessibilityIdentifier("TheatreDocumentView.formatButton")
     }
 
-    #if os(iOS) || os(visionOS)
-    /// Toggles the issues pane's visibility. Hidden by default on iPhone-width screens, unlike macOS's always-
-    /// present third `VSplitView` pane, since the output pane already fights the keyboard for space there —
-    /// a third always-visible pane would leave even less room to type.
+    /// Toggles the issues pane's visibility. Hidden by default, since the output pane already fights the
+    /// keyboard for space — a third always-visible pane would leave even less room to type.
     private var issuesListToggleButton: some View {
         Button {
             isIssuesListVisible.toggle()
@@ -159,20 +133,8 @@ struct TheatreDocumentView: View {
         }
         .accessibilityIdentifier("TheatreDocumentView.issuesListToggleButton")
     }
-    #endif
 
-    @ViewBuilder
     private var content: some View {
-        #if os(macOS)
-        VSplitView {
-            editor
-                .frame(minHeight: 150)
-            OutputPaneView(lines: runViewModel.outputLines)
-                .frame(minHeight: 80)
-            IssuesListView(diagnostics: diagnostics, onSelect: navigateToDiagnostic)
-                .frame(minHeight: 60, idealHeight: 120, maxHeight: 200)
-        }
-        #else
         VStack(spacing: 0) {
             editor
                 .frame(maxHeight: .infinity)
@@ -196,10 +158,8 @@ struct TheatreDocumentView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: shouldHideOutputForKeyboard)
         .animation(.easeInOut(duration: 0.2), value: isIssuesListVisible)
-        #endif
     }
 
-    #if os(iOS)
     /// A dark hairline separating editor and output, draggable to resize the output pane.
     private var outputDivider: some View {
         Rectangle()
@@ -219,7 +179,6 @@ struct TheatreDocumentView: View {
                     }
             )
     }
-    #endif
 
     private var editor: some View {
         TopsyTurvyCodeEditorView(text: $text, position: $position, session: session, languageService: languageService, fontSize: fontSize)
@@ -234,10 +193,8 @@ struct TheatreDocumentView: View {
     }
 
     private func runProgramme() {
-        #if os(iOS)
         // So the output pane (hidden while typing) reappears without an extra tap to dismiss the keyboard.
         keyboardObserver.dismiss()
-        #endif
         Task {
             await runViewModel.run(session: session, source: text, args: args, stdin: stdinLines.joined(separator: "\n"))
         }

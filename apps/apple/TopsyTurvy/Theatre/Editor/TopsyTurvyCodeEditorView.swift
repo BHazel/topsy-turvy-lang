@@ -22,10 +22,8 @@ struct TopsyTurvyCodeEditorView: View {
     @State private var messages: Set<TextLocated<Message>> = []
     @Environment(\.colorScheme) private var colorScheme
 
-    #if os(iOS) || os(visionOS)
     @State private var hoverContent: String?
     @State private var isHoverPresented = false
-    #endif
 
     var body: some View {
         CodeEditor(text: $text, position: $position, messages: $messages, language: .topsyTurvy(languageService: languageService))
@@ -46,7 +44,6 @@ struct TopsyTurvyCodeEditorView: View {
             .onChange(of: text) { _, newValue in
                 Task { await languageService?.updateText(newValue) }
             }
-            #if os(iOS) || os(visionOS)
             // Hover has no automatic path on iOS/iPadOS: `CodeEditorView`'s `info(at:)` popover is AppKit-only
             // (`CodeActions.swift`'s iOS/visionOS branch is an unimplemented upstream stub), so this gesture
             // builds the equivalent by hand. A tap already moves the underlying `UITextView`'s selection
@@ -58,7 +55,6 @@ struct TopsyTurvyCodeEditorView: View {
             .popover(isPresented: $isHoverPresented) {
                 TopsyTurvyHoverPopoverView(markdown: hoverContent ?? "")
             }
-            #endif
     }
 
     /// The active highlighting theme, derived from the current colour scheme with `fontSize` applied — lets
@@ -69,7 +65,6 @@ struct TopsyTurvyCodeEditorView: View {
         return theme
     }
 
-    #if os(iOS) || os(visionOS)
     /// Fetches hover content for the current selection's location and presents it in a popover.
     private func performHover() {
         guard let languageService, let location = position.selections.first?.location else { return }
@@ -80,5 +75,4 @@ struct TopsyTurvyCodeEditorView: View {
             }
         }
     }
-    #endif
 }
