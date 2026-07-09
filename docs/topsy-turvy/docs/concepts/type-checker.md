@@ -8,13 +8,13 @@ The Type Checker analyses a parsed Topsy Turvy programme and verifies that all t
 
 ## Implementation
 
-The Type Checker is implemented in the `BWHazel.TopsyTurvy.TypeChecker` namespace.  Its public entry point is the `TopsyTurvyTypeChecker` class, which exposes a single `Check(ProgramNode)` method and returns a `TypeCheckResult`.
+The Type Checker is implemented in the `BWHazel.TopsyTurvy.TypeChecker` namespace.  Its public entry point is the `TopsyTurvyTypeChecker` class, which exposes a single `Check(ProgramNode, sourceFileResolver)` method and returns a `TypeCheckResult`.  The optional `sourceFileResolver` delegate resolves a `PRAY ADMIT` import filename to its source text so that functions declared in imported files are visible to the check.  Passing `null` leaves imported functions unresolved.
 
 ### Type Check Result
 
 `TypeCheckResult` is a record containing two members:
 
-* **`SemanticModel`:** A mapping of the type information derived during the check (see below).
+* **`Model`:** A `SemanticModel` mapping of the type information derived during the check (please see below).
 * **`Diagnostics`:** An `IReadOnlyList<Diagnostic>` of all issues discovered during the check.  Each `Diagnostic` carries a `DiagnosticSeverity` of either `Error` or `Warning`.
 
 The `Success` property returns `true` only when no error severity diagnostic was produced.  Warnings do not prevent execution whereas errors do.

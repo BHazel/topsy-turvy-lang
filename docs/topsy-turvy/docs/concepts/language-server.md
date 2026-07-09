@@ -26,12 +26,9 @@ One important convention to note is that LSP uses **0-indexed** line and column 
 The language server is implemented using [OmniSharp](https://github.com/omnisharp).
 
 :::warning
-The following known limitations affect the current implementation:
+The following known limitation affects the current implementation:
 
-* **Diagnostic squiggle accuracy**: Syntax error squiggles inside block constructs (functions, loops, conditionals) often appear on the opening line of the block rather than the exact error line.  This is a known limitation of the error recovery in the parser and requires significant parser refactoring to resolve.
-* **Symbol position tracking**: The `SymbolTable` records declaration positions by scanning raw source lines for declaration keywords, rather than reading the AST node `Span`.  This is a workaround for AST span tracking not yet being wired into the parser. Please see the [AST](./ast.md#source-positions) page for more detail.
 * **Parameter name collisions**: The `SymbolTable` uses a flat namespace shared across all functions.  If two functions declare a parameter with the same name, only the first is recorded; subsequent ones are silently dropped, affecting hover, Go-to-Definition and rename.
-* **`JUST SO` exclusion**: The `JUST SO` implicit variable is excluded from Rename Symbol, Find All References and semantic token colouring because its name contains a space, which prevents word-boundary regular expression matching.
 :::
 
 ## Implementation
@@ -45,7 +42,7 @@ An LSP server implements handlers to respond to requests from editors.  The _Ope
 |VS Code Functionality|Handler Class|Description|
 |-|-|-|
 |Document Synchronisation|`TextDocumentSyncHandler`|The backbone of the language server.  Triggered whenever a `.topsy` file is opened, edited, saved or closed.  Re-parses the document on each change, updates the document state and publishes diagnostic squiggles to the editor.|
-|Hover|`HoverHandler`|Returns a Markdown tooltip when hovering over a symbol: variable, function, parameter or the `JUST SO` implicit variable.|
+|Hover|`HoverHandler`|Returns a Markdown tooltip when hovering over a symbol: variable, function or parameter.|
 |Go to Definition|`DefinitionHandler`|Navigates to the declaration of the symbol under the cursor: `PRAY WELCOME` for variables and parameters, `IT IS MY DUTY TO PERFORM` for functions.  Searches the current document first, then other open documents.|
 |IntelliSense / Completion|`CompletionHandler`|Suggests declared symbols and all Topsy Turvy keywords as the user types.  Uses server-side filtering to handle multi-word keywords incrementally as each word is typed.|
 |Semantic Syntax Highlighting|`SemanticTokensHandler`|Assigns semantic colours to variables, parameters and functions, enriching the base TextMate grammar colouring with symbol-aware information.|

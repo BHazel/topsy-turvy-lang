@@ -39,8 +39,9 @@ The concrete node types, grouped by their base class, are listed below.
 |`ImportNode`|Import|Imports another `.topsy` file, making its functions available: `PRAY ADMIT`.|
 |`InputNode`|Input|Reads a line from standard input into a variable as a `YARN` (string): `PRAY TELL`.|
 |`LoopNode`|Loop|A loop block supporting ascending, descending, whilst and infinite forms: `BY A LEGAL FICTION` ... `THE TERM EXPIRES.`  The form is determined by the `LoopType` enum (see below).|
-|`PrintNode`|Print|Evaluates and prints an expression to standard output: `BEHOLD`.|
 |`PrincipalBlockNode`|Principal Block|Groups variable declarations: `PRINCIPALS` ... `THE CURTAIN RISES.`|
+|`PrintNode`|Print|Evaluates and prints an expression to standard output: `BEHOLD`.|
+|`ProgrammeReturnNode`|Programme Return|Sets the OS exit code from the top level of the programme body, not inside a function: `AND SO I FIND <expr>`.  The expression must evaluate to a `PEER`.  Omitting this statement implicitly exits with code `0`.|
 |`ReturnNode`|Return|Returns from a function with or without a value: `AND SO I FIND` / `MY DUTY IS PREMATURELY DISCHARGED.`|
 |`SwitchNode`|Switch|Selects a block based on an expression value: `IN WHICH CAPACITY?` ... `NOTHING COULD BE MORE SATISFACTORY.`|
 |`ThrowNode`|Throw|Raises an exception with a payload expression: `A HIDEOUS CURSE ON`.|
@@ -78,7 +79,7 @@ The `LoopType` enum determines the form of a `LoopNode`:
 |Value|Keyword|Description|
 |-|-|-|
 |`Infinite`|(none)|Repeats indefinitely until a `THAT WILL DO.` break statement exits the loop.|
-|`Ascending`|`ASCENDING`|Increments a counter variable by 1 each iteration, exiting when a condition becomes `VERITY`.  The counter always starts from `0`.|
+|`Ascending`|`ASCENDING`|Increments a counter variable by 1 each iteration, exiting when a condition becomes `VERITY`.  The counter starts from its current declared value.|
 |`Descending`|`DESCENDING`|Decrements a counter variable by 1 each iteration, exiting when a condition becomes `VERITY`.  The counter starts from its current declared value.|
 |`Whilst`|`WHILST`|Continues while a boolean expression evaluates to `VERITY`, checked before each iteration.|
 
@@ -194,11 +195,10 @@ HARK! "Walking the Tree"
   or, "A Constitutional Through the Branches"
 
 PRINCIPALS
-    PRAY WELCOME Lords AS A PEER
-    PRAY WELCOME Message AS A YARN
+    PRAY WELCOME Lords AS A PEER BEING 0
 THE CURTAIN RISES.
 
-IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AND Liberals
+IT IS MY DUTY TO PERFORM TotalLords UNDER THE TERMS OF Conservatives AS A PEER AND Liberals AS A PEER TO FIND PEER
     AND SO I FIND SUM OF Conservatives AND Liberals
 MY DUTY IS DISCHARGED.
 
@@ -212,12 +212,12 @@ FINALE.
 graph TD
     P["<strong>ProgramNode</strong><br/>Title: <code>Walking the Tree</code><br/>Subtitle: <code>A Constitutional Through the Branches</code>"]
     P --> PB["<strong>PrincipalBlockNode</strong>"]
-    P --> FD["<strong>FunctionDefinitionNode</strong><br/>Name: <code>TotalLords</code><br/>Parameters: <code>Conservatives</code>, <code>Liberals</code>"]
+    P --> FD["<strong>FunctionDefinitionNode</strong><br/>Name: <code>TotalLords</code><br/>Parameters: <code>Conservatives</code>(<code>PEER</code>), <code>Liberals</code>(<code>PEER</code>)<br/>ReturnType: <code>Integer</code>"]
     P --> AS["<strong>AssignmentNode</strong><br/>Target: <code>Lords</code>"]
     P --> PR["<strong>PrintNode</strong>"]
 
     PB --> D1["<strong>DeclarationNode</strong><br/>Name: <code>Lords</code><br/>Type: <code>Integer</code>"]
-    PB --> D2["<strong>DeclarationNode</strong><br/>Name: <code>Message</code><br/>Type: <code>String</code>"]
+    D1 --> D1V["<strong>LiteralNode</strong><br/>Type: <code>Integer</code><br/>Value: <code>0</code>"]
 
     FD --> RN["<strong>ReturnNode</strong>"]
     RN --> SUM["<strong>PrefixExpressionNode</strong><br/>Operator: <code>Sum</code>"]
@@ -232,7 +232,7 @@ graph TD
     PR --> STR["<strong>LiteralNode</strong><br/>Type: <code>String</code><br/>Value: <code>There are {Lords} total lords!</code>"]
 ```
 
-* The `PrincipalBlockNode` groups the variable declarations.
+* The `PrincipalBlockNode` groups the variable declarations.  The `DeclarationNode` carries its `Name` and `Type` directly, and its `InitialValue` as a genuine child expression, here a `LiteralNode`.
 * The `FunctionDefinitionNode` contains the function body as a list of statements: a single `ReturnNode` wrapping a `PrefixExpressionNode` for the `SUM OF` expression.
 * The assignment calls the function using `Operator.Summon`, passing `7` and `6` as `LiteralNode` arguments.
 * Finally, the `PrintNode` prints the interpolated string.

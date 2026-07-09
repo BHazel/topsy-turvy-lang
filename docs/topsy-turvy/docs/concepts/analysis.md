@@ -6,7 +6,7 @@ sidebar_position: 7
 
 Code analysis enables editors to provide rich experiences when working with Topsy Turvy code, such as syntax highlighting, code navigation, refactoring amongst others.
 
-The _Operetta Language Server_ and Web Editor make use of the Analysis layer to provide these editing features.
+The _Operetta Language Server_, Web Editor and Operetta Theatre iOS app make use of the Analysis layer to provide these editing features.
 
 ## Implementation
 
@@ -18,13 +18,14 @@ In the _Operetta Toolchain_ the Analysis layer is implemented in the `BWHazel.To
 * **`TopsyTurvyCodeGenerator`:** Converts an AST back into valid Topsy Turvy source code.
 * **`SourceAnalyser`:** Finds occurrences of a symbol by scanning source text.
     * This is used as a workaround for missing AST position information as outlined in the Known Limitations section on the [Language Server](./language-server.md) page.
+* **`SourceTokeniser`:** Scans source text into categorised token spans for editor syntax highlighting.
 * **`KeywordData`:** The authoritative list of all Topsy Turvy keywords, used for completions and formatting.
 * **`DocumentationCommentParser`:** Parses documentation comments associated with variables and functions for display in editors.
 
 ### Symbol Table
 
 :::warning
-There is a known limitation regarding the flat symbol table namespace and source-text scanning for positions.  Please see the [Language Server](./language-server.md) page for full details.
+There is a known limitation regarding the flat symbol table namespace.  Please see the [Language Server](./language-server.md) page for full details.
 :::
 
 The `SymbolTable` is a registry of every named entity in a Topsy Turvy programme: variables, functions and function parameters.  It is rebuilt from scratch after every successful parse so that editors always have an up-to-date picture of the declared symbols in a programme.
@@ -53,10 +54,7 @@ The `SymbolKind` enum classifies what type of named entity a symbol represents:
 
 The `SymbolTable` is constructed by calling `SymbolTable.Build(program, originalSource)`, which takes the root `ProgramNode` from the [AST](./ast.md) and the original, unprocessed source text.
 
-The build proceeds in two steps:
-
-1. **Walk the AST**: The builder traverses every statement recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.
-2. **Scan the source for positions**: Because AST span tracking is not yet wired into the parser (please see the Source Positions section on the [AST](./ast.md#source-positions) page), the builder recovers definition positions by searching the raw source text line by line for the declaration keyword followed by the symbol name.  For variables it searches for `PRAY WELCOME` ... `Name` and for functions it searches for `IT IS MY DUTY TO PERFORM` ... `Name`.
+The builder walks the AST recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.  Definition positions are taken directly from each node `Span` (please see the Source Positions section on the [AST](./ast.md#source-positions) page).  Parameters carry their own `Span` independently of the function they belong to, so each reports its own position within the `UNDER THE TERMS OF` clause rather than reusing the position of the function.
 
 #### Example
 
@@ -79,10 +77,10 @@ the symbol table would contain four entries:
 |-|-|-|-|-|-|
 |`AllLords`|`Variable`|`PEER`|_(none)_|3|14|
 |`TotalLords`|`Function`|_(none)_|`Conservatives AS A PEER`, `Liberals AS A PEER`|4|26|
-|`Conservatives`|`Parameter`|`PEER`|_(none)_|4|26|
-|`Liberals`|`Parameter`|`PEER`|_(none)_|4|26|
+|`Conservatives`|`Parameter`|`PEER`|_(none)_|4|56|
+|`Liberals`|`Parameter`|`PEER`|_(none)_|4|84|
 
-Note that `Conservatives` and `Liberals` both report the same position as `TotalLords`.  Parameters are assigned the position of the function name itself rather than their own position within the `UNDER THE TERMS OF` clause, as the position scan uses the function declaration keyword to find the function, and parameters reuse that result.
+Note that `Conservatives` and `Liberals` each report their own position within the `UNDER THE TERMS OF` clause, rather than the position of `TotalLords` itself.
 
 ### Source Formatter
 
@@ -186,6 +184,31 @@ in that priority order, so that a block comment containing a string literal is t
 
 * `FindWordOccurrences(sourceLines, word)` uses these skip ranges to find every whole-word, case-insensitive match of a symbol name, returning `(Line, Character)` pairs in document order.  Whole-word matching checks that the character immediately before and after the match is not a valid identifier character (letters, digits, `-` or `_`).
 * `ExtractWordAt(source, line, column)` (on `SymbolTable`) performs the reverse: given a 0-indexed cursor position from the editor, it returns the identifier word the cursor is at by walking left and right from the position to find the full word boundaries.
+
+### Source Tokeniser
+
+:::warning
+The Source Tokeniser is a third, independent syntax-highlighting mechanism intended for when using the Language Server is not available, such as in the native, embedded toolchain.  In other situations the Language Server should be the preferred method for syntax highlighting.  Please see the [Language Server](./language-server.md) page for more information.
+:::
+
+The `SourceTokeniser` scans Topsy Turvy source text into a flat, document-ordered list of categorised token spans for editors to apply syntax highlighting.  Unlike `SymbolTable`, this is a lexical scan, not a parse: it does not consult the AST or the symbol table.  It emits a best-efforts category for every recognisable span even when the surrounding source does not currently form valid syntax, for example while the user is still typing, and never throws.
+
+Scanning is performed by the single entry point, `Tokenise(source)`, which returns a list of `SourceToken` records, each carrying a category and a source `Span`.  A token can have one of the following categories:
+
+|Category|Description|
+|-|-|
+|`comment`|A line or block comment.|
+|`string`|A single- or double-quoted character or string literal, honouring the `~`-escape character.|
+|`number`|An integer or floating-point numeric literal.|
+|`variable`|The special `THE PROPS` name.|
+|`keyword`|A recognised Topsy Turvy keyword.|
+|`type`|A keyword naming a type, for example `PEER` or `LITTLE LIST OF`.|
+|`keywordOther`|A keyword relating to other keywords, for example the `STANDING` modifier, categorised separately from other keywords.|
+|`identifier`|A user-declared name.|
+
+Keyword phrases are matched by longest-match against `KeywordData.Keywords` at every candidate word-start position, trying each keyword in descending length order rather than re-splitting each phrase into individual words.  This resolves prefix collisions, for example correctly matching the whole of `MY DUTY IS DISCHARGED.` rather than stopping early at a shorter phrase that happens to be a prefix of a longer one.  As with `SourceFormatter`, matching is case-insensitive and requires a non-identifier character, or end-of-source, immediately after the final word so a keyword-like sequence embedded inside a longer identifier is not mistakenly matched as a keyword.
+
+Token spans are reported using the same 1-indexed, half-open `Line`/`Column` convention as `DiagnosticInfo`, not the 0-indexed convention used by the hover and completion exports.
 
 ### Keyword Data
 
