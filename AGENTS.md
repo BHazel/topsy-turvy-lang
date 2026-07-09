@@ -216,6 +216,8 @@ Use the `/implement-language-feature` skill as it is the single source of truth 
 
 The skill also covers the visual editor layer (`VisualGraphBuilder`). Every new or renamed AST node type that produces a statement or expression needs a corresponding `Create*` or expression branch in `VisualGraphBuilder.cs`: consult the node-mapping table in the skill for the full list.
 
+`apps/apple/TopsyTurvy/Theatre/Editor/TopsyKeywords.swift` joins the REPL/Monaco/TextMate keyword-highlighting group as of Phase 2: it mirrors `KeywordData.Keywords` on the Swift side (word-by-word, since `CodeEditorView`'s reserved-identifier matching cannot anchor a trailing word-boundary against a keyword's own punctuation) to build `TopsyLanguageConfiguration`'s `reservedIdentifiers`. Update it alongside every other keyword-list sync point whenever `KeywordData.Keywords` changes.
+
 ### New REPL Command
 
 | # | File | What to Update |
@@ -234,6 +236,22 @@ The skill also covers the visual editor layer (`VisualGraphBuilder`). Every new 
 | 2 | `Cli/Program.cs` | Wire the builder into the root command. |
 | 3 | `Cli.E2ETests/` | New `*CommandTests.cs` test class. |
 | 4 | `DEVELOPMENT.md` §3 | Add a row to the CLI Commands table. |
+
+### Native Export (`operetta/BWHazel.TopsyTurvy.Embedded/`)
+
+The v1 native export contract (`TOURING_THEATRE_PLAN.md` §4.2) is frozen — any change to its shape must update every file below in the same commit, and bump `topsyturvy_api_version()`. The Embedded project is organised by utility, not flat: `NativeInterop/` (session/callback/IO plumbing, namespace `BWHazel.TopsyTurvy.Embedded.NativeInterop`) and `Analysis/` (hover/completion/format/diagnostic JSON payload types, namespace `BWHazel.TopsyTurvy.Embedded.Analysis`), with `NativeExports.cs` at the project root. All types are `public`.
+
+| # | File | What to Update |
+|---|---|---|
+| 1 | `Embedded/NativeExports.cs` | The `[UnmanagedCallersOnly]` export itself (C# method is PascalCase; only the `EntryPoint` string is `topsyturvy_*`). |
+| 2 | `apps/apple/TopsyTurvy/Frameworks/include/topsyturvytoolchain.h` | The matching C declaration and any function-pointer typedef. |
+| 3 | `apps/apple/TopsyTurvy/TopsyTurvyToolchainTests/TopsyTurvyToolchainTests.swift` | Swift smoke coverage for the new/changed export. |
+| 4 | `operetta/BWHazel.TopsyTurvy.Tests/Embedded/NativeExportsTests.cs` | In-process xUnit coverage, calling the export via a `delegate* unmanaged<...>` obtained from `&NativeExports.Method` — `[UnmanagedCallersOnly]` methods cannot be called directly, even in-process (CS8901). |
+
+`apps/apple/TopsyTurvy/TopsyTurvy.xcodeproj` remains the umbrella project (like a `.sln`); within it, the app target is `Theatre` and the XCFramework/module the app and tests link against is `TopsyTurvyToolchain` — keep these three names distinct when adding new targets or files.
+| 5 | A future JNI shim (`apps/android/`, not yet built) | Once the Android lane exists, its bindings too. |
+
+`PhraseContext.cs` in this project deliberately duplicates `CompletionHandler.GetPhraseContext` in `BWHazel.TopsyTurvy.LanguageServer` (the Embedded project cannot reference the OmniSharp-dependent LanguageServer project) — if the phrase-parsing rule ever changes, update both.
 
 ### XML Documentation
 

@@ -13,7 +13,7 @@
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.bwhazel.operetta.topsy</string>
+				<string>uk.bwhazel.topsy</string>
 			</array>
 		</dict>
 	</array>
@@ -24,27 +24,17 @@
 	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
-	<key>UISupportsDocumentBrowser</key>
-	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.bwhazel.operetta.topsy</string>
-			<key>UTTypeDescription</key>
-			<string>Topsy Turvy Source</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.plain-text</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>Topsy Turvy Source</string>
+			<key>UTTypeIdentifier</key>
+			<string>uk.bwhazel.topsy</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>

@@ -3,55 +3,83 @@ import Foundation
 import LanguageSupport
 import SwiftUI
 
-/// Bridges `TopsyTurvySession` into `CodeEditorView`'s `LanguageService` protocol.
+/// Adapter for a `TopsyTurvySession` and the `CodeEditorView` `LanguageService` protocol.
 ///
-/// This is a thin Swift-side adapter, not a reimplementation of any language logic: every method below
-/// converts a protocol-shaped call into an existing native call (`session.scheduleAnalyse`/`.tokens`/`.hover`/
-/// `.complete`, themselves thin wrappers around `topsyturvy_*` exports) and reshapes the JSON result into the
-/// types `CodeEditorView` expects. All parsing, tokenising, type-checking, hover-content and completion-candidate
-/// logic stays in the .NET engine, reusable by the CLI, LSP and web editor exactly as before — nothing here is
-/// Apple-specific intelligence.
-///
-/// One instance is owned per open document, alongside that document's `TopsyTurvySession`.
+/// One instance is owned per open document, alongside the `TopsyTurvySession` for that document.  It converts
+/// between the types expected by the native Topsy Turvy toolchain and `CodeEditorView`, including between a
+/// plain character position (an `Int`) and a line/column position; `CodeEditorView` provides and maintains
+/// that conversion, so this service does not track line breaks itself.
 final class TopsyTurvyLanguageService: LanguageService {
+    /// The Topsy Turvy toolchain session backing this service.
     private let session: TopsyTurvySession
+
+    /// The current text of the open source file.
     private var currentText: String = ""
+
+    /// The location service supplied by `CodeEditorView` for the open document.
     private var locationService: LocationService?
 
+    /// A value indicating whether a source file is currently open.
     private(set) var isOpen = false
 
+    /// A stream of one-off notifications for `CodeEditorView` to react to.
+    ///
+    /// The only kind of notification currently defined is new syntax highlighting ready for specified lines.
+    /// This service never sends one, since it does not supply its own highlighting; it is declared only
+    /// because every `LanguageService` is required to have one.
     let events = PassthroughSubject<LanguageServiceEvent, Never>()
+
+    /// The diagnostics for the open source file.
     let diagnostics = CurrentValueSubject<Set<TextLocated<Message>>, Never>([])
+
+    /// Characters that should make the `CodeEditorView` built-in completion panel ask for completions, in
+    /// addition to normal identifier characters.
+    ///
+    /// That panel only exists on macOS, which this app does not target, so this setting has no real effect and is
+    /// left at the default of a single space.
     let completionTriggerCharacters = CurrentValueSubject<[Character], Never>([" "])
+
+    /// Extra menu actions `CodeEditorView` can show for this language.
+    ///
+    /// This is only supported on macOS, so this app does not add any; its own toolbar buttons and menu
+    /// commands already cover what it needs.
     let extraActions = CurrentValueSubject<[ExtraAction], Never>([])
 
-    /// Incremented on every `openDocument`/`documentDidChange` call; a stale generation after the debounce
-    /// wait means a newer edit has superseded this call, mirroring `TopsyTurvySession.scheduleAnalyse`'s own
-    /// guard, applied here since the protocol's own change hooks (not `TopsyTurvyCodeEditorView`) now drive
-    /// analysis.
-    private var analyseGeneration = 0
+    /// Counts how many times `refreshDiagnostics` has been requested to run.  If a newer request comes in before an
+    /// older one finishes, the older one checks this count and skips applying its now-outdated result.
+    private var analysisGenerationCount = 0
 
+    /// Creates a `TopsyTurvyLanguageService` with the provided `TopsyTurvySession`.
+    ///
+    /// - Parameters:
+    ///   - session: The Topsy Turvy toolchain session.
     init(session: TopsyTurvySession) {
         self.session = session
     }
 
+    /// Opens a Topsy Turvy source file.
+    ///
+    /// - Parameters:
+    ///   - text: The source file text.
+    ///   - locationService: The `CodeEditorView` location service.
     func openDocument(with text: String, locationService: LocationService) async throws {
         self.locationService = locationService
-        isOpen = true
-        await updateText(text)
+        self.isOpen = true
+        await self.updateText(text)
     }
 
-    /// A required, but deliberately empty, protocol conformance.
+    /// Handler for changes in the document.
     ///
-    /// `newText` here is **not** the whole document — confirmed by reading `CodeStorageDelegate.swift`
-    /// directly: it is only `(textStorage.string as NSString).substring(with: editedRange)`, the fragment at
-    /// the edited range. An earlier version of this method wrongly treated it as the full document and
-    /// assigned it straight to `currentText`, which corrupted every analysis after the first keystroke (every
-    /// diagnostic/hover/completion call afterwards ran against a tiny fragment instead of the real document,
-    /// producing spurious parse errors like "Expected: HARK!" on genuinely valid source). `TopsyTurvyCodeEditorView`
-    /// drives re-analysis instead, via `updateText(_:)` called from its `text` binding's `.onChange` — SwiftUI
-    /// is guaranteed to already see the correct, full post-edit document by then, since `CodeStorageDelegate`
-    /// calls `setText(textStorage.string)` synchronously before this method's `Task` is even dispatched.
+    /// This is intentionally not implemented.  The `text` parameter is only the small piece of the document that
+    /// changed, not the whole file.  Treating it as a full file would only check the small piece which would
+    /// incorrectly reject valid code after an initial keystroke.  The `updateText(_:)` should be used instead.
+    ///
+    /// - Parameters:
+    ///   - changeLocation: The string index at which the change starts.
+    ///   - delta: The change in the overall document length, in characters.
+    ///   - deltaLine: The change in the number of lines.
+    ///   - deltaColumn: The change in the column position on the last line of the changed text.
+    ///   - text: The document fragment at `changeLocation` after the change, not the whole document.
     func documentDidChange(
         position changeLocation: Int,
         changeInLength delta: Int,
@@ -61,113 +89,150 @@ final class TopsyTurvyLanguageService: LanguageService {
     ) async throws {
     }
 
+    /// Closes the open Topsy Turvy source file.
     func closeDocument() async throws {
-        isOpen = false
-        diagnostics.send([])
+        self.isOpen = false
+        await MainActor.run {
+            self.diagnostics.send([])
+        }
     }
 
-    /// Updates the tracked document text and re-analyses, called from `TopsyTurvyCodeEditorView`'s `text`
-    /// binding whenever it changes — the single source of truth for the full current document, since the
-    /// `LanguageService` protocol's own `documentDidChange` cannot supply it (see that method's doc comment).
-    func updateText(_ text: String) async {
-        currentText = text
-        await refreshDiagnostics(source: text)
-    }
-
-    /// Completion support is backed out entirely, on every platform, per explicit user direction.
+    /// Updates the open source file text and re-analyses it.
     ///
-    /// `CodeEditorView`'s automatic macOS completion panel (`CodeActions.swift`'s `CompletionPanel`, a real
-    /// `NSPanel`) calls `makeKeyAndOrderFront`/`makeFirstResponder` on every appearance, stealing keyboard
-    /// focus from the editor on nearly every word typed — confirmed via live use, not hypothetical. A custom
-    /// on-demand alternative (a toolbar button on iOS/iPadOS, a keyboard shortcut on macOS) was built and
-    /// tried, then also rejected as a worse trade-off ("a terrible developer experience") than the focus
-    /// steal it was meant to avoid — a genuine catch-22 with no configuration knob on either side to resolve
-    /// it (`CompletionPanel` is `final`/`internal` to the package: not subclassable, not exposed). Returning
-    /// `.none` unconditionally here disables the automatic macOS panel outright, since it never has anything
-    /// to show; there is no remaining completion UI on any platform.
+    /// This is called from `TopsyTurvyCodeEditorView` `text` binding whenever it changes: the single source
+    /// of truth for the full current document.
+    ///
+    /// - Parameters:
+    ///   - text: The open source file text.
+    func updateText(_ text: String) async {
+        self.currentText = text
+        await self.refreshDiagnostics(source: text)
+    }
+
+    /// Returns completions detail.
+    ///
+    /// This is not implemented as the `CodeEditorView` built-in completion panel, which this method feeds, only exists
+    /// on macOS, which this app does not target. The completions the user actually sees come from a separate,
+    /// always-visible bar above the keyboard (`CompletionBarView` and `CompletionBarController`) which does not
+    /// call this method at all.
+    ///
+    /// - Parameters:
+    ///   - location: The location for the completions.
+    ///   - reason: The reason for the completions.
+    ///
+    /// - Returns: `Completions.none`, always.
     func completions(at location: Int, reason: CompletionTriggerReason) async throws -> Completions {
         .none
     }
 
-    /// Semantic tokens are deliberately not supplied; this always throws.
+    /// Provides tokens for syntax highlighting.
     ///
-    /// Throwing — not returning empty arrays — matters: `CodeStorageDelegate.requestSemanticTokens` only
-    /// skips its follow-up work on the throw path. On any successful return (even all-empty), it calls
-    /// `textStorageObserver.processEditing(edited: .editedAttributes, range: <the requested lines>, ...,
-    /// invalidatedRange: <the whole document>)` — and on macOS, `NSTextView` responds to that by moving the
-    /// insertion point to the end of the edited range. An earlier implementation both returned real tokens
-    /// here *and* emitted `.tokensAvailable(0..<lineCount)` after every debounced analysis pass, making the
-    /// edited range the entire document ~400ms after the user paused typing — the live-reported "cursor jumps
-    /// to the end of the file" bug on macOS (iOS's `UITextView` does not move its caret on attribute-only
-    /// edits, which is why iPadOS was unaffected). Supplying tokens was also already documented as having
-    /// almost no visible highlighting benefit: the syntactic pass driven by `reservedIdentifiers` pre-classifies
-    /// every keyword before semantic tokens are consulted. The native `topsyturvy_tokens` export and
-    /// `SourceTokeniser` remain in the frozen v2 ABI, available to other toolchain components or a future,
-    /// symbol-aware classification pass.
+    /// As this service does not supply syntax highlighting information, this method throws an error if called.
+    ///
+    /// Although not supported, on macOS a successful call resulted in `CodeEditorView` treating a requested
+    /// line as freshly edited and would move the cursor to the end of those lines.
+    ///
+    /// - Parameters:
+    ///   - lineRange: The line range semantic tokens are being requested for.
+    ///
+    /// - Returns: Tokens for syntax highlighting.
+    ///
+    /// - Throws: `CancellationError`, always.
     func tokens(for lineRange: Range<Int>) async throws -> [[(token: LanguageConfiguration.Token, range: NSRange)]] {
         throw CancellationError()
     }
 
-    /// Builds an info popover for the given location, automatic on macOS via `CodeActions.swift`'s AppKit-only
-    /// `InfoPopover` — a no-op path on iOS/iPadOS, which instead calls `hoverContent(at:)` directly from a
-    /// custom long-press gesture.
+    /// Builds an info popover for the given location.
+    ///
+    /// This is automatic on macOS but requires a custom long-press gesture on iOS/iPadOS.
+    ///
+    /// - Parameters:
+    ///   - at: The location for the info popup.
+    ///
+    /// - Returns: A view-range tuple of the info popup view and anchor.
     func info(at location: Int) async throws -> (view: any View, anchor: NSRange?)? {
-        guard let markdown = await hoverContent(at: location) else { return nil }
+        guard let markdown = await self.hoverContent(at: location) else {
+            return nil
+        }
+        
         return (AnyView(Text(.init(markdown))), nil)
     }
 
-    /// Builds Markdown hover content for the symbol at `location`, shared by `info(at:)` (automatic on macOS)
-    /// and the custom iOS/iPadOS long-press hover popover.
-    /// - Parameter location: A string index into the current document text.
-    /// - Returns: The Markdown content, or `nil` if no symbol was found there.
+    /// Builds Markdown hover content for a symbol at the specified location.
+    ///
+    /// Used by `info(at:)` when creating the info popup.
+    ///
+    /// - Parameters:
+    ///   - location: The location in the source text.
+    ///
+    /// - Returns: The Markdown content, or `nil` if no symbol was found at the location.
     func hoverContent(at location: Int) async -> String? {
         guard let locationService, case .success(let textLocation) = locationService.textLocation(from: location) else {
             return nil
         }
 
-        let result = await session.hover(
-            source: currentText,
+        let result = await self.session.hover(
+            source: self.currentText,
             line: Int32(textLocation.zeroBasedLine),
             column: Int32(textLocation.zeroBasedColumn)
         )
-        return result.Found ? result.MarkdownContent : nil
+        
+        return result.Found
+            ? result.MarkdownContent
+            : nil
     }
 
+    /// Shows a view for debugging within `CodeEditorView`.
+    ///
+    /// `CodeEditorView` may show this view somewhere in its interface to help developers inspect the language
+    /// service state.  There is no fixed format: it is up to each language service.
+    ///
+    /// - Returns: Any view, `nil` for this service.
     func capabilities() async throws -> (any View)? {
         nil
     }
 
-    /// Requests a debounced analysis and, if not superseded by a newer edit, replaces the diagnostics subject's
-    /// value wholesale (stale decorations are always cleared before applying a new set).
+    /// Refreshes the diagnostics for the source text.
     ///
-    /// Deliberately does **not** emit `.tokensAvailable`: that event makes `CodeStorageDelegate` run
-    /// `processEditing` with the requested lines as the edited range, and emitting it for the whole document
-    /// after every analysis pass moved the macOS insertion point to the end of the file ~400ms after the user
-    /// paused typing — see `tokens(for:)`'s doc comment for the full mechanism.
+    /// Replaces the diagnostics completely: stale decorations are always cleared before applying a new set.
+    ///
+    /// - Parameters:
+    ///   - source: The source text.
     private func refreshDiagnostics(source: String) async {
-        analyseGeneration += 1
-        let thisGeneration = analyseGeneration
+        self.analysisGenerationCount += 1
+        let thisGeneration = self.analysisGenerationCount
 
-        guard let result = await session.scheduleAnalyse(source: source), thisGeneration == analyseGeneration else {
+        guard let result = await session.scheduleAnalysis(source: source), thisGeneration == self.analysisGenerationCount else {
             return
         }
 
-        diagnostics.send(Set(result.Diagnostics.map(Self.diagnosticMessage)))
+        let messages = Set(result.Diagnostics.map(Self.toCodeEditorDiagnosticMessage))
+        await MainActor.run {
+            self.diagnostics.send(messages)
+        }
     }
-
-    /// Maps a `DiagnosticInfo` (1-indexed, half-open) onto a `TextLocated<Message>` for `CodeEditor`.
-    private static func diagnosticMessage(_ diagnostic: DiagnosticInfo) -> TextLocated<Message> {
+    
+    /// Converts a `DiagnosticInfo` into a `CodeEditorView` `TextLocated<Message>`.
+    ///
+    /// `DiagnosticInfo` is 1-indexed and half-open as used in the Topsy Turvy toolchain.
+    ///
+    /// - Parameters:
+    ///   - diagnostic: The `DiagnosticInfo` from the Topsy Turvy toolchain.
+    ///
+    /// - Returns: A `TextLocated<Message>` for `CodeEditorView` view.
+    private static func toCodeEditorDiagnosticMessage(_ diagnostic: DiagnosticInfo) -> TextLocated<Message> {
         let location = TextLocation(oneBasedLine: diagnostic.StartLine, column: diagnostic.StartColumn)
         let length = diagnostic.StartLine == diagnostic.EndLine
             ? max(1, diagnostic.EndColumn - diagnostic.StartColumn)
             : 1
+        
         let category: Message.Category = switch diagnostic.Severity {
-        case "Error": .error
-        case "Warning": .warning
-        default: .informational
+            case "Error": .error
+            case "Warning": .warning
+            default: .informational
         }
+        
         let message = Message(category: category, length: length, summary: diagnostic.Message, description: nil)
         return TextLocated(location: location, entity: message)
     }
-
 }

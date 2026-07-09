@@ -1,25 +1,26 @@
 import SwiftUI
 
-/// Arguments (`THE PROPS`) and STDIN, shown on demand rather than permanently.
-///
-/// An inset-grouped `List` with a swipe action (an explicit icon-only `Button(role: .destructive)`, not the
-/// default `.onDelete`, since the default swipe action's "Delete" text label doesn't fit well against a bare
-/// trash icon at this row size), presented as a medium-detent sheet by the caller.
+/// Configuration of command-line arguments (`THE PROPS`) and Standard Input.
 struct RunInputsView: View {
-    @Binding var args: [String]
-    @Binding var stdinLines: [String]
-
+    /// The dismiss action, from the environment.
     @Environment(\.dismiss) private var dismiss
 
+    /// The command-line arguments.
+    @Binding var commandLineArguments: [String]
+
+    /// The standard input lines.
+    @Binding var stdinLines: [String]
+
+    /// The view body.
     var body: some View {
         NavigationStack {
             List {
                 Section("Arguments") {
-                    ForEach(args.indices, id: \.self) { index in
-                        TextField("Argument", text: $args[index])
+                    ForEach(self.commandLineArguments.indices, id: \.self) { index in
+                        TextField("Argument", text: self.$commandLineArguments[index])
                             .swipeActions {
                                 Button(role: .destructive) {
-                                    args.remove(at: index)
+                                    self.commandLineArguments.remove(at: index)
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -27,18 +28,18 @@ struct RunInputsView: View {
                     }
 
                     Button {
-                        args.append("")
+                        self.commandLineArguments.append("")
                     } label: {
-                        Label("Add Argument", systemImage: "plus")
+                        Label("Add Command-Line Argument", systemImage: "plus")
                     }
                 }
 
                 Section("Standard Input") {
-                    ForEach(stdinLines.indices, id: \.self) { index in
-                        TextField("Input Line", text: $stdinLines[index])
+                    ForEach(self.stdinLines.indices, id: \.self) { index in
+                        TextField("Input Line", text: self.$stdinLines[index])
                             .swipeActions {
                                 Button(role: .destructive) {
-                                    stdinLines.remove(at: index)
+                                    self.stdinLines.remove(at: index)
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -46,9 +47,9 @@ struct RunInputsView: View {
                     }
 
                     Button {
-                        stdinLines.append("")
+                        self.stdinLines.append("")
                     } label: {
-                        Label("Add Input Line", systemImage: "plus")
+                        Label("Add Standard Input Line", systemImage: "plus")
                     }
                 }
             }

@@ -1,17 +1,19 @@
 import SwiftUI
 
-/// A horizontally scrolling row of completion candidate chips, always present (even with no candidates) so
-/// its place in the layout stays fixed rather than popping in and out — an always-visible fixture, iOS
-/// QuickType/Pythonista style, not a popup.
+/// A horizontally scrolling row of completion candidate chips, always present even with no candidates.
 struct CompletionBarView: View {
-    let candidates: [CompletionItemPayload]
-    let onSelect: (CompletionItemPayload) -> Void
+    /// The completion candidates.
+    let candidates: [CompletionItemInfo]
+    
+    /// The handler for when a completion candidate is selected.
+    let onSelect: (CompletionItemInfo) -> Void
 
+    /// The view body.
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(candidates.indices, id: \.self) { index in
-                    chip(for: candidates[index])
+                ForEach(self.candidates.indices, id: \.self) { index in
+                    self.chip(for: self.candidates[index])
                 }
             }
             .padding(.horizontal, 12)
@@ -22,30 +24,40 @@ struct CompletionBarView: View {
         .accessibilityIdentifier("CompletionBarView")
     }
 
-    private func chip(for item: CompletionItemPayload) -> some View {
+    /// Creates a chip for a completion candidate.
+    ///
+    /// - Parameters:
+    ///   - completionItem: The completion candidate.
+    ///
+    /// - Returns: A chip for a completion item.
+    private func chip(for completionItem: CompletionItemInfo) -> some View {
         Button {
-            onSelect(item)
+            self.onSelect(completionItem)
         } label: {
-            Text(item.Label)
+            Text(completionItem.Label)
                 .font(.system(.footnote, design: .monospaced))
                 .fontWeight(.medium)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .foregroundStyle(Self.color(for: item.Kind))
-                .background(Self.color(for: item.Kind).opacity(0.18), in: Capsule())
+                .foregroundStyle(Self.colour(for: completionItem.Kind))
+                .background(Self.colour(for: completionItem.Kind).opacity(0.18), in: Capsule())
         }
         .buttonStyle(.plain)
     }
-
-    /// Kind-to-colour mapping, reusing `IssuesListView`'s curated category-colour palette rather than
-    /// inventing new hues — red is deliberately skipped here, since it reads as "error" elsewhere in this app.
-    private static func color(for kind: String) -> Color {
+    
+    /// Gets the colour for the kind of completion item.
+    ///
+    /// - Parameters:
+    ///   - kind: The kind of completion item.
+    ///
+    /// - Returns: The colour for the kind of completion item.
+    private static func colour(for kind: String) -> Color {
         switch kind {
-        case "Keyword": .purple
-        case "Function": .blue
-        case "Variable": .yellow
-        case "Parameter": .secondary
-        default: .secondary
+            case "Keyword": .purple
+            case "Function": .blue
+            case "Variable": .yellow
+            case "Parameter": .secondary
+            default: .secondary
         }
     }
 }

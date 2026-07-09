@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// The Theatre app's menu bar commands, sourced from the active document window's `TheatreDocumentActions`
-/// and `TheatreFolderActions` (via `TheatreActiveScene`, not `@FocusedValue` — see that type's doc comment
-/// for why) — each item is disabled when no document window is active.
+/// Defines commands for the menu bar and keyboard shortcuts.
+///
+/// Menu bar commands are available on iPadOS, and macOS if supported by the app.
 struct TheatreCommands: Commands {
+    /// The commands.
     var body: some Commands {
         let actions = TheatreActiveScene.shared.documentActions
         let folderActions = TheatreActiveScene.shared.folderActions
+        
         CommandGroup(after: .newItem) {
             Button("Open Folder…") {
                 folderActions?.openFolder()
@@ -23,7 +25,7 @@ struct TheatreCommands: Commands {
                     }
                 }
             }
-            .disabled(folderActions?.recents.isEmpty != false)
+            .disabled(folderActions?.recents.isEmpty == true)
         }
 
         CommandMenu("Performance") {

@@ -1,23 +1,28 @@
 import SwiftUI
 
-/// Perform/Stop buttons, promoted to the toolbar so they stay reachable even while the run panel drawer is
-/// collapsed.
+/// Toolbar buttons for the Run and Stop actions.
 struct RunToolbarButtons: View {
+    /// A value indicating whether a run is in progress.
     let isRunning: Bool
+    
+    /// The handler for when a run is executed.
     let onRun: () -> Void
+    
+    /// The handler for when a run is stopped.
     let onStop: () -> Void
 
+    /// The view body.
     var body: some View {
-        Button(action: onRun) {
+        Button(action: self.onRun) {
             Label("Perform", systemImage: "play.fill")
         }
-        .disabled(isRunning)
-        .accessibilityIdentifier("RunControlsView.performButton")
+        .disabled(self.isRunning)
+        .accessibilityIdentifier("RunToolbarButtons.performButton")
 
-        Button(action: onStop) {
+        Button(action: self.onStop) {
             Label("Stop", systemImage: "stop.fill")
         }
-        .disabled(!isRunning)
-        .accessibilityIdentifier("RunControlsView.stopButton")
+        .disabled(!self.isRunning)
+        .accessibilityIdentifier("RunToolbarButtons.stopButton")
     }
 }

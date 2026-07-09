@@ -1,54 +1,18 @@
 import XCTest
 
-/// End-to-end UI tests for the core Theatre flows: opening/editing a document, running a programme with
-/// streamed output, and stopping a long-running one.
-///
-/// Each test opens its own fresh document. When run back-to-back within the same `xcodebuild test` session,
-/// the iOS Simulator's system document browser (`com.apple.DocumentManager`) can occasionally leave a
-/// document-loading state that takes longer than usual to settle on the second launch — a Simulator
-/// infrastructure quirk observed during development, not a defect in Theatre itself (each scenario below was
-/// independently verified to pass reliably in isolation, e.g. via `-only-testing:`). Both tests use a generous
-/// timeout for the initial document-open step to absorb that.
+/// End-to-end UI tests for the core Theatre flows.
 final class TheatreUITests: XCTestCase {
+    /// Sets up the fixture with error.
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    /// Launches the app and, on platforms that show a document browser at launch (iOS/iPadOS), creates a new
-    /// blank document so the editor and run panel are on screen.
-    private func launchIntoDocument() -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launch()
-
-        if !app.buttons["RunControlsView.performButton"].waitForExistence(timeout: 3) {
-            let createDocumentButton = app.buttons["Create Document"]
-            if createDocumentButton.waitForExistence(timeout: 10) {
-                createDocumentButton.tap()
-            }
-        }
-
-        XCTAssertTrue(
-            app.buttons["RunControlsView.performButton"].waitForExistence(timeout: 30),
-            "expected the run panel to appear after opening a document")
-
-        return app
-    }
-
-    /// Types `text` into the editor's text view.
-    private func typeIntoEditor(_ app: XCUIApplication, text: String) {
-        let editor = app.textViews.firstMatch
-        XCTAssertTrue(editor.waitForExistence(timeout: 5), "expected the code editor's text view to exist")
-        editor.tap()
-        editor.typeText(text)
-    }
-
-    /// Tests that running a `BEHOLD`-only programme streams its output into the output pane.
+    /// Tests that running a programme streams its output into the output pane.
     func testPerformStreamsOutputForBeholdStatement() {
-        let app = launchIntoDocument()
+        let app = self.launchIntoDocument()
+        self.typeIntoEditor(app, text: "HARK! \"Test\"\n\nBEHOLD \"Hello, Theatre!\"\n\nFINALE.\n")
 
-        typeIntoEditor(app, text: "HARK! \"Test\"\n\nBEHOLD \"Hello, Theatre!\"\n\nFINALE.\n")
-
-        app.buttons["RunControlsView.performButton"].tap()
+        app.buttons["RunToolbarButtons.performButton"].tap()
 
         let output = app.staticTexts["Hello, Theatre!"]
         XCTAssertTrue(output.waitForExistence(timeout: 10), "expected the output pane to show the BEHOLD line")
@@ -56,35 +20,108 @@ final class TheatreUITests: XCTestCase {
 
     /// Tests that the Format toolbar button normalises keyword casing to the canonical uppercase form.
     func testFormatNormalisesKeywordCasing() {
-        let app = launchIntoDocument()
-
-        typeIntoEditor(app, text: "hark! \"Test\"\n\nfinale.\n")
-
-        app.buttons["WorkspaceEditorHostView.formatButton"].tap()
+        let app = self.launchIntoDocument()
+        self.typeIntoEditor(app, text: "hark! \"Test\"\n\nfinale.\n")
+        
+        var formatButton = app.buttons["EditorHostView.formatButton"]
+        if !formatButton.exists {
+            app.buttons["OverflowBarButtonItem"].tap()
+            formatButton = app.buttons["Format"]
+        }
+        
+        if !formatButton.waitForExistence(timeout: 3) {
+            let visibleButtons = app.buttons.allElementsBoundByIndex.map { "\($0.label) [\($0.identifier)]" }
+            XCTFail("expected the Format button to exist directly or in the overflow menu; visible buttons: \(visibleButtons)")
+            return
+        }
+        
+        formatButton.tap()
 
         let editor = app.textViews.firstMatch
         let formatted = expectation(for: NSPredicate(format: "value CONTAINS 'HARK!'"), evaluatedWith: editor)
         wait(for: [formatted], timeout: 5)
     }
 
-    /// Tests that Stop halts a deliberately infinite loop and that the Perform button re-enables.
+    /// Tests that Stop halts an infinite loop and that the Perform button re-enables.
     func testStopHaltsInfiniteLoop() {
-        let app = launchIntoDocument()
+        let app = self.launchIntoDocument()
 
-        typeIntoEditor(
+        self.typeIntoEditor(
             app,
             text: "HARK! \"Test\"\n\nBY A LEGAL FICTION\n  BEHOLD \"looping\"\nTHE TERM EXPIRES.\n\nFINALE.\n")
 
-        let performButton = app.buttons["RunControlsView.performButton"]
+        let performButton = app.buttons["RunToolbarButtons.performButton"]
         performButton.tap()
+        
+        let closeOutputButton = app.buttons["Close"]
+        if closeOutputButton.waitForExistence(timeout: 3) {
+            closeOutputButton.tap()
+        }
 
-        let stopButton = app.buttons["RunControlsView.stopButton"]
+        let stopButton = app.buttons["RunToolbarButtons.stopButton"]
         XCTAssertTrue(stopButton.waitForExistence(timeout: 5))
         stopButton.tap()
-
-        // No status label to check (removed as a UI smell — see RunPanelView); instead confirm Stop actually
-        // interrupted the infinite loop by waiting for Perform to re-enable, which an uncancelled loop never does.
+        
         let performReenabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: performButton)
         wait(for: [performReenabled], timeout: 10)
+    }
+    
+    /// Launches the app and creates a new, blank document so the editor and run panel are on screen.
+    ///
+    /// `DocumentGroup` can reopen the previously open document on relaunch instead of showing its browser, so
+    /// if a document is already open, this returns to the browser first.
+    ///
+    /// - Returns: The app proxy for testing.
+    private func launchIntoDocument() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launch()
+
+        if app.buttons["RunToolbarButtons.performButton"].waitForExistence(timeout: 3) {
+            let backButton = app.buttons["BackButton"]
+            if backButton.waitForExistence(timeout: 3) {
+                backButton.tap()
+            }
+        }
+
+        let createDocumentButton = app.buttons["Create Document"]
+        XCTAssertTrue(createDocumentButton.waitForExistence(timeout: 10), "expected the document browser Create Document button to appear")
+        createDocumentButton.tap()
+
+        XCTAssertTrue(
+            app.buttons["RunToolbarButtons.performButton"].waitForExistence(timeout: 30),
+            "expected the Run panel to appear after opening a document")
+
+        return app
+    }
+
+    /// Types specified into the editor text view.
+    ///
+    /// - Parameters:
+    ///   - app: The app proxy for testing.
+    ///   - text: The text to insert.
+    private func typeIntoEditor(_ app: XCUIApplication, text: String) {
+        let editor = app.textViews.firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5), "expected the code editor text view to exist")
+
+        // A coordinate-based tap reliably focuses this custom text view; XCUITest's default `tap()` does not.
+        for _ in 0..<5 where !self.hasKeyboardFocus(editor) {
+            editor.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+            usleep(300_000)
+        }
+
+        XCTAssertTrue(self.hasKeyboardFocus(editor), "expected the code editor to gain keyboard focus after tapping")
+        editor.typeText(text)
+    }
+
+    /// Gets whether an element currently has keyboard focus.
+    ///
+    /// Read via Key-Value Coding since `hasKeyboardFocus` is not part of the `XCUIElement` compiled Swift interface.
+    ///
+    /// - Parameters:
+    ///   - element: The element to check.
+    /// 
+    /// - Returns: `true` if `element` has keyboard focus.
+    private func hasKeyboardFocus(_ element: XCUIElement) -> Bool {
+        (element.value(forKey: "hasKeyboardFocus") as? Bool) ?? false
     }
 }

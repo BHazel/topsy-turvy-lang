@@ -1,13 +1,8 @@
 import Foundation
 
-/// Mirrors `KeywordData` (`operetta/BWHazel.TopsyTurvy.Analysis/KeywordData.cs`) on the Swift side, for
-/// deriving `CodeEditorView`'s `LanguageConfiguration` keyword list.
-///
-/// `KeywordData` is the authoritative source of truth for language keywords; this array must be kept in step
-/// with it whenever a keyword is added, renamed or removed, joining the REPL/Monaco/TextMate highlighting
-/// sync group (see `AGENTS.md`).
+/// Keywords for the Topsy Turvy language.
 enum TopsyTurvyKeywords {
-    /// All language keywords and their short descriptions, in the same order as `KeywordData.Keywords`.
+    /// All language keywords and their short descriptions.
     static let all: [(keyword: String, detail: String)] = [
         ("HARK!", "program header"),
         ("or,", "program subtitle"),
@@ -118,26 +113,24 @@ enum TopsyTurvyKeywords {
     /// The keyword list flattened into individual, punctuation-stripped words, deduplicated, for use as
     /// `LanguageConfiguration.reservedIdentifiers`.
     ///
-    /// `CodeEditorView` anchors each reserved identifier with a word-boundary (`\b`) on both sides; since a
-    /// word boundary requires a transition between a word and a non-word character, a reserved string ending
-    /// in punctuation (e.g. `"FINALE."`, `"IF YOU PLEASE."`) would fail to match at its trailing edge, where
-    /// both the punctuation and the following whitespace are non-word characters. Splitting on whitespace and
-    /// stripping leading/trailing punctuation avoids that failure mode; the cosmetic cost is that trailing
-    /// punctuation itself isn't highlighted, matching the word-by-word highlighting already accepted for
-    /// multi-word keywords in `TOURING_THEATRE_PLAN.md` §5.4.
+    /// `CodeEditorView` matches reserved identifiers on a word-boundary basis, so a multi-word or
+    /// punctuated keyword must be split into its bare word components first; the punctuation itself is
+    /// simply not highlighted as a result.
     static var reservedWords: [String] {
-        var seen = Set<String>()
-        var words: [String] = []
-        for (keyword, _) in all {
-            for fragment in keyword.split(separator: " ") {
-                let stripped = fragment.trimmingCharacters(in: wordBoundaryPunctuation)
-                if !stripped.isEmpty, seen.insert(stripped).inserted {
-                    words.append(stripped)
+        var keywordComponentsSeen = Set<String>()
+        var reservedWords: [String] = []
+        for (keyword, _) in self.all {
+            for keywordComponent in keyword.split(separator: " ") {
+                let strippedComponent = keywordComponent.trimmingCharacters(in: self.wordBoundaryPunctuation)
+                if !strippedComponent.isEmpty, keywordComponentsSeen.insert(strippedComponent).inserted {
+                    reservedWords.append(strippedComponent)
                 }
             }
         }
-        return words
+        
+        return reservedWords
     }
 
+    /// The punctuation characters stripped from a keyword when splitting it into reserved words.
     private static let wordBoundaryPunctuation = CharacterSet(charactersIn: "!?.,:()")
 }

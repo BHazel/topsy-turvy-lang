@@ -1,23 +1,30 @@
 import LanguageSupport
 import SwiftUI
 
-/// Lists diagnostics reported by `TopsyTurvyLanguageService.diagnostics`, sorted top-to-bottom by location.
-/// Tapping a row moves the editor's selection to that location.
+/// Lists diagnostics for a Topsy Turvy source file sorted top-to-bottom by location.
+///
+/// Issues are reported by `TopsyTurvyLanguageService.diagnostics`; tapping a row moves the editor selection
+/// to that location.
 struct IssuesListView: View {
+    /// The reported diagnostics.
     let diagnostics: Set<TextLocated<Message>>
+    
+    /// The handler for selecting an issue in the list.
     let onSelect: (TextLocation) -> Void
 
+    /// The view body.
     var body: some View {
-        List(sortedDiagnostics, id: \.rowIdentity) { item in
+        List(self.sortedDiagnostics, id: \.self.rowIdentity) { diagnostic in
             Button {
-                onSelect(item.location)
+                self.onSelect(diagnostic.location)
             } label: {
                 HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: Self.iconName(for: item.entity.category))
-                        .foregroundStyle(Self.color(for: item.entity.category))
+                    Image(systemName: Self.iconName(for: diagnostic.entity.category))
+                        .foregroundStyle(Self.color(for: diagnostic.entity.category))
+                    
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.entity.summary)
-                        Text("Line \(item.location.oneBasedLine)")
+                        Text(diagnostic.entity.summary)
+                        Text("Line \(diagnostic.location.oneBasedLine)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -26,24 +33,39 @@ struct IssuesListView: View {
             .buttonStyle(.plain)
         }
         .overlay {
-            if diagnostics.isEmpty {
+            if self.diagnostics.isEmpty {
                 ContentUnavailableView("No Issues", systemImage: "checkmark.circle")
             }
         }
     }
 
+    /// Sorts the diagnostics.
+    ///
+    /// - Returns: The sorted diagnostics.
     private var sortedDiagnostics: [TextLocated<Message>] {
         Self.sorted(diagnostics)
     }
 
-    /// Orders diagnostics top-to-bottom, left-to-right for a sane display — `Set<TextLocated<Message>>` has no
-    /// stable order of its own. A free function, kept separate from the view body for direct unit testing.
+    /// Orders diagnostics by line and column.
+    ///
+    /// `Set<TextLocated<Message>>` has no stable order of its own.
+    ///
+    /// - Parameters:
+    ///   - diagnostics: The diagnostics.
+    ///
+    /// - Returns: The sorted diagnostics.
     static func sorted(_ diagnostics: Set<TextLocated<Message>>) -> [TextLocated<Message>] {
         diagnostics.sorted { lhs, rhs in
             (lhs.location.zeroBasedLine, lhs.location.zeroBasedColumn) < (rhs.location.zeroBasedLine, rhs.location.zeroBasedColumn)
         }
     }
 
+    /// Gets the system icon for a diagnostic category.
+    ///
+    /// - Parameters:
+    ///   - category: The diagnostic category.
+    ///
+    /// - Returns: The system icon name.
     private static func iconName(for category: Message.Category) -> String {
         switch category {
         case .error: "xmark.octagon.fill"
@@ -54,6 +76,12 @@ struct IssuesListView: View {
         }
     }
 
+    /// Gets the colour for a diagnostic category.
+    ///
+    /// - Parameters:
+    ///   - category: The diagnostic category.
+    ///
+    /// - Returns: The colour.
     private static func color(for category: Message.Category) -> Color {
         switch category {
         case .error: .red
@@ -62,20 +90,5 @@ struct IssuesListView: View {
         case .live: .blue
         case .informational: .secondary
         }
-    }
-}
-
-extension TextLocated<Message> {
-    /// A row identity built from content, not `entity.id`.
-    ///
-    /// `Message.id` (`UUID()`, no memberwise override) is assigned fresh on every construction, so a
-    /// logically-unchanged diagnostic gets a brand new, unrelated `id` on every debounced re-analysis pass —
-    /// confirmed by reading `Message.swift` directly. Using it as `List`'s row identity made SwiftUI treat
-    /// every row as freshly inserted on every edit rather than diffing in place, which on macOS specifically
-    /// (unlike iOS) was severe enough to repeatedly rebuild the backing `NSTableView` while typing and steal
-    /// first responder from the editor — the reported "cursor jumps to the end of the file" bug. A stable,
-    /// content-derived identity means an unchanged diagnostic keeps the same identity across re-renders.
-    var rowIdentity: String {
-        "\(location.zeroBasedLine):\(location.zeroBasedColumn):\(entity.category):\(entity.summary)"
     }
 }

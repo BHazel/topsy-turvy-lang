@@ -1,105 +1,96 @@
 import SwiftUI
 import UIKit
 
-/// Wraps `UIDocumentPickerViewController` in directory-open mode, for picking a programme folder on
-/// iOS/iPadOS.
-private struct FolderPickerView: UIViewControllerRepresentable {
-    var onPick: (URL) -> Void
-
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
-
-    final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let onPick: (URL) -> Void
-
-        init(onPick: @escaping (URL) -> Void) {
-            self.onPick = onPick
-        }
-
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            if let url = urls.first {
-                onPick(url)
-            }
-        }
-    }
-}
-
-/// A toolbar button that opens a folder picker for multi-file `PRAY ADMIT` programmes, via
-/// `UIDocumentPickerViewController`, then bookmarks the picked folder and presents `WorkspaceScene` as a
-/// full-screen cover onto it. A cover, not a second scene: an earlier `WindowGroup`-based attempt had no
-/// reliable way back on iPhone (dismissing it could exit the app entirely, since the workspace and
-/// single-file scenes had no relationship for iOS to fall back to); a full-screen cover's dismissal is
-/// standard and reliable on both iPhone and iPad.
+/// A toolbar button for opening a folder of code files.
+///
+/// This presents a dedicated `FolderPickerView` to select a folder to open in a `FolderBrowserView` as a full-screen
+/// modal over the `SingleFileEditorHostView`.  A bookmark is created for the folder so it can be accessed again in
+/// recent items.
 struct OpenFolderButton: View {
+    /// A value indicating whether the folder picker sheet is presented.
     @State private var isPickerPresented = false
-    @State private var bookmarkStore = WorkspaceBookmarkStore()
-    @State private var presentedEntry: WorkspaceBookmarkEntry?
 
-    /// This instance's token for `TheatreActiveScene` publishing — see that type's doc comment.
+    /// The store of recently opened folders.
+    @State private var recentFolderStore = RecentFolderStore()
+
+    /// The folder currently presented in the full-screen browser, or `nil` if none is open.
+    @State private var selectedFolder: RecentFolder?
+
+    /// The token for `TheatreActiveScene` publishing from this instance.
     private let activeSceneToken = UUID()
 
+    /// The scene phase, from the environment.
     @Environment(\.scenePhase) private var scenePhase
 
+    /// The view body.
     var body: some View {
         Button {
-            isPickerPresented = true
+            self.isPickerPresented = true
         } label: {
             Label("Open Programme Folder…", systemImage: "folder")
         }
-        .sheet(isPresented: $isPickerPresented) {
+        .sheet(isPresented: self.$isPickerPresented) {
             FolderPickerView { url in
-                isPickerPresented = false
-                openWorkspace(for: url)
+                self.isPickerPresented = false
+                self.openFolder(for: url)
             }
         }
-        .fullScreenCover(item: $presentedEntry) { entry in
-            WorkspaceScene(entry: entry)
+        .fullScreenCover(item: self.$selectedFolder) { entry in
+            FolderBrowserView(currentFolder: entry)
         }
         .accessibilityIdentifier("OpenFolderButton")
         .onAppear {
-            publishActiveFolderActions()
+            self.publishActiveFolderActions()
         }
         .onDisappear {
-            TheatreActiveScene.shared.clearFolderActions(token: activeSceneToken)
+            TheatreActiveScene.shared.clearFolderActions(token: self.activeSceneToken)
         }
-        .onChange(of: scenePhase) { _, newPhase in
+        .onChange(of: self.scenePhase) { _, newPhase in
             if newPhase == .active {
-                publishActiveFolderActions()
+                self.publishActiveFolderActions()
             }
         }
     }
 
-    /// Publishes this button's actions to `TheatreActiveScene`, so the menu bar and hardware-keyboard
+    /// Publishes this button actions to `TheatreActiveScene` so the menu bar and hardware-keyboard
     /// shortcuts reach whichever single-file document window is currently active.
     private func publishActiveFolderActions() {
         TheatreActiveScene.shared.publishFolderActions(
             TheatreFolderActions(
-                openFolder: { isPickerPresented = true },
-                recents: bookmarkStore.recents,
-                openRecent: { presentedEntry = $0 }
+                openFolder: {
+                    self.isPickerPresented = true
+                },
+                recents: self.recentFolderStore.recents,
+                openRecent: {
+                    self.selectedFolder = $0
+                }
             ),
-            token: activeSceneToken
+            token: self.activeSceneToken
         )
     }
 
-    /// Creates a security-scoped bookmark for the picked folder and presents the workspace cover onto it.
+    /// Adds the folder to the recents, creates a security-scoped bookmark for it and presents the folder browser cover onto it.
     ///
-    /// `UIDocumentPickerViewController`'s URL requires `startAccessingSecurityScopedResource()` before any
-    /// operation on it, including `bookmarkData()` — without it, bookmark creation fails silently. Access is
-    /// only needed transiently here, to create the bookmark; `WorkspaceModel` starts its own access on the
+    /// The `UIDocumentPickerViewController` URL requires `startAccessingSecurityScopedResource()` before any
+    /// operation on it, including `bookmarkData()`.  Without it, bookmark creation fails silently.  Access is
+    /// only needed transiently here to create the bookmark; `TheatreFolder` starts its own access on the
     /// URL it later resolves from that bookmark.
-    private func openWorkspace(for url: URL) {
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
+    ///
+    /// - Parameters:
+    ///   - url: The folder URL.
+    private func openFolder(for url: URL) {
+        guard url.startAccessingSecurityScopedResource() else {
+            return
+        }
+        
+        defer {
+            url.stopAccessingSecurityScopedResource()
+        }
 
-        guard let entry = try? bookmarkStore.addRecent(for: url) else { return }
-        presentedEntry = entry
+        guard let entry = try? self.recentFolderStore.addRecentFolder(for: url) else {
+            return
+        }
+        
+        self.selectedFolder = entry
     }
 }

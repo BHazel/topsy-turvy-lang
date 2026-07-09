@@ -1,31 +1,38 @@
 import SwiftUI
 
-/// Displays run output, adapting to size class per `THEATRE_DESIGN.md` §4: a snap-state drawer docked at
-/// the bottom of the editor column on regular-width screens (iPad), or a status pill plus a detented sheet
-/// on compact-width screens (iPhone). `isPresented` doubles as "drawer expanded" and "sheet presented", so
-/// callers share one binding regardless of size class.
+/// Wraps the execution output view depending on the size and orientation class.
 ///
-/// Two snap states only (collapsed / expanded) — the free-form drag-to-resize divider this replaces is a
-/// deliberately dropped affordance (`TOURING_THEATRE_PLAN.md` §13, kill list).
+/// Adapts to size and orientation size class:
+/// - A snap-state drawer docked at the bottom of the editor column on regular-width screens (iPad), or,
+/// - A status bar plus a detented sheet on compact-width screens (iPhone).
+///
+/// `isPresented` is used for both the drawer expansion and sheet presentation state.
 struct OutputDrawerView: View {
+    /// The horizontal size class, from the environment.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
+    /// The lines of output text.
     let lines: [String]
+    
+    /// The status message.
     let statusMessage: String?
+    
+    /// A value indicating whether the output view is presented.
     @Binding var isPresented: Bool
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
+    /// The view body.
     var body: some View {
-        if horizontalSizeClass == .compact {
-            statusPill
-                .sheet(isPresented: $isPresented) {
+        if self.horizontalSizeClass == .compact {
+            self.statusPill
+                .sheet(isPresented: self.$isPresented) {
                     NavigationStack {
-                        OutputPaneView(lines: lines)
+                        OutputPaneView(lines: self.lines)
                             .navigationTitle("Output")
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button("Close") {
-                                        isPresented = false
+                                        self.isPresented = false
                                     }
                                 }
                             }
@@ -33,19 +40,20 @@ struct OutputDrawerView: View {
                     .presentationDetents([.medium, .large])
                 }
         } else {
-            drawer
+            self.drawer
         }
     }
 
-    /// The compact-width status pill: a persistent summary of the last run, tapped to present the output
-    /// sheet — visible without needing the sheet open, unlike the docked pane it replaces.
+    /// The compact-width status pill.
+    ///
+    /// A persistent summary of the last run, tapped to present the full output sheet.
     private var statusPill: some View {
         Button {
-            isPresented = true
+            self.isPresented = true
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "terminal")
-                Text(statusMessage ?? "No output yet")
+                Text(self.statusMessage ?? "No output yet")
                     .lineLimit(1)
             }
             .font(.footnote)
@@ -58,14 +66,16 @@ struct OutputDrawerView: View {
         .accessibilityIdentifier("OutputDrawerView.statusPill")
     }
 
-    /// The regular-width drawer: a grab-bar header (status + chevron, tap to expand/collapse) with the
+    /// The regular-width drawer.
+    ///
+    /// A grab-bar header, with status, chevron and tapped to expand/collapse, with the
     /// output pane revealed beneath it when expanded.
     private var drawer: some View {
         VStack(spacing: 0) {
-            header
-            if isPresented {
+            self.header
+            if self.isPresented {
                 Divider()
-                OutputPaneView(lines: lines)
+                OutputPaneView(lines: self.lines)
                     .frame(height: 260)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -74,17 +84,18 @@ struct OutputDrawerView: View {
         .animation(.easeInOut(duration: 0.2), value: isPresented)
     }
 
+    /// The drawer header.
     private var header: some View {
         Button {
-            isPresented.toggle()
+            self.isPresented.toggle()
         } label: {
             HStack {
                 Image(systemName: "terminal")
-                Text(statusMessage ?? "Output")
+                Text(self.statusMessage ?? "Output")
                     .lineLimit(1)
                 Spacer()
                 Image(systemName: "chevron.up")
-                    .rotationEffect(.degrees(isPresented ? 180 : 0))
+                    .rotationEffect(.degrees(self.isPresented ? 180 : 0))
             }
             .font(.footnote)
             .foregroundStyle(.secondary)

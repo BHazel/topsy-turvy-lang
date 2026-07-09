@@ -1,15 +1,14 @@
-/// The active document window's actions, exposed to menu bar commands via `TheatreActiveScene` (not
-/// `FocusedValue` — see that type's doc comment for why).
+/// Actions available for an active document.
 struct TheatreDocumentActions {
-    /// A value indicating whether a run is currently in flight for the active document.
+    /// A value indicating whether code is being executed for the active document.
     let isRunning: Bool
 
-    /// Runs the active document's programme.
+    /// Runs the active document programme.
     let perform: () -> Void
 
-    /// Cancels the active document's in-flight run, if any.
+    /// Cancels the active document code execution if running.
     let stop: () -> Void
 
-    /// Replaces the active document's buffer with its canonically formatted source.
+    /// Replaces the active document source code with its canonically formatted source.
     let format: () -> Void
 }

@@ -162,7 +162,23 @@ cd extensions/vscode/topsy-turvy && npm run test:grammar
 All four snapshot files must pass. If a snapshot changes legitimately, update
 it with `vscode-tmgrammar-test --updateSnapshot`.
 
-### 3i. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
+### 3i. Apple app keyword list: `apps/apple/TopsyTurvy/Theatre/Editor/TopsyTurvyKeywords.swift`
+
+This is a fourth hand-maintained keyword mirror, alongside `KeywordData.Keywords` (3b), the Monaco tokenizer's
+`keywords` array (3g), and the TextMate grammar (3h) — easy to forget since it lives in a different project
+entirely (the Apple app, not `operetta/`). `TopsyTurvyKeywords.all` is a `[(keyword: String, detail: String)]`
+array in the same shape and order as `KeywordData.Keywords`; add new keyword/description pairs there to match.
+
+Unlike the Monaco/TextMate mirrors, this one only drives the editor's own syntax highlighting (`CodeEditorView`'s
+`reservedIdentifiers`, derived from `TopsyTurvyKeywords.reservedWords`) — it has no bearing on completions, which
+the Apple app gets by calling the native `topsyturvy_complete` export directly (so completions never drift here,
+only highlighting can).
+
+There are no automated tests for this file. After editing, build the `Theatre` scheme
+(`xcodebuild build -scheme Theatre -destination 'platform=iOS Simulator,name=iPhone 17'`) and, if you have a
+simulator/device available, open a `.topsy` file containing the new keyword to confirm it highlights correctly.
+
+### 3j. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
 
 If the feature adds a new AST statement or expression node, or renames an existing node's keyword, update `VisualGraphBuilder` to reflect it. The file is ~1100 lines but its structure is straightforward: a `BuildStatement` dispatch switch and a `CreateExpressionNode` compound section.
 
@@ -212,7 +228,7 @@ If the feature adds a new AST statement or expression node, or renames an existi
 | `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
 | branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
 
-### 3j. Visual editor supporting files
+### 3k. Visual editor supporting files
 
 Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGraphBuilder` whenever a node type or keyword changes:
 
@@ -230,7 +246,7 @@ Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGr
 
 **`VisualTypeMaps.cs`** — If the feature adds or renames a `LiteralType` enum value, add or update the corresponding entry in `VisualTypeMaps.TypeToKeyword` using the `Keywords.TypeNames.*` constant (never a raw string literal).
 
-### 3k. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
+### 3l. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
 
 If the feature adds, removes, or renames a statement or expression construct, update the code generator and add corresponding round-trip tests.
 
@@ -249,7 +265,7 @@ If the feature adds, removes, or renames a statement or expression construct, up
 - Avoid reserved identifier names: `i`, `a`, and `b` are reserved by the language and must not be used as variable or parameter names in test source.
 - Check `DEVELOPMENT.md` for the current baseline test count and confirm the new tests push it up.
 
-### 3l. REPL highlighter: `Repl/ReplHighlighter.cs`
+### 3m. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
 constructor. Place each entry in the appropriate colour category (programme

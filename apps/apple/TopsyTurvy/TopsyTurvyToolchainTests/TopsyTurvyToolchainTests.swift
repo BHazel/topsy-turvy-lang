@@ -1,5 +1,6 @@
 import XCTest
 import TopsyTurvyToolchain
+@testable import Theatre
 
 /// Tests for the `TopsyTurvyToolchain` framework.
 final class TopsyTurvyToolchainTests: XCTestCase {
@@ -10,6 +11,8 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     }
 
     /// Tests that `topsyturvy_api_version` returns 1.
+    ///
+    /// As the framework is built and imported separately, this ensures drift is captured early.
     func testApiVersionReturnsOne() {
         XCTAssertEqual(topsyturvy_api_version(), 1)
     }
@@ -51,6 +54,7 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         }
 
         let source = "HARK! \"Test\"\n\n(ASIDE, AT SOME LENGTH:\nspans several\nlines\nEND OF ASIDE.)\n\nFINALE.\n"
+        
         let result = tokens(session: session, source: source)
 
         let commentTokens = result.Tokens.filter { $0.Category == "comment" }
@@ -59,8 +63,11 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     }
 
     /// Calls `topsyturvy_tokens` and decodes its JSON result.
-    /// - Parameter session: The session to tokenise in.
-    /// - Parameter source: The source code to tokenise.
+    ///
+    /// - Parameters:
+    ///   - session: The session to tokenise in.
+    /// - source: The source code to tokenise.
+    ///
     /// - Returns: The decoded `TokenResult`.
     private func tokens(session: UnsafeMutableRawPointer?, source: String) -> TokenResult {
         let tokenResultJson = source.withCString { sourcePointer -> String in
@@ -83,8 +90,11 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     }
 
     /// Calls `topsyturvy_analyse` and decodes its JSON result.
-    /// - Parameter session: The session to analyse in.
-    /// - Parameter source: The source code to analyse.
+    ///
+    /// - Parameters:
+    ///   - session: The session to analyse in.
+    ///   - source: The source code to analyse.
+    ///
     /// - Returns: The decoded `AnalysisResult`.
     private func analyse(session: UnsafeMutableRawPointer?, source: String) -> AnalysisResult {
         let analysisResultJson = source.withCString { sourcePointer -> String in
@@ -107,8 +117,11 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     }
 
     /// Calls `topsyturvy_execute` with no arguments or pre-seeded input.
-    /// - Parameter session: The session to execute in.
-    /// - Parameter source: The source code to execute.
+    ///
+    /// - Parameters:
+    ///   - session: The session to execute in.
+    ///   - source: The source code to execute.
+    /// 
     /// - Returns: The exit status returned by `topsyturvy_execute`.
     private func execute(session: UnsafeMutableRawPointer?, source: String) -> Int32 {
         source.withCString { sourcePointer -> Int32 in

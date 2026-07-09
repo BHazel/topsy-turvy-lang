@@ -1,32 +1,37 @@
 import SwiftUI
 
-/// Hosts a single `.topsy` document opened via `DocumentGroup`: owns that document window's own
-/// `TopsyTurvySession` for the window's whole lifetime, and renders the shared `WorkspaceEditorHostView` shell
-/// bound directly to the document's own `FileDocument` text binding — its autosave already covers persistence,
-/// so no disk-backed wrapper (`WorkspaceFileEditorView`'s workspace-file equivalent) is needed here.
+/// Hosts a single Topsy Turvy source file opened via `DocumentGroup`.
 ///
-/// Passes "Open Folder" (a single-file-specific escape hatch into the fuller workspace experience, not
-/// something a workspace file itself would offer) as `WorkspaceEditorHostView`'s `extraToolbarContent`, merging
-/// it into that view's own single `.toolbar` call rather than layering a second, separate one here — declaring
-/// two `.toolbar` calls (one here, one inside `WorkspaceEditorHostView`'s own `body`) was tried and produced
-/// visibly duplicated toolbar buttons, live-tested on both iPhone and iPad (2026-07-05).
+/// Owns its own `TopsyTurvySession` for as long as this document stays open. The actual editing UI
+/// comes from the shared `EditorHostView`, which this view feeds directly from the text of the
+/// document.  That text already autosaves itself, so no extra saving code is needed here.
+///
+/// Also adds an "Open Folder" button to the `EditorHostView` toolbar as a way to jump from one open file
+/// into the fuller folder-browsing experience.
 struct SingleFileEditorHostView: View {
-    @Binding var text: String
-    let documentURL: URL?
-
+    /// The Topsy Turvy toolchain session owned by this document.
     @State private var session = TopsyTurvySession()
 
+    /// The source text.
+    @Binding var text: String
+
+    /// The source file URL.
+    let documentURL: URL?
+
+    /// The view body.
     var body: some View {
-        WorkspaceEditorHostView(text: $text, documentURL: documentURL, session: session) {
+        EditorHostView(text: self.$text, documentURL: self.documentURL, session: self.session) {
             ToolbarItemGroup {
                 OpenFolderButton()
             }
         }
         .task {
-            await session.open()
+            await self.session.open()
         }
         .onDisappear {
-            Task { await session.close() }
+            Task {
+                await self.session.close()
+            }
         }
     }
 }

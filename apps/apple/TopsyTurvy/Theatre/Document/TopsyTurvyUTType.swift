@@ -1,11 +1,12 @@
 import UniformTypeIdentifiers
 
+/// Extends `UTType` to add a unique type identifier (UTI) for Topsy Turvy `.topsy` files.
 extension UTType {
-    /// The exported UTI for `.topsy` source files, conforming to `public.plain-text`.
+    /// The exported UTI for Topsy Turvy `.topsy` source files.
     ///
-    /// Declared in `Info.plist` under `UTExportedTypeDeclarations`/`CFBundleDocumentTypes`, since `.topsy` is
-    /// not a system-registered type.
+    /// As this is not a system-registered type it must also be registered in `Info.plist` in the
+    /// `UTExportedTypeDeclarations` array, conforming to `public.plain-text`.
     static var topsySource: UTType {
-        UTType(exportedAs: "com.bwhazel.operetta.topsy")
+        UTType(exportedAs: "uk.bwhazel.topsy")
     }
 }

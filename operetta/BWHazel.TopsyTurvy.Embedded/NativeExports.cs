@@ -236,17 +236,17 @@ public static unsafe class NativeExports
                 ? phrase.Length - lastWord.Length
                 : 0;
 
-            List<CompletionItemPayload> items = [];
+            List<CompletionItemInfo> items = [];
             if (parseResult.Program is not null)
             {
                 SymbolTable symbolTable = SymbolTable.Build(parseResult.Program, source);
-                IEnumerable<CompletionItemPayload> symbolItems = symbolTable.AllSymbols()
+                IEnumerable<CompletionItemInfo> symbolItems = symbolTable.AllSymbols()
                     .Where(symbol => lastWord.Length == 0 || symbol.Name.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase))
                     .Select(BuildSymbolItem);
                 items.AddRange(symbolItems);
             }
 
-            IEnumerable<CompletionItemPayload> keywordItems = KeywordData.Keywords
+            IEnumerable<CompletionItemInfo> keywordItems = KeywordData.Keywords
                 .Where(keywordInfo => !isKeywordContext
                     || phrase.Length == 0
                     || keywordInfo.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase))
@@ -538,8 +538,8 @@ public static unsafe class NativeExports
     /// Builds a completion candidate from a symbol.
     /// </summary>
     /// <param name="symbol">The symbol information.</param>
-    /// <returns>The equivalent <see cref="CompletionItemPayload"/>.</returns>
-    private static CompletionItemPayload BuildSymbolItem(SymbolInfo symbol) =>
+    /// <returns>The equivalent <see cref="CompletionItemInfo"/>.</returns>
+    private static CompletionItemInfo BuildSymbolItem(SymbolInfo symbol) =>
         new(
             symbol.Name,
             symbol.Kind.ToString(),
@@ -557,8 +557,8 @@ public static unsafe class NativeExports
     /// </summary>
     /// <param name="keywordInfo">The keyword and its short description.</param>
     /// <param name="insertOffset">The offset into the keyword string from which to build the insert text.</param>
-    /// <returns>The equivalent <see cref="CompletionItemPayload"/>.</returns>
-    private static CompletionItemPayload BuildKeywordItem((string Keyword, string Detail) keywordInfo, int insertOffset) =>
+    /// <returns>The equivalent <see cref="CompletionItemInfo"/>.</returns>
+    private static CompletionItemInfo BuildKeywordItem((string Keyword, string Detail) keywordInfo, int insertOffset) =>
         new(keywordInfo.Keyword, "Keyword", keywordInfo.Detail, keywordInfo.Keyword[insertOffset..]);
 
     /// <summary>

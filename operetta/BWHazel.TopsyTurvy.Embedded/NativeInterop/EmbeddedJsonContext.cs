@@ -15,7 +15,7 @@ namespace BWHazel.TopsyTurvy.Embedded.NativeInterop;
 [JsonSerializable(typeof(DiagnosticInfo))]
 [JsonSerializable(typeof(HoverResult))]
 [JsonSerializable(typeof(CompletionResult))]
-[JsonSerializable(typeof(CompletionItemPayload))]
+[JsonSerializable(typeof(CompletionItemInfo))]
 [JsonSerializable(typeof(TokenResult))]
 [JsonSerializable(typeof(TokenInfo))]
 [JsonSerializable(typeof(string[]))]

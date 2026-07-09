@@ -2,31 +2,36 @@ import Combine
 import SwiftUI
 import UIKit
 
-/// Tracks whether the software keyboard is currently visible, via `UIResponder`'s show/hide notifications.
+/// Tracks whether the software keyboard is currently visible, via `UIResponder` show/hide notifications.
 ///
-/// `CodeEditorView` wraps its own `UITextView`, not a stock SwiftUI `TextField`/`TextEditor`, so there's no
-/// `@FocusState` binding available to detect editing directly — observing the keyboard notifications works
-/// regardless of which view currently holds first responder. For the same reason, dismissing the keyboard
-/// can't target a specific SwiftUI focus binding either; `dismiss()` uses the standard "resign whichever
-/// responder is currently first" trick instead.
+/// `CodeEditorView` wraps its own `UITextView`, so there is no SwiftUI `@FocusState` binding available to
+/// detect editing directly; observing the keyboard notifications works regardless of which view holds first
+/// responder.
 @MainActor
 final class KeyboardObserver: ObservableObject {
+    /// A value indicating whether the keyboard is visible, updating the view on modification.
     @Published private(set) var isKeyboardVisible = false
 
+    /// The subscriptions to the keyboard show/hide notifications.
     private var cancellables = Set<AnyCancellable>()
 
+    /// On initialisation configures responders for keyboard show and hide notifications.
     init() {
         NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
-            .sink { [weak self] _ in self?.isKeyboardVisible = true }
+            .sink {
+                [weak self] _ in self?.isKeyboardVisible = true
+            }
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
-            .sink { [weak self] _ in self?.isKeyboardVisible = false }
+            .sink {
+                [weak self] _ in self?.isKeyboardVisible = false
+            }
             .store(in: &cancellables)
     }
 
-    /// Resigns whichever view currently holds first responder (the editor's internal `UITextView`), which
-    /// dismisses the keyboard without needing a direct reference to that view.
+    /// Resigns whichever view currently holds first responder, in this case the internal `UITextView` of the editor,
+    /// which dismisses the keyboard without needing a direct reference to that view.
     func dismiss() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
