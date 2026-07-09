@@ -1,0 +1,805 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		49D0DA654A91BD87ACC4C2FC /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = D66088F47D9B9776B2A00E15 /* CodeEditorView */; };
+		5DE908C4FCE35DBBF4B180C8 /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 1B103DF60A097855A523B36A /* LanguageSupport */; };
+		5E2543D62FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; };
+		5E2543D72FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5E2543E32FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; };
+		5E2543EB2FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C1257C913E2A4B4BBDD5D93E /* TopsyTurvyToolchain.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2F4CCC36F031CD788EDD36CA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5E2543C42FF7A0B3009F3A51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E2543D02FF7A0B3009F3A51;
+			remoteInfo = Theatre;
+		};
+		5E6198142FFE60E000678D80 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5E2543C42FF7A0B3009F3A51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E2543D02FF7A0B3009F3A51;
+			remoteInfo = Theatre;
+		};
+		FD41EFF6E7382A242F8BD040 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5E2543C42FF7A0B3009F3A51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E2543D02FF7A0B3009F3A51;
+			remoteInfo = Theatre;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5E2543DB2FF7A0B3009F3A51 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5E2543D72FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543EA2FF7A0B3009F3A51 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5E2543EB2FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5E2543D12FF7A0B3009F3A51 /* Theatre.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Theatre.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TopsyTurvyToolchain.xcframework; path = Frameworks/TopsyTurvyToolchain.xcframework; sourceTree = "<group>"; };
+		5E2543E12FF7A0B3009F3A51 /* TheatreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheatreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E6198102FFE60E000678D80 /* TopsyTurvyToolchainTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TopsyTurvyToolchainTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6492D37A5CE4D76B22A522A6 /* TheatreUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TheatreUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B1C3E40675A082A495CD3BE4 /* Exceptions for "Theatre" folder in "Theatre" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5E2543D02FF7A0B3009F3A51 /* Theatre */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2F3378BBDEF71CB1E454C2F7 /* TheatreUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TheatreUITests;
+			sourceTree = "<group>";
+		};
+		5E2543D32FF7A0B3009F3A51 /* Theatre */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B1C3E40675A082A495CD3BE4 /* Exceptions for "Theatre" folder in "Theatre" target */,
+			);
+			path = Theatre;
+			sourceTree = "<group>";
+		};
+		5E2543E22FF7A0B3009F3A51 /* TheatreTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TheatreTests;
+			sourceTree = "<group>";
+		};
+		5E6198112FFE60E000678D80 /* TopsyTurvyToolchainTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TopsyTurvyToolchainTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		17BE9126C85F7DDF58575600 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543D92FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E2543D62FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */,
+				49D0DA654A91BD87ACC4C2FC /* CodeEditorView in Frameworks */,
+				5DE908C4FCE35DBBF4B180C8 /* LanguageSupport in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E42FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E2543E32FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E61980D2FFE60E000678D80 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1257C913E2A4B4BBDD5D93E /* TopsyTurvyToolchain.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5E2543C32FF7A0B3009F3A51 = {
+			isa = PBXGroup;
+			children = (
+				5E2543D32FF7A0B3009F3A51 /* Theatre */,
+				5E2543E22FF7A0B3009F3A51 /* TheatreTests */,
+				2F3378BBDEF71CB1E454C2F7 /* TheatreUITests */,
+				5E6198112FFE60E000678D80 /* TopsyTurvyToolchainTests */,
+				5E2543D42FF7A0B3009F3A51 /* Frameworks */,
+				5E2543D22FF7A0B3009F3A51 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5E2543D22FF7A0B3009F3A51 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5E2543D12FF7A0B3009F3A51 /* Theatre.app */,
+				5E2543E12FF7A0B3009F3A51 /* TheatreTests.xctest */,
+				6492D37A5CE4D76B22A522A6 /* TheatreUITests.xctest */,
+				5E6198102FFE60E000678D80 /* TopsyTurvyToolchainTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E2543D42FF7A0B3009F3A51 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5E2543D52FF7A0B3009F3A51 /* TopsyTurvyToolchain.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		55B63379F0E4DD3B816F459A /* TheatreUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E73A028B19C8A33BDC7C64A /* Build configuration list for PBXNativeTarget "TheatreUITests" */;
+			buildPhases = (
+				285D8F6E7602DA267510D181 /* Sources */,
+				17BE9126C85F7DDF58575600 /* Frameworks */,
+				381D65331D0EE3D43E621799 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F8AA4DEE2466B1C93B9D0180 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				2F3378BBDEF71CB1E454C2F7 /* TheatreUITests */,
+			);
+			name = TheatreUITests;
+			productName = TheatreUITests;
+			productReference = 6492D37A5CE4D76B22A522A6 /* TheatreUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		5E2543D02FF7A0B3009F3A51 /* Theatre */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E2543DE2FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "Theatre" */;
+			buildPhases = (
+				5E2543D82FF7A0B3009F3A51 /* Sources */,
+				5E2543D92FF7A0B3009F3A51 /* Frameworks */,
+				5E2543DA2FF7A0B3009F3A51 /* Resources */,
+				5E2543DB2FF7A0B3009F3A51 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5E2543D32FF7A0B3009F3A51 /* Theatre */,
+			);
+			name = Theatre;
+			packageProductDependencies = (
+				D66088F47D9B9776B2A00E15 /* CodeEditorView */,
+				1B103DF60A097855A523B36A /* LanguageSupport */,
+			);
+			productName = Theatre;
+			productReference = 5E2543D12FF7A0B3009F3A51 /* Theatre.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5E2543E02FF7A0B3009F3A51 /* TheatreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E2543E92FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "TheatreTests" */;
+			buildPhases = (
+				5E2543E52FF7A0B3009F3A51 /* Sources */,
+				5E2543E42FF7A0B3009F3A51 /* Frameworks */,
+				5E2543E62FF7A0B3009F3A51 /* Resources */,
+				5E2543EA2FF7A0B3009F3A51 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				97498A207147D7F12AEA7AA4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5E2543E22FF7A0B3009F3A51 /* TheatreTests */,
+			);
+			name = TheatreTests;
+			productName = TopsyTurvyToolchainTests;
+			productReference = 5E2543E12FF7A0B3009F3A51 /* TheatreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5E61980F2FFE60E000678D80 /* TopsyTurvyToolchainTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E6198182FFE60E000678D80 /* Build configuration list for PBXNativeTarget "TopsyTurvyToolchainTests" */;
+			buildPhases = (
+				5E61980C2FFE60E000678D80 /* Sources */,
+				5E61980D2FFE60E000678D80 /* Frameworks */,
+				5E61980E2FFE60E000678D80 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5E6198152FFE60E000678D80 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5E6198112FFE60E000678D80 /* TopsyTurvyToolchainTests */,
+			);
+			name = TopsyTurvyToolchainTests;
+			packageProductDependencies = (
+			);
+			productName = TopsyTurvyToolchainTests;
+			productReference = 5E6198102FFE60E000678D80 /* TopsyTurvyToolchainTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5E2543C42FF7A0B3009F3A51 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					5E61980F2FFE60E000678D80 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 5E2543D02FF7A0B3009F3A51;
+					};
+				};
+			};
+			buildConfigurationList = 5E2543C72FF7A0B3009F3A51 /* Build configuration list for PBXProject "TopsyTurvy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5E2543C32FF7A0B3009F3A51;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3076133D656E275FA2B817EB /* XCRemoteSwiftPackageReference "CodeEditorView" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5E2543D02FF7A0B3009F3A51 /* Theatre */,
+				5E2543E02FF7A0B3009F3A51 /* TheatreTests */,
+				55B63379F0E4DD3B816F459A /* TheatreUITests */,
+				5E61980F2FFE60E000678D80 /* TopsyTurvyToolchainTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		381D65331D0EE3D43E621799 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543DA2FF7A0B3009F3A51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E62FF7A0B3009F3A51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E61980E2FFE60E000678D80 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		285D8F6E7602DA267510D181 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543D82FF7A0B3009F3A51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E2543E52FF7A0B3009F3A51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E61980C2FFE60E000678D80 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5E6198152FFE60E000678D80 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E2543D02FF7A0B3009F3A51 /* Theatre */;
+			targetProxy = 5E6198142FFE60E000678D80 /* PBXContainerItemProxy */;
+		};
+		97498A207147D7F12AEA7AA4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E2543D02FF7A0B3009F3A51 /* Theatre */;
+			targetProxy = FD41EFF6E7382A242F8BD040 /* PBXContainerItemProxy */;
+		};
+		F8AA4DEE2466B1C93B9D0180 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E2543D02FF7A0B3009F3A51 /* Theatre */;
+			targetProxy = 2F4CCC36F031CD788EDD36CA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5E2543C82FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = A2588FL9GM;
+			};
+			name = Debug;
+		};
+		5E2543C92FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = A2588FL9GM;
+			};
+			name = Release;
+		};
+		5E2543DC2FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Theatre/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRIP_INSTALLED_PRODUCT = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5E2543DD2FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Theatre/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_STYLE = "non-global";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5E2543E72FF7A0B3009F3A51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Theatre.app/Theatre";
+			};
+			name = Debug;
+		};
+		5E2543E82FF7A0B3009F3A51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Theatre.app/Theatre";
+			};
+			name = Release;
+		};
+		5E6198162FFE60E000678D80 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Theatre.app/Theatre";
+			};
+			name = Debug;
+		};
+		5E6198172FFE60E000678D80 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.TopsyTurvyToolchainTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Theatre.app/Theatre";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EC7A82D4C4F574E42FDAE770 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre.TheatreUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Theatre;
+			};
+			name = Debug;
+		};
+		F48CEA3616191E24B227034E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A2588FL9GM;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.bwhazel.OperettaTheatre.TheatreUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Theatre;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0E73A028B19C8A33BDC7C64A /* Build configuration list for PBXNativeTarget "TheatreUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC7A82D4C4F574E42FDAE770 /* Debug */,
+				F48CEA3616191E24B227034E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E2543C72FF7A0B3009F3A51 /* Build configuration list for PBXProject "TopsyTurvy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543C82FF7A0B3009F3A51 /* Debug */,
+				5E2543C92FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E2543DE2FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "Theatre" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543DC2FF7A0B3009F3A51 /* Debug */,
+				5E2543DD2FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E2543E92FF7A0B3009F3A51 /* Build configuration list for PBXNativeTarget "TheatreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E2543E72FF7A0B3009F3A51 /* Debug */,
+				5E2543E82FF7A0B3009F3A51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E6198182FFE60E000678D80 /* Build configuration list for PBXNativeTarget "TopsyTurvyToolchainTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E6198162FFE60E000678D80 /* Debug */,
+				5E6198172FFE60E000678D80 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3076133D656E275FA2B817EB /* XCRemoteSwiftPackageReference "CodeEditorView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mchakravarty/CodeEditorView";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1B103DF60A097855A523B36A /* LanguageSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3076133D656E275FA2B817EB /* XCRemoteSwiftPackageReference "CodeEditorView" */;
+			productName = LanguageSupport;
+		};
+		D66088F47D9B9776B2A00E15 /* CodeEditorView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3076133D656E275FA2B817EB /* XCRemoteSwiftPackageReference "CodeEditorView" */;
+			productName = CodeEditorView;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 5E2543C42FF7A0B3009F3A51 /* Project object */;
+}

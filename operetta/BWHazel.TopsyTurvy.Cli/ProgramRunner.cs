@@ -1,3 +1,4 @@
+using System;
 using System.IO.Abstractions;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
@@ -52,7 +53,7 @@ public class ProgramRunner
         }
 
         TopsyTurvyTypeChecker typeChecker = new();
-        TypeCheckResult typeCheckResult = typeChecker.Check(parseData.Program!);
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseData.Program!, CreateFileResolver(filePath, fileSystem));
         if (!typeCheckResult.Success)
         {
             return (ProgramExecutionResult.TypeErrors(typeCheckResult.Diagnostics), parseData);
@@ -90,7 +91,7 @@ public class ProgramRunner
         }
 
         TopsyTurvyTypeChecker typeCheckerForRun = new();
-        TypeCheckResult typeCheckResultForRun = typeCheckerForRun.Check(program);
+        TypeCheckResult typeCheckResultForRun = typeCheckerForRun.Check(program, CreateFileResolver(filePath, fileSystem));
         if (!typeCheckResultForRun.Success)
         {
             return ProgramExecutionResult.TypeErrors(typeCheckResultForRun.Diagnostics);
@@ -105,5 +106,28 @@ public class ProgramRunner
         }
 
         return ProgramExecutionResult.Success(interpreter.ExitCode);
+    }
+
+    /// <summary>
+    /// Creates a file import resolver that reads an import relative to the supplied file path.
+    /// </summary>
+    /// <param name="filePath">The path of the Topsy Turvy file being checked or run.</param>
+    /// <param name="fileSystem">The file system to use, or <c>null</c> to use the real file system.</param>
+    /// <returns>A file resolver function..</returns>
+    private static Func<string, string?> CreateFileResolver(string filePath, IFileSystem? fileSystem)
+    {
+        IFileSystem fs = fileSystem ?? new Testably.Abstractions.RealFileSystem();
+        string? sourceDirectory = fs.Path.GetDirectoryName(fs.Path.GetFullPath(filePath));
+
+        return importPath =>
+        {
+            string resolvedPath = sourceDirectory is not null && !fs.Path.IsPathRooted(importPath)
+                ? fs.Path.GetFullPath(fs.Path.Combine(sourceDirectory, importPath))
+                : importPath;
+
+            return fs.File.Exists(resolvedPath)
+                ? fs.File.ReadAllText(resolvedPath)
+                : null;
+        };
     }
 }

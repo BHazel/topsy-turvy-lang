@@ -190,6 +190,11 @@ public class CompletionHandler(DocumentStateManager documentStateManager)
     /// or the entire phrase if no spaces are present.  The last word is used for filtering and
     /// insert-text calculation.
     /// </para>
+    /// <para>
+    /// <b>Constraint:</b> <c>PhraseContext.Get</c> in <c>BWHazel.TopsyTurvy.Embedded</c> is a deliberate
+    /// duplicate of this method (that project cannot reference this OmniSharp-dependent one). If this
+    /// phrase-parsing rule ever changes, both implementations must be updated together.
+    /// </para>
     /// </remarks>
     /// <param name="source">The full document source.</param>
     /// <param name="line">0-indexed line number.</param>

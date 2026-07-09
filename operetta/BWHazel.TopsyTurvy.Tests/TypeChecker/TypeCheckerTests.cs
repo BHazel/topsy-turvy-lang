@@ -1,3 +1,4 @@
+using System;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.TypeChecker;
@@ -676,6 +677,105 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method recognises a function declared in a <c>PRAY ADMIT</c> import when a source file resolver is supplied.
+    /// </summary>
+    [Fact]
+    public void Check_WithFunctionCallFromResolvedImport_Succeeds()
+    {
+        string importedSource = """
+            HARK! "Utils"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+              BEHOLD WOVEN OF "Hello, " AND name AND "!" IF YOU PLEASE.
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Import Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY ADMIT "utils.topsy"
+            SUMMON greet WITH "World" IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "utils.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method still reports an undefined-function error when no source filer resolver is supplied, even in the presence of a <c>PRAY ADMIT</c> import.
+    /// </summary>
+    [Fact]
+    public void Check_WithFunctionCallFromImportAndNoResolver_ReportsUndefinedFunction()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Import Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY ADMIT "utils.topsy"
+            SUMMON greet WITH "World" IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("greet"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method does not recurse indefinitely when two imported files admit each other.
+    /// </summary>
+    [Fact]
+    public void Check_WithCircularImports_DoesNotRecurseIndefinitely()
+    {
+        string fileA = """
+            HARK! "A"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY ADMIT "b.topsy"
+            IT IS MY DUTY TO PERFORM fromA UNDER NO OBLIGATION
+              BEHOLD "A"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string fileB = """
+            HARK! "B"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY ADMIT "a.topsy"
+            IT IS MY DUTY TO PERFORM fromB UNDER NO OBLIGATION
+              BEHOLD "B"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY ADMIT "a.topsy"
+            SUMMON fromA WITH NOTHING IF YOU PLEASE.
+            SUMMON fromB WITH NOTHING IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename switch
+            {
+                "a.topsy" => fileA,
+                "b.topsy" => fileB,
+                _ => null,
+            });
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>
@@ -685,5 +785,18 @@ public class TypeCheckerTests
         ProgramNode program = this.parser.Parse(source);
         TopsyTurvyTypeChecker typeChecker = new();
         return typeChecker.Check(program);
+    }
+
+    /// <summary>
+    /// Runs the type checker on the given source code with a <c>PRAY ADMIT</c> resolver and returns the result.
+    /// </summary>
+    /// <param name="source">The source code to check.</param>
+    /// <param name="sourceFileResolver">Resolves an import's filename to its source text.</param>
+    /// <returns>The result of the type check.</returns>
+    private TypeCheckResult Check(string source, Func<string, string?> sourceFileResolver)
+    {
+        ProgramNode program = this.parser.Parse(source);
+        TopsyTurvyTypeChecker typeChecker = new();
+        return typeChecker.Check(program, sourceFileResolver);
     }
 }
