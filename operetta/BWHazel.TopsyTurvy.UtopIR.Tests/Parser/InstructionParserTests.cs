@@ -103,6 +103,13 @@ public class InstructionParserTests
     [InlineData("rem", UtopIRArithmeticOperation.Rem)]
     [InlineData("max", UtopIRArithmeticOperation.Max)]
     [InlineData("min", UtopIRArithmeticOperation.Min)]
+    [InlineData("sum.f", UtopIRArithmeticOperation.SumFloat)]
+    [InlineData("diff.f", UtopIRArithmeticOperation.DiffFloat)]
+    [InlineData("prod.f", UtopIRArithmeticOperation.ProdFloat)]
+    [InlineData("quot.f", UtopIRArithmeticOperation.QuotFloat)]
+    [InlineData("rem.f", UtopIRArithmeticOperation.RemFloat)]
+    [InlineData("max.f", UtopIRArithmeticOperation.MaxFloat)]
+    [InlineData("min.f", UtopIRArithmeticOperation.MinFloat)]
     public void AssignmentInstruction_WithArithmeticMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRArithmeticOperation expectedOperation)
     {
         var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
@@ -112,6 +119,57 @@ public class InstructionParserTests
         arithmetic.Operation.ShouldBe(expectedOperation);
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a floating-point arithmetic instruction with float literal operands.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithFloatMnemonicAndFloatLiterals_ReturnsFloatOperands()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = sum.f 1.5, 2.5"));
+
+        result.HasValue.ShouldBeTrue();
+        ArithmeticInstruction arithmetic = result.Value.ShouldBeOfType<ArithmeticInstruction>();
+        arithmetic.Operation.ShouldBe(UtopIRArithmeticOperation.SumFloat);
+        arithmetic.Operand1.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1.5);
+        arithmetic.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2.5);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses each binary bitwise mnemonic to the correct operation.
+    /// </summary>
+    /// <param name="mnemonic">The UtopIR bitwise mnemonic.</param>
+    /// <param name="expectedOperation">The expected <see cref="UtopIRBitwiseOperation"/>.</param>
+    [Theory]
+    [InlineData("chord", UtopIRBitwiseOperation.Chord)]
+    [InlineData("harmony", UtopIRBitwiseOperation.Harmony)]
+    [InlineData("discord", UtopIRBitwiseOperation.Discord)]
+    [InlineData("transup", UtopIRBitwiseOperation.TransUp)]
+    [InlineData("transdown", UtopIRBitwiseOperation.TransDown)]
+    public void AssignmentInstruction_WithBitwiseMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRBitwiseOperation expectedOperation)
+    {
+        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
+
+        result.HasValue.ShouldBeTrue();
+        BitwiseInstruction bitwise = result.Value.ShouldBeOfType<BitwiseInstruction>();
+        bitwise.Operation.ShouldBe(expectedOperation);
+        bitwise.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        bitwise.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses an <c>inv</c> assignment with a single operand.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithInv_ReturnsInvInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = inv £a"));
+
+        result.HasValue.ShouldBeTrue();
+        InvInstruction inv = result.Value.ShouldBeOfType<InvInstruction>();
+        inv.Target.Name.ShouldBe("r");
+        inv.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
     }
 
     /// <summary>

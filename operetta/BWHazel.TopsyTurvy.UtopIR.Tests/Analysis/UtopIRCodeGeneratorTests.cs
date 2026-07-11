@@ -244,6 +244,13 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRArithmeticOperation.Rem, "rem")]
     [InlineData(UtopIRArithmeticOperation.Max, "max")]
     [InlineData(UtopIRArithmeticOperation.Min, "min")]
+    [InlineData(UtopIRArithmeticOperation.SumFloat, "sum.f")]
+    [InlineData(UtopIRArithmeticOperation.DiffFloat, "diff.f")]
+    [InlineData(UtopIRArithmeticOperation.ProdFloat, "prod.f")]
+    [InlineData(UtopIRArithmeticOperation.QuotFloat, "quot.f")]
+    [InlineData(UtopIRArithmeticOperation.RemFloat, "rem.f")]
+    [InlineData(UtopIRArithmeticOperation.MaxFloat, "max.f")]
+    [InlineData(UtopIRArithmeticOperation.MinFloat, "min.f")]
     public void Generate_ArithmeticInstruction_EmitsCorrectMnemonic(UtopIRArithmeticOperation operation, string expectedMnemonic)
     {
         UtopIRProgram program = new([
@@ -276,6 +283,68 @@ public class UtopIRCodeGeneratorTests
         string result = this.generator.Generate(program);
 
         result.Trim().ShouldBe("£total = sum 10, 20");
+    }
+
+    /// <summary>
+    /// Tests that a floating-point arithmetic instruction with float literal operands is formatted with the <c>.f</c> mnemonic and decimal operands.
+    /// </summary>
+    [Fact]
+    public void Generate_ArithmeticInstruction_WithFloatLiteralOperands_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new ArithmeticInstruction(
+                UtopIRArithmeticOperation.SumFloat,
+                new UtopIRVariable("total"),
+                new LiteralOperand(1.5),
+                new LiteralOperand(2.5))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£total = sum.f 1.5, 2.5");
+    }
+
+    /// <summary>
+    /// Tests that each <see cref="UtopIRBitwiseOperation"/> value produces the correct mnemonic in the emitted bitwise instruction.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRBitwiseOperation"/> to test.</param>
+    /// <param name="expectedMnemonic">The expected mnemonic in the emitted instruction.</param>
+    [Theory]
+    [InlineData(UtopIRBitwiseOperation.Chord, "chord")]
+    [InlineData(UtopIRBitwiseOperation.Harmony, "harmony")]
+    [InlineData(UtopIRBitwiseOperation.Discord, "discord")]
+    [InlineData(UtopIRBitwiseOperation.TransUp, "transup")]
+    [InlineData(UtopIRBitwiseOperation.TransDown, "transdown")]
+    public void Generate_BitwiseInstruction_EmitsCorrectMnemonic(UtopIRBitwiseOperation operation, string expectedMnemonic)
+    {
+        UtopIRProgram program = new([
+            new BitwiseInstruction(
+                operation,
+                new UtopIRVariable("result"),
+                new VariableOperand(new UtopIRVariable("a")),
+                new VariableOperand(new UtopIRVariable("b")))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe($"£result = {expectedMnemonic} £a, £b");
+    }
+
+    /// <summary>
+    /// Tests that an <c>inv</c> instruction is emitted with its single operand.
+    /// </summary>
+    [Fact]
+    public void Generate_InvInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new InvInstruction(
+                new UtopIRVariable("result"),
+                new VariableOperand(new UtopIRVariable("a")))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£result = inv £a");
     }
 
     /// <summary>

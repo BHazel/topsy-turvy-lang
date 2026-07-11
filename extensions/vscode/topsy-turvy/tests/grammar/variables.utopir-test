@@ -1,0 +1,12 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Variables, including compiler-generated temporary registers ──
+
+£Lords = appoint 42
+//^ variable.other.utopir
+
+£_1 = welcome peer
+//^ variable.other.utopir
+
+£_sum_Peer1_Peer2 = sum £Peer1, £Peer2
+//^ variable.other.utopir

@@ -6,14 +6,16 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// <remarks>
 /// <para>
 /// Covers all UtopIR arithmetic mnemonics:
-/// * <c>sum</c>
-/// * <c>diff</c>
-/// * <c>prod</c>
-/// * <c>quot</c>
-/// * <c>rem</c>
-/// * <c>max</c>
-/// * <c>min</c>
-/// The operation to perform is elected by <see cref="Operation"/> and the format in UtopIR source is:
+/// * <c>sum</c> / <c>sum.f</c>
+/// * <c>diff</c> / <c>diff.f</c>
+/// * <c>prod</c> / <c>prod.f</c>
+/// * <c>quot</c> / <c>quot.f</c>
+/// * <c>rem</c> / <c>rem.f</c>
+/// * <c>max</c> / <c>max.f</c>
+/// * <c>min</c> / <c>min.f</c>
+/// The plain mnemonics operate on integer operands and the <c>.f</c>-suffixed mnemonics on
+/// floating-point operands.  The operation to perform is selected by <see cref="Operation"/> and the
+/// format in UtopIR source is:
 /// </para>
 /// <code>
 /// <c>£&lt;name&gt; = &lt;op&gt; &lt;op1&gt;, &lt;op2&gt;</c>.

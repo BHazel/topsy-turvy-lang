@@ -109,5 +109,44 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>min</c> instruction.</summary>
         public const string Min = "min";
+
+        /// <summary>The <c>sum.f</c> instruction.</summary>
+        public const string SumFloat = "sum.f";
+
+        /// <summary>The <c>diff.f</c> instruction.</summary>
+        public const string DiffFloat = "diff.f";
+
+        /// <summary>The <c>prod.f</c> instruction.</summary>
+        public const string ProdFloat = "prod.f";
+
+        /// <summary>The <c>quot.f</c> instruction.</summary>
+        public const string QuotFloat = "quot.f";
+
+        /// <summary>The <c>rem.f</c> instruction.</summary>
+        public const string RemFloat = "rem.f";
+
+        /// <summary>The <c>max.f</c> instruction.</summary>
+        public const string MaxFloat = "max.f";
+
+        /// <summary>The <c>min.f</c> instruction.</summary>
+        public const string MinFloat = "min.f";
+
+        /// <summary>The <c>chord</c> instruction.</summary>
+        public const string Chord = "chord";
+
+        /// <summary>The <c>harmony</c> instruction.</summary>
+        public const string Harmony = "harmony";
+
+        /// <summary>The <c>discord</c> instruction.</summary>
+        public const string Discord = "discord";
+
+        /// <summary>The <c>inv</c> instruction.</summary>
+        public const string Inv = "inv";
+
+        /// <summary>The <c>transup</c> instruction.</summary>
+        public const string TransUp = "transup";
+
+        /// <summary>The <c>transdown</c> instruction.</summary>
+        public const string TransDown = "transdown";
     }
 }

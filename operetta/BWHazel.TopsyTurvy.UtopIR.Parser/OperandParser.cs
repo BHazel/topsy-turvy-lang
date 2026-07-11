@@ -50,15 +50,43 @@ public static class OperandParser
     /// <summary>
     /// Parses an arithmetic operation mnemonic returning the corresponding <see cref="UtopIRArithmeticOperation"/>.
     /// </summary>
+    /// <remarks>
+    /// Each <c>.f</c>-suffixed floating-point mnemonic is tried before its plain integer
+    /// counterpart.  <see cref="Lexer.Keyword"/> matches raw text with no trailing word-boundary
+    /// check, so trying <c>sum</c> first against the input <c>sum.f</c> would succeed on the
+    /// <c>sum</c> prefix and leave <c>.f</c> behind to fail the rest of the instruction parse.
+    /// </remarks>
     public static readonly TextParser<UtopIRArithmeticOperation> ArithmeticOperation =
-        Lexer.Keyword(UtopIRKeywords.Instructions.Sum).Value(UtopIRArithmeticOperation.Sum)
+        Lexer.Keyword(UtopIRKeywords.Instructions.SumFloat).Value(UtopIRArithmeticOperation.SumFloat)
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Sum).Value(UtopIRArithmeticOperation.Sum))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.DiffFloat).Value(UtopIRArithmeticOperation.DiffFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Diff).Value(UtopIRArithmeticOperation.Diff))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.ProdFloat).Value(UtopIRArithmeticOperation.ProdFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Prod).Value(UtopIRArithmeticOperation.Prod))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.QuotFloat).Value(UtopIRArithmeticOperation.QuotFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Quot).Value(UtopIRArithmeticOperation.Quot))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.RemFloat).Value(UtopIRArithmeticOperation.RemFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Rem).Value(UtopIRArithmeticOperation.Rem))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.MaxFloat).Value(UtopIRArithmeticOperation.MaxFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Max).Value(UtopIRArithmeticOperation.Max))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.MinFloat).Value(UtopIRArithmeticOperation.MinFloat))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Min).Value(UtopIRArithmeticOperation.Min))
             .Named("arithmetic operator");
+
+    /// <summary>
+    /// Parses a binary bitwise operation mnemonic returning the corresponding <see cref="UtopIRBitwiseOperation"/>.
+    /// </summary>
+    /// <remarks>
+    /// The unary <c>inv</c> mnemonic is not included here as its instruction shape is different. It is
+    /// matched directly by the instruction parser.
+    /// </remarks>
+    public static readonly TextParser<UtopIRBitwiseOperation> BitwiseOperation =
+        Lexer.Keyword(UtopIRKeywords.Instructions.Chord).Value(UtopIRBitwiseOperation.Chord)
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Harmony).Value(UtopIRBitwiseOperation.Harmony))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Discord).Value(UtopIRBitwiseOperation.Discord))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.TransUp).Value(UtopIRBitwiseOperation.TransUp))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.TransDown).Value(UtopIRBitwiseOperation.TransDown))
+            .Named("bitwise operator");
 
     /// <summary>
     /// Parses a compile-time constant literal value returning it boxed as its natural CLR type.

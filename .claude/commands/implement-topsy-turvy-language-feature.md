@@ -1,5 +1,5 @@
 ---
-name: implement-language-feature
+name: implement-topsy-turvy-language-feature
 description: >
   Guides the complete, full-stack implementation or modification of a Topsy
   Turvy language feature — from grammar through parser, runtime, LSP,
@@ -13,7 +13,8 @@ description: >
   skill knows the full layer order and all project constraints — always use it
   rather than attempting a language change freehand, because the change touches
   at least seven files across four projects and several invariants must hold
-  simultaneously.
+  simultaneously. For UtopIR instructions instead of Topsy Turvy language
+  syntax, use `implement-utopir-feature`.
 ---
 
 # Topsy Turvy: Implement or Modify Language Feature

@@ -342,6 +342,399 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that the <c>fathom</c> type (64-bit floating-point) is correctly declared and stored but the value is truncated toward zero to <c>int32</c> on return.
+    /// </summary>
+    [Fact]
+    public void Emit_Fathom_StoresAndReturnsTruncated()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("x"), UtopIRType.Fathom),
+            new AppointInstruction(new("x"), new LiteralOperand(42.9)),
+            new FindInstruction(new VariableOperand(new("x")))
+        ]);
+
+        RunProgram(program).ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that the <c>foot</c> type (32-bit floating-point) is correctly declared and stored but the value is truncated toward zero to <c>int32</c> on return.
+    /// </summary>
+    [Fact]
+    public void Emit_Foot_StoresAndReturnsTruncated()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("x"), UtopIRType.Foot),
+            new AppointInstruction(new("x"), new LiteralOperand(8.5f)),
+            new FindInstruction(new VariableOperand(new("x")))
+        ]);
+
+        RunProgram(program).ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that <c>sum.f</c> adds two <c>fathom</c> operands.
+    /// </summary>
+    [Fact]
+    public void Emit_SumFloat_AddsOperands()
+    {
+        // 1.5 + 2.75 = 4.25, truncated to 4 on return.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(1.5)),
+            new AppointInstruction(new("b"), new LiteralOperand(2.75)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.SumFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(4);
+    }
+
+    /// <summary>
+    /// Tests that <c>diff.f</c> subtracts one <c>fathom</c> operand from another.
+    /// </summary>
+    [Fact]
+    public void Emit_DiffFloat_SubtractsOperands()
+    {
+        // 10.0 - 2.5 = 7.5, truncated to 7 on return.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(10.0)),
+            new AppointInstruction(new("b"), new LiteralOperand(2.5)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.DiffFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(7);
+    }
+
+    /// <summary>
+    /// Tests that <c>prod.f</c> multiplies two <c>fathom</c> operands.
+    /// </summary>
+    [Fact]
+    public void Emit_ProdFloat_MultipliesOperands()
+    {
+        // 1.25 * 3.5 = 4.375, truncated to 4 on return.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(1.25)),
+            new AppointInstruction(new("b"), new LiteralOperand(3.5)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(4);
+    }
+
+    /// <summary>
+    /// Tests that <c>quot.f</c> divides one <c>fathom</c> operand by another without integer truncation of the intermediate result.
+    /// </summary>
+    [Fact]
+    public void Emit_QuotFloat_DividesOperands()
+    {
+        // 15.0 / 2.0 = 7.5, truncated to 7 on return; integer division of 15 / 2 would also give 7,
+        // so scale by ten first (7.5 * 10 = 75) to prove the division was floating-point.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("scale"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("q"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(15.0)),
+            new AppointInstruction(new("b"), new LiteralOperand(2.0)),
+            new AppointInstruction(new("scale"), new LiteralOperand(10.0)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.QuotFloat, new("q"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("q")), new VariableOperand(new("scale"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(75);
+    }
+
+    /// <summary>
+    /// Tests that <c>rem.f</c> computes the floating-point remainder of two <c>fathom</c> operands.
+    /// </summary>
+    [Fact]
+    public void Emit_RemFloat_ComputesRemainder()
+    {
+        // 7.5 rem 2.0 = 1.5, scaled by ten (15) to prove the fractional part survived.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("scale"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("m"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(7.5)),
+            new AppointInstruction(new("b"), new LiteralOperand(2.0)),
+            new AppointInstruction(new("scale"), new LiteralOperand(10.0)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.RemFloat, new("m"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("m")), new VariableOperand(new("scale"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(15);
+    }
+
+    /// <summary>
+    /// Tests that <c>max.f</c> returns the larger of two <c>fathom</c> operands.
+    /// </summary>
+    [Fact]
+    public void Emit_MaxFloat_ReturnsLargerOperand()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(10.5)),
+            new AppointInstruction(new("b"), new LiteralOperand(5.25)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.MaxFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that <c>min.f</c> returns the smaller of two <c>fathom</c> operands.
+    /// </summary>
+    [Fact]
+    public void Emit_MinFloat_ReturnsSmallerOperand()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(10.5)),
+            new AppointInstruction(new("b"), new LiteralOperand(5.25)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.MinFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(5);
+    }
+
+    /// <summary>
+    /// Tests that floating-point arithmetic on <c>foot</c> operands resolves the <c>float</c> overload of <see cref="Math.Max(float, float)"/> correctly.
+    /// </summary>
+    [Fact]
+    public void Emit_MaxFloat_OnFootOperands_ReturnsLargerOperand()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Foot),
+            new WelcomeInstruction(new("b"), UtopIRType.Foot),
+            new WelcomeInstruction(new("r"), UtopIRType.Foot),
+            new AppointInstruction(new("a"), new LiteralOperand(2.5f)),
+            new AppointInstruction(new("b"), new LiteralOperand(9.75f)),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.MaxFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(9);
+    }
+
+    /// <summary>
+    /// Tests that a floating-point arithmetic instruction with integer operands throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_FloatOperationOnIntegerOperands_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Peer),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.SumFloat, new("r"), new LiteralOperand(1), new LiteralOperand(2))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that an integer arithmetic instruction with floating-point operands throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_IntegerOperationOnFloatOperands_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new LiteralOperand(1.5), new LiteralOperand(2.5))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that each binary <see cref="BitwiseInstruction"/> operation computes the correct result on <c>peer</c> operands.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRBitwiseOperation"/> to test.</param>
+    /// <param name="operand1">The first operand value.</param>
+    /// <param name="operand2">The second operand value.</param>
+    /// <param name="expectedResult">The expected exit code.</param>
+    [Theory]
+    [InlineData(UtopIRBitwiseOperation.Chord, 9, 3, 1)]
+    [InlineData(UtopIRBitwiseOperation.Harmony, 9, 3, 11)]
+    [InlineData(UtopIRBitwiseOperation.Discord, 9, 3, 10)]
+    [InlineData(UtopIRBitwiseOperation.TransUp, 10, 1, 20)]
+    [InlineData(UtopIRBitwiseOperation.TransDown, 10, 1, 5)]
+    [InlineData(UtopIRBitwiseOperation.TransUp, 1, 5, 32)]
+    public void Emit_BitwiseOperation_ComputesCorrectResult(UtopIRBitwiseOperation operation, int operand1, int operand2, int expectedResult)
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("b"), UtopIRType.Peer),
+            new WelcomeInstruction(new("r"), UtopIRType.Peer),
+            new AppointInstruction(new("a"), new LiteralOperand(operand1)),
+            new AppointInstruction(new("b"), new LiteralOperand(operand2)),
+            new BitwiseInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(expectedResult);
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="InvInstruction"/> computes the bitwise complement of its operand.
+    /// </summary>
+    [Fact]
+    public void Emit_Inv_ComputesBitwiseComplement()
+    {
+        // ~10 = -11 in two's complement.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("r"), UtopIRType.Peer),
+            new AppointInstruction(new("a"), new LiteralOperand(10)),
+            new InvInstruction(new("r"), new VariableOperand(new("a"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(-11);
+    }
+
+    /// <summary>
+    /// Tests that <c>transdown</c> on an unsigned type uses <c>shr.un</c> so the vacated high bit is zero-filled.
+    /// </summary>
+    [Fact]
+    public void Emit_TransDown_UnsignedPeer_UsesShrUn()
+    {
+        // 0x80000000 >> 1 must be 0x40000000, not sign-extended.
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("r"), UtopIRType.StandingPeer),
+            new AppointInstruction(new("a"), new LiteralOperand(0x80000000u)),
+            new AppointInstruction(new("b"), new LiteralOperand(1u)),
+            new BitwiseInstruction(UtopIRBitwiseOperation.TransDown, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("shr.un");
+        exitCode.ShouldBe(0x40000000);
+    }
+
+    /// <summary>
+    /// Tests that a shift on a 64-bit type converts the shift amount to <c>int32</c> so the emitted IL remains valid.
+    /// </summary>
+    [Fact]
+    public void Emit_TransUp_OnChancellor_ConvertsShiftAmountAndComputesCorrectResult()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
+            new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
+            new WelcomeInstruction(new("r"), UtopIRType.Chancellor),
+            new AppointInstruction(new("a"), new LiteralOperand(5L)),
+            new AppointInstruction(new("b"), new LiteralOperand(1L)),
+            new BitwiseInstruction(UtopIRBitwiseOperation.TransUp, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="BitwiseInstruction"/> with floating-point operands throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_BitwiseOperationOnFloatOperands_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new BitwiseInstruction(UtopIRBitwiseOperation.Chord, new("r"), new LiteralOperand(1.5), new LiteralOperand(2.5))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="InvInstruction"/> with a floating-point operand throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_InvOnFloatOperand_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Fathom),
+            new InvInstruction(new("r"), new LiteralOperand(1.5))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tests that a <see cref="PrenticeInstruction"/> pushes a value onto the stack and a subsequent <see cref="LeaveInstruction"/> stores it in the target register.
     /// </summary>
     [Fact]
@@ -416,11 +809,9 @@ public class CilEmitterTests
     /// <summary>
     /// Tests that declaring a variable of an unsupported type throws <see cref="NotSupportedException"/>.
     /// </summary>
+    /// <param name="type">The unsupported <see cref="UtopIRType"/> to declare.</param>
     [Theory]
-    [InlineData(UtopIRType.Fathom)]
-    [InlineData(UtopIRType.Foot)]
     [InlineData(UtopIRType.Decree)]
-    [InlineData(UtopIRType.Stitch)]
     [InlineData(UtopIRType.Yarn)]
     public void Emit_UnsupportedType_ThrowsNotSupportedException(UtopIRType type)
     {
@@ -711,6 +1102,152 @@ public class CilEmitterTests
         ]);
 
         RunProgram(program).ShouldBe(unchecked((int)4_000_000_000u));
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> converts <c>peer</c> to <c>fathom</c> by emitting <c>conv.r8</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsPeerToFathom_EmitsConvR8()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new AppointInstruction(new("a"), new LiteralOperand(7)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Fathom),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.r8");
+        exitCode.ShouldBe(7);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> narrows <c>fathom</c> to <c>peer</c> by truncating toward zero via <c>conv.i4</c>, matching the Topsy Turvy runtime cast behaviour.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_NarrowsFathomToPeer_TruncatesTowardZero()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Peer),
+            new AppointInstruction(new("a"), new LiteralOperand(42.9)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Peer),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.i4");
+        exitCode.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> narrows <c>fathom</c> to <c>foot</c> by emitting <c>conv.r4</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_NarrowsFathomToFoot_EmitsConvR4()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Foot),
+            new AppointInstruction(new("a"), new LiteralOperand(8.5)),
+            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Foot),
+            new FindInstruction(new VariableOperand(new("b")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.r4");
+        exitCode.ShouldBe(8);
+    }
+
+    /// <summary>
+    /// Tests that the <c>stitch</c> type stores a character literal and returns its code point as the exit code.
+    /// </summary>
+    [Fact]
+    public void Emit_Stitch_StoresCharacterAndReturnsCodePoint()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("c"), UtopIRType.Stitch),
+            new AppointInstruction(new("c"), new LiteralOperand('A')),
+            new FindInstruction(new VariableOperand(new("c")))
+        ]);
+
+        RunProgram(program).ShouldBe(65);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> converts <c>peer</c> to <c>stitch</c> through the code point via <c>conv.u2</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsPeerToStitch_EmitsConvU2()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("n"), UtopIRType.Peer),
+            new WelcomeInstruction(new("c"), UtopIRType.Stitch),
+            new AppointInstruction(new("n"), new LiteralOperand(66)),
+            new WereInstruction(new("c"), new VariableOperand(new("n")), UtopIRType.Stitch),
+            new FindInstruction(new VariableOperand(new("c")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("conv.u2");
+        exitCode.ShouldBe(66);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> converts <c>stitch</c> to <c>peer</c> yielding the character code point.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsStitchToPeer_YieldsCodePoint()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("c"), UtopIRType.Stitch),
+            new WelcomeInstruction(new("n"), UtopIRType.Peer),
+            new AppointInstruction(new("c"), new LiteralOperand('Z')),
+            new WereInstruction(new("n"), new VariableOperand(new("c")), UtopIRType.Peer),
+            new FindInstruction(new VariableOperand(new("n")))
+        ]);
+
+        RunProgram(program).ShouldBe(90);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> converts <c>stitch</c> to <c>fathom</c> through the code point.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsStitchToFathom_YieldsCodePoint()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("c"), UtopIRType.Stitch),
+            new WelcomeInstruction(new("d"), UtopIRType.Fathom),
+            new AppointInstruction(new("c"), new LiteralOperand('A')),
+            new WereInstruction(new("d"), new VariableOperand(new("c")), UtopIRType.Fathom),
+            new FindInstruction(new VariableOperand(new("d")))
+        ]);
+
+        RunProgram(program).ShouldBe(65);
+    }
+
+    /// <summary>
+    /// Tests that <c>were</c> converts <c>fathom</c> to <c>stitch</c> by truncating toward zero then narrowing to the code point.
+    /// </summary>
+    [Fact]
+    public void Emit_Were_ConvertsFathomToStitch_TruncatesToCodePoint()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("d"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("c"), UtopIRType.Stitch),
+            new AppointInstruction(new("d"), new LiteralOperand(65.9)),
+            new WereInstruction(new("c"), new VariableOperand(new("d")), UtopIRType.Stitch),
+            new FindInstruction(new VariableOperand(new("c")))
+        ]);
+
+        RunProgram(program).ShouldBe(65);
     }
 
     /// <summary>

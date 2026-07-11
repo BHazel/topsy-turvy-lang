@@ -49,6 +49,14 @@ public sealed class UtopIRCodeGenerator
                     $"£{arithmetic.Target.Name} = {this.OperationMnemonic(arithmetic.Operation)} " +
                     $"{this.FormatOperand(arithmetic.Operand1)}, {this.FormatOperand(arithmetic.Operand2)}");
                 break;
+            case BitwiseInstruction bitwise:
+                builder.AppendLine(
+                    $"£{bitwise.Target.Name} = {this.BitwiseOperationMnemonic(bitwise.Operation)} " +
+                    $"{this.FormatOperand(bitwise.Operand1)}, {this.FormatOperand(bitwise.Operand2)}");
+                break;
+            case InvInstruction inv:
+                builder.AppendLine($"£{inv.Target.Name} = {UtopIRKeywords.Instructions.Inv} {this.FormatOperand(inv.Operand)}");
+                break;
             case PrenticeInstruction prentice:
                 builder.AppendLine($"{UtopIRKeywords.Instructions.Prentice} {this.FormatOperand(prentice.Value)}");
                 break;
@@ -189,6 +197,28 @@ public sealed class UtopIRCodeGenerator
         UtopIRArithmeticOperation.Rem => UtopIRKeywords.Instructions.Rem,
         UtopIRArithmeticOperation.Max => UtopIRKeywords.Instructions.Max,
         UtopIRArithmeticOperation.Min => UtopIRKeywords.Instructions.Min,
+        UtopIRArithmeticOperation.SumFloat => UtopIRKeywords.Instructions.SumFloat,
+        UtopIRArithmeticOperation.DiffFloat => UtopIRKeywords.Instructions.DiffFloat,
+        UtopIRArithmeticOperation.ProdFloat => UtopIRKeywords.Instructions.ProdFloat,
+        UtopIRArithmeticOperation.QuotFloat => UtopIRKeywords.Instructions.QuotFloat,
+        UtopIRArithmeticOperation.RemFloat => UtopIRKeywords.Instructions.RemFloat,
+        UtopIRArithmeticOperation.MaxFloat => UtopIRKeywords.Instructions.MaxFloat,
+        UtopIRArithmeticOperation.MinFloat => UtopIRKeywords.Instructions.MinFloat,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown arithmetic operation.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic for the given <see cref="UtopIRBitwiseOperation"/>.
+    /// </summary>
+    /// <param name="operation">The bitwise operation to convert.</param>
+    /// <returns>The UtopIR operation mnemonic.</returns>
+    private string BitwiseOperationMnemonic(UtopIRBitwiseOperation operation) => operation switch
+    {
+        UtopIRBitwiseOperation.Chord => UtopIRKeywords.Instructions.Chord,
+        UtopIRBitwiseOperation.Harmony => UtopIRKeywords.Instructions.Harmony,
+        UtopIRBitwiseOperation.Discord => UtopIRKeywords.Instructions.Discord,
+        UtopIRBitwiseOperation.TransUp => UtopIRKeywords.Instructions.TransUp,
+        UtopIRBitwiseOperation.TransDown => UtopIRKeywords.Instructions.TransDown,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown bitwise operation.")
     };
 }

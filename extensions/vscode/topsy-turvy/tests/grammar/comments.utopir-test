@@ -1,0 +1,11 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Line comments ────────────────────────────────────────────────
+
+@ this is a line comment
+//^ comment.line.utopir
+
+// ── A literal @ inside a string is not a comment ─────────────────
+
+£x = appoint "not @ a comment"
+//           ^ string.quoted.double.utopir
