@@ -35,6 +35,21 @@
           "light": "./images/topsy-turvy-file-icon.svg",
           "dark": "./images/topsy-turvy-file-icon.svg"
         }
+      },
+      {
+        "id": "utopir",
+        "aliases": [
+          "UtopIR",
+          "utopir"
+        ],
+        "extensions": [
+          ".utopir"
+        ],
+        "configuration": "./language-configuration.utopir.json",
+        "icon": {
+          "light": "./images/utopir-file-icon.svg",
+          "dark": "./images/utopir-file-icon.svg"
+        }
       }
     ],
     "grammars": [
@@ -42,6 +57,11 @@
         "language": "topsy-turvy",
         "scopeName": "source.topsy",
         "path": "./syntaxes/topsy-turvy.tmLanguage.json"
+      },
+      {
+        "language": "utopir",
+        "scopeName": "source.utopir",
+        "path": "./syntaxes/utopir.tmLanguage.json"
       }
     ],
     "configuration": {
@@ -386,7 +406,9 @@
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "test": "vscode-test",
-    "test:grammar": "vscode-tmgrammar-test -g syntaxes/topsy-turvy.tmLanguage.json 'tests/grammar/*.topsy-test'",
+    "test:grammar:topsyturvy": "vscode-tmgrammar-test -g syntaxes/topsy-turvy.tmLanguage.json 'tests/grammar/*.topsy-test'",
+    "test:grammar:utopir": "vscode-tmgrammar-test -g syntaxes/utopir.tmLanguage.json 'tests/grammar/*.utopir-test'",
+    "test:grammar": "npm run test:grammar:topsyturvy && npm run test:grammar:utopir",
     "test:unit": "mocha --ui tdd 'out/test/unit/**/*.test.js'",
     "test:integration": "vscode-test --config .vscode-test.integration.mjs",
     "test:all": "npm run compile-tests && npm run test:grammar && npm run test:unit && npm run test:integration"

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "UtopIR",
+  "scopeName": "source.utopir",
+  "fileTypes": ["utopir"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#char-literals" },
+    { "include": "#numbers" },
+    { "include": "#boolean-literals" },
+    { "include": "#declaration" },
+    { "include": "#assignment" },
+    { "include": "#cast" },
+    { "include": "#arithmetic-float" },
+    { "include": "#arithmetic-integer" },
+    { "include": "#bitwise" },
+    { "include": "#stack" },
+    { "include": "#control-flow" },
+    { "include": "#types" },
+    { "include": "#variables" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.utopir",
+      "match": "@.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.utopir",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.utopir",
+          "match": "~[nt\"~]"
+        }
+      ]
+    },
+    "char-literals": {
+      "name": "string.quoted.single.utopir",
+      "match": "'(?:(~[nt'~])|[^'])'",
+      "captures": {
+        "1": { "name": "constant.character.escape.utopir" }
+      }
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.utopir",
+          "match": "(?i)-?\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.utopir",
+          "match": "(?i)-?\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "boolean-literals": {
+      "name": "constant.language.boolean.utopir",
+      "match": "(?i)\\b(verity|nay)\\b"
+    },
+    "declaration": {
+      "name": "keyword.other.declaration.utopir",
+      "match": "(?i)\\bwelcome\\b"
+    },
+    "assignment": {
+      "name": "keyword.operator.assignment.utopir",
+      "match": "(?i)\\bappoint\\b"
+    },
+    "cast": {
+      "name": "keyword.operator.cast.utopir",
+      "match": "(?i)\\bwere\\b"
+    },
+    "arithmetic-float": {
+      "name": "keyword.operator.arithmetic.float.utopir",
+      "match": "(?i)\\b(sum|diff|prod|quot|rem|max|min)\\.f\\b"
+    },
+    "arithmetic-integer": {
+      "name": "keyword.operator.arithmetic.utopir",
+      "match": "(?i)\\b(sum|diff|prod|quot|rem|max|min)\\b"
+    },
+    "bitwise": {
+      "name": "keyword.operator.bitwise.utopir",
+      "match": "(?i)\\b(chord|harmony|discord|inv|transup|transdown)\\b"
+    },
+    "stack": {
+      "name": "keyword.other.stack.utopir",
+      "match": "(?i)\\b(prentice|leave)\\b"
+    },
+    "control-flow": {
+      "name": "keyword.control.utopir",
+      "match": "(?i)\\bfind\\b"
+    },
+    "types": {
+      "name": "storage.type.utopir",
+      "match": "(?i)\\b(chancellor|peer|pirate|sausageroll|standingchancellor|standingpeer|standingpirate|standingsausageroll|fathom|foot|decree|stitch|yarn)\\b"
+    },
+    "variables": {
+      "name": "variable.other.utopir",
+      "match": "£[A-Za-z_][A-Za-z0-9_-]*"
+    }
+  }
+}

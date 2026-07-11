@@ -8,8 +8,9 @@ description: >
   removed in `specifications/UtopIR.md` and needs to be propagated through the
   UtopIR toolchain. Invoke it when asked to "add an instruction to UtopIR",
   "implement [instruction] in UtopIR", "extend UtopIR with X", "change the
-  UtopIR were cast matrix", "add a UtopIR type", or "sync the UtopIR grammar
-  after a spec change". This skill knows UtopIR's own layer order and the
+  UtopIR were cast matrix", "add a UtopIR type", "sync the UtopIR grammar
+  after a spec change", or "add/update UtopIR syntax highlighting in VS
+  Code". This skill knows UtopIR's own layer order and the
   constraints specific to it — always use it rather than attempting a UtopIR
   change freehand, because the change touches five projects and a naming
   responsibility that is easy to place in the wrong layer. For a Topsy Turvy
@@ -24,10 +25,11 @@ flat intermediary representation Topsy Turvy lowers to for targeting
 compilation backends (currently .NET CIL). UtopIR is a separate, smaller
 toolchain from the main Topsy Turvy one: five `.NET` projects
 (`UtopIR.Ast`, `UtopIR.Parser`, `UtopIR.Transformer`, `UtopIR.Analysis`,
-`UtopIR.Emitters.Cil`), no LSP, no editor syntax highlighting, no REPL
-integration. A change must still land consistently across all five or the
-transformer will produce instructions the parser cannot read back, or the
-emitter cannot compile.
+`UtopIR.Emitters.Cil`), plus a standalone VS Code TextMate grammar for
+`.utopir` files (Step 3h) — no LSP, no completions, no REPL integration. A
+change must still land consistently across all affected layers or the
+transformer will produce instructions the parser cannot read back, the
+emitter cannot compile, or a `.utopir` file renders with a broken half-token.
 
 This applies equally to **new** instructions/types and to **modifications**
 of existing ones. The layer order and verification steps are the same in
@@ -80,6 +82,10 @@ current implementation and produce a brief delta summary:
 * Which operand types is the instruction valid for? Does it need the same
   same-type-in-same-instruction validation and widening the existing
   arithmetic/bitwise instructions already have, or different rules?
+* Does this need a corresponding addition to the VS Code TextMate grammar
+  (Step 3h)? Any new instruction mnemonic or `UtopIRType` does — it is easy
+  to forget since it's the only editor-facing layer and lives in a different
+  part of the repository (`extensions/vscode/`, not `operetta/`).
 
 **Present this delta summary to the user and wait for their confirmation
 before making any edits.**
@@ -241,6 +247,67 @@ plumbing and also should not need per-instruction changes; if a change here
 does seem to be needed, that is a signal something instruction-specific has
 leaked into a layer that is supposed to be generic.
 
+### 3h. VS Code TextMate grammar (`extensions/vscode/topsy-turvy`)
+
+UtopIR has no language server, so `.utopir` files get syntax highlighting
+purely from a TextMate grammar — `extensions/vscode/topsy-turvy/syntaxes/utopir.tmLanguage.json`
+(`scopeName: "source.utopir"`). It is organised one `repository` group per
+`UtopIR.md` §4.x subsection (`declaration`/`assignment`/`cast` for §4.1,
+`arithmetic-integer`/`arithmetic-float` for §4.2, `bitwise` for §4.3,
+`stack` for §4.4, `control-flow` for §4.5), plus `types` for
+`UtopIRKeywords.TypeNames` and `variables` for the `£`-sigil identifier
+fallback. A new instruction within an existing family extends that group's
+alternation; a genuinely new §4.x subsection gets its own new group and a
+new top-level `{"include": ...}` entry.
+
+**The `.f`-before-plain ordering trap applies here too**, for the identical
+reason already documented on `OperandParser.ArithmeticOperation` (3b):
+TextMate/Oniguruma alternations are first-match-wins, and `\bsum\b` matches
+successfully against `sum.f` since `.` is a non-word character forming a
+false boundary — the same class of bug already shows up a third time in this
+grammar's own `numbers` group (float pattern listed before integer for
+exactly this reason). If a new instruction introduces a `.f`-suffixed (or
+any other prefix-sharing) mnemonic family, its repository group's
+`{"include": ...}` entry must appear *before* the plain-mnemonic group's
+entry in the top-level `patterns` array — this constraint travels with
+*include order* here, not with a single regex's alternative order, since the
+two mnemonic families live in separate repository groups.
+
+If the change adds a new `UtopIRType` (3a), add its literal
+`UtopIRKeywords.TypeNames` string to the `types` group's alternation. Unlike
+the `.f` case, there is no prefix-collision ordering concern among type
+names (`standingpeer` is not a string-prefix of `peer`, or vice versa) —
+append in spec order for readability; position doesn't affect correctness.
+
+Add a fixture to `extensions/vscode/topsy-turvy/tests/grammar/`, extension
+`.utopir-test`, using the same `// SYNTAX TEST "source.utopir"` + `//^`
+caret-annotation format as the `.topsy-test` files (one file per semantic
+category: `comments`, `literals`, `keywords`, `variables`). **Caret
+alignment gotcha**: the assertion line overlays the source line directly,
+column for column — the `^` character's own absolute column in the
+assertion line *is* the source column being tested, with no adjustment for
+the leading `//`. This only looks like it works differently for something
+like `PEER\n//^ storage.type.topsy` because the whole word is one token, so
+any column inside it passes regardless of precision. For a narrow assertion
+(one escape character, one suffix), get the column exactly right or the
+check silently targets the wrong character. Also keep every marker
+substring unique within its source line — a marker like `"t"` used to
+target the `~t` escape in `£x = appoint "~t"` will instead match the `t`
+inside `appoint` if that occurs first in the string. For a `.f`-family
+addition specifically, put the caret on the `.f` suffix itself (not the
+mnemonic prefix) — that is the regression guard for the ordering trap above.
+
+**Grammar test checkpoint:**
+```
+cd extensions/vscode/topsy-turvy && npm run test:grammar:utopir
+```
+
+This is grammar-only. Do not add LSP registration, `activationEvents`
+entries, or completion providers as part of this step — `contributes.languages`/
+`contributes.grammars` tokenize declaratively without activating the
+extension, so none of that is needed just to light up highlighting. If
+UtopIR ever gets an LSP, that is a separate, much larger change.
+
 ---
 
 ## Step 4: Write tests
@@ -308,7 +375,8 @@ This is the last step, after everything else is green:
   `v0.0.1-previewN`) and one-line summary for every UtopIR project row this
   change touched.
 * **§1 File Inventory** — add or update rows for any new or significantly
-  changed files, including `specifications/UtopIR.ebnf`.
+  changed files, including `specifications/UtopIR.ebnf` and, if touched,
+  `extensions/vscode/topsy-turvy/syntaxes/utopir.tmLanguage.json`.
 * **Baseline counts** — update test numbers to reflect the new passing
   total for `BWHazel.TopsyTurvy.UtopIR.Tests` and
   `BWHazel.TopsyTurvy.UtopIR.E2ETests`.
