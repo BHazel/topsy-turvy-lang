@@ -299,6 +299,110 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that each arithmetic Topsy Turvy operator maps to the corresponding <c>.f</c>-suffixed <see cref="UtopIRArithmeticOperation"/> when the operands are floating-point.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR floating-point operation.</param>
+    [Theory]
+    [InlineData(Operator.Sum, UtopIRArithmeticOperation.SumFloat)]
+    [InlineData(Operator.Difference, UtopIRArithmeticOperation.DiffFloat)]
+    [InlineData(Operator.Product, UtopIRArithmeticOperation.ProdFloat)]
+    [InlineData(Operator.Quotient, UtopIRArithmeticOperation.QuotFloat)]
+    [InlineData(Operator.Remainder, UtopIRArithmeticOperation.RemFloat)]
+    [InlineData(Operator.Larger, UtopIRArithmeticOperation.MaxFloat)]
+    [InlineData(Operator.Smaller, UtopIRArithmeticOperation.MinFloat)]
+    public void Transform_ArithmeticOperatorOnFloats_MapsToFloatOperation(Operator topsyTurvyOperator, UtopIRArithmeticOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        arithmetic.Operation.ShouldBe(expectedUtopirOperation);
+    }
+
+    /// <summary>
+    /// Tests that mixed integer and floating-point arithmetic widens the integer operand to the floating-point type and selects the floating-point operation group.
+    /// </summary>
+    [Fact]
+    public void Transform_MixedIntegerAndFloatArithmetic_WidensIntegerAndUsesFloatOperation()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.Sum,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        were.Type.ShouldBe(UtopIRType.Fathom);
+        ArithmeticInstruction arithmetic = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
+        arithmetic.Operation.ShouldBe(UtopIRArithmeticOperation.SumFloat);
+        arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that a <c>foot</c> declaration initialised with a double literal inserts a narrowing <see cref="WereInstruction"/> so the literal type matches the declared target type.
+    /// </summary>
+    [Fact]
+    public void Transform_FootDeclarationWithDoubleLiteral_InsertsWereInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode()
+            {
+                Name = "Foot4",
+                Type = LiteralType.Single,
+                InitialValue = new LiteralNode() { Value = 8.5, Type = LiteralType.Double, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(3);
+        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Foot);
+        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        were.Type.ShouldBe(UtopIRType.Foot);
+        were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(8.5);
+        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+    }
+
+    /// <summary>
     /// Tests that a binary arithmetic expression on two variables emits an <see cref="ArithmeticInstruction"/> whose operands reference those variables and whose target is a temporary register named after the operation and operands.
     /// </summary>
     [Fact]
@@ -334,6 +438,224 @@ public class TopsyTurvyToUtopIRTransformerTests
         AppointInstruction appoint = result.Instructions[4].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum_Peer1_Peer2");
+    }
+
+    /// <summary>
+    /// Tests that each binary bitwise Topsy Turvy operator maps to the correct <see cref="UtopIRBitwiseOperation"/> in the emitted instruction.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR bitwise operation.</param>
+    [Theory]
+    [InlineData(Operator.ChordOf, UtopIRBitwiseOperation.Chord)]
+    [InlineData(Operator.HarmonyOf, UtopIRBitwiseOperation.Harmony)]
+    [InlineData(Operator.DiscordOf, UtopIRBitwiseOperation.Discord)]
+    public void Transform_BinaryBitwiseOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRBitwiseOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        BitwiseInstruction bitwise = result.Instructions[3].ShouldBeOfType<BitwiseInstruction>();
+        bitwise.Operation.ShouldBe(expectedUtopirOperation);
+        bitwise.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        bitwise.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <c>INVERSION OF</c> emits an <see cref="InvInstruction"/> with the operand and a temporary register named after the operation.
+    /// </summary>
+    [Fact]
+    public void Transform_InversionOf_EmitsInvInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.InversionOf,
+                    Arguments = [new IdentifierNode() { Name = "a", Span = PlaceholderSpan }],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        InvInstruction inv = result.Instructions[2].ShouldBeOfType<InvInstruction>();
+        inv.Target.Name.ShouldBe("_inv_a");
+        inv.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        result.Instructions[3].ShouldBeOfType<AppointInstruction>()
+            .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_inv_a");
+    }
+
+    /// <summary>
+    /// Tests that the unary <c>TRANSPOSITION UP</c> operator lowers to a binary <see cref="BitwiseInstruction"/> with a shift amount of one matching the operand type.
+    /// </summary>
+    [Fact]
+    public void Transform_TranspositionUpOnChancellor_EmitsBitwiseInstructionWithMatchingShiftAmount()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.TranspositionUp,
+                    Arguments = [new IdentifierNode() { Name = "a", Span = PlaceholderSpan }],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        BitwiseInstruction shift = result.Instructions[2].ShouldBeOfType<BitwiseInstruction>();
+        shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
+        shift.Target.Name.ShouldBe("_transup_a_1");
+        shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        shift.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1L);
+    }
+
+    /// <summary>
+    /// Tests that the unary <c>TRANSPOSITION DOWN</c> operator lowers to a binary <see cref="BitwiseInstruction"/> with a shift amount of one.
+    /// </summary>
+    [Fact]
+    public void Transform_TranspositionDown_EmitsBitwiseInstructionWithShiftAmountOfOne()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.TranspositionDown,
+                    Arguments = [new IdentifierNode() { Name = "a", Span = PlaceholderSpan }],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        BitwiseInstruction shift = result.Instructions[2].ShouldBeOfType<BitwiseInstruction>();
+        shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransDown);
+        shift.Target.Name.ShouldBe("_transdown_a_1");
+        shift.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that mixed-width binary bitwise operands widen the narrower operand before the <see cref="BitwiseInstruction"/> is emitted.
+    /// </summary>
+    [Fact]
+    public void Transform_MixedTypeBitwise_WidensNarrowerOperand()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.ChordOf,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        BitwiseInstruction bitwise = result.Instructions[4].ShouldBeOfType<BitwiseInstruction>();
+        bitwise.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        bitwise.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that a <c>stitch</c> declaration initialised with a character literal emits <c>welcome</c> then <c>appoint</c> with no intermediate cast.
+    /// </summary>
+    [Fact]
+    public void Transform_StitchDeclarationWithCharLiteral_EmitsWelcomeThenAppoint()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode()
+            {
+                Name = "Letter",
+                Type = LiteralType.Char,
+                InitialValue = new LiteralNode() { Value = 'A', Type = LiteralType.Char, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(2);
+        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Stitch);
+        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe('A');
+    }
+
+    /// <summary>
+    /// Tests that an <c>AS IT WERE</c> cast to <c>STITCH</c> emits a <see cref="WereInstruction"/> with the <see cref="UtopIRType.Stitch"/> destination type.
+    /// </summary>
+    [Fact]
+    public void Transform_ExpressionCastToStitch_EmitsWereInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "n", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "c", Type = LiteralType.Char, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "c",
+                Value = new ExpressionCastNode()
+                {
+                    Expression = new IdentifierNode() { Name = "n", Span = PlaceholderSpan },
+                    NewType = LiteralType.Char,
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[2].ShouldBeOfType<WereInstruction>();
+        were.Type.ShouldBe(UtopIRType.Stitch);
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("n");
+        AppointInstruction appoint = result.Instructions[3].ShouldBeOfType<AppointInstruction>();
+        appoint.Target.Name.ShouldBe("c");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
 
     /// <summary>

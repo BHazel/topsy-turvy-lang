@@ -212,11 +212,15 @@ Several areas of the codebase must be kept consistent whenever related changes a
 
 ### New Language Keyword or Construct
 
-Use the `/implement-language-feature` skill as it is the single source of truth for layer order, build checkpoints and per-layer constraints.  Do not attempt a language change without it: the change touches at least eight files across four projects and several invariants must hold simultaneously.
+Use the `/implement-topsy-turvy-language-feature` skill as it is the single source of truth for layer order, build checkpoints and per-layer constraints.  Do not attempt a language change without it: the change touches at least eight files across four projects and several invariants must hold simultaneously.
 
 The skill also covers the visual editor layer (`VisualGraphBuilder`). Every new or renamed AST node type that produces a statement or expression needs a corresponding `Create*` or expression branch in `VisualGraphBuilder.cs`: consult the node-mapping table in the skill for the full list.
 
 `apps/apple/TopsyTurvy/Theatre/Editor/TopsyKeywords.swift` joins the REPL/Monaco/TextMate keyword-highlighting group as of Phase 2: it mirrors `KeywordData.Keywords` on the Swift side (word-by-word, since `CodeEditorView`'s reserved-identifier matching cannot anchor a trailing word-boundary against a keyword's own punctuation) to build `TopsyLanguageConfiguration`'s `reservedIdentifiers`. Update it alongside every other keyword-list sync point whenever `KeywordData.Keywords` changes.
+
+### New UtopIR Instruction or Construct
+
+Use the `/implement-utopir-feature` skill as it is the single source of truth for UtopIR's own layer order (`UtopIR.Ast` → `UtopIR.Parser` → `UtopIR.Transformer` → `UtopIR.Analysis` → `UtopIR.Emitters.Cil`), build checkpoints and per-layer constraints.  Do not confuse this with `/implement-topsy-turvy-language-feature` above: that skill covers changes to Topsy Turvy source syntax itself, this one covers changes to the UtopIR instruction set a Topsy Turvy programme lowers to.  A change that adds a new Topsy Turvy operator with no existing UtopIR equivalent needs both skills, in sequence — the language-feature skill first, so the transformer has an AST node and `Operator` value to map from.
 
 ### New REPL Command
 
@@ -273,7 +277,9 @@ The `cli-repl.md` page describes how the REPL works in detail.  It must be kept 
 
 ## Implementing Language Features
 
-When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
+When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-topsy-turvy-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
+
+When a new instruction or type is added to `specifications/UtopIR.md` instead, the equivalent guide is `.claude/commands/implement-utopir-feature.md`, covering UtopIR's own layer order (`UtopIR.Ast` → `UtopIR.Parser` → `UtopIR.Transformer` → `UtopIR.Analysis` → `UtopIR.Emitters.Cil`).
 
 After completing the implementation, documentation must also be kept in sync:
 

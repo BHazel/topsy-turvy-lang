@@ -34,10 +34,10 @@ namespace BWHazel.TopsyTurvy.UtopIR.Transformer;
 /// </para>
 /// <para>
 /// ## Scope
-/// This initial implementation covers the instruction set defined in
-/// UtopIR v0.0.1-preview1: variable declaration/assignment, arithmetic operations, and
-/// top-level programme return.  Constant inlining, functions, control flow, and non-numeric
-/// types are deferred to later versions.
+/// This implementation covers the instruction set defined in UtopIR v0.0.1-preview2:
+/// variable declaration/assignment, integer and floating-point arithmetic operations, bitwise
+/// operations and top-level programme return.  Constant inlining, functions, control flow, and
+/// non-numeric types are deferred to later versions.
 /// </para>
 /// <para>
 /// ## Constants
@@ -144,7 +144,7 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         if (declaration.InitialValue is not null)
         {
             UtopIROperand value = this.TransformExpression(declaration.InitialValue, instructions, declaredTypes);
-            if (this.IsIntegerType(type))
+            if (this.IsCastableType(type))
             {
                 UtopIRType valueType = this.InferOperandType(value, declaredTypes);
                 value = this.CastOperandIfNeeded(value, valueType, type, instructions, declaredTypes);
@@ -170,7 +170,7 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         UtopIRVariable target = new(assignment.Target);
         UtopIROperand value = this.TransformExpression(assignment.Value, instructions, declaredTypes);
         UtopIRType targetType = declaredTypes[assignment.Target];
-        if (this.IsIntegerType(targetType))
+        if (this.IsCastableType(targetType))
         {
             UtopIRType valueType = this.InferOperandType(value, declaredTypes);
             value = this.CastOperandIfNeeded(value, valueType, targetType, instructions, declaredTypes);
@@ -215,6 +215,8 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
                 return new VariableOperand(new UtopIRVariable(identifier.Name));
             case PrefixExpressionNode prefix when this.IsArithmeticOperator(prefix.Operator):
                 return this.TransformArithmetic(prefix, instructions, declaredTypes);
+            case PrefixExpressionNode prefix when this.IsBitwiseOperator(prefix.Operator):
+                return this.TransformBitwise(prefix, instructions, declaredTypes);
             case ExpressionCastNode cast:
                 return this.TransformCast(cast, instructions, declaredTypes);
             default:
@@ -231,14 +233,93 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     /// types differ, emitting an <see cref="ArithmeticInstruction"/> into a temporary register,
     /// and returning a <see cref="VariableOperand"/> referencing that register.
     /// </summary>
+    /// <remarks>
+    /// The instruction group is selected by the widened operand type: floating-point operands
+    /// produce the <c>.f</c>-suffixed operation variants, all other operands the integer variants.
+    /// </remarks>
     /// <param name="prefix">The arithmetic prefix expression to transform.</param>
     /// <param name="instructions">The instruction list being built.</param>
     /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
     /// <returns>A <see cref="VariableOperand"/> for the temporary register holding the result.</returns>
     private VariableOperand TransformArithmetic(PrefixExpressionNode prefix, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
     {
+        UtopIROperand operand1 = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+        UtopIROperand operand2 = this.TransformExpression(prefix.Arguments[1], instructions, declaredTypes);
+
+        UtopIRType type1 = this.InferOperandType(operand1, declaredTypes);
+        UtopIRType type2 = this.InferOperandType(operand2, declaredTypes);
+        UtopIRType widenedType = this.Widen(type1, type2);
+
+        operand1 = this.CastOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
+        operand2 = this.CastOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
+
         UtopIRArithmeticOperation operation = this.MapOperator(prefix.Operator);
+        if (this.IsFloatType(widenedType))
+        {
+            operation = this.ToFloatOperation(operation);
+        }
+
         string mnemonic = this.OperationMnemonic(operation);
+        string temporaryVariableName = this.formatter.CreateName(mnemonic, this.OperandName(operand1), this.OperandName(operand2));
+        UtopIRVariable temporaryVariable = new(temporaryVariableName);
+        instructions.Add(new ArithmeticInstruction(operation, temporaryVariable, operand1, operand2));
+        declaredTypes[temporaryVariableName] = widenedType;
+        return new VariableOperand(temporaryVariable);
+    }
+
+    /// <summary>
+    /// Transforms a bitwise <see cref="PrefixExpressionNode"/> by recursively flattening its
+    /// operands, emitting a <see cref="BitwiseInstruction"/> or <see cref="InvInstruction"/> into
+    /// a temporary register, and returning a <see cref="VariableOperand"/> referencing that register.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The binary operators (<c>CHORD OF</c>, <c>HARMONY OF</c>, <c>DISCORD OF</c>) widen the
+    /// narrower operand first.  The unary operators keep the operand type as the result type.
+    /// </para>
+    /// <para>
+    /// Topsy Turvy transposition operators are unary shifts by one, whereas the UtopIR
+    /// <c>transup</c> and <c>transdown</c> instructions take the shift amount as their second operand,
+    /// so <c>TRANSPOSITION UP x</c> lowers to <c>transup £x, 1</c> with the literal <c>1</c> boxed
+    /// as the operand type to satisfy the same-type operand rule.
+    /// </para>
+    /// </remarks>
+    /// <param name="prefix">The bitwise prefix expression to transform.</param>
+    /// <param name="instructions">The instruction list being built.</param>
+    /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
+    /// <returns>A <see cref="VariableOperand"/> for the temporary register holding the result.</returns>
+    private VariableOperand TransformBitwise(PrefixExpressionNode prefix, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
+    {
+        if (prefix.Operator == Operator.InversionOf)
+        {
+            UtopIROperand operand = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+            UtopIRType operandType = this.InferOperandType(operand, declaredTypes);
+
+            string invTemporaryName = this.formatter.CreateName(UtopIRKeywords.Instructions.Inv, this.OperandName(operand));
+            UtopIRVariable invTemporary = new(invTemporaryName);
+            instructions.Add(new InvInstruction(invTemporary, operand));
+            declaredTypes[invTemporaryName] = operandType;
+            return new VariableOperand(invTemporary);
+        }
+
+        if (prefix.Operator is Operator.TranspositionUp or Operator.TranspositionDown)
+        {
+            UtopIROperand operand = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+            UtopIRType operandType = this.InferOperandType(operand, declaredTypes);
+            UtopIROperand shiftAmount = new LiteralOperand(this.CreateOneLiteral(operandType));
+
+            UtopIRBitwiseOperation shiftOperation = prefix.Operator == Operator.TranspositionUp
+                ? UtopIRBitwiseOperation.TransUp
+                : UtopIRBitwiseOperation.TransDown;
+            
+            string shiftMnemonic = this.BitwiseOperationMnemonic(shiftOperation);
+
+            string shiftTemporaryName = this.formatter.CreateName(shiftMnemonic, this.OperandName(operand), this.OperandName(shiftAmount));
+            UtopIRVariable shiftTemporary = new(shiftTemporaryName);
+            instructions.Add(new BitwiseInstruction(shiftOperation, shiftTemporary, operand, shiftAmount));
+            declaredTypes[shiftTemporaryName] = operandType;
+            return new VariableOperand(shiftTemporary);
+        }
 
         UtopIROperand operand1 = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
         UtopIROperand operand2 = this.TransformExpression(prefix.Arguments[1], instructions, declaredTypes);
@@ -250,9 +331,12 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         operand1 = this.CastOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
         operand2 = this.CastOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
 
+        UtopIRBitwiseOperation operation = this.MapBitwiseOperator(prefix.Operator);
+        string mnemonic = this.BitwiseOperationMnemonic(operation);
+
         string temporaryVariableName = this.formatter.CreateName(mnemonic, this.OperandName(operand1), this.OperandName(operand2));
         UtopIRVariable temporaryVariable = new(temporaryVariableName);
-        instructions.Add(new ArithmeticInstruction(operation, temporaryVariable, operand1, operand2));
+        instructions.Add(new BitwiseInstruction(operation, temporaryVariable, operand1, operand2));
         declaredTypes[temporaryVariableName] = widenedType;
         return new VariableOperand(temporaryVariable);
     }
@@ -318,6 +402,26 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
             or UtopIRType.StandingSausageRoll;
 
     /// <summary>
+    /// Determines whether the given <see cref="UtopIRType"/> is one of the floating-point types.
+    /// </summary>
+    /// <param name="type">The type to test.</param>
+    /// <returns><c>true</c> if <paramref name="type"/> is a floating-point type, otherwise <c>false</c>.</returns>
+    private bool IsFloatType(UtopIRType type) =>
+        type is UtopIRType.Fathom
+            or UtopIRType.Foot;
+
+    /// <summary>
+    /// Determines whether the given <see cref="UtopIRType"/> supports <c>were</c> casting, so a
+    /// mismatched initial or assigned value can be coerced to the declared target type.
+    /// </summary>
+    /// <param name="type">The type to test.</param>
+    /// <returns><c>true</c> if <paramref name="type"/> is an integer, floating-point or character type, otherwise <c>false</c>.</returns>
+    private bool IsCastableType(UtopIRType type) =>
+        this.IsIntegerType(type)
+            || this.IsFloatType(type)
+            || type == UtopIRType.Stitch;
+
+    /// <summary>
     /// Returns a short name string for a <see cref="UtopIROperand"/>, used when constructing
     /// temporary variable names.
     /// </summary>
@@ -357,6 +461,9 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
             uint => UtopIRType.StandingPeer,
             ushort => UtopIRType.StandingPirate,
             byte => UtopIRType.StandingSausageRoll,
+            double => UtopIRType.Fathom,
+            float => UtopIRType.Foot,
+            char => UtopIRType.Stitch,
             _ => throw new NotSupportedException($"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },
         _ => throw new NotSupportedException($"Operand type '{operand.GetType().Name}' is not supported.")
@@ -407,6 +514,70 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
             or Operator.Smaller;
 
     /// <summary>
+    /// Determines whether the given <see cref="Operator"/> is one of the bitwise operators
+    /// supported by the transformer.
+    /// </summary>
+    /// <param name="theOperator">The operator to test.</param>
+    /// <returns><c>true</c> if the operator lowers to a <see cref="BitwiseInstruction"/> or <see cref="InvInstruction"/>, otherwise <c>false</c>.</returns>
+    private bool IsBitwiseOperator(Operator theOperator) =>
+        theOperator is Operator.ChordOf
+            or Operator.HarmonyOf
+            or Operator.DiscordOf
+            or Operator.InversionOf
+            or Operator.TranspositionUp
+            or Operator.TranspositionDown;
+
+    /// <summary>
+    /// Maps a binary bitwise Topsy Turvy <see cref="Operator"/> to the corresponding
+    /// <see cref="UtopIRBitwiseOperation"/>.
+    /// </summary>
+    /// <param name="theOperator">The Topsy Turvy operator to map.</param>
+    /// <returns>The corresponding <see cref="UtopIRBitwiseOperation"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="theOperator"/> is not a binary bitwise operator.</exception>
+    private UtopIRBitwiseOperation MapBitwiseOperator(Operator theOperator) => theOperator switch
+    {
+        Operator.ChordOf => UtopIRBitwiseOperation.Chord,
+        Operator.HarmonyOf => UtopIRBitwiseOperation.Harmony,
+        Operator.DiscordOf => UtopIRBitwiseOperation.Discord,
+        _ => throw new ArgumentOutOfRangeException(nameof(theOperator), theOperator, "Operator is not a binary bitwise operator.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic string for the given <see cref="UtopIRBitwiseOperation"/>.
+    /// </summary>
+    /// <param name="operation">The bitwise operation.</param>
+    /// <returns>The mnemonic string.</returns>
+    private string BitwiseOperationMnemonic(UtopIRBitwiseOperation operation) => operation switch
+    {
+        UtopIRBitwiseOperation.Chord => UtopIRKeywords.Instructions.Chord,
+        UtopIRBitwiseOperation.Harmony => UtopIRKeywords.Instructions.Harmony,
+        UtopIRBitwiseOperation.Discord => UtopIRKeywords.Instructions.Discord,
+        UtopIRBitwiseOperation.TransUp => UtopIRKeywords.Instructions.TransUp,
+        UtopIRBitwiseOperation.TransDown => UtopIRKeywords.Instructions.TransDown,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown bitwise operation.")
+    };
+
+    /// <summary>
+    /// Returns the literal value <c>1</c> boxed as the CLR type corresponding to the given integer
+    /// <see cref="UtopIRType"/>, used as the shift amount when lowering transposition operators.
+    /// </summary>
+    /// <param name="type">The integer type the literal must match.</param>
+    /// <returns>The value <c>1</c> boxed as the matching CLR type.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="type"/> is not an integer type.</exception>
+    private object CreateOneLiteral(UtopIRType type) => type switch
+    {
+        UtopIRType.Chancellor => 1L,
+        UtopIRType.Peer => 1,
+        UtopIRType.Pirate => (short)1,
+        UtopIRType.SausageRoll => (sbyte)1,
+        UtopIRType.StandingChancellor => 1UL,
+        UtopIRType.StandingPeer => 1U,
+        UtopIRType.StandingPirate => (ushort)1,
+        UtopIRType.StandingSausageRoll => (byte)1,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Shift amounts require an integer type.")
+    };
+
+    /// <summary>
     /// Maps a Topsy Turvy <see cref="Operator"/> to the corresponding
     /// <see cref="UtopIRArithmeticOperation"/>.
     /// </summary>
@@ -426,12 +597,27 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     };
 
     /// <summary>
+    /// Returns the floating-point variant of the given integer <see cref="UtopIRArithmeticOperation"/>.
+    /// </summary>
+    /// <param name="operation">The integer arithmetic operation.</param>
+    /// <returns>The corresponding <c>.f</c>-suffixed <see cref="UtopIRArithmeticOperation"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="operation"/> is not an integer arithmetic operation.</exception>
+    private UtopIRArithmeticOperation ToFloatOperation(UtopIRArithmeticOperation operation) => operation switch
+    {
+        UtopIRArithmeticOperation.Sum => UtopIRArithmeticOperation.SumFloat,
+        UtopIRArithmeticOperation.Diff => UtopIRArithmeticOperation.DiffFloat,
+        UtopIRArithmeticOperation.Prod => UtopIRArithmeticOperation.ProdFloat,
+        UtopIRArithmeticOperation.Quot => UtopIRArithmeticOperation.QuotFloat,
+        UtopIRArithmeticOperation.Rem => UtopIRArithmeticOperation.RemFloat,
+        UtopIRArithmeticOperation.Max => UtopIRArithmeticOperation.MaxFloat,
+        UtopIRArithmeticOperation.Min => UtopIRArithmeticOperation.MinFloat,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Operation has no floating-point variant.")
+    };
+
+    /// <summary>
     /// Returns the UtopIR mnemonic string for the given <see cref="UtopIRArithmeticOperation"/>.
     /// </summary>
     /// <param name="operation">The arithmetic operation.</param>
-    /// <remarks>
-    /// Used when generating temporary variable names.
-    /// </remarks>
     /// <returns>The mnemonic string.</returns>
     private string OperationMnemonic(UtopIRArithmeticOperation operation) => operation switch
     {
@@ -442,6 +628,13 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         UtopIRArithmeticOperation.Rem => UtopIRKeywords.Instructions.Rem,
         UtopIRArithmeticOperation.Max => UtopIRKeywords.Instructions.Max,
         UtopIRArithmeticOperation.Min => UtopIRKeywords.Instructions.Min,
+        UtopIRArithmeticOperation.SumFloat => UtopIRKeywords.Instructions.SumFloat,
+        UtopIRArithmeticOperation.DiffFloat => UtopIRKeywords.Instructions.DiffFloat,
+        UtopIRArithmeticOperation.ProdFloat => UtopIRKeywords.Instructions.ProdFloat,
+        UtopIRArithmeticOperation.QuotFloat => UtopIRKeywords.Instructions.QuotFloat,
+        UtopIRArithmeticOperation.RemFloat => UtopIRKeywords.Instructions.RemFloat,
+        UtopIRArithmeticOperation.MaxFloat => UtopIRKeywords.Instructions.MaxFloat,
+        UtopIRArithmeticOperation.MinFloat => UtopIRKeywords.Instructions.MinFloat,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown arithmetic operation.")
     };
 

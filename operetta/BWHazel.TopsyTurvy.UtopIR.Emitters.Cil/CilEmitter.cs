@@ -58,8 +58,8 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// </para>
 /// <para>
 /// ### Supported Types
-/// All integer types are supported in v0.0.1-preview1.  Floating-point, boolean, character and
-/// string types are not currently supported.
+/// All integer, floating-point and character types are supported as of v0.0.1-preview2.
+/// Boolean and string types are not currently supported.
 /// </para>
 /// </remarks>
 public sealed class CilEmitter
@@ -241,6 +241,12 @@ public sealed class CilEmitter
             case ArithmeticInstruction arithmetic:
                 this.EmitArithmetic(arithmetic, ilGenerator, cilGenerator, locals, localTypes);
                 break;
+            case BitwiseInstruction bitwise:
+                this.EmitBitwise(bitwise, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case InvInstruction inv:
+                this.EmitInv(inv, ilGenerator, cilGenerator, locals, localTypes);
+                break;
             case PrenticeInstruction prentice:
                 this.EmitPrentice(prentice, ilGenerator, locals);
                 break;
@@ -327,6 +333,21 @@ public sealed class CilEmitter
                 $"operand types ('{operand1Type}' and '{operand2Type}').");
         }
 
+        bool isFloatOperation = this.IsFloatOperation(arithmeticInstruction.Operation);
+        if (isFloatOperation && !this.IsFloatType(operand1Type))
+        {
+            throw new InvalidOperationException(
+                $"Floating-point arithmetic instruction targeting '£{arithmeticInstruction.Target.Name}' " +
+                $"requires floating-point operands but was given '{operand1Type}'.");
+        }
+
+        if (!isFloatOperation && this.IsFloatType(operand1Type))
+        {
+            throw new InvalidOperationException(
+                $"Integer arithmetic instruction targeting '£{arithmeticInstruction.Target.Name}' " +
+                $"requires integer operands but was given '{operand1Type}'.");
+        }
+
         // If the target local has not yet been declared, declare it using the operand type.
         // Arithmetic instructions in UtopIR can be thought of as "auto"-declaring the
         // target register.
@@ -341,7 +362,11 @@ public sealed class CilEmitter
         LocalBuilder target = declaredLocal;
         UtopIRType targetType = localTypes[arithmeticInstruction.Target.Name];
 
-        if (arithmeticInstruction.Operation is UtopIRArithmeticOperation.Max or UtopIRArithmeticOperation.Min)
+        if (arithmeticInstruction.Operation
+            is UtopIRArithmeticOperation.Max
+            or UtopIRArithmeticOperation.Min
+            or UtopIRArithmeticOperation.MaxFloat
+            or UtopIRArithmeticOperation.MinFloat)
         {
             this.EmitMaxMin(arithmeticInstruction.Operation, arithmeticInstruction.Operand1, arithmeticInstruction.Operand2, targetType, ilGenerator, locals);
         }
@@ -364,14 +389,14 @@ public sealed class CilEmitter
     /// explicit narrowing conversion before the call because the CIL evaluation stack always widens
     /// them to <c>int32</c>.
     /// </remarks>
-    /// <param name="arithmeticOperations">The arithmetic operations; must be <see cref="UtopIRArithmeticOperation.Max"/> or <see cref="UtopIRArithmeticOperation.Min"/>.</param>
+    /// <param name="arithmeticOperation">The arithmetic operations; must be <see cref="UtopIRArithmeticOperation.Max"/>, <see cref="UtopIRArithmeticOperation.Min"/>, <see cref="UtopIRArithmeticOperation.MaxFloat"/> or <see cref="UtopIRArithmeticOperation.MinFloat"/>.</param>
     /// <param name="operand1">The first operand.</param>
     /// <param name="operand2">The second operand.</param>
     /// <param name="type">The type of the target register, used to resolve the correct <see cref="Math"/> overload.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
     private void EmitMaxMin(
-        UtopIRArithmeticOperation arithmeticOperations,
+        UtopIRArithmeticOperation arithmeticOperation,
         UtopIROperand operand1,
         UtopIROperand operand2,
         UtopIRType type,
@@ -379,7 +404,9 @@ public sealed class CilEmitter
         Dictionary<string, LocalBuilder> locals)
     {
         Type clrType = this.MapToClrType(type);
-        string methodName = arithmeticOperations == UtopIRArithmeticOperation.Max ? "Max" : "Min";
+        string methodName = arithmeticOperation is UtopIRArithmeticOperation.Max or UtopIRArithmeticOperation.MaxFloat
+            ? "Max"
+            : "Min";
 
         this.EmitStackLoadOperand(operand1, ilGenerator, locals);
         this.EmitConversion(type, ilGenerator);
@@ -391,6 +418,113 @@ public sealed class CilEmitter
                 $"Math.{methodName}({clrType.Name}, {clrType.Name}) could not be resolved.");
 
         ilGenerator.Emit(OpCodes.Call, mathMethod);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="BitwiseInstruction"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Both operands must share the same integer type.  An undeclared target register is
+    /// auto-declared with the operand type.
+    /// </para>
+    /// <para>
+    /// For the shift operations, CIL requires the shift amount on the stack as an <c>int32</c>
+    /// or native int regardless of the value width, so a <c>conv.i4</c> is emitted after
+    /// loading the second operand when the operand type is 64-bit.
+    /// </para>
+    /// </remarks>
+    /// <param name="bitwiseInstruction">The bitwise instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the operands have different inferred types or are not integer types.</exception>
+    private void EmitBitwise(
+        BitwiseInstruction bitwiseInstruction,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        UtopIRType operand1Type = this.InferOperandType(bitwiseInstruction.Operand1, localTypes);
+        UtopIRType operand2Type = this.InferOperandType(bitwiseInstruction.Operand2, localTypes);
+        if (operand1Type != operand2Type)
+        {
+            throw new InvalidOperationException(
+                $"Bitwise instruction targeting '£{bitwiseInstruction.Target.Name}' has mismatched " +
+                $"operand types ('{operand1Type}' and '{operand2Type}').");
+        }
+
+        if (!this.IsIntegerType(operand1Type))
+        {
+            throw new InvalidOperationException(
+                $"Bitwise instruction targeting '£{bitwiseInstruction.Target.Name}' " +
+                $"requires integer operands but was given '{operand1Type}'.");
+        }
+
+        if (!locals.TryGetValue(bitwiseInstruction.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(operand1Type));
+            cilGenerator.RegisterLocalName(declaredLocal, bitwiseInstruction.Target.Name);
+            locals[bitwiseInstruction.Target.Name] = declaredLocal;
+            localTypes[bitwiseInstruction.Target.Name] = operand1Type;
+        }
+
+        LocalBuilder target = declaredLocal;
+        UtopIRType targetType = localTypes[bitwiseInstruction.Target.Name];
+        bool isShift = bitwiseInstruction.Operation is UtopIRBitwiseOperation.TransUp or UtopIRBitwiseOperation.TransDown;
+
+        this.EmitStackLoadOperand(bitwiseInstruction.Operand1, ilGenerator, locals);
+        this.EmitStackLoadOperand(bitwiseInstruction.Operand2, ilGenerator, locals);
+        if (isShift && this.Is64BitType(operand1Type))
+        {
+            ilGenerator.Emit(OpCodes.Conv_I4);
+        }
+
+        this.EmitBitwiseOpcode(bitwiseInstruction.Operation, targetType, ilGenerator);
+        ilGenerator.Emit(OpCodes.Stloc, target);
+    }
+
+    /// <summary>
+    /// Emits CIL for an <see cref="InvInstruction"/> by loading the operand, applying <c>not</c>
+    /// and storing the result into the target local.
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared with the operand type.
+    /// </remarks>
+    /// <param name="invInstruction">The inv instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the operand is not an integer type.</exception>
+    private void EmitInv(
+        InvInstruction invInstruction,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        UtopIRType operandType = this.InferOperandType(invInstruction.Operand, localTypes);
+        if (!this.IsIntegerType(operandType))
+        {
+            throw new InvalidOperationException(
+                $"Bitwise NOT instruction targeting '£{invInstruction.Target.Name}' " +
+                $"requires an integer operand but was given '{operandType}'.");
+        }
+
+        if (!locals.TryGetValue(invInstruction.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(operandType));
+            cilGenerator.RegisterLocalName(declaredLocal, invInstruction.Target.Name);
+            locals[invInstruction.Target.Name] = declaredLocal;
+            localTypes[invInstruction.Target.Name] = operandType;
+        }
+
+        this.EmitStackLoadOperand(invInstruction.Operand, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Not);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
     }
 
     /// <summary>
@@ -457,7 +591,12 @@ public sealed class CilEmitter
     /// Emits CIL for a <see cref="FindInstruction"/> loading the return value or 0 for a void return.
     /// </summary>
     /// <remarks>
-    /// <c>Main</c> always returns <c>int32</c>.  64-bit values are narrowed to <c>int32</c> via <c>conv.i4</c>.
+    /// <c>Main</c> always returns <c>int32</c>.  64-bit values are narrowed to <c>int32</c> via
+    /// <c>conv.i4</c>, as are floating-point values, which are truncated in the process.  The type
+    /// used to decide whether a conversion is needed is derived via <see cref="InferOperandType"/>
+    /// for both a <see cref="VariableOperand"/> and a <see cref="LiteralOperand"/> alike, rather than
+    /// switching on the operand CLR runtime type directly, so this stays correct automatically if a
+    /// future <see cref="UtopIRType"/> is added to <see cref="Is64BitType"/> or <see cref="IsFloatType"/>.
     /// </remarks>
     /// <param name="find">The find instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
@@ -473,18 +612,11 @@ public sealed class CilEmitter
         {
             ilGenerator.Emit(OpCodes.Ldc_I4_0);
         }
-        else if (find.Value is VariableOperand variableOperand)
+        else
         {
-            ilGenerator.Emit(OpCodes.Ldloc, locals[variableOperand.Variable.Name]);
-            if (this.Is64BitType(localTypes[variableOperand.Variable.Name]))
-            {
-                ilGenerator.Emit(OpCodes.Conv_I4);
-            }
-        }
-        else if (find.Value is LiteralOperand literalOperand)
-        {
-            this.EmitLoadLiteralValue(literalOperand.Value, ilGenerator);
-            if (literalOperand.Value is long or ulong)
+            this.EmitStackLoadOperand(find.Value, ilGenerator, locals);
+            UtopIRType valueType = this.InferOperandType(find.Value, localTypes);
+            if (this.Is64BitType(valueType) || this.IsFloatType(valueType))
             {
                 ilGenerator.Emit(OpCodes.Conv_I4);
             }
@@ -537,6 +669,10 @@ public sealed class CilEmitter
     /// <see cref="MapToClrType"/>).  This mirrors the same principle documented on
     /// <see cref="EmitArithmeticOpcode"/> for <c>div.un</c>/<c>rem.un</c>.
     /// </para>
+    /// <para>
+    /// <c>char</c> has no dedicated shape on the CIL evaluation stack, so it is loaded the same way
+    /// as <c>byte</c> and <c>ushort</c>: its UTF-16 code unit is widened to <c>int32</c> via <c>ldc.i4</c>.
+    /// </para>
     /// </remarks>
     /// <param name="value">The literal value to load.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
@@ -569,6 +705,15 @@ public sealed class CilEmitter
             case byte uint8:
                 ilGenerator.Emit(OpCodes.Ldc_I4, (int)uint8);
                 break;
+            case double float64:
+                ilGenerator.Emit(OpCodes.Ldc_R8, float64);
+                break;
+            case float float32:
+                ilGenerator.Emit(OpCodes.Ldc_R4, float32);
+                break;
+            case char character:
+                ilGenerator.Emit(OpCodes.Ldc_I4, (int)character);
+                break;
             default:
                 throw new NotSupportedException(
                     $"Literal value of CLR type '{value.GetType().Name}' is not supported by the CIL emitter in this version.");
@@ -592,27 +737,68 @@ public sealed class CilEmitter
         bool isUnsigned = this.IsUnsignedType(type);
         switch (operation)
         {
-            case UtopIRArithmeticOperation.Sum:
+            case UtopIRArithmeticOperation.Sum or UtopIRArithmeticOperation.SumFloat:
                 ilGenerator.Emit(OpCodes.Add);
                 break;
-            case UtopIRArithmeticOperation.Diff:
+            case UtopIRArithmeticOperation.Diff or UtopIRArithmeticOperation.DiffFloat:
                 ilGenerator.Emit(OpCodes.Sub);
                 break;
-            case UtopIRArithmeticOperation.Prod:
+            case UtopIRArithmeticOperation.Prod or UtopIRArithmeticOperation.ProdFloat:
                 ilGenerator.Emit(OpCodes.Mul);
                 break;
-            case UtopIRArithmeticOperation.Quot:
+            case UtopIRArithmeticOperation.Quot or UtopIRArithmeticOperation.QuotFloat:
                 ilGenerator.Emit(isUnsigned
                     ? OpCodes.Div_Un
                     : OpCodes.Div);
                 break;
-            case UtopIRArithmeticOperation.Rem:
+            case UtopIRArithmeticOperation.Rem or UtopIRArithmeticOperation.RemFloat:
                 ilGenerator.Emit(isUnsigned
                     ? OpCodes.Rem_Un
                     : OpCodes.Rem);
                 break;
-            case UtopIRArithmeticOperation.Max or UtopIRArithmeticOperation.Min:
+            case UtopIRArithmeticOperation.Max
+                or UtopIRArithmeticOperation.Min
+                or UtopIRArithmeticOperation.MaxFloat
+                or UtopIRArithmeticOperation.MinFloat:
                 throw new InvalidOperationException($"Operation '{operation}' must be handled by EmitMaxMin.");
+            default:
+                throw new InvalidOperationException($"Operation '{operation}' not supported.");
+        }
+    }
+
+    /// <summary>
+    /// Emits the CIL bitwise opcode corresponding to the given <see cref="UtopIRBitwiseOperation"/>.
+    /// </summary>
+    /// <remarks>
+    /// The right shift uses <c>shr.un</c> for unsigned types so vacated high bits are zero-filled
+    /// rather than sign-extended.  All other operations are bit-pattern identical for signed and
+    /// unsigned types and use a single opcode.
+    /// </remarks>
+    /// <param name="operation">The bitwise operation.</param>
+    /// <param name="type">The target variable type used to select the signed or unsigned right-shift opcode.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="operation"/> is not a recognised bitwise operation.</exception>
+    private void EmitBitwiseOpcode(UtopIRBitwiseOperation operation, UtopIRType type, ILGenerator ilGenerator)
+    {
+        switch (operation)
+        {
+            case UtopIRBitwiseOperation.Chord:
+                ilGenerator.Emit(OpCodes.And);
+                break;
+            case UtopIRBitwiseOperation.Harmony:
+                ilGenerator.Emit(OpCodes.Or);
+                break;
+            case UtopIRBitwiseOperation.Discord:
+                ilGenerator.Emit(OpCodes.Xor);
+                break;
+            case UtopIRBitwiseOperation.TransUp:
+                ilGenerator.Emit(OpCodes.Shl);
+                break;
+            case UtopIRBitwiseOperation.TransDown:
+                ilGenerator.Emit(this.IsUnsignedType(type)
+                    ? OpCodes.Shr_Un
+                    : OpCodes.Shr);
+                break;
             default:
                 throw new InvalidOperationException($"Operation '{operation}' not supported.");
         }
@@ -623,10 +809,14 @@ public sealed class CilEmitter
     /// to the given target type true CLR width and signedness.
     /// </summary>
     /// <remarks>
-    /// Covers all integer <see cref="UtopIRType"/> variants.  A single target-only conversion is
-    /// sufficient regardless of the original type of the value.  <c>conv.*</c> opcodes convert whatever is on
-    /// the stack so this also serves the <see cref="EmitWere"/> general widen/narrow cast between any
-    /// pair of integer types, not just the narrowing case <see cref="EmitMaxMin"/> uses.
+    /// Covers all integer and floating-point <see cref="UtopIRType"/> variants.  A single target-only
+    /// conversion is sufficient regardless of the original type of the value.  <c>conv.*</c> opcodes
+    /// convert whatever is on the stack so this also serves the <see cref="EmitWere"/> general
+    /// widen/narrow cast between any pair of numeric types, not just the narrowing case
+    /// <see cref="EmitMaxMin"/> uses.  Floating-point to integer conversion truncates toward zero,
+    /// matching the Topsy Turvy runtime cast behaviour.  <see cref="UtopIRType.Stitch"/> uses
+    /// <c>conv.u2</c>, the same opcode as <see cref="UtopIRType.StandingPirate"/> (<c>ushort</c>),
+    /// since a .NET <c>char</c> is a 16-bit unsigned code unit on the CIL stack.
     /// </remarks>
     /// <param name="targetType">The UtopIR type to convert the top-of-stack value to.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
@@ -643,6 +833,9 @@ public sealed class CilEmitter
             UtopIRType.StandingPeer => OpCodes.Conv_U4,
             UtopIRType.StandingPirate => OpCodes.Conv_U2,
             UtopIRType.StandingSausageRoll => OpCodes.Conv_U1,
+            UtopIRType.Fathom => OpCodes.Conv_R8,
+            UtopIRType.Foot => OpCodes.Conv_R4,
+            UtopIRType.Stitch => OpCodes.Conv_U2,
             _ => throw new NotSupportedException($"UtopIR type '{targetType}' is not supported by the CIL emitter conversion in this version.")
         };
 
@@ -659,6 +852,44 @@ public sealed class CilEmitter
             or UtopIRType.StandingPeer
             or UtopIRType.StandingPirate
             or UtopIRType.StandingSausageRoll;
+
+    /// <summary>
+    /// Determines if the <see cref="UtopIRType"/> is a floating-point type.
+    /// </summary>
+    /// <param name="type">The UtopIR type to test.</param>
+    /// <returns><c>true</c> for floating-point types, otherwise <c>false</c>.</returns>
+    private bool IsFloatType(UtopIRType type) =>
+        type is UtopIRType.Fathom
+            or UtopIRType.Foot;
+
+    /// <summary>
+    /// Determines if the <see cref="UtopIRType"/> is an integer type of any width or signed-ness.
+    /// </summary>
+    /// <param name="type">The UtopIR type to test.</param>
+    /// <returns><c>true</c> for integer types, otherwise <c>false</c>.</returns>
+    private bool IsIntegerType(UtopIRType type) =>
+        type is UtopIRType.Chancellor
+            or UtopIRType.Peer
+            or UtopIRType.Pirate
+            or UtopIRType.SausageRoll
+            or UtopIRType.StandingChancellor
+            or UtopIRType.StandingPeer
+            or UtopIRType.StandingPirate
+            or UtopIRType.StandingSausageRoll;
+
+    /// <summary>
+    /// Determines if the <see cref="UtopIRArithmeticOperation"/> is a floating-point operation.
+    /// </summary>
+    /// <param name="operation">The arithmetic operation to test.</param>
+    /// <returns><c>true</c> for floating-point operations, otherwise <c>false</c>.</returns>
+    private bool IsFloatOperation(UtopIRArithmeticOperation operation) =>
+        operation is UtopIRArithmeticOperation.SumFloat
+            or UtopIRArithmeticOperation.DiffFloat
+            or UtopIRArithmeticOperation.ProdFloat
+            or UtopIRArithmeticOperation.QuotFloat
+            or UtopIRArithmeticOperation.RemFloat
+            or UtopIRArithmeticOperation.MaxFloat
+            or UtopIRArithmeticOperation.MinFloat;
 
     /// <summary>
     /// Determines if the <see cref="UtopIRType"/> is a 64-bit integer type.
@@ -690,6 +921,9 @@ public sealed class CilEmitter
         UtopIRType.StandingPeer => typeof(uint),
         UtopIRType.StandingPirate => typeof(ushort),
         UtopIRType.StandingSausageRoll => typeof(byte),
+        UtopIRType.Fathom => typeof(double),
+        UtopIRType.Foot => typeof(float),
+        UtopIRType.Stitch => typeof(char),
         _ => throw new NotSupportedException(
             $"UtopIR type '{utopirType}' is not supported by the CIL emitter in this version.")
     };
@@ -720,6 +954,9 @@ public sealed class CilEmitter
             uint => UtopIRType.StandingPeer,
             ushort => UtopIRType.StandingPirate,
             byte => UtopIRType.StandingSausageRoll,
+            double => UtopIRType.Fathom,
+            float => UtopIRType.Foot,
+            char => UtopIRType.Stitch,
             _ => throw new NotSupportedException(
                 $"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },

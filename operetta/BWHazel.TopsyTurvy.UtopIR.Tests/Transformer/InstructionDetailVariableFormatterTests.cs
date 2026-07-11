@@ -8,7 +8,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Tests.Transformer;
 public class InstructionDetailVariableFormatterTests
 {
     /// <summary>
-    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string[])"/> joins parts with an underscore, prefixed with an underscore.
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> joins parts with an underscore, prefixed with an underscore.
     /// </summary>
     [Fact]
     public void CreateName_WithMultipleParts_JoinsWithUnderscoresAndPrefix()
@@ -21,10 +21,10 @@ public class InstructionDetailVariableFormatterTests
     }
 
     /// <summary>
-    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string[])"/> replaces a decimal point with <c>p</c>.
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> replaces a decimal point in an operand part with <c>p</c>.
     /// </summary>
     [Fact]
-    public void CreateName_WithDecimalPoint_ReplacesWithP()
+    public void CreateName_WithDecimalPointInOperand_ReplacesWithP()
     {
         InstructionDetailVariableFormatter formatter = new();
 
@@ -34,7 +34,20 @@ public class InstructionDetailVariableFormatterTests
     }
 
     /// <summary>
-    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string[])"/> replaces punctuation other than hyphen/underscore with a hyphen.
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> drops the <c>.</c> in a <c>.f</c>-suffixed mnemonic entirely, rather than replacing it with <c>p</c> as it would for an operand decimal point.
+    /// </summary>
+    [Fact]
+    public void CreateName_WithDotInMnemonic_DropsDot()
+    {
+        InstructionDetailVariableFormatter formatter = new();
+
+        string name = formatter.CreateName("sum.f", "a", "b");
+
+        name.ShouldBe("_sumf_a_b");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> replaces punctuation other than hyphen/underscore with a hyphen.
     /// </summary>
     [Fact]
     public void CreateName_WithOtherPunctuation_ReplacesWithHyphen()
@@ -47,7 +60,7 @@ public class InstructionDetailVariableFormatterTests
     }
 
     /// <summary>
-    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string[])"/> preserves hyphens and underscores in parts unchanged.
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> preserves hyphens and underscores in parts unchanged.
     /// </summary>
     [Fact]
     public void CreateName_WithHyphenAndUnderscore_PreservesUnchanged()
@@ -60,7 +73,7 @@ public class InstructionDetailVariableFormatterTests
     }
 
     /// <summary>
-    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string[])"/> appends a numeric suffix when the same composed name has already been produced.
+    /// Tests that <see cref="InstructionDetailVariableFormatter.CreateName(string, string[])"/> appends a numeric suffix when the same composed name has already been produced.
     /// </summary>
     [Fact]
     public void CreateName_WithDuplicateComposedName_AppendsIncrementingSuffix()

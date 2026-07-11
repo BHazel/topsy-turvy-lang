@@ -22,5 +22,5 @@ public sealed class IncrementingIntVariableFormatter : ITemporaryVariableNameFor
     private int counter;
 
     /// <inheritdoc />
-    public string CreateName(params string[] parts) => $"_{this.counter++}";
+    public string CreateName(string mnemonic, params string[] operandParts) => $"_{this.counter++}";
 }
