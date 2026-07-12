@@ -6,7 +6,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.IO;
 /// <summary>
 /// Represents the editor preferences stored in Local Storage.
 /// </summary>
-internal sealed class EditorPreferences
+public sealed class EditorPreferences
 {
     /// <summary>
     /// Gets or initialises the open files and their content.

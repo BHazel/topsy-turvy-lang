@@ -757,16 +757,16 @@ The `transup` instruction performs a left shift on a value by a specified amount
 For the following Topsy Turvy code:
 
 ```topsy
-Lords = TRANSPOSITION UP 10
+Lords = TRANSPOSITION UP 10 BY 2
 ```
 
 the following UtopIR is equivalent:
 
 ```utopir
-£Lords = transup 10, 1
+£Lords = transup 10, 2
 ```
 
-**Please Note:** Topsy Turvy currently only supports single shifts by 1, whereas UtopIR can support larger shifts.
+Setting the shift size in Topsy Turvy is optional and, if not explicitly set, defaults to 1.
 
 #### 4.3.6. `transdown` Instruction
 
@@ -788,16 +788,16 @@ The `transdown` instruction performs a right shift on a value by a specified amo
 For the following Topsy Turvy code:
 
 ```topsy
-Lords = TRANSPOSITION DOWN 10
+Lords = TRANSPOSITION DOWN 10 BY 2
 ```
 
 the following UtopIR is equivalent:
 
 ```utopir
-£Lords = transdown 10, 1
+£Lords = transdown 10, 2
 ```
 
-**Please Note:** Topsy Turvy currently only supports single shifts by 1, whereas UtopIR can support larger shifts.
+Setting the shift size in Topsy Turvy is optional and, if not explicitly set, defaults to 1.
 
 ### 4.4. Stack Operations
 

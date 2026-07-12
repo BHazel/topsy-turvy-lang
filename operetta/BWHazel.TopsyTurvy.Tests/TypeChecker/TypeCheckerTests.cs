@@ -528,6 +528,48 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a TRANSPOSITION UP/DOWN
+    /// BY clause operand is a wider integer type than the value being shifted, since the result type is
+    /// always the type of the shifted value and never widens across the shift amount.
+    /// </summary>
+    [Fact]
+    public void Check_TranspositionWithWiderByOperand_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME small AS A PEER BEING 1
+            PRAY WELCOME wide AS A CHANCELLOR BEING 3
+            PRAY WELCOME result AS A PEER BEING TRANSPOSITION UP small BY wide
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a TRANSPOSITION UP/DOWN
+    /// BY clause operand is not an integer type.
+    /// </summary>
+    [Fact]
+    public void Check_TranspositionWithNonIntegerByOperand_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME value AS A PEER BEING 1
+            PRAY WELCOME shiftAmount AS A FATHOM BEING 1.0
+            PRAY WELCOME result AS A PEER BEING TRANSPOSITION UP value BY shiftAmount
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when an array element is assigned the wrong type.
     /// </summary>
     [Fact]

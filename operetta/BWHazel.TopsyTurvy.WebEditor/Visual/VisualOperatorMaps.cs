@@ -6,12 +6,12 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// <summary>
 /// Provides forward and reverse maps between <see cref="Operator"/> enum values and their visual editor title strings.
 /// </summary>
-internal static class VisualOperatorMaps
+public static class VisualOperatorMaps
 {
     /// <summary>
     /// Maps each <see cref="Operator"/> value to the keyword string used as the node title in the visual editor.
     /// </summary>
-    internal static readonly Dictionary<Operator, string> OperatorToTitle = new()
+    public static readonly Dictionary<Operator, string> OperatorToTitle = new()
     {
         [Operator.Sum] = "SUM OF",
         [Operator.Difference] = "DIFFERENCE OF",
@@ -42,7 +42,7 @@ internal static class VisualOperatorMaps
     /// <summary>
     /// Maps each visual editor title string back to the corresponding <see cref="Operator"/> value.
     /// </summary>
-    internal static readonly Dictionary<string, Operator> TitleToOperator;
+    public static readonly Dictionary<string, Operator> TitleToOperator;
 
     /// <summary>
     /// Initialises the <see cref="TitleToOperator"/> map by reversing the <see cref="OperatorToTitle"/> map.

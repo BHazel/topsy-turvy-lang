@@ -24,7 +24,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// reconstructed from the live visual model and its port connections.
 /// </para>
 /// </remarks>
-internal sealed class VisualGraphToAstConverter
+public sealed class VisualGraphToAstConverter
 {
     /// <summary>
     /// Converts the given diagram back into a <see cref="ProgramNode"/>.
@@ -256,6 +256,7 @@ internal sealed class VisualGraphToAstConverter
             "LoopOpener" => this.ReconstructLoopFactory(openerNode, diagram),
             "TryCatchOpener" => this.ReconstructTryCatchFactory(openerNode, diagram),
             "GuardOpener" => this.ReconstructGuardFactory(openerNode, diagram),
+            "SwitchOpener" => this.ReconstructSwitchFactory(openerNode, diagram),
             "FunctionBodyOpener" => this.ReconstructFunctionBodyFactory(openerNode, diagram),
             _ => new BreakNode() { Span = PlaceholderSpan },
         };
@@ -642,6 +643,60 @@ internal sealed class VisualGraphToAstConverter
             Span = PlaceholderSpan,
         };
     }
+
+    /// <summary>
+    /// Reconstructs a switch statement from a factory node in the diagram.
+    /// </summary>
+    /// <param name="openerNode">The factory node representing the switch statement.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
+    /// <returns>The reconstructed switch statement.</returns>
+    private SwitchNode ReconstructSwitchFactory(TopsyTurvyVisualNodeModel openerNode, BlazorDiagram diagram)
+    {
+        return new()
+        {
+            Expression = this.GetExpressionFromDataIn(openerNode, "Expr", diagram) ?? Fallback(),
+            Cases = this.ReconstructSwitchCases(openerNode, diagram),
+            DefaultBlock = this.WalkBranchBody(openerNode, "Default", diagram),
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Discovers every case on a switch opener directly from its Branch Out ports, resolving each case
+    /// literal from its header node and its body by walking the branch flow chain.
+    /// </summary>
+    /// <remarks>
+    /// Reading cases from the live ports, rather than from the original AST's <c>Cases</c> list, means a
+    /// case added interactively is picked up even when the switch itself is
+    /// otherwise AST-backed; the AST-backed <c>Cases</c> list is frozen at load time and has no entry for
+    /// a case added afterwards.
+    /// </remarks>
+    /// <param name="openerNode">The opener node of the switch.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
+    /// <returns>The reconstructed switch cases, in declaration order.</returns>
+    private IReadOnlyList<SwitchCase> ReconstructSwitchCases(TopsyTurvyVisualNodeModel openerNode, BlazorDiagram diagram)
+    {
+        List<TopsyTurvyVisualPortModel> casePorts = [.. openerNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.BranchOut && port.Label != "Default")];
+
+        return [.. casePorts.Select(casePort =>
+        {
+            TopsyTurvyVisualNodeModel? header = GetBranchFlowTarget(openerNode, casePort.Label!);
+            return new SwitchCase(GetCaseLiteralFromHeader(header), this.WalkBranchBody(openerNode, casePort.Label!, diagram));
+        })];
+    }
+
+    /// <summary>
+    /// Reads a switch case literal value from its "WHEN ACTING AS" header node, parsing the header
+    /// <see cref="TopsyTurvyVisualNodeModel.LiteralValue"/> according to its <see cref="TopsyTurvyVisualNodeModel.NodeLiteralType"/>.
+    /// </summary>
+    /// <param name="header">The case header node, or <c>null</c> if the case port has no header wired.</param>
+    /// <returns>The parsed literal value, or <c>null</c> if the header has no value set.</returns>
+    private static object? GetCaseLiteralFromHeader(TopsyTurvyVisualNodeModel? header) =>
+        header?.LiteralValue is not null
+            ? ParseLiteralValue(header.NodeLiteralType ?? LiteralType.String, header.LiteralValue)
+            : null;
 
     /// <summary>
     /// Reconstructs a function body from a factory node in the diagram.
@@ -1097,12 +1152,12 @@ internal sealed class VisualGraphToAstConverter
         Expression expression = this.GetExpressionFromDataIn(visualNode, "Expr", diagram)
             ?? this.ReconstructExpressionFromAst(original.Expression, diagram);
 
-        List<SwitchCase> cases = [.. original.Cases.Select((switchCase, i) => new SwitchCase(switchCase.Literal, this.WalkBranchBody(visualNode, $"Case {i + 1}", diagram)))];
-
+        // Cases are discovered from the diagram live Branch Out ports, not from `original.Cases`, so a
+        // case added after load is not silently dropped.
         return new()
         {
             Expression = expression,
-            Cases = cases.AsReadOnly(),
+            Cases = this.ReconstructSwitchCases(visualNode, diagram),
             DefaultBlock = this.WalkBranchBody(visualNode, "Default", diagram),
             Span = PlaceholderSpan,
         };
@@ -1419,12 +1474,15 @@ internal sealed class VisualGraphToAstConverter
         List<Expression> arguments = [];
         arguments.Add(new IdentifierNode() { Name = functionName, Span = PlaceholderSpan });
 
-        IEnumerable<TopsyTurvyVisualPortModel> argumentPorts = functionNode is not null
-            ? functionNode.Ports
-                .OfType<TopsyTurvyVisualPortModel>()
-                .Where(port => port.Role == VisualPortRole.DataIn)
-                .OrderBy(port => port.Label)
-            : [];
+        List<TopsyTurvyVisualPortModel> summonArgumentPorts = [.. visualNode.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .Where(port => port.Role == VisualPortRole.DataIn && port.Label != "Function")
+            .OrderBy(port => port.Label)];
+
+        IEnumerable<TopsyTurvyVisualPortModel> argumentPorts = summonArgumentPorts.Count > 0
+            ? summonArgumentPorts
+            : functionNode?.Ports.OfType<TopsyTurvyVisualPortModel>().Where(port => port.Role == VisualPortRole.DataIn)
+                ?? [];
 
         foreach (TopsyTurvyVisualPortModel argumentPort in argumentPorts)
         {
@@ -1547,6 +1605,7 @@ internal sealed class VisualGraphToAstConverter
             LiteralType.Byte => byte.TryParse(value, out byte b) ? b : (object?)value,
             LiteralType.Double => double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double d) ? d : (object?)value,
             LiteralType.Single => float.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out float f) ? f : (object?)value,
+            LiteralType.Char => value.Length > 0 ? value[0] : '\0',
             LiteralType.Boolean => string.Equals(value, "VERITY", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "True", StringComparison.OrdinalIgnoreCase)
                 ? true

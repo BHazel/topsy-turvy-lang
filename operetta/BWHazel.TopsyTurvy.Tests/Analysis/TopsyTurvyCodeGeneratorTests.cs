@@ -486,6 +486,43 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips <c>TRANSPOSITION UP</c> with an explicit <c>BY</c> clause, preserving the second argument.
+    /// </summary>
+    [Fact]
+    public void Generate_TranspositionUpWithByClause_RoundTrips()
+    {
+        string source = "HARK! \"T\"\nPRAY WELCOME num AS A PEER BEING 5\nBEHOLD TRANSPOSITION UP num BY 3\nFINALE.";
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        PrefixExpressionNode theOperator = (PrefixExpressionNode)result.Program!.Statements.OfType<PrintNode>().First().Expression;
+        theOperator.Operator.ShouldBe(Operator.TranspositionUp);
+        theOperator.Arguments.Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method does not emit a spurious <c>BY 1</c>
+    /// clause for a <c>TRANSPOSITION UP</c>/<c>TRANSPOSITION DOWN</c> expression whose source never had one,
+    /// mirroring how a loop with no <c>Step</c> round-trips without a <c>BY</c> clause.
+    /// </summary>
+    [Fact]
+    public void Generate_TranspositionUpWithoutByClause_DoesNotEmitByOne()
+    {
+        string source = "HARK! \"T\"\nPRAY WELCOME num AS A PEER BEING 5\nBEHOLD TRANSPOSITION UP num\nFINALE.";
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        PrefixExpressionNode theOperator = (PrefixExpressionNode)result.Program!.Statements.OfType<PrintNode>().First().Expression;
+        theOperator.Operator.ShouldBe(Operator.TranspositionUp);
+        theOperator.Arguments.Count.ShouldBe(1);
+        generatedCode.ShouldNotContain(" BY ");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips the variadic <c>ALL OF</c> operator.
     /// </summary>
     [Fact]

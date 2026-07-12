@@ -66,6 +66,14 @@ WOVEN OF
 HARDLY EVER
 //^ keyword.operator.topsy
 
+// ── Bitwise operators ─────────────────────────────────────────────────────────
+
+TRANSPOSITION UP x BY 3
+//^ keyword.operator.topsy
+
+TRANSPOSITION DOWN x
+//^ keyword.operator.topsy
+
 // ── Function call argument separators ────────────────────────────────────────
 
 WITH NOTHING

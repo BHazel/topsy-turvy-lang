@@ -11,14 +11,17 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// cursor and resets the secondary cursor to the same Y coordinate so that expressions always start level with their
 /// owning statement.
 /// </remarks>
-internal sealed class NodeLayoutContext
+/// <param name="primaryX">X coordinate of the main (statement) column.</param>
+/// <param name="secondaryX">X coordinate of the expression column, to the left of primary.</param>
+/// <param name="startY">Initial Y for both cursors.</param>
+public sealed class NodeLayoutContext(double primaryX = 300, double secondaryX = 60, double startY = 60)
 {
     private const double RowSpacingY = 160;
 
-    private readonly double primaryX;
-    private readonly double secondaryX;
-    private double primaryY;
-    private double secondaryY;
+    private readonly double primaryX = primaryX;
+    private readonly double secondaryX = secondaryX;
+    private double primaryY = startY;
+    private double secondaryY = startY;
 
     /// <summary>
     /// Gets the vertical distance between successive rows.
@@ -32,20 +35,6 @@ internal sealed class NodeLayoutContext
     /// Gets the current primary Y cursor without advancing it, for use when spawning a child layout.
     /// </summary>
     public double CurrentPrimaryY => this.primaryY;
-
-    /// <summary>
-    /// Initialises the layout context with the given column X positions and starting Y.
-    /// </summary>
-    /// <param name="primaryX">X coordinate of the main (statement) column.</param>
-    /// <param name="secondaryX">X coordinate of the expression column, to the left of primary.</param>
-    /// <param name="startY">Initial Y for both cursors.</param>
-    internal NodeLayoutContext(double primaryX = 300, double secondaryX = 60, double startY = 60)
-    {
-        this.primaryX = primaryX;
-        this.secondaryX = secondaryX;
-        this.primaryY = startY;
-        this.secondaryY = startY;
-    }
 
     /// <summary>
     /// Gets the next position for a statement node and resets the secondary column to the same Y.
@@ -78,7 +67,7 @@ internal sealed class NodeLayoutContext
     /// This enables the next <see cref="NextPrimaryPosition"/> call to land below a block
     /// whose branches extend deeper than the default row spacing would place it.
     /// </remarks>
-    internal void AdvancePrimaryYTo(double y)
+    public void AdvancePrimaryYTo(double y)
     {
         if (y > this.primaryY)
         {

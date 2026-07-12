@@ -923,9 +923,15 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case Operator.InversionOf:
                 return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => ~value, "INVERSION OF", node.Span);
             case Operator.TranspositionUp:
-                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value << 1, "TRANSPOSITION UP", node.Span);
+                int shiftUpAmount = node.Arguments.Count > 1
+                    ? (int)ToLong(this.EvaluateExpression(node.Arguments[1], environment))
+                    : 1;
+                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value << shiftUpAmount, "TRANSPOSITION UP", node.Span);
             case Operator.TranspositionDown:
-                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value >> 1, "TRANSPOSITION DOWN", node.Span);
+                int shiftDownAmount = node.Arguments.Count > 1
+                    ? (int)ToLong(this.EvaluateExpression(node.Arguments[1], environment))
+                    : 1;
+                return ApplyUnaryBitwise(this.EvaluateExpression(node.Arguments[0], environment), value => value >> shiftDownAmount, "TRANSPOSITION DOWN", node.Span);
             default:
                 TopsyTurvyValue left = this.EvaluateExpression(node.Arguments[0], environment);
                 TopsyTurvyValue right = this.EvaluateExpression(node.Arguments[1], environment);

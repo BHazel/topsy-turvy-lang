@@ -681,6 +681,84 @@ public class TopsyTurvyInterpreterOperatorTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
+    /// Tests that <c>TRANSPOSITION UP</c> with an explicit <c>BY</c> clause shifts left by the given amount.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTranspositionUpByClause_ShiftsLeftByGivenAmount()
+    {
+        string source = """
+            HARK! "Left shift by 3"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED TRANSPOSITION UP 1 BY 3
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("8");
+    }
+
+    /// <summary>
+    /// Tests that <c>TRANSPOSITION DOWN</c> with an explicit <c>BY</c> clause shifts right by the given amount.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTranspositionDownByClause_ShiftsRightByGivenAmount()
+    {
+        string source = """
+            HARK! "Right shift by 3"
+            PRINCIPALS
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED TRANSPOSITION DOWN 64 BY 3
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("8");
+    }
+
+    /// <summary>
+    /// Tests that a <c>TRANSPOSITION UP</c> <c>BY</c> clause of a narrower integer type than <c>PEER</c> does not
+    /// throw when converting the shift amount, guarding against a raw unboxing cast that would only work for
+    /// boxed <c>int</c> values.
+    /// </summary>
+    [Fact]
+    public void Execute_WithTranspositionUpByClauseOfPirateType_DoesNotThrow()
+    {
+        string source = """
+            HARK! "Left shift by a PIRATE-typed amount"
+            PRINCIPALS
+              PRAY WELCOME shiftAmount AS A PIRATE BEING 3
+              PRAY WELCOME result AS A PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED TRANSPOSITION UP 1 BY shiftAmount
+            BEHOLD result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output[0].ShouldBe("8");
+    }
+
+    /// <summary>
     /// Tests that <c>CHORD OF</c> applied to a non-integer operand produces a runtime error.
     /// </summary>
     [Fact]

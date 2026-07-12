@@ -569,6 +569,77 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that a <c>TRANSPOSITION UP</c> operator with a <c>BY</c> clause lowers to a <see cref="BitwiseInstruction"/> using the transformed shift-amount expression instead of the synthesised literal 1.
+    /// </summary>
+    [Fact]
+    public void Transform_TranspositionUpWithByClause_EmitsBitwiseInstructionWithTransformedShiftAmount()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.TranspositionUp,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "shiftAmount", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        BitwiseInstruction shift = result.Instructions[3].ShouldBeOfType<BitwiseInstruction>();
+        shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
+        shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        shift.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("shiftAmount");
+    }
+
+    /// <summary>
+    /// Tests that a <c>TRANSPOSITION UP</c> <c>BY</c> clause operand of a narrower integer type than the shifted value is cast to match via an inserted <see cref="WereInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_TranspositionUpWithByClauseOfNarrowerType_InsertsWereInstructionForShiftAmount()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.TranspositionUp,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "shiftAmount", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("shiftAmount");
+        BitwiseInstruction shift = result.Instructions[4].ShouldBeOfType<BitwiseInstruction>();
+        shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
+        shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        shift.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+    }
+
+    /// <summary>
     /// Tests that mixed-width binary bitwise operands widen the narrower operand before the <see cref="BitwiseInstruction"/> is emitted.
     /// </summary>
     [Fact]

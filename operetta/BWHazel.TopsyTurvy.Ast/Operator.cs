@@ -43,8 +43,8 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// * <see cref="Operator"/>.<c>HarmonyOf</c>: Bitwise Or, <c>x | y</c>: <c>HARMONY OF x AND y</c>.
 /// * <see cref="Operator"/>.<c>DiscordOf</c>: Bitwise Xor, <c>x ^ y</c>: <c>DISCORD OF x AND y</c>.
 /// * <see cref="Operator"/>.<c>InversionOf</c>: Bitwise Not (unary), <c>~x</c>: <c>INVERSION OF x</c>.
-/// * <see cref="Operator"/>.<c>TranspositionUp</c>: Left shift by 1 (unary), <c>x &lt;&lt; 1</c>: <c>TRANSPOSITION UP x</c>.
-/// * <see cref="Operator"/>.<c>TranspositionDown</c>: Right shift by 1 (unary), <c>x &gt;&gt; 1</c>: <c>TRANSPOSITION DOWN x</c>.
+/// * <see cref="Operator"/>.<c>TranspositionUp</c>: Left Shift, <c>x &lt;&lt; n</c>: <c>TRANSPOSITION UP x [BY n]</c>.  Defaults to a shift of 1 when the <c>BY</c> clause is omitted.
+/// * <see cref="Operator"/>.<c>TranspositionDown</c>: Right Shift, <c>x &gt;&gt; n</c>: <c>TRANSPOSITION DOWN x [BY n]</c>.  Defaults to a shift of 1 when the <c>BY</c> clause is omitted.
 /// </para>
 /// <para>
 /// **Function Call** accepts a function name and zero or more arguments, closed by <c>IF YOU PLEASE.</c>:
@@ -119,9 +119,9 @@ public enum Operator
     /// <summary>INVERSION OF</summary>
     InversionOf,
 
-    /// <summary>TRANSPOSITION UP</summary>
+    /// <summary>TRANSPOSITION UP [BY n]</summary>
     TranspositionUp,
 
-    /// <summary>TRANSPOSITION DOWN</summary>
+    /// <summary>TRANSPOSITION DOWN [BY n]</summary>
     TranspositionDown
 }

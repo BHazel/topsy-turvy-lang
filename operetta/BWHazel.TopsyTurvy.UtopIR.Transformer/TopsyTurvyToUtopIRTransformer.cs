@@ -278,10 +278,12 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     /// narrower operand first.  The unary operators keep the operand type as the result type.
     /// </para>
     /// <para>
-    /// Topsy Turvy transposition operators are unary shifts by one, whereas the UtopIR
-    /// <c>transup</c> and <c>transdown</c> instructions take the shift amount as their second operand,
-    /// so <c>TRANSPOSITION UP x</c> lowers to <c>transup £x, 1</c> with the literal <c>1</c> boxed
-    /// as the operand type to satisfy the same-type operand rule.
+    /// The UtopIR <c>transup</c> and <c>transdown</c> instructions always take an explicit shift-amount
+    /// second operand.  When the Topsy Turvy source omits its optional <c>BY</c> clause <c>TRANSPOSITION UP x</c>
+    /// lowers to <c>transup £x, 1</c> with the literal <c>1</c> boxed to match the shifted value own type,
+    /// satisfying the same-type operand rule.  When <c>BY</c> is present, the
+    /// real shift-amount expression is transformed and cast to match the shifted value type via
+    /// <see cref="CastOperandIfNeeded"/>.
     /// </para>
     /// </remarks>
     /// <param name="prefix">The bitwise prefix expression to transform.</param>
@@ -306,7 +308,18 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         {
             UtopIROperand operand = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
             UtopIRType operandType = this.InferOperandType(operand, declaredTypes);
-            UtopIROperand shiftAmount = new LiteralOperand(this.CreateOneLiteral(operandType));
+
+            UtopIROperand shiftAmount;
+            if (prefix.Arguments.Count > 1)
+            {
+                UtopIROperand rawShiftAmount = this.TransformExpression(prefix.Arguments[1], instructions, declaredTypes);
+                UtopIRType shiftAmountType = this.InferOperandType(rawShiftAmount, declaredTypes);
+                shiftAmount = this.CastOperandIfNeeded(rawShiftAmount, shiftAmountType, operandType, instructions, declaredTypes);
+            }
+            else
+            {
+                shiftAmount = new LiteralOperand(this.CreateOneLiteral(operandType));
+            }
 
             UtopIRBitwiseOperation shiftOperation = prefix.Operator == Operator.TranspositionUp
                 ? UtopIRBitwiseOperation.TransUp

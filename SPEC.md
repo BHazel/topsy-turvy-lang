@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.6.0
+### Language Specification — Version 0.7.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -324,24 +324,26 @@ If either operand is a `FATHOM`, the result is a `FATHOM`. If both are `PEER`, t
 
 Bitwise operators use the same prefix notation as arithmetic operators and require integer operands. Applying a bitwise operator to a `FATHOM`, `FOOT`, `YARN`, `STITCH`, `DECREE`, or `NAUGHT` value is a runtime error.
 
-| Expression                       | Operation                    |
-|----------------------------------|------------------------------|
-| `CHORD OF x AND y`               | `x & y` (bitwise AND)        |
-| `HARMONY OF x AND y`             | `x \| y` (bitwise OR)        |
-| `DISCORD OF x AND y`             | `x ^ y` (bitwise XOR)        |
-| `INVERSION OF x`                 | `~x` (bitwise NOT)    |
-| `TRANSPOSITION UP x`             | `x << 1` (left shift by 1)   |
-| `TRANSPOSITION DOWN x`           | `x >> 1` (right shift by 1)  |
+| Expression                                | Operation                          |
+|--------------------------------------------|------------------------------------|
+| `CHORD OF x AND y`                        | `x & y` (bitwise AND)              |
+| `HARMONY OF x AND y`                      | `x \| y` (bitwise OR)              |
+| `DISCORD OF x AND y`                      | `x ^ y` (bitwise XOR)              |
+| `INVERSION OF x`                          | `~x` (bitwise NOT)                 |
+| `TRANSPOSITION UP x [BY n]`               | `x << n` (left shift, default `n` = 1)  |
+| `TRANSPOSITION DOWN x [BY n]`             | `x >> n` (right shift, default `n` = 1) |
 
-For the binary operators (`CHORD OF`, `HARMONY OF`, `DISCORD OF`), the result type follows the integer widening hierarchy (widest operand type wins). For the unary operators (`INVERSION OF`, `TRANSPOSITION UP`, `TRANSPOSITION DOWN`), the result type is the same as the operand type.
+For the binary operators (`CHORD OF`, `HARMONY OF`, `DISCORD OF`), the result type follows the integer widening hierarchy (widest operand type wins). For the unary operators (`INVERSION OF`) and for `TRANSPOSITION UP`/`TRANSPOSITION DOWN`, the result type is always the same as `x`'s type, regardless of the shift amount's own type when a `BY` clause is present: the shift count never affects the result's width.
 
 ```topsy
 BEHOLD CHORD OF 12 AND 10          ASIDE: 8  (1100 & 1010 = 1000)
 BEHOLD HARMONY OF 5 AND 3          ASIDE: 7  (0101 | 0011 = 0111)
 BEHOLD DISCORD OF 15 AND 9         ASIDE: 6  (1111 ^ 1001 = 0110)
 BEHOLD INVERSION OF 0              ASIDE: -1 (bitwise complement of 0)
-BEHOLD TRANSPOSITION UP 4          ASIDE: 8  (4 << 1)
-BEHOLD TRANSPOSITION DOWN 8        ASIDE: 4  (8 >> 1)
+BEHOLD TRANSPOSITION UP 4          ASIDE: 8  (4 << 1, BY omitted defaults to 1)
+BEHOLD TRANSPOSITION UP 1 BY 3     ASIDE: 8  (1 << 3)
+BEHOLD TRANSPOSITION DOWN 8        ASIDE: 4  (8 >> 1, BY omitted defaults to 1)
+BEHOLD TRANSPOSITION DOWN 64 BY 3  ASIDE: 8  (64 >> 3)
 ```
 
 ---
@@ -1039,8 +1041,8 @@ PRAY WELCOME OldSum AS A PEER
 | `HARMONY OF ... AND ...`                         | Bitwise OR                  | —                                                                                 |
 | `DISCORD OF ... AND ...`                         | Bitwise XOR                 | —                                                                                 |
 | `INVERSION OF ...`                               | Bitwise NOT (unary)         | —                                                                                 |
-| `TRANSPOSITION UP ...`                           | Left shift by 1 (unary)     | —                                                                                 |
-| `TRANSPOSITION DOWN ...`                         | Right shift by 1 (unary)    | —                                                                                 |
+| `TRANSPOSITION UP ... [BY ...]`                  | Left shift, default 1       | —                                                                                 |
+| `TRANSPOSITION DOWN ... [BY ...]`                | Right shift, default 1      | —                                                                                 |
 | `IF YOU PLEASE.`                                 | Variable-length list closer | Verbatim *H.M.S. Pinafore* — Sir Joseph's insistence on the proper form of address; closes any open-ended argument list: `WOVEN OF`, `SUMMON`, `ALL OF`, `ANY OF` |
 | `VERITY`                                          | Boolean true                | *Utopia, Limited* — "Henceforward, of a verity, with Fame ourselves we link"      |
 | `NAY`                                             | Boolean false               | Throughout the canon — *Iolanthe*: "Nay, tempt me not"; *Ruddigore*: "Nay — that may never be" |

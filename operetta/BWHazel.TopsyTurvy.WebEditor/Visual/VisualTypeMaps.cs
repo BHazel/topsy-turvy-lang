@@ -6,7 +6,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// <summary>
 /// Maps between <see cref="LiteralType"/> values and their Topsy Turvy keyword equivalents for use in the visual editor.
 /// </summary>
-internal static class VisualTypeMaps
+public static class VisualTypeMaps
 {
     /// <summary>
     /// Maps each <see cref="LiteralType"/> to the keyword displayed in the visual editor type selectors.

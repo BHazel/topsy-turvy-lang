@@ -169,6 +169,36 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
+    /// Tests that TRANSPOSITION UP/DOWN with an optional BY clause produces a <see cref="PrefixExpressionNode"/> with two arguments, the shift amount being the second.
+    /// </summary>
+    /// <param name="expressionSource">The source code of the expression to parse.</param>
+    /// <param name="expectedOperator">The expected operator enum value.</param>
+    [Theory]
+    [InlineData("TRANSPOSITION UP 4 BY 3",   Operator.TranspositionUp)]
+    [InlineData("TRANSPOSITION DOWN 8 BY 2", Operator.TranspositionDown)]
+    public void Parse_TranspositionWithByClause_ProducesCorrectOperatorWithTwoArguments(string expressionSource, Operator expectedOperator)
+    {
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(expressionSource);
+
+        node.Operator.ShouldBe(expectedOperator);
+        node.Arguments.Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that TRANSPOSITION UP/DOWN with the AND separator instead of BY fails to parse, since these two operators use BY exclusively.
+    /// </summary>
+    /// <param name="source">The complete Topsy Turvy source to parse.</param>
+    [Theory]
+    [InlineData("HARK! \"T\" BEHOLD TRANSPOSITION UP 4 AND 3 FINALE.")]
+    [InlineData("HARK! \"T\" BEHOLD TRANSPOSITION DOWN 8 AND 2 FINALE.")]
+    public void Parse_TranspositionWithAndClause_ReturnsDiagnostic(string source)
+    {
+        ParseResult result = this.parser.TryParse(source);
+
+        result.Diagnostics.ShouldNotBeEmpty();
+    }
+
+    /// <summary>
     /// Tests that WOVEN OF with three arguments produces a <see cref="PrefixExpressionNode"/> with three arguments.
     /// </summary>
     [Fact]
