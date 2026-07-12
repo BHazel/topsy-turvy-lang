@@ -50,7 +50,7 @@ This extension contributes the following settings:
 
 ### 0.6.0
 
-* Basic syntax highlighting for UtopIR.
+* Basic syntax highlighting and file icons for UtopIR.
 
 ### 0.5.0
 

@@ -701,8 +701,8 @@ internal sealed class TypeCheckVisitor
             Operator.HarmonyOf => this.InferBitwiseOperator(node),
             Operator.DiscordOf => this.InferBitwiseOperator(node),
             Operator.InversionOf => this.InferBitwiseOperator(node),
-            Operator.TranspositionUp => this.InferBitwiseOperator(node),
-            Operator.TranspositionDown => this.InferBitwiseOperator(node),
+            Operator.TranspositionUp => this.InferTranspositionOperator(node),
+            Operator.TranspositionDown => this.InferTranspositionOperator(node),
             Operator.WovenOf => LiteralType.String,
             Operator.Summon => this.InferSummon(node),
             _ => null
@@ -841,6 +841,38 @@ internal sealed class TypeCheckVisitor
         }
 
         return widenedType;
+    }
+
+    /// <summary>
+    /// Infers the type of a <see cref="Operator.TranspositionUp"/> or <see cref="Operator.TranspositionDown"/>
+    /// prefix expression node.
+    /// </summary>
+    /// <param name="node">The prefix expression node to infer the type of.</param>
+    /// <returns>The inferred type of the shifted value (<c>Arguments[0]</c>), or <c>null</c> if it cannot be determined.</returns>
+    private LiteralType? InferTranspositionOperator(PrefixExpressionNode node)
+    {
+        LiteralType? valueType = this.EvaluateExpression(node.Arguments[0]);
+        if (valueType is not null && !IntegerTypes.Contains(valueType.Value))
+        {
+            this.Error(
+                $"{node.Operator} requires integer operands, got {TypeName(valueType.Value)}.",
+                node.Arguments[0].Span);
+
+            return null;
+        }
+
+        if (node.Arguments.Count > 1)
+        {
+            LiteralType? shiftType = this.EvaluateExpression(node.Arguments[1]);
+            if (shiftType is not null && !IntegerTypes.Contains(shiftType.Value))
+            {
+                this.Error(
+                    $"{node.Operator} BY clause requires an integer operand, got {TypeName(shiftType.Value)}.",
+                    node.Arguments[1].Span);
+            }
+        }
+
+        return valueType;
     }
 
     /// <summary>

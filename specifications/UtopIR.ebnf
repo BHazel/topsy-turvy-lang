@@ -102,8 +102,9 @@ BitwiseOp       = "chord" | "harmony" | "discord" | "transup" | "transdown" ;
 (* All bitwise operations require integer operands.  The unary bitwise NOT,
    "inv", has its own single-operand rule (InvRhs) rather than appearing here.
    For the shifts, the second operand is the shift amount; Topsy Turvy's
-   transposition operators always shift by one, but UtopIR permits any
-   amount. *)
+   transposition operators default to a shift of one but accept an optional
+   "BY <expr>" clause to explicitly set it, lowering directly to this same
+   two-operand form. *)
 
 (*----------------------------------------------------------------------------*)
 (* Types                                                                      *)
