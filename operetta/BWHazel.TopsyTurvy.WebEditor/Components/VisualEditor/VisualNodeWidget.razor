@@ -4,6 +4,7 @@
 @using Blazor.Diagrams.Components.Renderers
 @using Blazor.Diagrams.Core.Geometry;
 @using Blazor.Diagrams.Core.Models;
+@using Blazor.Diagrams.Core.Models.Base;
 @using BWHazel.TopsyTurvy.Ast
 @using BWHazel.TopsyTurvy.WebEditor.Visual
 
@@ -164,8 +165,9 @@ The node layout is a vertical stack of rows:
                 <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
                     ValueChanged="@(value => this.OnPropertyChanged(() =>
                     {
+                        string previousTitle = this.Node.Title ?? string.Empty;
                         this.Node.Title = value;
-                        this.AdjustOperatorPortCount(value);
+                        this.AdjustOperatorPortCount(value, previousTitle);
                     }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (string bitwiseOperator in BitwiseOperators)
@@ -173,14 +175,30 @@ The node layout is a vertical stack of rows:
                         <MudSelectItem T="string" Value="@bitwiseOperator">@bitwiseOperator</MudSelectItem>
                     }
                 </MudSelect>
+                @if (OptionallyBinaryOperators.Contains(this.Node.Title ?? string.Empty))
+                {
+                    @if (this.OperatorDataInPortCount == 1)
+                    {
+                        <MudButton StartIcon="@Icons.Material.Outlined.Add"
+                            Size="MudBlazor.Size.Small"
+                            OnClick="@this.AddOperatorArgumentPort">Add Argument</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton StartIcon="@Icons.Material.Outlined.Remove"
+                            Size="MudBlazor.Size.Small"
+                            OnClick="@this.RemoveOperatorArgumentPort">Remove Argument</MudButton>
+                    }
+                }
             }
             else if (this.Node.StatementType == "LogicalNode")
             {
                 <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
                     ValueChanged="@(value => this.OnPropertyChanged(() =>
                     {
+                        string previousTitle = this.Node.Title ?? string.Empty;
                         this.Node.Title = value;
-                        this.AdjustOperatorPortCount(value);
+                        this.AdjustOperatorPortCount(value, previousTitle);
                     }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (string logicalOperator in LogicalOperators)
@@ -432,28 +450,71 @@ The node layout is a vertical stack of rows:
     private static readonly IReadOnlyList<string> VariadicOperators = ["ALL OF", "ANY OF"];
 
     private static readonly IReadOnlySet<string> UnaryOperators =
-        new HashSet<string> { "HARDLY EVER", "INVERSION OF", "TRANSPOSITION UP", "TRANSPOSITION DOWN" };
+        new HashSet<string> { "HARDLY EVER", "INVERSION OF" };
+
+    private static readonly IReadOnlySet<string> OptionallyBinaryOperators =
+        new HashSet<string> { "TRANSPOSITION UP", "TRANSPOSITION DOWN" };
+
+    /// <summary>
+    /// Gets the number of Data In ports on the current node.
+    /// </summary>
+    /// <returns>The number of Data In ports.</returns>
+    private int OperatorDataInPortCount => this.Node.Ports
+        .OfType<TopsyTurvyVisualPortModel>()
+        .Count(port => port.Role == VisualPortRole.DataIn);
 
     /// <summary>
     /// Adjusts the number of Data In ports for a bitwise or logical operator node based on the selected operator.
     /// </summary>
-    /// <param name="operatorNodeTitle">The operator title.</param>
-    private void AdjustOperatorPortCount(string operatorNodeTitle)
+    /// <param name="operatorNodeTitle">The newly selected operator title.</param>
+    /// <param name="previousOperatorTitle">The operator title before the change.</param>
+    private void AdjustOperatorPortCount(string operatorNodeTitle, string previousOperatorTitle)
     {
-        if (UnaryOperators.Contains(operatorNodeTitle))
+        bool targetIsUnary = UnaryOperators.Contains(operatorNodeTitle);
+        bool targetIsOptionallyBinary = OptionallyBinaryOperators.Contains(operatorNodeTitle);
+
+        if (targetIsOptionallyBinary && OptionallyBinaryOperators.Contains(previousOperatorTitle))
         {
             return;
         }
 
-        int dataInPortsCount = this.Node.Ports
-            .OfType<TopsyTurvyVisualPortModel>()
-            .Count(port => port.Role == VisualPortRole.DataIn);
+        if (targetIsUnary || targetIsOptionallyBinary)
+        {
+            this.RemoveLastDataInPort();
+            return;
+        }
 
-        if (dataInPortsCount < 2)
+        if (this.OperatorDataInPortCount < 2)
         {
             this.Node.AddPort(new TopsyTurvyVisualPortModel(
                 this.Node, Blazor.Diagrams.Core.Models.PortAlignment.Left, "Arg 2", VisualPortRole.DataIn));
         }
+    }
+
+    /// <summary>
+    /// Removes the most-recently-added Data In port, along with any link attached to it.
+    /// </summary>
+    /// <remarks>
+    /// Ports are always added in argument order so the last Data In port in <see cref="NodeModel.Ports"/> is
+    /// always the highest-numbered argument, regardless of its label text.
+    /// </remarks>
+    private void RemoveLastDataInPort()
+    {
+        TopsyTurvyVisualPortModel? port = this.Node.Ports
+            .OfType<TopsyTurvyVisualPortModel>()
+            .LastOrDefault(port => port.Role == VisualPortRole.DataIn);
+
+        if (port is null)
+        {
+            return;
+        }
+
+        foreach (BaseLinkModel link in port.Links.ToList())
+        {
+            this.Diagram.Links.Remove(link);
+        }
+
+        this.Node.RemovePort(port);
     }
 
     /// <summary>
@@ -467,6 +528,16 @@ The node layout is a vertical stack of rows:
 
         TopsyTurvyVisualPortModel? port = new(this.Node, PortAlignment.Left, $"Arg {argIndex + 1}", VisualPortRole.DataIn);
         this.Node.AddPort(port);
+        this.Node.Refresh();
+        await this.OnNodeChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Removes the most-recently-added argument port from an optionally-binary operator node.
+    /// </summary>
+    private async Task RemoveOperatorArgumentPort()
+    {
+        this.RemoveLastDataInPort();
         this.Node.Refresh();
         await this.OnNodeChanged.InvokeAsync();
     }

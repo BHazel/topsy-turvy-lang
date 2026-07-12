@@ -24,7 +24,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// reconstructed from the live visual model and its port connections.
 /// </para>
 /// </remarks>
-internal sealed class VisualGraphToAstConverter
+public sealed class VisualGraphToAstConverter
 {
     /// <summary>
     /// Converts the given diagram back into a <see cref="ProgramNode"/>.

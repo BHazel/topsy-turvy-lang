@@ -25,12 +25,15 @@ jobs:
       - name: Install Playwright Browsers
         run: |
           pwsh operetta/BWHazel.TopsyTurvy.WebEditor.E2ETests/bin/Debug/net10.0/playwright.ps1 install chromium --with-deps
-      - name: Run Unit Tests
+      - name: Run Topsy Turvy Toolchain Unit Tests
         run: |
           dotnet test operetta/BWHazel.TopsyTurvy.Tests
       - name: Run CLI E2E Tests
         run: |
           dotnet test operetta/BWHazel.TopsyTurvy.Cli.E2ETests
+      - name: Run Web Editor Unit Tests
+        run: |
+          dotnet test operetta/BWHazel.TopsyTurvy.WebEditor.Tests
       - name: Run Web Editor E2E Tests
         run: |
           dotnet test operetta/BWHazel.TopsyTurvy.WebEditor.E2ETests
