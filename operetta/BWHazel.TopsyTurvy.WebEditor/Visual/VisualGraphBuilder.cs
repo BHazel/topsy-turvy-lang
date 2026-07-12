@@ -886,7 +886,11 @@ public sealed class VisualGraphBuilder
                 label,
                 VisualNodeKind.Conditional,
                 new NodeLayoutContext(primaryX: xPosition, secondaryX: xPosition - 220, startY: position.Y + NodeLayoutContext.RowSpacing), diagram,
-                statementType: "SwitchCaseBranch");
+                statementType: "SwitchCaseBranch",
+                literalType: node.Cases[i].Literal is not null
+                    ? InferLiteralType(node.Cases[i].Literal)
+                    : null,
+                literalValue: node.Cases[i].Literal?.ToString());
             
             tails.Add(tail);
         }
@@ -933,6 +937,20 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
+    /// Infers the <see cref="LiteralType"/> of a boxed switch case literal from its CLR runtime type.
+    /// </summary>
+    /// <param name="value">The boxed literal value, as parsed by <c>StatementParser.SwitchBody</c>.</param>
+    /// <returns>The inferred literal type.</returns>
+    private static LiteralType InferLiteralType(object? value) => value switch
+    {
+        bool => LiteralType.Boolean,
+        string => LiteralType.String,
+        double or float => LiteralType.Double,
+        long => LiteralType.Long,
+        _ => LiteralType.Integer,
+    };
+
+    /// <summary>
     /// Creates a visual node for an import statement.
     /// </summary>
     /// <param name="node">The import node to create a visual representation for.</param>
@@ -955,7 +973,9 @@ public sealed class VisualGraphBuilder
     /// <remarks>
     /// The header has a Flow In port, linked from <paramref name="branchPort"/>, and a Flow Out port chained
     /// to the first body statement.  An optional <paramref name="condition"/> adds a Data In port, used by
-    /// Else If branches.
+    /// Else If branches.  The optional <paramref name="literalType"/>/<paramref name="literalValue"/> pair is
+    /// stored directly on the header node, not just formatted into <paramref name="headerSubtitle"/>, used by
+    /// switch case headers so the Visual Editor case literal editing controls have somewhere to read from.
     /// </remarks>
     /// <returns>
     /// The last node in the branch: tail of the body or the header itself when body is empty.
@@ -970,11 +990,15 @@ public sealed class VisualGraphBuilder
         NodeLayoutContext layout,
         BlazorDiagram diagram,
         Expression? condition = null,
-        string? statementType = null)
+        string? statementType = null,
+        LiteralType? literalType = null,
+        string? literalValue = null)
     {
         BlazorDiagramsPoint headerPosition = layout.NextPrimaryPosition();
         TopsyTurvyVisualNodeModel headerNode = this.MakeNode(headerPosition, headerTitle, headerSubtitle, headerKind);
         headerNode.StatementType = statementType;
+        headerNode.NodeLiteralType = literalType;
+        headerNode.LiteralValue = literalValue;
 
         TopsyTurvyVisualPortModel headerInPort = this.MakePort(headerNode, "In", VisualPortRole.FlowIn);
         headerNode.AddPort(headerInPort);

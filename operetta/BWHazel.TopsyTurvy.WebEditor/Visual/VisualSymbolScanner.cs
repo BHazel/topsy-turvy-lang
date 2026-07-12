@@ -9,7 +9,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// <summary>
 /// Scans a live visual diagram and extracts declared symbols for display in the symbol panel.
 /// </summary>
-internal static class VisualSymbolScanner
+public static class VisualSymbolScanner
 {
     /// <summary>
     /// Scans all nodes in the diagram and returns a list of declared symbol entries.
