@@ -6,7 +6,7 @@ This is the codebase for Topsy Turvy, an esoteric but fully functional programmi
 
 ## Language Specification
 
-The complete specification of the language is in the `./SPEC.md` file.
+The complete specification of the language is in the `./specifications/TopsyTurvy.md` file.
 
 **You must read this file before performing any work so you understand the language specification and grammar.**
 
@@ -202,7 +202,7 @@ These rules apply to `operetta/BWHazel.TopsyTurvy.WebEditor/`.
 
 The Docusaurus site under `docs/topsy-turvy/` is structured into three content areas:
 
-* **Concepts (`docs/concepts/`):** High-level explanations of each toolchain component (parser, runtime, analysis layer, etc.).  These pages must describe *how the component works*, not what the language does.  Do not copy or summarise language-spec content here: that belongs in `SPEC.md`.  Before adding content to a concepts page apply this test: _does this sentence describe the toolchain component (a class, a design decision, an implementation mechanism) or does it describe the language feature (syntax, semantics, example programs)?_  Only the former belongs here.  Appropriate content includes how classes relate to each other, non-obvious design choices (e.g. using .NET exceptions as control-flow signals), storage representation of new types, and enforcement mechanisms that are not obvious from the source.  Syntax tables, keyword lists, example programs, cast rules and traversal patterns are usually considered language specification detail and should be avoided but could be useful in context.  Do not create a new subsection for each language feature: fold implementation notes into the existing component section (Environment, Interpreter, etc.) where they naturally belong.
+* **Concepts (`docs/concepts/`):** High-level explanations of each toolchain component (parser, runtime, analysis layer, etc.).  These pages must describe *how the component works*, not what the language does.  Do not copy or summarise language-spec content here: that belongs in `specifications/TopsyTurvy.md`.  Before adding content to a concepts page apply this test: _does this sentence describe the toolchain component (a class, a design decision, an implementation mechanism) or does it describe the language feature (syntax, semantics, example programs)?_  Only the former belongs here.  Appropriate content includes how classes relate to each other, non-obvious design choices (e.g. using .NET exceptions as control-flow signals), storage representation of new types, and enforcement mechanisms that are not obvious from the source.  Syntax tables, keyword lists, example programs, cast rules and traversal patterns are usually considered language specification detail and should be avoided but could be useful in context.  Do not create a new subsection for each language feature: fold implementation notes into the existing component section (Environment, Interpreter, etc.) where they naturally belong.
 * **Guide (`docs/guide/`):** Task-oriented how-to pages for users of the language and toolchain.
 * **API Reference (`docs/api/`):** Auto-generated from XML documentation comments; do not edit generated files by hand.
 
@@ -277,11 +277,11 @@ The `cli-repl.md` page describes how the REPL works in detail.  It must be kept 
 
 ## Implementing Language Features
 
-When a new language feature is added to `SPEC.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-topsy-turvy-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
+When a new language feature is added to `specifications/TopsyTurvy.md`, changes are required across multiple files spanning four projects.  Before starting any implementation work read the complete workflow and constraints in `.claude/commands/implement-topsy-turvy-language-feature.md`. That file is the single authoritative guide for this process and covers layer order, build checkpoints, per-layer constraints and what to verify at each step.
 
 When a new instruction or type is added to `specifications/UtopIR.md` instead, the equivalent guide is `.claude/commands/implement-utopir-feature.md`, covering UtopIR's own layer order (`UtopIR.Ast` → `UtopIR.Parser` → `UtopIR.Transformer` → `UtopIR.Analysis` → `UtopIR.Emitters.Cil`).
 
 After completing the implementation, documentation must also be kept in sync:
 
 * **XML documentation comments:** Update the `<summary>` and `<remarks>` blocks on any modified or newly added public type or member.  The XML docs are the source of truth for the API reference; stale comments are worse than no comments.
-* **Docusaurus concepts pages:** Update a concepts page only if the component's high-level behaviour has materially changed, for example, if the parser now handles a new construct category or the runtime introduces a new execution model.  Do not add language-spec detail (keyword syntax, example programs, cast rules) to a concepts page; that content belongs in `SPEC.md`.
+* **Docusaurus concepts pages:** Update a concepts page only if the component's high-level behaviour has materially changed, for example, if the parser now handles a new construct category or the runtime introduces a new execution model.  Do not add language-spec detail (keyword syntax, example programs, cast rules) to a concepts page; that content belongs in `specifications/TopsyTurvy.md`.
