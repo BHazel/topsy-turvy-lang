@@ -443,6 +443,85 @@ public class TopsyTurvyParserExpressionTests
     }
 
     /// <summary>
+    /// Tests that a plain, unqualified SUMMON call produces an <see cref="IdentifierNode"/> whose name contains no dot.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_PlainTarget_NameContainsNoDot()
+    {
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>("SUMMON greet WITH NOTHING IF YOU PLEASE.");
+
+        IdentifierNode functionName = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        functionName.Name.ShouldBe("greet");
+    }
+
+    /// <summary>
+    /// Tests that a long-form fully-qualified SUMMON target with a WITH DISTRICT chain joins every segment with <c>.</c> into the <see cref="IdentifierNode"/> name.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_LongFormQualifiedTargetWithDistrict_JoinsSegmentsWithDot()
+    {
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(
+            "SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH NOTHING IF YOU PLEASE.");
+
+        IdentifierNode functionIdentifier = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        functionIdentifier.Name.ShouldBe("Accounts.Payroll.CalculateTax");
+    }
+
+    /// <summary>
+    /// Tests that a long-form fully-qualified SUMMON target with no WITH DISTRICT segments, just WITH DUTY, joins the two segments with <c>.</c>.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_LongFormQualifiedTargetWithoutDistrict_JoinsSegmentsWithDot()
+    {
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(
+            "SUMMON Mathematical WITH DUTY Add WITH NOTHING IF YOU PLEASE.");
+
+        IdentifierNode functionIdentifier = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        functionIdentifier.Name.ShouldBe("Mathematical.Add");
+    }
+
+    /// <summary>
+    /// Tests that a short-form <c>*</c>-joined fully-qualified SUMMON target joins every segment with <c>.</c> into the <see cref="IdentifierNode"/> name.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_ShortFormQualifiedTarget_JoinsSegmentsWithDot()
+    {
+        PrefixExpressionNode node = this.ParsePrintExpression<PrefixExpressionNode>(
+            "SUMMON Accounts*Payroll*CalculateTax WITH NOTHING IF YOU PLEASE.");
+
+        IdentifierNode functionIdentifier = node.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        functionIdentifier.Name.ShouldBe("Accounts.Payroll.CalculateTax");
+    }
+
+    /// <summary>
+    /// Tests that both the long-form and short-form fully-qualified SUMMON target syntaxes produce an identical <see cref="IdentifierNode"/> name.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_LongFormAndShortFormQualifiedTargets_ProduceSameName()
+    {
+        PrefixExpressionNode longForm = this.ParsePrintExpression<PrefixExpressionNode>(
+            "SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH NOTHING IF YOU PLEASE.");
+        PrefixExpressionNode shortForm = this.ParsePrintExpression<PrefixExpressionNode>(
+            "SUMMON Accounts*Payroll*CalculateTax WITH NOTHING IF YOU PLEASE.");
+
+        IdentifierNode longFormName = longForm.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        IdentifierNode shortFormName = shortForm.Arguments[0].ShouldBeOfType<IdentifierNode>();
+        longFormName.Name.ShouldBe(shortFormName.Name);
+    }
+
+    /// <summary>
+    /// Tests that a long-form WITH DISTRICT chain with no trailing WITH DUTY function-name marker fails to parse.
+    /// </summary>
+    [Fact]
+    public void Parse_SummonExpression_DistrictChainWithoutDuty_ReturnsDiagnostic()
+    {
+        ParseResult result = this.parser.TryParse(
+            "HARK! \"T\" BEHOLD SUMMON Accounts WITH DISTRICT Payroll WITH NOTHING IF YOU PLEASE. FINALE.");
+
+        result.Diagnostics.ShouldNotBeEmpty();
+    }
+
+    /// <summary>
     /// Tests that an array index expression carries a real source span starting at the VICTIM keyword.
     /// </summary>
     [Fact]

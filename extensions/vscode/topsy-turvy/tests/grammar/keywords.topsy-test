@@ -130,6 +130,25 @@ IF YOU PLEASE.
 PRAY ADMIT
 //^ keyword.control.import.topsy
 
+// ── Namespaces ───────────────────────────────────────────────────────────────
+
+TOWN
+//^ keyword.control.namespace.topsy
+
+WITH DISTRICT
+//^ keyword.control.namespace.topsy
+
+PRAY RECOGNISE
+//^ keyword.control.namespace.topsy
+
+SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH NOTHING IF YOU PLEASE.
+//     ^^^^^^^^ variable.other.topsy
+//              ^^^^^^^^^^^^^ keyword.control.namespace.topsy
+//                            ^^^^^^^ variable.other.topsy
+//                                    ^^^^^^^^^ keyword.other.function.topsy
+//                                              ^^^^^^^^^^^^ variable.other.topsy
+//                                                           ^^^^^^^^^^^^ keyword.operator.topsy
+
 // ── Declarations ─────────────────────────────────────────────────────────────
 
 PRAY WELCOME myVar AS A PEER BEING 1

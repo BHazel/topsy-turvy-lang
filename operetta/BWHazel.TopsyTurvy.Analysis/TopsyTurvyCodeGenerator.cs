@@ -336,6 +336,12 @@ public sealed class TopsyTurvyCodeGenerator
             case ImportNode import:
                 generatedCodeBuilder.AppendLine($"{indent}PRAY ADMIT \"{import.FilePath}\"");
                 break;
+            case NamespaceDeclarationNode namespaceDeclaration:
+                generatedCodeBuilder.AppendLine($"{indent}TOWN {string.Join('*', namespaceDeclaration.Path)}");
+                break;
+            case RecogniseNode recognise:
+                generatedCodeBuilder.AppendLine($"{indent}PRAY RECOGNISE {string.Join('*', recognise.Path)}");
+                break;
             case ExpressionStatement expressionStatement:
                 this.WriteExpression(expressionStatement.Expression, generatedCodeBuilder);
                 generatedCodeBuilder.AppendLine();
@@ -458,7 +464,19 @@ public sealed class TopsyTurvyCodeGenerator
                 break;
             case Operator.Summon:
                 generatedCodeBuilder.Append("SUMMON ");
-                this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                if (prefix.Arguments[0] is IdentifierNode { Name: string qualifiedTargetName } && qualifiedTargetName.Contains('.'))
+                {
+                    // A namespace-qualified call target is stored as a dot-joined internal name
+                    // (please see ExpressionParser.FunctionCallTargetTail).  It is re-emited as the
+                    // short-form *-joined syntax rather than delegating to the generic identifier writer,
+                    // which would emit the literal, invalid dot-joined text.
+                    generatedCodeBuilder.Append(qualifiedTargetName.Replace('.', '*'));
+                }
+                else
+                {
+                    this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                }
+
                 if (prefix.Arguments.Count > 1)
                 {
                     generatedCodeBuilder.Append(" WITH ");

@@ -87,6 +87,57 @@ public class CompletionHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="CompletionHandler"/> method filters keyword items to a multi-word namespace keyword when its own first words are typed as the whole phrase.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithPartialRecogniseKeywordTyped_FiltersKeywordListToMatches()
+    {
+        string source = "HARK! \"Test\"\nTHE CURTAIN RISES.\nPRAY REC\nFINALE.\n";
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        CompletionHandler handler = new(manager);
+
+        CompletionList result = await handler.Handle(this.MakeRequest(line: 2, character: 8), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "PRAY RECOGNISE");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="CompletionHandler"/> method offers the new namespace keywords as candidates when a document has never been parsed, alongside all other keywords.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNoDocumentState_IncludesNamespaceKeywords()
+    {
+        DocumentStateManager manager = new();
+        CompletionHandler handler = new(manager);
+
+        CompletionList result = await handler.Handle(this.MakeRequest(line: 0, character: 0), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "TOWN");
+        result.Items.ShouldContain(item => item.Label == "WITH DISTRICT");
+        result.Items.ShouldContain(item => item.Label == "WITH DUTY");
+        result.Items.ShouldContain(item => item.Label == "PRAY RECOGNISE");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="CompletionHandler"/> method filters keyword items to <c>WITH DISTRICT</c> and not the shorter, pre-existing bare <c>WITH</c> keyword, confirming the two-word phrase prefix is matched in full rather than truncated to its first word.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithPartialWithDistrictKeywordTyped_FiltersKeywordListToMatches()
+    {
+        string source = "HARK! \"Test\"\nTHE CURTAIN RISES.\nWITH DI\nFINALE.\n";
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        CompletionHandler handler = new(manager);
+
+        CompletionList result = await handler.Handle(this.MakeRequest(line: 2, character: 7), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Items.ShouldContain(item => item.Label == "WITH DISTRICT");
+        result.Items.ShouldNotContain(item => item.Label == "WITH");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="CompletionHandler"/> method imports function symbols from other open documents.
     /// </summary>
     [Fact]

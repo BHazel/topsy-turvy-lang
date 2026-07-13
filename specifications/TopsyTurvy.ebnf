@@ -17,8 +17,21 @@ NullLit       = "NAUGHT" ;
 (*----------------------------------------------------------------------------*)
 (* Program Structure                                                          *)
 (*----------------------------------------------------------------------------*)
-Program         = "HARK!", StringLiteral, [ "\n", "or,", StringLiteral ], 
-                  StatementList, "FINALE." ;
+Program         = "HARK!", StringLiteral, [ "\n", "or,", StringLiteral ],
+                  TopLevelStatementList, "FINALE." ;
+
+TopLevelStatementList = { TopLevelStatement } ;
+
+TopLevelStatement = ProgrammeReturn
+                  | NamespaceDeclaration
+                  | RecogniseStatement
+                  | Statement ;
+(* NamespaceDeclaration and RecogniseStatement are valid only directly within the top-level
+   programme body, never inside a function, loop, conditional, or other block body — this is
+   what makes namespace membership a whole-file property rather than a per-statement one; see
+   §15 Libraries & Imports. ProgrammeReturn is likewise top-level-only; see §1 Program Structure. *)
+
+ProgrammeReturn = "AND SO I FIND", Expression ;
 
 StatementList   = { Statement } ;
 
@@ -115,7 +128,7 @@ ArrayLengthExpression = "RECKONING OF", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 
-PrefixExpression = EitherExpression | TranspositionExpression | OtherFixedOpExpression | VariadicExpression ;
+PrefixExpression = EitherExpression | TranspositionExpression | OtherFixedOpExpression | VariadicExpression | FunctionCallExpression ;
 
 EitherExpression       = "EITHER", Expression, "OR", Expression ;
 (* EITHER is the sole binary operator that uses "OR" as its argument separator.
@@ -132,6 +145,26 @@ OtherFixedOpExpression = OtherFixedOp, Expression, [ "AND", Expression ] ;
 
 VariadicExpression = VariadicOp, Expression, { "AND", Expression }, "IF YOU PLEASE." ;
 
+FunctionCallExpression = "SUMMON", FunctionCallTarget, "WITH",
+                         ( "NOTHING" | Expression, { "AND", Expression } ),
+                         "IF YOU PLEASE." ;
+(* Split out from VariadicExpression because, unlike WOVEN OF/ALL OF/ANY OF, SUMMON's first
+   term is a call target (not itself an Expression) and takes the WITH .. IF YOU PLEASE. shape
+   rather than a bare comma-like AND-list — mirroring how EitherExpression and
+   TranspositionExpression are already split out of the generic operator productions. *)
+
+FunctionCallTarget     = Identifier, FunctionCallTargetTail ;
+
+FunctionCallTargetTail = { "WITH DISTRICT", Identifier }, "WITH DUTY", Identifier
+                        | { "*", Identifier }
+                        | (* empty: plain, non-namespaced call, e.g. SUMMON factorial WITH ... *) ;
+(* The long-hand form (WITH DISTRICT chain then a mandatory WITH DUTY <name>) and the
+   short-hand form (a *-joined qualified name) are two surface syntaxes for the same
+   fully-qualified target — see §15 Libraries & Imports for the worked namespace examples.
+   Once either form has matched at least one token, backtracking to the empty (plain-call)
+   alternative is no longer permitted; a missing WITH DUTY after a WITH DISTRICT chain is a
+   syntax error, not a fall-through. *)
+
 OtherFixedOp    = ArithmeticOp | OtherBooleanOp | ComparisonOp | BitwiseOp ;
 
 ArithmeticOp    = "SUM OF" | "DIFFERENCE OF" | "PRODUCT OF"
@@ -145,7 +178,7 @@ BitwiseOp       = "CHORD OF" | "HARMONY OF" | "DISCORD OF" | "INVERSION OF" ;
 
 TranspositionOp = "TRANSPOSITION UP" | "TRANSPOSITION DOWN" ;
 
-VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
+VariadicOp      = "WOVEN OF" | "ALL OF" | "ANY OF" ;
 
 (*----------------------------------------------------------------------------*)
 (* Control Flow                                                               *)
@@ -199,6 +232,22 @@ TypedParameter     = Identifier, "AS A", ScalarType ;
 FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 
 ImportStatement    = "PRAY ADMIT", StringLiteral ;
+
+NamespaceDeclaration = "TOWN", NamespacePath ;
+(* At most one per file, and valid only as a TopLevelStatement (see above) — the whole file's
+   functions join this namespace, regardless of the declaration's position relative to them. *)
+
+RecogniseStatement   = "PRAY RECOGNISE", NamespacePath ;
+(* Opens a namespace so its functions may be called by bare name without a fully-qualified
+   SUMMON target. May appear more than once, and does not itself require the target namespace's
+   file to have been admitted via PRAY ADMIT in the same file. *)
+
+NamespacePath        = Identifier, NamespaceTail ;
+
+NamespaceTail        = { "WITH DISTRICT", Identifier }
+                     | { "*", Identifier } ;
+(* A path commits to one style — the long-hand WITH DISTRICT chain or the short-hand * chain —
+   per declaration; the two styles are not mixed within a single TOWN or PRAY RECOGNISE. *)
 
 AssertStatement    = "THE LAW IS", Expression, "THAT", Expression ;
 (* If Expression (condition) is falsy, throws a runtime exception with the second Expression (error message)

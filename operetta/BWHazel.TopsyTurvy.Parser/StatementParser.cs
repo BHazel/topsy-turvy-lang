@@ -424,6 +424,47 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * The second block would be matched by the <c>PrincipalBlock</c> parser, returning a <see cref="PrincipalBlockNode"/> with two declarations for the variables <c>Defendant</c> and <c>JurySize</c>.
 /// </para>
 /// <para>
+/// #### Namespace Path
+/// The <c>NamespacePath</c> parser matches the segments of a namespace path, shared by <c>NamespaceDeclaration</c>
+/// and <c>RecogniseStatement</c> below, returning an ordered list of segment names:
+/// * It first matches on an identifier for the leading segment.
+/// * It then matches on the remaining segments via the shared <see cref="ParserHelpers.NamespacePathTail"/> parser,
+///   which tries a long-form <c>WITH DISTRICT &lt;name&gt;</c> chain first, then a short-form <c>*&lt;name&gt;</c> chain;
+///   either may match zero segments, in which case the path is just the leading identifier.
+/// </para>
+/// <para>
+/// #### Namespace Declaration
+/// The <c>NamespaceDeclaration</c> parser matches on a namespace declaration, returning a
+/// <see cref="NamespaceDeclarationNode"/>:
+/// * It first matches on the <c>TOWN</c> keyword.
+/// * It then matches on required whitespace followed by a namespace path using the <c>NamespacePath</c> parser.
+///
+/// A file may declare at most one namespace.  Once declared, every function defined in that file belongs to it
+/// instead of the global scope, regardless of where in the file the declaration appears.
+/// </para>
+/// <para>
+/// #### Namespace Recognition
+/// The <c>RecogniseStatement</c> parser matches on a namespace-open directive, returning a <see cref="RecogniseNode"/>:
+/// * It first matches on the <c>PRAY RECOGNISE</c> keyword.
+/// * It then matches on required whitespace followed by a namespace path using the <c>NamespacePath</c> parser.
+///
+/// A file may contain more than one namespace-open directive.  Opening a namespace lets its functions be called by
+/// bare name for the rest of the file; it does not itself require a namespace file to have been admitted via
+/// <c>Import</c> in the same file.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples:
+/// <code>
+/// TOWN Accounts WITH DISTRICT Payroll
+/// PRAY RECOGNISE Accounts*Payroll
+/// </code>
+/// * The first statement would be matched by the <c>NamespaceDeclaration</c> parser, returning a
+///   <see cref="NamespaceDeclarationNode"/> with the path <c>["Accounts", "Payroll"]</c>.
+/// * The second statement would be matched by the <c>RecogniseStatement</c> parser, returning a
+///   <see cref="RecogniseNode"/> with the same path <c>["Accounts", "Payroll"]</c>; the long-form and short-form
+///   syntaxes produce an identical path.
+/// </para>
+/// <para>
 /// #### Programme Return
 /// The <c>ProgrammeReturn</c> parser matches on a top-level <c>AND SO I FIND &lt;expr&gt;</c> statement,
 /// returning a <see cref="ProgrammeReturnNode"/> carrying the exit-code expression:
@@ -447,10 +488,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </para>
 /// <para>
 /// #### Top-Level Statement
-/// The <c>TopLevelStatement</c> parser is the entry point used when parsing the programme body.  It first tries
-/// <c>ProgrammeReturn</c>, which must precede <c>Statement</c> to intercept <c>AND SO I FIND</c> at the top level,
-/// then falls back to <c>Statement</c> for every other construct.  Function bodies continue to use <c>Statement</c>
-/// directly so that <c>AND SO I FIND</c> inside a function is still parsed as <see cref="ReturnNode"/>.
+/// The <c>TopLevelStatement</c> parser is the entry point used when parsing the programme body.  It tries, in order,
+/// <c>ProgrammeReturn</c>, <c>NamespaceDeclaration</c>, <c>RecogniseStatement</c>, then falls back to <c>Statement</c>
+/// for every other construct.  <c>ProgrammeReturn</c> must precede <c>Statement</c> to intercept <c>AND SO I FIND</c>
+/// at the top level; function bodies continue to use <c>Statement</c> directly so that <c>AND SO I FIND</c> inside a
+/// function is still parsed as <see cref="ReturnNode"/>.  <c>NamespaceDeclaration</c> and <c>RecogniseStatement</c> are
+/// likewise reachable only here, never from <c>Statement</c>.  This makes nesting a namespace declaration or a
+/// namespace-open directive inside a function, loop, conditional, or other block body grammatically impossible, which
+/// is what makes namespace membership a whole-file property rather than a per-statement one.
 /// </para>
 /// <para>
 /// ### Expression Statements
@@ -547,7 +592,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// Two entry points are provided:
 ///
 /// **<c>TopLevelStatement</c>** is the entry point used by <see cref="TopsyTurvyParser"/> when parsing the programme body.
-/// It first tries <c>ProgrammeReturn</c>, then falls back to <c>Statement</c>.
+/// It tries, in order, <c>ProgrammeReturn</c>, <c>NamespaceDeclaration</c>, <c>RecogniseStatement</c>, then falls back
+/// to <c>Statement</c>.
 ///
 /// **<c>Statement</c>** is the entry point for all other contexts: function bodies, loop bodies, conditional branches, etc..
 /// It tries every statement parser in turn:
@@ -1095,6 +1141,42 @@ public static class StatementParser
         };
 
     /// <summary>
+    /// Parses the ordered segments of a namespace path, starting with its leading identifier.
+    /// </summary>
+    private static readonly TextParser<IReadOnlyList<string>> NamespacePath =
+        from firstSegment in Lexer.Identifier
+        from tail in NamespacePathTail
+        select (IReadOnlyList<string>)new[] { firstSegment }.Concat(tail).ToArray();
+
+    /// <summary>
+    /// Parses a namespace declaration.
+    /// </summary>
+    public static readonly TextParser<Statement> NamespaceDeclaration =
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("TOWN")
+        from namespacePath in Ws(NamespacePath)
+        from endOffset in CurrentOffset
+        select (Statement)new NamespaceDeclarationNode()
+        {
+            Path = namespacePath,
+            Span = BuildSpan(startOffset, endOffset)
+        };
+
+    /// <summary>
+    /// Parses a namespace recognition directive.
+    /// </summary>
+    public static readonly TextParser<Statement> RecogniseStatement =
+        from startOffset in CurrentOffset
+        from _ in Lexer.Keyword("PRAY RECOGNISE")
+        from namespacePath in Ws(NamespacePath)
+        from endOffset in CurrentOffset
+        select (Statement)new RecogniseNode()
+        {
+            Path = namespacePath,
+            Span = BuildSpan(startOffset, endOffset)
+        };
+
+    /// <summary>
     /// Parses a standalone expression as a statement.
     /// </summary>
     public static readonly TextParser<Statement> ExpressionStatementParser =
@@ -1158,7 +1240,8 @@ public static class StatementParser
             .Or(ExpressionStatementParser);
 
     /// <summary>
-    /// Parses a single top-level statement, trying a programme return before any standard statement.
+    /// Parses a single top-level statement, trying a programme return or namespace directive before
+    /// any standard statement.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -1167,9 +1250,18 @@ public static class StatementParser
     /// <c>AND SO I FIND &lt;expr&gt;</c> at the top level is parsed as a <see cref="ProgrammeReturnNode"/> rather
     /// than a <see cref="ReturnNode"/>.
     /// </para>
+    /// <para>
+    /// <see cref="NamespaceDeclaration"/> and <see cref="RecogniseStatement"/> are likewise only
+    /// reachable here, not from the plain <see cref="Statement"/> combinator used inside function,
+    /// loop, conditional, and other block bodies.  This makes nesting a <c>TOWN</c> or
+    /// <c>PRAY RECOGNISE</c> inside a block grammatically impossible, which is what makes namespace
+    /// membership a whole-file property rather than a per-statement one.
+    /// </para>
     /// </remarks>
     public static readonly TextParser<Statement> TopLevelStatement =
         ProgrammeReturn
             .Try()
+            .Or(NamespaceDeclaration.Try())
+            .Or(RecogniseStatement.Try())
             .Or(Statement);
 }

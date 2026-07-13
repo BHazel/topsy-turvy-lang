@@ -697,6 +697,7 @@ SUMMON greet WITH NOTHING IF YOU PLEASE.
 
 - `SUMMON <name> WITH <arg1> [AND <arg2> ...] IF YOU PLEASE.` — calls a function. `SUMMON` is verbatim from *The Mikado*, Act I — Ko-Ko: *"I summon my guard."* To summon a named party to perform their duty, with the specified terms, if they would be so kind. `IF YOU PLEASE` is verbatim from *H.M.S. Pinafore* — Sir Joseph Porter's insistence on the proper form of address.
 - `SUMMON <name> WITH NOTHING IF YOU PLEASE.` — calls a function with no arguments
+- If `<name>` is declared inside a `TOWN`, it may instead be called by its fully-qualified name — `SUMMON <Namespace> [WITH DISTRICT <Sub> ...] WITH DUTY <name> WITH <args> IF YOU PLEASE.` (long-hand) or `SUMMON <Namespace>[*<Sub> ...]*<name> WITH <args> IF YOU PLEASE.` (short-hand) — or by its bare name after opening the namespace with `PRAY RECOGNISE`. See §15 Libraries & Imports for the full namespace picture and worked examples.
 - The return value may be used directly in an expression; using the return value of a void function is a type error
 
 **Example — Factorial:**
@@ -806,6 +807,37 @@ PRAY ADMIT "filename"
 ```
 
 `PRAY ADMIT "filename"` — admits another `.topsy` file into the current programme's company. All `IT IS MY DUTY TO PERFORM` declarations in that file become available. Drawn from the theatrical tradition of formally admitting a new party to the assembled company — the doorkeeper admits the newcomer, who then takes their place among the principals already on stage.
+
+### Namespaces
+
+```topsy
+TOWN Mathematical
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+  AND SO I FIND SUM OF Num1 AND Num2
+MY DUTY IS DISCHARGED.
+```
+
+`TOWN <Name> [WITH DISTRICT <Sub> ...]` — declares the namespace the whole file's company performs in. Once a file contains a `TOWN` declaration, **every** `IT IS MY DUTY TO PERFORM` function in that file belongs to that namespace instead of the global scope — regardless of where in the file `TOWN` itself appears. A file may declare at most one `TOWN`. Sub-namespaces nest with `WITH DISTRICT <Sub>` (repeatable) or the equivalent short-hand `*<Sub>`; `TOWN Accounts WITH DISTRICT Payroll` and `TOWN Accounts*Payroll` declare the same namespace. A single declaration commits to one style — the two are not mixed within one `TOWN`.
+
+Calling a namespaced function from another file requires either its fully-qualified name or an open `PRAY RECOGNISE`:
+
+```topsy
+PRAY ADMIT "mathematical.topsy"
+
+SUMMON Mathematical WITH DUTY Add WITH 2 AND 3 IF YOU PLEASE.
+SUMMON Mathematical*Add WITH 2 AND 3 IF YOU PLEASE.
+
+PRAY RECOGNISE Mathematical
+SUMMON Add WITH 2 AND 3 IF YOU PLEASE.
+```
+
+- `TOWN <Name>` — declares the file's namespace. *The Sorcerer*'s Ploverleigh, *Ruddigore*'s Rederring — G&S operettas are routinely set in a named town; this declares the one the file's company performs in.
+- `WITH DISTRICT <Sub>` — nests a sub-namespace; chainable, e.g. `TOWN A WITH DISTRICT B WITH DISTRICT C`. A sub-division within the town, echoing the canon's civic-institution satire (*Iolanthe*'s peers, *Utopia, Limited*'s reformed corporation).
+- `*` — the short-hand equivalent of `WITH DISTRICT`, e.g. `TOWN A*B*C`.
+- `WITH DUTY <name>` — in a fully-qualified `SUMMON`, marks the end of the namespace path and the start of the function name being summoned, echoing `IT IS MY DUTY TO PERFORM`.
+- `PRAY RECOGNISE <Namespace path>` — formally recognises a town or district as already known to the company, so its citizens (functions) may thereafter be addressed by bare name for the rest of the file. `PRAY` verbatim, matching `PRAY WELCOME`/`PRAY ADMIT`/`PRAY TELL` (*The Mikado*). Does not itself require `PRAY ADMIT` to have already happened for that namespace — it only affects name resolution, not which functions exist.
+- Namespace membership is exclusive: a function declared under `TOWN` is **not** also reachable by its bare name from outside that namespace, even after `PRAY ADMIT` — see §21 Scoping.
 
 ---
 
@@ -997,6 +1029,8 @@ PRAY WELCOME OldSum AS A PEER
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
 | `HARK!`                                          | Program start               | Theatrical attention-getter throughout the canon                                  |
 | `FINALE.`                                        | Program end                 | Standard G&S ending                                                               |
+| `TOWN <Name>`                                    | Namespace declaration       | G&S operettas are routinely set in a named town (Ploverleigh in *The Sorcerer*, Rederring in *Ruddigore*); declares the town the file's company performs in; at most one per file |
+| `WITH DISTRICT <Sub>`                            | Sub-namespace                | The canon's civic-institution satire (*Iolanthe*'s peers, *Utopia, Limited*'s reformed corporation); a sub-division within the town; chainable, or use the `*` short-hand |
 | `PRINCIPALS`                                     | Variable declaration block  | Dramatis Personae                                                                 |
 | `THE CURTAIN RISES.`                             | Close `PRINCIPALS` block    | Once all characters are assembled, the curtain rises and the drama begins         |
 | `PRAY WELCOME`                                   | Variable declaration        | *The Mikado*, Act I — `PRAY` verbatim; welcoming each new variable before the assembled company |
@@ -1074,6 +1108,7 @@ PRAY WELCOME OldSum AS A PEER
 | `MY DUTY IS PREMATURELY DISCHARGED.`             | Return (no value)           | Early exit — duty cut short; valid only in void functions; type error in a function declared with `TO FIND` |
 | `SUMMON ... WITH ... IF YOU PLEASE.`             | Function call               | *The Mikado*, Act I — Ko-Ko: *"I summon my guard"*; `IF YOU PLEASE` from *Pinafore* |
 | `SUMMON ... WITH NOTHING IF YOU PLEASE.`         | Call with no args           | —                                                                                 |
+| `WITH DUTY <name>`                               | Fully-qualified call target | Echoes `IT IS MY DUTY TO PERFORM`; in a fully-qualified `SUMMON`, marks the end of the namespace path and the start of the function name |
 | `A HIDEOUS CURSE ON`                             | Throw exception             | *Ruddigore* — the Murgatroyd ancestral curse; raises an exception with the given `YARN` value; a non-`YARN` value is a type error; terminates programme if uncaught |
 | `WITH THE GREATEST RESPECT,`                     | Try block                   | Victorian preamble acknowledging things may go awry                               |
 | `WITH GRATITUDE`                                 | Success handler             | —                                                                                 |
@@ -1082,6 +1117,7 @@ PRAY WELCOME OldSum AS A PEER
 | `THE LAW IS <condition> THAT <error-message>`    | Assert statement            | The Mikado and Lord Chancellor as ultimate arbiters of law; `<condition>` must be `DECREE`, `<error-message>` must be `YARN`; if `NAY`, throws with the error message as payload |
 | `THAT`                                           | Assert separator            | Structural separator between condition and error message within `THE LAW IS`; not in the keyword completion list |
 | `PRAY ADMIT`                                     | Import                      | Formally admits another `.topsy` file into the programme's company                |
+| `PRAY RECOGNISE <Namespace path>`                | Open namespace               | `PRAY` verbatim, matching `PRAY WELCOME`/`PRAY ADMIT`/`PRAY TELL` (*The Mikado*); formally recognises a town or district as already known to the company, so its functions may be addressed by bare name |
 | `A LITTLE LIST OF <type>`                        | Array type annotation       | *The Mikado*, Act I — Ko-Ko's "I've Got a Little List"; every array is a catalogue of victims |
 | `VICTIM <index> ON <array-or-yarn>`              | Array element / character access | The item at position `<index>` (1-based) on Ko-Ko's list; on a YARN, returns the STITCH at that position |
 | `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`; not valid on YARN (strings are immutable) |
@@ -1131,6 +1167,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
 - Functions do not close over outer scope — they receive values only through parameters.
 - Loop bodies share the scope of their enclosing block.
+- A function declared in a file with a `TOWN` namespace is visible only under its fully-qualified name, or by bare name after that namespace is opened with `PRAY RECOGNISE`, or from within the same namespace — it is **not** also reachable by its bare name from unrelated files, even once `PRAY ADMIT`ed. Functions with no `TOWN` in their file remain in the global namespace exactly as before. See §15 Libraries & Imports.
 
 ---
 

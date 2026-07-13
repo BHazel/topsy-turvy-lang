@@ -818,6 +818,177 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a cross-file fully-qualified SUMMON call in both the long-form and short-form syntax.
+    /// </summary>
+    [Fact]
+    public void Check_WithCrossFileFullyQualifiedSummon_Succeeds()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            BEHOLD SUMMON Mathematical WITH DUTY Add WITH 2 AND 3 IF YOU PLEASE.
+            BEHOLD SUMMON Mathematical*Add WITH 10 AND 20 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a bare SUMMON call after PRAY RECOGNISE opens the declaring namespace.
+    /// </summary>
+    [Fact]
+    public void Check_WithRecogniseThenBareSummon_Succeeds()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            PRAY RECOGNISE Mathematical
+            BEHOLD SUMMON Add WITH 7 AND 8 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a bare SUMMON call between two functions declared in the same namespace, without requiring PRAY RECOGNISE.
+    /// </summary>
+    [Fact]
+    public void Check_WithSameNamespaceBareSummon_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "SameNamespace"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Double UNDER THE TERMS OF N AS A PEER TO FIND PEER
+              AND SO I FIND SUMMON Add WITH N AND N IF YOU PLEASE.
+            MY DUTY IS DISCHARGED.
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            BEHOLD SUMMON Double WITH 21 IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a bare SUMMON name matches functions in two different open namespaces.
+    /// </summary>
+    [Fact]
+    public void Check_WithBareSummonMatchingTwoOpenNamespaces_ReportsAmbiguousReference()
+    {
+        string fileA = """
+            HARK! "A"
+            TOWN Alpha
+            IT IS MY DUTY TO PERFORM Greet UNDER NO OBLIGATION
+              BEHOLD "Alpha"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string fileB = """
+            HARK! "B"
+            TOWN Beta
+            IT IS MY DUTY TO PERFORM Greet UNDER NO OBLIGATION
+              BEHOLD "Beta"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "a.topsy"
+            PRAY ADMIT "b.topsy"
+            PRAY RECOGNISE Alpha
+            PRAY RECOGNISE Beta
+            SUMMON Greet WITH NOTHING IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename switch
+            {
+                "a.topsy" => fileA,
+                "b.topsy" => fileB,
+                _ => null,
+            });
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("ambiguous"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an undefined function when a bare SUMMON call targets a namespaced function whose namespace has not been recognised.
+    /// </summary>
+    [Fact]
+    public void Check_WithBareSummonToNamespacedFunctionWithoutRecognise_ReportsUndefinedFunction()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            BEHOLD SUMMON Add WITH 1 AND 2 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("Add"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a programme declares more than one TOWN.
+    /// </summary>
+    [Fact]
+    public void Check_WithDuplicateNamespaceDeclaration_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Duplicate"
+            TOWN Alpha
+            TOWN Beta
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("TOWN"));
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

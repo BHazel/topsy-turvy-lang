@@ -21,6 +21,7 @@
     { "include": "#functions" },
     { "include": "#io" },
     { "include": "#import" },
+    { "include": "#namespace" },
     { "include": "#cast" },
     { "include": "#declaration" },
     { "include": "#assignment" },
@@ -271,6 +272,10 @@
         },
         {
           "name": "keyword.other.function.topsy",
+          "match": "(?i)\\bWITH\\s+DUTY\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
           "match": "(?i)\\bIF\\s+YOU\\s+PLEASE\\."
         },
         {
@@ -298,6 +303,22 @@
     "import": {
       "name": "keyword.control.import.topsy",
       "match": "(?i)\\bPRAY\\s+ADMIT\\b"
+    },
+    "namespace": {
+      "patterns": [
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bTOWN\\b"
+        },
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bWITH\\s+DISTRICT\\b"
+        },
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bPRAY\\s+RECOGNISE\\b"
+        }
+      ]
     },
     "cast": {
       "patterns": [
