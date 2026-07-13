@@ -120,8 +120,9 @@ jobs:
         run: |
           xcodebuild test \
             -project apps/apple/TopsyTurvy/TopsyTurvy.xcodeproj \
-            -scheme TopsyTurvyToolchainTests \
-            -destination 'platform=iOS Simulator,name=iPhone 16'
+            -scheme Theatre \
+            -only-testing:TopsyTurvyToolchainTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17'
   docs:
     name: Documentation
     runs-on: ubuntu-latest
