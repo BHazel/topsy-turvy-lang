@@ -141,13 +141,42 @@ WITH DISTRICT
 PRAY RECOGNISE
 //^ keyword.control.namespace.topsy
 
+TOWN Accounts
+//^ keyword.control.namespace.topsy
+//   ^^^^^^^^ entity.name.namespace.topsy
+
+PRAY RECOGNISE Accounts
+//^ keyword.control.namespace.topsy
+//             ^^^^^^^^ entity.name.namespace.topsy
+
+TOWN Accounts WITH DISTRICT Payroll
+//^ keyword.control.namespace.topsy
+//   ^^^^^^^^ entity.name.namespace.topsy
+//            ^^^^^^^^^^^^^ keyword.control.namespace.topsy
+//                          ^^^^^^^ entity.name.namespace.topsy
+
+TOWN Accounts*Payroll
+//^ keyword.control.namespace.topsy
+//   ^^^^^^^^ entity.name.namespace.topsy
+//            ^^^^^^^ entity.name.namespace.topsy
+
 SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH NOTHING IF YOU PLEASE.
-//     ^^^^^^^^ variable.other.topsy
+//     ^^^^^^^^ entity.name.namespace.topsy
 //              ^^^^^^^^^^^^^ keyword.control.namespace.topsy
-//                            ^^^^^^^ variable.other.topsy
+//                            ^^^^^^^ entity.name.namespace.topsy
 //                                    ^^^^^^^^^ keyword.other.function.topsy
 //                                              ^^^^^^^^^^^^ variable.other.topsy
 //                                                           ^^^^^^^^^^^^ keyword.operator.topsy
+
+SUMMON Accounts*Payroll*CalculateTax WITH NOTHING IF YOU PLEASE.
+//     ^^^^^^^^ entity.name.namespace.topsy
+//              ^^^^^^^ entity.name.namespace.topsy
+//                      ^^^^^^^^^^^^ entity.name.namespace.topsy
+//                                   ^^^^^^^^^^^^ keyword.operator.topsy
+
+SUMMON Add WITH NOTHING IF YOU PLEASE.
+//^ keyword.other.function.topsy
+//     ^^^ variable.other.topsy
 
 // ── Declarations ─────────────────────────────────────────────────────────────
 

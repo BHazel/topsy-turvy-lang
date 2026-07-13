@@ -18,6 +18,7 @@ public class VisualGraphBuilderDeclarationAssignmentTests : VisualGraphBuilderTe
         DeclarationNode declaration = new()
         {
             Name = "x",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             InitialValue = IntegerLiteral(42),
             Span = PlaceholderSpan,
@@ -38,6 +39,7 @@ public class VisualGraphBuilderDeclarationAssignmentTests : VisualGraphBuilderTe
         DeclarationNode declaration = new()
         {
             Name = "x",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             IsConstant = true,
             Span = PlaceholderSpan,
@@ -57,6 +59,7 @@ public class VisualGraphBuilderDeclarationAssignmentTests : VisualGraphBuilderTe
         DeclarationNode declaration = new()
         {
             Name = "x",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             Span = PlaceholderSpan,
         };

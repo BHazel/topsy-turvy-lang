@@ -241,7 +241,10 @@ public static unsafe class NativeExports
             {
                 SymbolTable symbolTable = SymbolTable.Build(parseResult.Program, source);
                 IEnumerable<CompletionItemInfo> symbolItems = symbolTable.AllSymbols()
-                    .Where(symbol => lastWord.Length == 0 || symbol.Name.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase))
+                    // Namespace symbols use a synthesised "*"-joined display name, e.g. "Accounts*Payroll", that a
+                    // user would never type as a single completion target, so they are excluded here.
+                    .Where(symbol => symbol.Kind != SymbolKind.Namespace
+                        && (lastWord.Length == 0 || symbol.Name.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase)))
                     .Select(BuildSymbolItem);
                 items.AddRange(symbolItems);
             }

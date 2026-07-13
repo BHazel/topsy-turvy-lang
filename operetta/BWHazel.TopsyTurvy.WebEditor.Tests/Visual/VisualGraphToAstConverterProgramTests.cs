@@ -33,8 +33,8 @@ public class VisualGraphToAstConverterProgramTests : VisualGraphToAstConverterTe
     [Fact]
     public void RoundTrip_PrincipalBlockDeclarations_CollectsAllFloatingDeclarationsInOrder()
     {
-        DeclarationNode first = new() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan };
-        DeclarationNode second = new() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode first = new() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode second = new() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
         PrincipalBlockNode principals = new() { Declarations = [first, second], Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTrip(WrapInProgram(principals));

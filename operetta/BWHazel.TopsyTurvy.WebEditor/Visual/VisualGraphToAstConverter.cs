@@ -315,6 +315,7 @@ public sealed class VisualGraphToAstConverter
         return new DeclarationNode()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
+            NameSpan = PlaceholderSpan,
             Type = node.NodeLiteralType ?? LiteralType.String,
             IsConstant = node.IsIdentifierConstant,
             InitialValue = this.GetExpressionFromDataIn(node, "Value", diagram),
@@ -352,6 +353,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
+            NameSpan = PlaceholderSpan,
             ElementType = node.ArrayElementLiteralType ?? LiteralType.String,
             Size = size,
             IsConstant = node.IsIdentifierConstant,
@@ -371,6 +373,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
+            NameSpan = PlaceholderSpan,
             ElementType = node.ArrayElementLiteralType ?? LiteralType.String,
             Size = size,
             IsConstant = node.IsIdentifierConstant,
@@ -666,7 +669,7 @@ public sealed class VisualGraphToAstConverter
     /// literal from its header node and its body by walking the branch flow chain.
     /// </summary>
     /// <remarks>
-    /// Reading cases from the live ports, rather than from the original AST's <c>Cases</c> list, means a
+    /// Reading cases from the live ports, rather than from the <c>Cases</c> list on the original AST, means a
     /// case added interactively is picked up even when the switch itself is
     /// otherwise AST-backed; the AST-backed <c>Cases</c> list is frozen at load time and has no entry for
     /// a case added afterwards.
@@ -727,6 +730,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = openerNode.SymbolIdentifierNodeName ?? string.Empty,
+            NameSpan = PlaceholderSpan,
             Parameters = parameters.AsReadOnly(),
             ReturnType = openerNode.NodeLiteralType,
             Body = body,
@@ -837,6 +841,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = visualNode.SymbolIdentifierNodeName ?? original.Name,
+            NameSpan = original.NameSpan,
             Parameters = parameters.Count > 0 ? parameters.AsReadOnly() : original.Parameters,
             ReturnType = visualNode.NodeLiteralType ?? original.ReturnType,
             Body = this.WalkFlowStatements(visualNode, visualNode.PairedCloserId, diagram),
@@ -860,6 +865,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = visualNode.SymbolIdentifierNodeName ?? original.Name,
+            NameSpan = original.NameSpan,
             Type = visualNode.NodeLiteralType ?? original.Type,
             IsConstant = visualNode.IsIdentifierConstant,
             InitialValue = initialValue,
@@ -908,6 +914,7 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             Name = visualNode.SymbolIdentifierNodeName ?? original.Name,
+            NameSpan = original.NameSpan,
             ElementType = visualNode.ArrayElementLiteralType ?? original.ElementType,
             Size = values.Count > 0 ? null : size,
             IsConstant = visualNode.IsIdentifierConstant,

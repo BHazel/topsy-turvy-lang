@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace BWHazel.TopsyTurvy.Analysis;
 
 /// <summary>
@@ -21,4 +23,16 @@ public class DocumentState
     /// This will be <c>null</c> until the document has been successfully parsed at least once.
     /// </remarks>
     public SymbolTable? SymbolTable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw <c>PRAY ADMIT</c> import path strings declared by the document, exactly as written
+    /// (not resolved to an absolute path). Populated from the last successful parse, alongside <see cref="SymbolTable"/>.
+    /// </summary>
+    public IReadOnlyList<string> ImportPaths { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the namespace path declared by the document, e.g. <c>["Accounts", "Payroll"]</c>, or empty
+    /// if it declares none.  Populated from the last successful parse, alongside <see cref="SymbolTable"/>.
+    /// </summary>
+    public IReadOnlyList<string> NamespacePath { get; set; } = [];
 }

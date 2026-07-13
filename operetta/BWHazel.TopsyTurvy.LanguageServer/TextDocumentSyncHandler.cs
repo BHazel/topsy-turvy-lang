@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -174,7 +175,7 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
             if (result.Success && result.Program is not null)
             {
                 TopsyTurvyTypeChecker typeChecker = new();
-                TypeCheckResult typeCheckResult = typeChecker.Check(result.Program);
+                TypeCheckResult typeCheckResult = typeChecker.Check(result.Program, this.CreateFileResolver(uri));
                 lspDiagnostics.AddRange(typeCheckResult.Diagnostics.Select(
                     (AstDiagnostic diagnostic) => new Diagnostic()
                     {
@@ -197,7 +198,9 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
             {
                 string[] sourceLines = text.Split('\n');
                 foreach (SymbolInfo deprecatedSymbol in documentState.SymbolTable.AllSymbols()
-                    .Where(symbol => symbol.Documentation?.IsDeprecated == true && !symbol.Name.Contains(' ')))
+                    .Where(symbol => symbol.Documentation?.IsDeprecated == true
+                        && !symbol.Name.Contains(' ')
+                        && symbol.Kind != BWHazel.TopsyTurvy.Analysis.SymbolKind.Namespace))
                 {
                     string message = string.IsNullOrWhiteSpace(deprecatedSymbol.Documentation?.DeprecationMessage)
                         ? $"'{deprecatedSymbol.Name}' is deprecated."
@@ -235,5 +238,36 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
                 Message = $"Topsy Turvy LSP error: {ex.Message}"
             });
         }
+    }
+
+    /// <summary>
+    /// Creates a <c>PRAY ADMIT</c> import resolver rooted at the directory of the given document.
+    /// </summary>
+    /// <param name="currentUri">The URI of the document performing the import; import paths are resolved relative to its directory.</param>
+    /// <remarks>
+    /// Resolves the path relative to the directory of <paramref name="currentUri"/>, then checks <see cref="documentStateManager"/>
+    /// first, so an open, unsaved buffer wins, before falling back to the real file system.
+    /// </remarks>
+    /// <returns>A delegate resolving an import path to its source text, or <c>null</c> if it cannot be resolved.</returns>
+    public Func<string, string?> CreateFileResolver(DocumentUri currentUri)
+    {
+        string? currentDirectory = Path.GetDirectoryName(DocumentUri.GetFileSystemPath(currentUri));
+
+        return importPath =>
+        {
+            string resolvedPath = currentDirectory is not null && !Path.IsPathRooted(importPath)
+                ? Path.GetFullPath(Path.Combine(currentDirectory, importPath))
+                : importPath;
+
+            DocumentState? openState = this.documentStateManager.Get(DocumentUri.FromFileSystemPath(resolvedPath));
+            if (openState is not null)
+            {
+                return openState.Source;
+            }
+
+            return File.Exists(resolvedPath)
+                ? File.ReadAllText(resolvedPath)
+                : null;
+        };
     }
 }

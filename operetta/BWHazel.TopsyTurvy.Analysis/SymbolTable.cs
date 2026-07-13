@@ -228,6 +228,9 @@ public class SymbolTable
                 CollectFromStatements(tryCatch.SuccessBlock, collectedSymbols, sourceLines);
                 CollectFromStatements(tryCatch.ExceptionBlock, collectedSymbols, sourceLines);
                 break;
+            case NamespaceDeclarationNode namespaceDeclaration:
+                AddNamespace(namespaceDeclaration, collectedSymbols, sourceLines);
+                break;
         }
     }
 
@@ -254,9 +257,9 @@ public class SymbolTable
             IsConstant = declaration.IsConstant,
             TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
             DeclaredType = declaration.Type,
-            DefinitionLine = declaration.Span.Start.Line,
-            DefinitionColumn = declaration.Span.Start.Column,
-            Documentation = FindDocumentationComment(sourceLines, declaration.Span.Start.Line)
+            DefinitionLine = declaration.NameSpan.Start.Line,
+            DefinitionColumn = declaration.NameSpan.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
         };
     }
 
@@ -284,9 +287,9 @@ public class SymbolTable
             TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
                 ? $"{declaration.Size.Value} "
                 : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
-            DefinitionLine = declaration.Span.Start.Line,
-            DefinitionColumn = declaration.Span.Start.Column,
-            Documentation = FindDocumentationComment(sourceLines, declaration.Span.Start.Line)
+            DefinitionLine = declaration.NameSpan.Start.Line,
+            DefinitionColumn = declaration.NameSpan.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
         };
     }
 
@@ -306,9 +309,9 @@ public class SymbolTable
                 Kind = SymbolKind.Function,
                 DeclaredType = function.ReturnType,
                 TypedParameters = function.Parameters,
-                DefinitionLine = function.Span.Start.Line,
-                DefinitionColumn = function.Span.Start.Column,
-                Documentation = FindDocumentationComment(sourceLines, function.Span.Start.Line)
+                DefinitionLine = function.NameSpan.Start.Line,
+                DefinitionColumn = function.NameSpan.Start.Column,
+                Documentation = FindDocumentationComment(sourceLines, function.NameSpan.Start.Line)
             };
         }
 
@@ -329,6 +332,30 @@ public class SymbolTable
         }
 
         CollectFromStatements(function.Body, collectedSymbols, sourceLines);
+    }
+
+    /// <summary>
+    /// Adds a file namespace declaration to the collected symbol information.
+    /// </summary>
+    /// <param name="namespaceDeclaration">The namespace declaration node.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="sourceLines">The original source lines.</param>
+    private static void AddNamespace(NamespaceDeclarationNode namespaceDeclaration, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    {
+        string name = string.Join('*', namespaceDeclaration.Path);
+        if (collectedSymbols.ContainsKey(name))
+        {
+            return;
+        }
+
+        collectedSymbols[name] = new SymbolInfo()
+        {
+            Name = name,
+            Kind = SymbolKind.Namespace,
+            DefinitionLine = namespaceDeclaration.Span.Start.Line,
+            DefinitionColumn = namespaceDeclaration.Span.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, namespaceDeclaration.Span.Start.Line)
+        };
     }
 
     /// <summary>

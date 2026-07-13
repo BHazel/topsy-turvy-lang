@@ -119,6 +119,32 @@ public static class HoverMarkdownBuilder
     }
 
     /// <summary>
+    /// Builds a Markdown hover string for a namespace path.
+    /// </summary>
+    /// <param name="namespacePath">The namespace path segments.</param>
+    /// <param name="functions">The function symbols declared in the namespace, if any.</param>
+    /// <returns>A Markdown string suitable for display in a hover tooltip.</returns>
+    public static string BuildNamespaceHover(IReadOnlyList<string> namespacePath, IEnumerable<SymbolInfo> functions)
+    {
+        string pathDisplay = string.Join('*', namespacePath);
+        StringBuilder builder = new($"**(namespace)** `{pathDisplay}`");
+
+        List<SymbolInfo> functionList = [.. functions.OrderBy(function => function.Name)];
+        if (functionList.Count > 0)
+        {
+            builder.Append("\n\n---\n\n");
+            builder.AppendLine("**Functions:**");
+            builder.AppendLine();
+            foreach (SymbolInfo function in functionList)
+            {
+                builder.AppendLine($"- `{function.Name}`");
+            }
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    /// <summary>
     /// Builds the signature string for a function symbol, including typed parameters and return type.
     /// </summary>
     /// <param name="symbolInfo">The function symbol.</param>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.LanguageServer;
 using BWHazel.TopsyTurvy.Parser;
@@ -303,6 +304,172 @@ public class DocumentStateManagerTests : LanguageServerTestBase
         IEnumerable<SymbolInfo> result = manager.GetImportedFunctionSymbols(this.testUri);
 
         result.ShouldNotContain(s => s.Name.Equals("greeting", System.StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="DocumentStateManager.Update"/> method records <c>PRAY ADMIT</c> import paths on the document state.
+    /// </summary>
+    [Fact]
+    public void Update_WithImportStatement_RecordsImportPath()
+    {
+        string source = "HARK! \"Test\"\nPRINCIPALS\nTHE CURTAIN RISES.\nPRAY ADMIT \"other.topsy\"\nFINALE.\n";
+        DocumentStateManager manager = new();
+
+        manager.Update(this.testUri, source, this.parser.TryParse(source));
+
+        manager.Get(this.testUri)!.ImportPaths.ShouldContain("other.topsy");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportConnectedDocuments"/> returns an empty collection for an untracked document.
+    /// </summary>
+    [Fact]
+    public void GetImportConnectedDocuments_ForUnknownUri_ReturnsEmpty()
+    {
+        DocumentStateManager manager = new();
+
+        IReadOnlyList<(DocumentUri, DocumentState)> result = manager.GetImportConnectedDocuments(this.testUri);
+
+        result.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportConnectedDocuments"/> includes a document the current document imports via <c>PRAY ADMIT</c>.
+    /// </summary>
+    [Fact]
+    public void GetImportConnectedDocuments_WithCurrentDocumentImportingOther_IncludesOther()
+    {
+        string mainSource = "HARK! \"Test\"\nPRINCIPALS\nTHE CURTAIN RISES.\nPRAY ADMIT \"other.topsy\"\nFINALE.\n";
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, mainSource, this.parser.TryParse(mainSource));
+        manager.Update(this.otherUri, this.functionSource, this.parser.TryParse(this.functionSource));
+
+        IReadOnlyList<(DocumentUri Uri, DocumentState State)> result = manager.GetImportConnectedDocuments(this.testUri);
+
+        result.ShouldContain(entry => entry.Uri.ToString() == this.otherUri.ToString());
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportConnectedDocuments"/> includes a document that imports the
+    /// current document, even though the current document does not import it back.
+    /// </summary>
+    [Fact]
+    public void GetImportConnectedDocuments_WithOtherDocumentImportingCurrent_IncludesOther()
+    {
+        string otherSource = "HARK! \"Other\"\nPRINCIPALS\nTHE CURTAIN RISES.\nPRAY ADMIT \"test.topsy\"\nFINALE.\n";
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, otherSource, this.parser.TryParse(otherSource));
+
+        IReadOnlyList<(DocumentUri Uri, DocumentState State)> result = manager.GetImportConnectedDocuments(this.testUri);
+
+        result.ShouldContain(entry => entry.Uri.ToString() == this.otherUri.ToString());
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetImportConnectedDocuments"/> excludes an open document that has
+    /// no <c>PRAY ADMIT</c> connection to the current document in either direction.
+    /// </summary>
+    [Fact]
+    public void GetImportConnectedDocuments_WithUnrelatedDocument_ExcludesUnrelatedDocument()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+        manager.Update(this.otherUri, this.functionSource, this.parser.TryParse(this.functionSource));
+
+        IReadOnlyList<(DocumentUri Uri, DocumentState State)> result = manager.GetImportConnectedDocuments(this.testUri);
+
+        result.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="DocumentStateManager.Update"/> method records the namespace path declared by the document.
+    /// </summary>
+    [Fact]
+    public void Update_WithNamespaceDeclaration_RecordsNamespacePath()
+    {
+        string source = "HARK! \"Test\"\nTOWN Accounts WITH DISTRICT Payroll\nFINALE.\n";
+        DocumentStateManager manager = new();
+
+        manager.Update(this.testUri, source, this.parser.TryParse(source));
+
+        manager.Get(this.testUri)!.NamespacePath.ShouldBe(["Accounts", "Payroll"]);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="DocumentStateManager.Update"/> method leaves <see cref="DocumentState.NamespacePath"/> empty for a document without a namespace declaration.
+    /// </summary>
+    [Fact]
+    public void Update_WithoutNamespaceDeclaration_LeavesNamespacePathEmpty()
+    {
+        DocumentStateManager manager = new();
+
+        manager.Update(this.testUri, this.source, this.SuccessfulParse(this.source));
+
+        manager.Get(this.testUri)!.NamespacePath.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetKnownNamespacePaths"/> returns every distinct namespace path
+    /// declared across all open documents.
+    /// </summary>
+    [Fact]
+    public void GetKnownNamespacePaths_WithMultipleDocuments_ReturnsAllDistinctPaths()
+    {
+        string firstSource = "HARK! \"First\"\nTOWN Accounts\nFINALE.\n";
+        string secondSource = "HARK! \"Second\"\nTOWN Marketing\nFINALE.\n";
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, firstSource, this.parser.TryParse(firstSource));
+        manager.Update(this.otherUri, secondSource, this.parser.TryParse(secondSource));
+
+        IReadOnlyList<IReadOnlyList<string>> result = manager.GetKnownNamespacePaths();
+
+        result.ShouldContain(path => path.SequenceEqual(new[] { "Accounts" }));
+        result.ShouldContain(path => path.SequenceEqual(new[] { "Marketing" }));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetKnownNamespacePaths"/> excludes documents without a namespace declaration.
+    /// </summary>
+    [Fact]
+    public void GetKnownNamespacePaths_WithDocumentWithoutNamespace_ExcludesIt()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.source);
+
+        IReadOnlyList<IReadOnlyList<string>> result = manager.GetKnownNamespacePaths();
+
+        result.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetFunctionsInNamespace"/> returns only functions declared in a
+    /// document whose own namespace path exactly matches the requested path.
+    /// </summary>
+    [Fact]
+    public void GetFunctionsInNamespace_WithMatchingAndNonMatchingDocuments_ReturnsOnlyMatchingFunctions()
+    {
+        string accountsSource = "HARK! \"Accounts\"\nTOWN Accounts\nPRINCIPALS\nTHE CURTAIN RISES.\nIT IS MY DUTY TO PERFORM CalculateTax UNDER NO OBLIGATION\n  BEHOLD \"tax\"\nMY DUTY IS DISCHARGED.\nFINALE.\n";
+        string marketingSource = "HARK! \"Marketing\"\nTOWN Marketing\nPRINCIPALS\nTHE CURTAIN RISES.\nIT IS MY DUTY TO PERFORM SendCampaign UNDER NO OBLIGATION\n  BEHOLD \"sent\"\nMY DUTY IS DISCHARGED.\nFINALE.\n";
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, accountsSource, this.parser.TryParse(accountsSource));
+        manager.Update(this.otherUri, marketingSource, this.parser.TryParse(marketingSource));
+
+        IEnumerable<SymbolInfo> result = manager.GetFunctionsInNamespace(["Accounts"]);
+
+        result.ShouldContain(symbol => symbol.Name == "CalculateTax");
+        result.ShouldNotContain(symbol => symbol.Name == "SendCampaign");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DocumentStateManager.GetFunctionsInNamespace"/> returns an empty sequence for a
+    /// namespace path that no open document declares.
+    /// </summary>
+    [Fact]
+    public void GetFunctionsInNamespace_WithUnknownNamespace_ReturnsEmpty()
+    {
+        DocumentStateManager manager = this.CreateManagerWithSource(this.functionSource);
+
+        IEnumerable<SymbolInfo> result = manager.GetFunctionsInNamespace(["DoesNotExist"]);
+
+        result.ShouldBeEmpty();
     }
 
     /// <summary>

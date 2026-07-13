@@ -577,6 +577,13 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// The <c>FunctionDefinition</c> parser captures one pair of offsets per parameter, immediately before and
 /// after each <c>Lexer.Identifier</c> consume in the parameter list, to populate the
 /// <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter.Span"/> of each <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter"/>.
+///
+/// <c>FunctionDefinition</c>, <c>Declaration</c> and <c>ArrayDeclaration</c> each also capture a narrower
+/// <see cref="FunctionDefinitionNode.NameSpan"/>/<see cref="DeclarationNode.NameSpan"/>/<see cref="ArrayDeclarationNode.NameSpan"/>
+/// around just the name identifier, separate from <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/>, which still covers
+/// the whole statement, opening keyword to close.  Consumers needing the position of the name itself, such as
+/// <c>SymbolTable</c> and every LSP feature built on it, must use <c>NameSpan</c>: <c>Span.Start</c> points at
+/// the opening keyword instead.
 /// </para>
 /// <para>
 /// ### Committed Parse Semantics
@@ -657,7 +664,9 @@ public static class StatementParser
     public static readonly TextParser<Statement> ArrayDeclaration =
         (from startOffset in CurrentOffset
          from _ in Lexer.Keyword("PRAY WELCOME")
-         from variableName in Ws(Lexer.Identifier)
+         from nameStartOffset in Ws(CurrentOffset)
+         from variableName in Lexer.Identifier
+         from nameEndOffset in CurrentOffset
          from asAKeyword in Ws(Lexer.Keyword("AS A"))
          from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
              .Try()
@@ -674,6 +683,7 @@ public static class StatementParser
          select (Statement)new ArrayDeclarationNode()
          {
              Name = variableName,
+             NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
              ElementType = elementType,
              Size = sizeValue,
              IsConstant = mutabilityModifier == "CONSERVATIVE",
@@ -714,7 +724,9 @@ public static class StatementParser
     public static readonly TextParser<Statement> Declaration =
         from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRAY WELCOME")
-        from variableName in Ws(Lexer.Identifier)
+        from nameStartOffset in Ws(CurrentOffset)
+        from variableName in Lexer.Identifier
+        from nameEndOffset in CurrentOffset
         from asAKeyword in Ws(Lexer.Keyword("AS A"))
         from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
             .Try()
@@ -730,6 +742,7 @@ public static class StatementParser
         select (Statement)new DeclarationNode()
         {
             Name = variableName,
+            NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
             Type = variableType,
             IsConstant = mutabilityModifier == "CONSERVATIVE",
             InitialValue = initialValue,
@@ -1086,7 +1099,9 @@ public static class StatementParser
     public static readonly TextParser<Statement> FunctionDefinition =
         from startOffset in CurrentOffset
         from _ in Lexer.Keyword("IT IS MY DUTY TO PERFORM")
-        from functionName in Ws(Lexer.Identifier)
+        from nameStartOffset in Ws(CurrentOffset)
+        from functionName in Lexer.Identifier
+        from nameEndOffset in CurrentOffset
         from parameters in ParameterList
         from returnType in Ws(Lexer.Keyword("TO FIND").IgnoreThen(Ws(ExpressionParser.TypeKeyword)))
             .Select(type => (LiteralType?)type)
@@ -1099,6 +1114,7 @@ public static class StatementParser
         select (Statement)new FunctionDefinitionNode()
         {
             Name = functionName,
+            NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
             Parameters = [.. parameters],
             ReturnType = returnType,
             Body = [.. body],

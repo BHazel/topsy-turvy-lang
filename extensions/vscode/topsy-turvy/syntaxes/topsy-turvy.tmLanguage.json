@@ -267,6 +267,13 @@
           "match": "(?i)\\bAND\\s+SO\\s+I\\s+FIND\\b"
         },
         {
+          "match": "(?i)(\\bSUMMON\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)(?=\\s+WITH\\s+DISTRICT\\b|\\s+WITH\\s+DUTY\\b|\\*)",
+          "captures": {
+            "1": { "name": "keyword.other.function.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
           "name": "keyword.other.function.topsy",
           "match": "(?i)\\bSUMMON\\b"
         },
@@ -307,6 +314,27 @@
     "namespace": {
       "patterns": [
         {
+          "match": "(?i)(\\bTOWN\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
+          "match": "(?i)(\\bWITH\\s+DISTRICT\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
+          "match": "(?i)(\\bPRAY\\s+RECOGNISE\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
           "name": "keyword.control.namespace.topsy",
           "match": "(?i)\\bTOWN\\b"
         },
@@ -317,6 +345,12 @@
         {
           "name": "keyword.control.namespace.topsy",
           "match": "(?i)\\bPRAY\\s+RECOGNISE\\b"
+        },
+        {
+          "match": "\\*([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "entity.name.namespace.topsy" }
+          }
         }
       ]
     },

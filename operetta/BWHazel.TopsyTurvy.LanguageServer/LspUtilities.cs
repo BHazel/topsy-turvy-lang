@@ -75,6 +75,7 @@ internal static class LspUtilities
     {
         TopsyTurvySymbolKind.Function => LspSymbolKind.Function,
         TopsyTurvySymbolKind.Parameter => LspSymbolKind.TypeParameter,
+        TopsyTurvySymbolKind.Namespace => LspSymbolKind.Namespace,
         _ => LspSymbolKind.Variable
     };
 }

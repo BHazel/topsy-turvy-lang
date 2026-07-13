@@ -134,6 +134,67 @@ public class HoverHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="HoverHandler.Handle"/> method returns a namespace hover card when hovering over a
+    /// namespace segment declared in the document, listing the functions it declares.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithCursorOnNamespaceSegment_ReturnsNamespaceHoverListingFunctions()
+    {
+        string source = """
+            HARK! "Accounts"
+            TOWN Accounts
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM CalculateTax UNDER NO OBLIGATION
+              BEHOLD "tax"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(this.MakeRequest(line: 1, character: 6), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        result.Contents.MarkupContent!.Value.ShouldContain("namespace");
+        result.Contents.MarkupContent!.Value.ShouldContain("Accounts");
+        result.Contents.MarkupContent!.Value.ShouldContain("CalculateTax");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="HoverHandler.Handle"/> method returns a namespace hover card when hovering over a
+    /// namespace segment that is declared only in another open document, not the current one.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithCursorOnNamespaceSegmentDeclaredInOtherDocument_ReturnsNamespaceHover()
+    {
+        DocumentUri otherUri = DocumentUri.From("file:///other.topsy");
+        string otherSource = """
+            HARK! "Accounts"
+            TOWN Accounts
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM CalculateTax UNDER NO OBLIGATION
+              BEHOLD "tax"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+        string mainSource = "HARK! \"Main\"\nSUMMON Accounts WITH DUTY CalculateTax WITH NOTHING IF YOU PLEASE.\nFINALE.\n";
+
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, mainSource, this.parser.TryParse(mainSource));
+        manager.Update(otherUri, otherSource, this.parser.TryParse(otherSource));
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(this.MakeRequest(line: 1, character: 8), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        result.Contents.MarkupContent!.Value.ShouldContain("Accounts");
+    }
+
+    /// <summary>
     /// Create a <see cref="HoverParams"/> request for the test document at a specific position.
     /// </summary>
     /// <param name="line">The line number of the position.</param>

@@ -112,7 +112,9 @@ public class SemanticTokensHandler(DocumentStateManager documentStateManager)
 
             foreach (SymbolInfo symbol in allSymbols)
             {
-                if (symbol.Name.Contains(' '))
+                // Namespace symbols use a synthesised "*"-joined name that does not appear verbatim in source for
+                // long-form usages, and the TextMate grammar already highlights namespace segments directly.
+                if (symbol.Name.Contains(' ') || symbol.Kind == TopsyTurvySymbolKind.Namespace)
                 {
                     continue;
                 }

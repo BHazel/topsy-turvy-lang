@@ -85,6 +85,7 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             Size = 5,
             InitialValues = [],
@@ -105,6 +106,7 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             InitialValues = [IntegerLiteral(1), IntegerLiteral(2)],
             Span = PlaceholderSpan,
@@ -126,6 +128,7 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             IsConstant = true,
             InitialValues = [],
@@ -146,6 +149,7 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
         DeclarationNode first = new()
         {
             Name = "a",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             Span = PlaceholderSpan
         };
@@ -153,6 +157,7 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
         DeclarationNode second = new()
         {
             Name = "b",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             Span = PlaceholderSpan
         };
