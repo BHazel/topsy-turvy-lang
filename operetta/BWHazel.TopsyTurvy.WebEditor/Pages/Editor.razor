@@ -602,8 +602,11 @@
         IEnumerable<object> typeMarkers = [];
         if (result.Success && result.Program is not null)
         {
+            Dictionary<string, string> currentFileContents = this.files.ToDictionary(file => file.Name, file => file.Content);
+            Func<string, string?> sourceFileResolver = name => currentFileContents.GetValueOrDefault(name);
+
             TopsyTurvyTypeChecker typeChecker = new();
-            TypeCheckResult typeCheckResult = typeChecker.Check(result.Program);
+            TypeCheckResult typeCheckResult = typeChecker.Check(result.Program, sourceFileResolver);
             typeMarkers = typeCheckResult.Diagnostics.Select(diagnostic => (object)new
             {
                 startLineNumber = diagnostic.Span.Start.Line,
@@ -637,7 +640,9 @@
 
         if (this.ActiveSymbolTable?.TryGetSymbol(word, out SymbolInfo? info) == true && info is not null)
         {
-            return HoverMarkdownBuilder.Build(info);
+            return info.Kind == SymbolKind.Namespace
+                ? this.BuildNamespaceHoverMarkdown(info)
+                : HoverMarkdownBuilder.Build(info);
         }
 
         foreach ((string fileName, SymbolTable otherTable) in this.symbolTables)
@@ -649,11 +654,111 @@
 
             if (otherTable.TryGetSymbol(word, out SymbolInfo? otherInfo) && otherInfo is not null)
             {
-                return HoverMarkdownBuilder.Build(otherInfo);
+                return otherInfo.Kind == SymbolKind.Namespace ? this.BuildNamespaceHoverMarkdown(otherInfo) : HoverMarkdownBuilder.Build(otherInfo);
+            }
+        }
+
+        return this.TryBuildNamespaceSegmentHoverMarkdown(word);
+    }
+
+    /// <summary>
+    /// Builds namespace hover Markdown for a symbol that is itself a namespace declaration.
+    /// </summary>
+    /// <param name="symbolInfo">The namespace symbol; <see cref="SymbolInfo.Name"/> is the <c>*</c>-joined namespace path.</param>
+    /// <remarks>
+    /// Reached when the word under the cursor exactly matches the whole name of a single-segment namespace, e.g.
+    /// <c>Accounts</c> in <c>TOWN Accounts</c>.  Individual segments of a multi-segment namespace go via
+    /// <see cref="TryBuildNamespaceSegmentHoverMarkdown"/> instead.
+    /// </remarks>
+    /// <returns>Markdown for the namespace, listing its declared functions.</returns>
+    private string BuildNamespaceHoverMarkdown(SymbolInfo symbolInfo)
+    {
+        string[] namespacePath = symbolInfo.Name.Split('*');
+        return HoverMarkdownBuilder.BuildNamespaceHover(namespacePath, this.GetFunctionsInNamespace(namespacePath));
+    }
+
+    /// <summary>
+    /// Builds namespace hover Markdown for a word matching a namespace path segment rather than a whole symbol.
+    /// </summary>
+    /// <param name="word">The word under the cursor.</param>
+    /// <remarks>
+    /// A namespace segment has no <see cref="SymbolInfo"/> of its own, so this is the fallback once ordinary symbol
+    /// lookup fails.
+    /// </remarks>
+    /// <returns>Markdown for the first matching namespace, or <c>null</c> if none match.</returns>
+    private string? TryBuildNamespaceSegmentHoverMarkdown(string word)
+    {
+        foreach (SymbolTable table in this.symbolTables.Values)
+        {
+            foreach (SymbolInfo symbol in table.AllSymbols())
+            {
+                if (symbol.Kind != SymbolKind.Namespace)
+                {
+                    continue;
+                }
+
+                string[] namespacePath = symbol.Name.Split('*');
+                if (namespacePath.Any(segment => string.Equals(segment, word, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return HoverMarkdownBuilder.BuildNamespaceHover(namespacePath, this.GetFunctionsInNamespace(namespacePath));
+                }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Returns the function symbols declared in every file whose own namespace path exactly matches
+    /// <paramref name="namespacePath"/> (segment-by-segment, case-insensitive).
+    /// </summary>
+    /// <param name="namespacePath">The namespace path to match against.</param>
+    /// <returns>The matching function symbols.</returns>
+    private IEnumerable<SymbolInfo> GetFunctionsInNamespace(IReadOnlyList<string> namespacePath)
+    {
+        foreach (SymbolTable table in this.symbolTables.Values)
+        {
+            bool declaresNamespace = table.AllSymbols().Any(symbol =>
+                symbol.Kind == SymbolKind.Namespace &&
+                NamespacePathsEqual(symbol.Name.Split('*'), namespacePath));
+
+            if (!declaresNamespace)
+            {
+                continue;
+            }
+
+            foreach (SymbolInfo symbol in table.AllSymbols())
+            {
+                if (symbol.Kind == SymbolKind.Function)
+                {
+                    yield return symbol;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Compares two namespace paths segment-by-segment, case-insensitively.
+    /// </summary>
+    /// <param name="first">The first namespace path.</param>
+    /// <param name="second">The second namespace path.</param>
+    /// <returns><c>true</c> if both paths have the same number of segments and each segment matches case-insensitively, otherwise <c>false</c>.</returns>
+    private static bool NamespacePathsEqual(IReadOnlyList<string> first, IReadOnlyList<string> second)
+    {
+        if (first.Count != second.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < first.Count; i++)
+        {
+            if (!string.Equals(first[i], second[i], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -833,8 +938,10 @@
             return;
         }
 
+        Func<string, string?> fileResolver = name => currentFileContents.GetValueOrDefault(name);
+
         TopsyTurvyTypeChecker typeChecker = new();
-        TypeCheckResult typeCheckResult = typeChecker.Check(parseResult.Program!);
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseResult.Program!, fileResolver);
         if (!typeCheckResult.Success)
         {
             foreach (Diagnostic diagnostic in typeCheckResult.Diagnostics
@@ -850,7 +957,6 @@
 
         using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
         Interpreter interpreter = new(io);
-        Func<string, string?> fileResolver = name => currentFileContents.GetValueOrDefault(name);
         DiagnosticCollection runtimeDiagnostics = interpreter.Execute(
             parseResult.Program!,
             cancellationTokenSource.Token,
