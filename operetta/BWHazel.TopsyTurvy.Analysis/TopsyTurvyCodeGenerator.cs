@@ -481,11 +481,21 @@ public sealed class TopsyTurvyCodeGenerator
                 break;
             case Operator.HardlyEver:
             case Operator.InversionOf:
+                generatedCodeBuilder.Append(this.OperatorKeyword(prefix.Operator));
+                generatedCodeBuilder.Append(' ');
+                this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                break;
             case Operator.TranspositionUp:
             case Operator.TranspositionDown:
                 generatedCodeBuilder.Append(this.OperatorKeyword(prefix.Operator));
                 generatedCodeBuilder.Append(' ');
                 this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                if (prefix.Arguments.Count > 1)
+                {
+                    generatedCodeBuilder.Append(" BY ");
+                    this.WriteExpression(prefix.Arguments[1], generatedCodeBuilder);
+                }
+
                 break;
             case Operator.Either:
                 generatedCodeBuilder.Append("EITHER ");

@@ -1,11 +1,11 @@
 ---
-name: implement-language-feature
+name: implement-topsy-turvy-language-feature
 description: >
   Guides the complete, full-stack implementation or modification of a Topsy
   Turvy language feature — from grammar through parser, runtime, LSP,
   Monaco/TextMate syntax highlighting, REPL highlighting, and tests. Use this
   skill whenever a keyword, operator, or construct is being added, changed, or
-  removed in SPEC.md and needs to be propagated throughout the codebase. Invoke
+  removed in specifications/TopsyTurvy.md and needs to be propagated throughout the codebase. Invoke
   it when asked to "add a feature to Topsy Turvy", "implement
   [keyword/construct] in the language", "extend the language with X", "change
   the syntax/behaviour of [keyword]", "remove [keyword] from the language",
@@ -13,7 +13,8 @@ description: >
   skill knows the full layer order and all project constraints — always use it
   rather than attempting a language change freehand, because the change touches
   at least seven files across four projects and several invariants must hold
-  simultaneously.
+  simultaneously. For UtopIR instructions instead of Topsy Turvy language
+  syntax, use `implement-utopir-feature`.
 ---
 
 # Topsy Turvy: Implement or Modify Language Feature
@@ -44,18 +45,18 @@ short but every constraint in them is load-bearing.
 |---|---|
 | `AGENTS.md` | Grammar invariants I1–I10, retired keyword list, coding standards, test conventions. Violations here break the language's design contract. |
 | `DEVELOPMENT.md` | Current baseline test counts, file inventory, non-obvious constraints (§2). Read §2 carefully — it contains traps that are easy to fall into. |
-| `SPEC.md` | The authoritative language specification. ~800 lines. This is what you are implementing. |
-| `GRAMMAR.ebnf` | The formal grammar (~135 lines). After you implement the feature, it must match SPEC.md. |
+| `specifications/TopsyTurvy.md` | The authoritative language specification. ~800 lines. This is what you are implementing. |
+| `specifications/TopsyTurvy.ebnf` | The formal grammar (~135 lines). After you implement the feature, it must match `specifications/TopsyTurvy.md`. |
 
 ---
 
 ## Step 2: Identify the delta and confirm scope
 
-Before writing a single line of code, compare SPEC.md against the current
+Before writing a single line of code, compare `specifications/TopsyTurvy.md` against the current
 implementation and produce a brief delta summary:
 
 * Which new keywords or token sequences does the feature introduce?
-* Which existing production rules in GRAMMAR.ebnf need extending?
+* Which existing production rules in `specifications/TopsyTurvy.ebnf` need extending?
 * Which layers are definitely affected (parser, runtime, analysis, LSP, grammar files)?
 * Does the feature introduce new block structure (open/close keywords)? If so, the LSP formatter, folder and indentation rules all need updating.
 * Does it violate any invariant from AGENTS.md §Grammar Invariants? If so, stop and discuss with the user before proceeding.
@@ -71,7 +72,7 @@ on the one above it, so do not skip ahead.
 
 **XML documentation comments are required on every new or modified public type and member throughout all steps below.** `<summary>` must be a single sentence; use `<remarks>` for multi-sentence elaboration or non-obvious constraints. This applies to AST node types, parser fields, runtime methods, analysis types, and LSP handlers alike. Do not defer XML docs to the end: write them as you add each type or member.
 
-### 3a. `GRAMMAR.ebnf`
+### 3a. `specifications/TopsyTurvy.ebnf`
 
 Add or update the production rules. Keep the style consistent with what is
 already there. After editing, read it back and check that every new token
@@ -162,7 +163,23 @@ cd extensions/vscode/topsy-turvy && npm run test:grammar
 All four snapshot files must pass. If a snapshot changes legitimately, update
 it with `vscode-tmgrammar-test --updateSnapshot`.
 
-### 3i. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
+### 3i. Apple app keyword list: `apps/apple/TopsyTurvy/Theatre/Editor/TopsyTurvyKeywords.swift`
+
+This is a fourth hand-maintained keyword mirror, alongside `KeywordData.Keywords` (3b), the Monaco tokenizer's
+`keywords` array (3g), and the TextMate grammar (3h) — easy to forget since it lives in a different project
+entirely (the Apple app, not `operetta/`). `TopsyTurvyKeywords.all` is a `[(keyword: String, detail: String)]`
+array in the same shape and order as `KeywordData.Keywords`; add new keyword/description pairs there to match.
+
+Unlike the Monaco/TextMate mirrors, this one only drives the editor's own syntax highlighting (`CodeEditorView`'s
+`reservedIdentifiers`, derived from `TopsyTurvyKeywords.reservedWords`) — it has no bearing on completions, which
+the Apple app gets by calling the native `topsyturvy_complete` export directly (so completions never drift here,
+only highlighting can).
+
+There are no automated tests for this file. After editing, build the `Theatre` scheme
+(`xcodebuild build -scheme Theatre -destination 'platform=iOS Simulator,name=iPhone 17'`) and, if you have a
+simulator/device available, open a `.topsy` file containing the new keyword to confirm it highlights correctly.
+
+### 3j. Visual graph builder: `WebEditor/Visual/VisualGraphBuilder.cs`
 
 If the feature adds a new AST statement or expression node, or renames an existing node's keyword, update `VisualGraphBuilder` to reflect it. The file is ~1100 lines but its structure is straightforward: a `BuildStatement` dispatch switch and a `CreateExpressionNode` compound section.
 
@@ -212,7 +229,7 @@ If the feature adds a new AST statement or expression node, or renames an existi
 | `FunctionCallNode` (SUMMON) | `SUMMON` | `Operator` |
 | branch-entry headers | `QUITE SO.` / `OR, IF NOT,` / `OTHERWISE,` / `WHEN ACTING AS {val}` / `FAILING ALL OF THE ABOVE,` / `MODIFIED RAPTURE,` / `OTHERWISE,` (guard) | matches parent kind |
 
-### 3j. Visual editor supporting files
+### 3k. Visual editor supporting files
 
 Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGraphBuilder` whenever a node type or keyword changes:
 
@@ -230,7 +247,7 @@ Four additional files in `WebEditor/Visual/` must be kept in sync with `VisualGr
 
 **`VisualTypeMaps.cs`** — If the feature adds or renames a `LiteralType` enum value, add or update the corresponding entry in `VisualTypeMaps.TypeToKeyword` using the `Keywords.TypeNames.*` constant (never a raw string literal).
 
-### 3k. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
+### 3l. Code generator and tests: `Analysis/TopsyTurvyCodeGenerator.cs` and `Tests/Analysis/TopsyTurvyCodeGeneratorTests.cs`
 
 If the feature adds, removes, or renames a statement or expression construct, update the code generator and add corresponding round-trip tests.
 
@@ -249,7 +266,7 @@ If the feature adds, removes, or renames a statement or expression construct, up
 - Avoid reserved identifier names: `i`, `a`, and `b` are reserved by the language and must not be used as variable or parameter names in test source.
 - Check `DEVELOPMENT.md` for the current baseline test count and confirm the new tests push it up.
 
-### 3l. REPL highlighter: `Repl/ReplHighlighter.cs`
+### 3m. REPL highlighter: `Repl/ReplHighlighter.cs`
 
 Add the new keyword(s) to the keyword table inside the `ReplHighlighter` static
 constructor. Place each entry in the appropriate colour category (programme
@@ -332,4 +349,4 @@ Review the `<summary>` and `<remarks>` blocks on every public type or member tha
 
 Update a concepts page only if the feature materially changes what a toolchain component does at a high level, for example, if the parser now handles a new category of construct, or the runtime introduces a new execution mechanism.
 
-Do **not** add language-spec detail to a concepts page. Keyword syntax, example programs, operator rules, type cast behaviour — anything that describes what the language does rather than how the component works — belongs in `SPEC.md` only, not in a concepts page.
+Do **not** add language-spec detail to a concepts page. Keyword syntax, example programs, operator rules, type cast behaviour — anything that describes what the language does rather than how the component works — belongs in `specifications/TopsyTurvy.md` only, not in a concepts page.

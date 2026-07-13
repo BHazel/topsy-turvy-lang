@@ -1,6 +1,6 @@
 # UtopIR
 ## An Intermediary Representation for Topsy Turvy
-### Language Specification: Version 0.0.1-preview1
+### Language Specification: Version 0.0.1-preview2
 
 ---
 
@@ -47,7 +47,7 @@ Variables all start with the `£` character, followed by the variable name which
 
 ### 3.2.2. Temporary Variables
 
-Temporart variables are intended for use in larger statements and experssions comprised of other expressions, for example, multiple arithmetic operations.  While they can be named any valid identifier, a naming convention of starting these variables with `£_` visually distinguishes them from user-declared variables.
+Temporary variables are intended for use in larger statements and expressions comprised of other expressions, for example, multiple arithmetic operations.  While they can be named any valid identifier, a naming convention of starting these variables with `£_` visually distinguishes them from user-declared variables.
 
 As an example, the arithmetic expression `3 + 4 - 5` in Topsy Turvy would be:
 
@@ -111,7 +111,7 @@ the following UtopIR is equivalent:
 
 #### 4.1.2 `appoint` Instruction
 
-The `appoint` instruction assigns a spceified `value` to a variable and assigns it to a declared virtual register.  Assigning a value of a type that is incompatible with the variable declaration is a compilation error.
+The `appoint` instruction assigns a specified `value` to a variable and assigns it to a declared virtual register.  Assigning a value of a type that is incompatible with the variable declaration is a compilation error.
 
 **Operands**
 
@@ -170,26 +170,33 @@ the following UtopIR is equivalent:
 
 ### 4.2. Arithmetic Operations
 
-The following instructions provide basic arithmetic operations.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+This section describes arithmetic operations on supported types.  They are split into two groups:
+
+* Integer Arithmetic, supporting all integer types.
+* Floating-Point Arithmetic, supporting all floating-point types; these have the same names as the integer instructions but appended with the `.f` suffix.
+
+#### 4.2.1 Integer Arithmetic
+
+The following instructions provide basic arithmetic operations for integers.  Operands must be of the same type in the same instruction; using two types that are incompatible is a compilation error.
 
 |Instruction|Description|Mechanism|Example|
 |-|-|-|-|
-|`sum <op1>, <op2>`|Addition|Virtual Register|`£Lords = sum 10, 20`|
-|`diff <op1>, <op2>`|Subtraction|Virtual Register|`£Lords = diff 10, 5`|
-|`prod <op1>, <op2>`|Multiplication|Virtual Register|`£Lords = prod 10, 2`|
-|`quot <op1>, <op2>`|Division|Virtual Register|`£Lords = quot 10, 5`|
-|`rem <op1>, <op2>`|Remainder|Virtual Register|`£Lords = rem 10, 5`|
-|`max <op1>, <op2>`|Maximum Operand|Virtual Register|`£Biggest = max 10, 5`|
-|`min <op1>, <op2>`|Minimum Operand|Virtual Register|`£Smallest = min 10, 5`|
+|`sum <op1>, <op2>`|Integer Addition|Virtual Register|`£Lords = sum 10, 20`|
+|`diff <op1>, <op2>`|Integer Subtraction|Virtual Register|`£Lords = diff 10, 5`|
+|`prod <op1>, <op2>`|Integer Multiplication|Virtual Register|`£Lords = prod 10, 2`|
+|`quot <op1>, <op2>`|Integer Division|Virtual Register|`£Lords = quot 10, 5`|
+|`rem <op1>, <op2>`|Integer Remainder|Virtual Register|`£Lords = rem 10, 5`|
+|`max <op1>, <op2>`|Integer Maximum Operand|Virtual Register|`£Biggest = max 10, 5`|
+|`min <op1>, <op2>`|Integer Minimum Operand|Virtual Register|`£Smallest = min 10, 5`|
 
-#### 4.2.1. `sum` Instruction
+##### 4.2.1.1. `sum` Instruction
 
-The `sum` instruction adds two numeric values together (`<op1> + <op2>`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `sum` instruction adds two integer values together (`<op1> + <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -211,14 +218,14 @@ the following UtopIR is equivalent:
 £Lords = sum 10, 20
 ```
 
-#### 4.2.2. `diff` Instruction
+##### 4.2.1.2. `diff` Instruction
 
-The `diff` instruction subtracts one operand from another (`<op1> - <op2>`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `diff` instruction subtracts one integer from another (`<op1> - <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -240,14 +247,14 @@ the following UtopIR is equivalent:
 £Lords = diff 20, 10
 ```
 
-#### 4.2.3. `prod` Instruction
+##### 4.2.1.3. `prod` Instruction
 
-The `prod` instruction multiples two operands together (`<op1> * <op2>`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `prod` instruction multiples two integers together (`<op1> * <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -269,14 +276,14 @@ the following UtopIR is equivalent:
 £BanquetDrinks = prod 10, 20
 ```
 
-#### 4.2.4. `quot` Instruction
+##### 4.2.1.4. `quot` Instruction
 
-The `quot` instruction divides one operand by another (`<op1> / <op2>`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `quot` instruction divides one integer by another (`<op1> / <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -298,14 +305,14 @@ the following UtopIR is equivalent:
 £BanquetDrinksPerPerson = quot 20, 10
 ```
 
-#### 4.2.5. `rem` Instruction
+##### 4.2.1.5. `rem` Instruction
 
-The `rem` instruction finds the remainder, or modulo, of one operand from another (`<op1> % <op2>`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `rem` instruction finds the remainder, or modulo, of one integer from another (`<op1> % <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -327,14 +334,14 @@ the following UtopIR is equivalent:
 £SpareBanquetDrinks = rem 20, 10
 ```
 
-#### 4.2.5. `max` Instruction
+##### 4.2.1.6. `max` Instruction
 
-The `max` instruction returns the maximum of the two operands (`max(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `max` instruction returns the maximum of the two integer operands (`max(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -356,14 +363,14 @@ the following UtopIR is equivalent:
 £FairiesOrLords = max 10, 20
 ```
 
-#### 4.2.6. `min` Instruction
+##### 4.2.1.7. `min` Instruction
 
-The `min` instruction returns the minimum of the two operands (`min(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same numeric type in the same instruction; using two types that are incompatible is a compilation error.
+The `min` instruction returns the minimum of the two integer operands (`min(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two different types is a compilation error.
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
 
 **Format**
 
@@ -385,16 +392,423 @@ the following UtopIR is equivalent:
 £FairiesOrLords = min 10, 20
 ```
 
-### 4.3 Stack Operations
+#### 4.2.2. Floating-Point Arithmetic
+
+The following instructions provide basic arithmetic operations for floating-point numbers.  Operands must be of the same type in the same instruction; using two different types is a compilation error.
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`sum.f <op1>, <op2>`|Floating-Point Addition|Virtual Register|`£Lords = sum.f 1.5, 2.5`|
+|`diff.f <op1>, <op2>`|Floating-Point Subtraction|Virtual Register|`£Lords = diff.f 10.0, 2.5`|
+|`prod.f <op1>, <op2>`|Floating-Point Multiplication|Virtual Register|`£Lords = prod.f 1.25, 3.5`|
+|`quot.f <op1>, <op2>`|Floating-Point Division|Virtual Register|`£Lords = quot.f 15.0, 7.0`|
+|`rem.f <op1>, <op2>`|Floating-Point Remainder|Virtual Register|`£Lords = rem.f 10.0, 5.0`|
+|`max.f <op1>, <op2>`|Floating-Point Maximum Operand|Virtual Register|`£Biggest = max.f 10.5, 5.25`|
+|`min.f <op1>, <op2>`|Floating-Point Minimum Operand|Virtual Register|`£Smallest = min.f 10.5, 5.25`|
+
+##### 4.2.2.1. `sum.f` Instruction
+
+The `sum.f` instruction adds two floating-point operands together (`<op1> + <op2>`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = sum.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = SUM OF 1.5 AND 2.5
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = sum.f 1.5, 2.5
+```
+
+##### 4.2.2.2. `diff.f` Instruction
+
+The `diff.f` instruction subtracts one floating-point operand from another (`<op1> - <op2>`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = diff.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = DIFFERENCE OF 10.0 AND 2.5
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = diff.f 10.0, 2.5
+```
+
+##### 4.2.2.3. `prod.f` Instruction
+
+The `prod.f` instruction multiples two floating-point operands together (`<op1> * <op2>`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first numeric operand, either literal or variable.
+* **`<op2>`:** The second numeric operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = prod.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+BanquetDrinks = PRODUCT OF 1.25 AND 3.5
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£BanquetDrinks = prod.f 1.25, 3.5
+```
+
+##### 4.2.2.4. `quot.f` Instruction
+
+The `quot.f` instruction divides one floating-point operand by another (`<op1> / <op2>`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = quot.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+BanquetDrinksPerPerson = QUOTIENT OF 15.0 AND 7.0
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£BanquetDrinksPerPerson = quot.f 15.0, 7.0
+```
+
+##### 4.2.2.5. `rem.f` Instruction
+
+The `rem.f` instruction finds the remainder, or modulo, of one floating-point operand from another (`<op1> % <op2>`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = rem.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+SpareBanquetDrinks = REMAINDER OF 10.0 AND 5.0
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£SpareBanquetDrinks = rem.f 10.0, 5.0
+```
+
+##### 4.2.2.6. `max.f` Instruction
+
+The `max.f` instruction returns the maximum of the two floating-point operands (`max(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = max.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+FairiesOrLords = LARGER OF 10.5 AND 5.25
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£FairiesOrLords = max.f 10.5, 5.25
+```
+
+##### 4.2.2.7. `min.f` Instruction
+
+The `min.f` instruction returns the minimum of the two floating-point operands (`min(<op1>, <op2>)`) and assigns the result to a variable.  Operands must be of the same floating-point type in the same instruction; using two different types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = min.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+FairiesOrLords = SMALLER OF 10.5 AND 5.25
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£FairiesOrLords = min.f 10.5, 5.25
+```
+
+### 4.3. Bitwise Operations
+
+The following instructions provide bitwise operations for integers.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`chord <op1>, <op2>`|Bitwise AND|Virtual Register|`£Result = chord 10, 20`|
+|`harmony <op1>, <op2>`|Bitwise OR|Virtual Register|`£Result = harmony 10, 20`|
+|`discord <op1>, <op2>`|Bitwise XOR|Virtual Register|`£Result = discord 10, 20`|
+|`inv <op1>`|Bitwise NOT|Virtual Register|`£Result = inv 10`|
+|`transup <op1>, <op2>`|Left Shift by `<op2>`|Virtual Register|`£Result = transup 10, 1`|
+|`transdown <op1>, <op2>`|Right Shift by `<op2>`|Virtual Register|`£Result = transdown 10, 1`|
+
+#### 4.3.1. `chord` Instruction
+
+The `chord` instruction calculates the bitwise AND of two values (`<op1> & <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = chord <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = CHORD OF 10 AND 20
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = chord 10, 20
+```
+
+#### 4.3.2. `harmony` Instruction
+
+The `harmony` instruction calculates the bitwise OR of two values (`<op1> | <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = harmony <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = HARMONY OF 10 AND 20
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = harmony 10, 20
+```
+
+#### 4.3.3. `discord` Instruction
+
+The `discord` instruction calculates the bitwise XOR of two values (`<op1> ^ <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = discord <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = DISCORD OF 10 AND 20
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = discord 10, 20
+```
+
+#### 4.3.4. `inv` Instruction
+
+The `inv` instruction calculates the bitwise NOT of a value (`~<op1>`) and assigns the result to a variable.  The operand must be of an integer type; using a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = inv <op1>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = INVERSION OF 10
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = inv 10
+```
+
+#### 4.3.5. `transup` Instruction
+
+The `transup` instruction performs a left shift on a value by a specified amount (`<op1> << <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = transup <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = TRANSPOSITION UP 10 BY 2
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = transup 10, 2
+```
+
+Setting the shift size in Topsy Turvy is optional and, if not explicitly set, defaults to 1.
+
+#### 4.3.6. `transdown` Instruction
+
+The `transdown` instruction performs a right shift on a value by a specified amount (`<op1> >> <op2>`) and assigns the result to a variable.  Operands must be of the same integer type in the same instruction; using two types that are incompatible or a non-integer type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = transdown <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Lords = TRANSPOSITION DOWN 10 BY 2
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Lords = transdown 10, 2
+```
+
+Setting the shift size in Topsy Turvy is optional and, if not explicitly set, defaults to 1.
+
+### 4.4. Stack Operations
 
 The following instructions work with the stack:
 
 |Instruction|Description|Mechanism|Example|
-|-|-|-|
+|-|-|-|-|
 |`prentice <op>`|Pushes the operand onto the stack.|Stack|`prentice 42`|
 |`leave`|Pops the top value off the stack.|Stack|`£Lords = leave`|
 
-#### 4.3.1. `prentice` Instruction
+#### 4.4.1. `prentice` Instruction
 
 The `prentice` instruction pushes a value onto the current stack frame.
 
@@ -417,7 +831,7 @@ prentice 42
 prentice £LovesickMaidens
 ```
 
-#### 4.3.2. `leave` Instruction
+#### 4.4.2. `leave` Instruction
 
 The `leave` instruction pops a value from the current stack frame and assigns it to a virtual register.
 
@@ -439,15 +853,15 @@ There is no direct equivalent of the stack operations in Topsy Turvy.  The follo
 £LovesickMaidens = leave
 ```
 
-### 4.4. Control Flow Instructions
+### 4.5. Control Flow Instructions
 
 The following instructions control the flow of the programme:
 
 |Instruction|Description|Mechanism|Example|
-|-|-|-|
+|-|-|-|-|
 |`find <value>`|Returns a value to the calling scope.|Virtual Register/Stack|`find 42`|
 
-#### 4.4.1. `find` Instruction
+#### 4.5.1. `find` Instruction
 
 The `find` instruction returns a value to a calling scope and can be a literal or variable value.
 
@@ -481,9 +895,13 @@ To return no value the `find` instruction is called without an operand:
 find
 ```
 
-## 5. Complete Example
+## 5. Examples
 
-The following example demonstrates the instruction set defined.
+This section includes brief examples demonstrating how UtopIR instructions are used with Topsy Turvy equivalents.  Not all instructions are covered but sufficient are included in these examples for a working knowledge of UtopIR.
+
+### 5.1. Declaration, Assignment, Casting & Integer Arithmetic
+
+The following example demonstrates how declarations, assignments and casting instructions work along with integer arithmetic instructions.
 
 For the following Topsy Turvy code:
 
@@ -493,14 +911,17 @@ PRAY WELCOME Peer2 AS A PEER BEING 30
 PRAY WELCOME PeerResultA AS A PEER BEING SUM OF Peer1 AND Peer2
 
 PRAY WELCOME Peer3 AS A PEER BEING 4
-PRAY WELCOME Peer4 AS A PEER BEING 8
-PRAY WELCOME PeerResultB AS A PEER
-PeerResultB IS APPOINTED PRODUCT OF SUM OF Peer3 AND Peer4 AND PeerResult
+PRAY WELCOME Chancellor4 AS A CHANCELLOR BEING 8
+PRAY WELCOME ChancellorResultB AS A CHANCELLOR
+ChancellorResultB IS APPOINTED PRODUCT OF SUM OF Peer3 AND Chancellor4 AND PeerResultA
 
-AND SO I FIND PeerResultB
+AND SO I FIND ChancellorResultB
 ```
 
+the following is the equivalent UtopIR code:
+
 ```utopir
+@ This section uses the "verbose" temporary variable naming style.
 £Peer1 = welcome peer
 £Peer1 = appoint 42
 £Peer2 = welcome peer
@@ -509,16 +930,101 @@ AND SO I FIND PeerResultB
 £_sum_Peer1_Peer2 = sum £Peer1, £Peer2
 £PeerResultA = appoint £_sum_Peer1_Peer2
 
+@ This section uses the "numeric" temporary variable naming style.
 £Peer3 = welcome peer
 £Peer3 = appoint 4
-£Peer4 = welcome peer
-£Peer4 = appoint 8
-£PeerResultB = welcome peer
-£_sum_Peer3_Peer4 = sum £Peer3, £Peer4
-£_prod__sum_Peer3_Peer4_PeerResultA = prod £_sum_Peer3_Peer4, £PeerResultA
-£PeerResultB = appoint £_prod__sum_Peer3_Peer4_PeerResultA
+£Chancellor4 = welcome chancellor
+£_1 = were 8, chancellor
+£Chancellor4 = appoint £_1
+£ChancellorResultB = welcome chancellor
+£_2 = were £Peer3, chancellor
+£_3 = sum £_2, £Chancellor4
+£_4 = were £PeerResultA, chancellor
+£_5 = prod £_3, £_4
+£ChancellorResultB = appoint £_5
 
-find £PeerResultB
+£PeerReturnResult = welcome peer
+£_6 = were £ChancellorResultB, peer
+£PeerReturnResult = appoint £_6
+
+find £PeerReturnResult
+```
+
+### 5.2. Floating-Point Arithmetic
+
+The following example is similar to the example in §5.1 but using floating-point numbers.
+
+For the following Topsy Turvy code:
+
+```topsy
+PRAY WELCOME Fathom1 AS A FATHOM BEING 42.5
+PRAY WELCOME Fathom2 AS A FATHOM BEING 30.25
+PRAY WELCOME FathomResultA AS A FATHOM BEING SUM OF Fathom1 AND Fathom2
+
+PRAY WELCOME Fathom3 AS A FATHOM BEING 4.75
+PRAY WELCOME Foot4 AS A FOOT BEING 8.5
+PRAY WELCOME FathomResultB AS A FATHOM
+FathomResultB IS APPOINTED PRODUCT OF SUM OF Fathom3 AND Foot4 AND FathomResultA
+
+AND SO I FIND FathomResultB
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+@ This section uses the "verbose" temporary variable naming style.
+£Fathom1 = welcome fathom
+£Fathom1 = appoint 42.5
+£Fathom2 = welcome fathom
+£Fathom2 = appoint 30.25
+£FathomResultA = welcome fathom
+£_sumf_Fathom1_Fathom2 = sum.f £Fathom1, £Fathom2
+£FathomResultA = appoint £_sumf_Fathom1_Fathom2
+
+@ This section uses the "numeric" temporary variable naming style.
+£Fathom3 = welcome fathom
+£Fathom3 = appoint 4.75
+£Foot4 = welcome foot
+£_1 = were 8.5, foot
+£Foot4 = appoint £_1
+£FathomResultB = welcome fathom
+£_2 = were £Foot4, fathom
+£_3 = sum.f £Fathom3, £_2
+£_4 = prod.f £_3, £FathomResultA
+£FathomResultB = appoint £_4
+
+find £FathomResultB
+```
+
+### 5.3. Bitwise Operations
+
+```topsy
+ASIDE: 0b1001
+PRAY WELCOME PeerMask AS A PEER BEING 9
+
+ASIDE: 0b0011
+PRAY WELCOME PeerValue AS A PEER BEING 3
+
+ASIDE: 0b0001
+PRAY WELCOME PeerAndResult AS A PEER BEING CHORD OF PeerMask AND PeerValue
+
+ASIDE: 0b1110
+PRAY WELCOME PeerNotResult AS A PEER BEING INVERSION OF PeerAndResult
+```
+
+```utopir
+£PeerMask = welcome peer
+£PeerMask = appoint 9
+£PeerValue = welcome peer
+£PeerValue = appoint 3
+£_chord_PeerMask_PeerValue = chord £PeerMask, £PeerValue
+£PeerAndResult = welcome peer
+£PeerAndResult = appoint £_chord_PeerMask_PeerValue
+£_inv_PeerAndResult = inv £PeerAndResult
+£PeerNotResult = welcome peer
+£PeerNotResult = appoint £_inv_PeerAndResult
+
+find £PeerNotResult
 ```
 
 ## Appendix A. Instruction Reference
@@ -530,12 +1036,27 @@ find £PeerResultB
 |`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
 |`leave`|Pop off Stack|`£LovesickMaidens = leave`|
-|`sum <op1>, <op2>`|Addition|`£Lords = sum 10, 20`|
-|`diff <op1>, <op2>`|Subtraction|`£Lords = diff 10, 5`|
-|`prod <op1>, <op2>`|Multiplication|`£Lords = prod 10, 2`|
-|`quot <op1>, <op2>`|Division|`£Lords = quot 10, 5`|
-|`rem <op1>, <op2>`|Remainder|`£Lords = rem 10, 5`|
+|`sum <op1>, <op2>`|Integer Addition|`£Lords = sum 10, 20`|
+|`diff <op1>, <op2>`|Integer Subtraction|`£Lords = diff 10, 5`|
+|`prod <op1>, <op2>`|Integer Multiplication|`£Lords = prod 10, 2`|
+|`quot <op1>, <op2>`|Integer Division|`£Lords = quot 10, 5`|
+|`rem <op1>, <op2>`|Integer Remainder|`£Lords = rem 10, 5`|
+|`max <op1>, <op2>`|Integer Maximum Operand|`£Biggest = max 10, 5`|
+|`min <op1>, <op2>`|Integer Minimum Operand|`£Smallest = min 10, 5`|
+|`sum.f <op1>, <op2>`|Floating-Point Addition|`£Lords = sum.f 2.5, 7.5`|
+|`diff.f <op1>, <op2>`|Floating-Point Subtraction|`£Lords = diff.f 15.0, 7.5`|
+|`prod.f <op1>, <op2>`|Floating-Point Multiplication|`£Lords = prod.f 2.25, 4.0`|
+|`quot.f <op1>, <op2>`|Floating-Point Division|`£Lords = quot.f 10.0, 5.0`|
+|`rem.f <op1>, <op2>`|Floating-Point Remainder|`£Lords = rem.f 10.0, 5.0`|
+|`max.f <op1>, <op2>`|Floating-Point Maximum Operand|`£Biggest = max.f 10.5, 5.25`|
+|`min.f <op1>, <op2>`|Floating-Point Minimum Operand|`£Smallest = min.f 10.5, 5.25`|
 |`find <value>`|Return a Value|`find £Lords`|
+|`chord <op1>, <op2>`|Bitwise AND|`£Result = chord 10, 20`|
+|`harmony <op1>, <op2>`|Bitwise OR|`£Result = harmony 10, 20`|
+|`discord <op1>, <op2>`|Bitwise XOR|`£Result = discord 10, 20`|
+|`inv <op1>`|Bitwise NOT|`£Result = inv 10`|
+|`transup <op1>, <op2>`|Left Shift by `<op2>`|`£Result = transup 10, 1`|
+|`transdown <op1>, <op2>`|Right Shift by `<op2>`|`£Result = transdown 10, 1`|
 
 ## Appendix B. Type Reference
 

@@ -514,7 +514,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     { maxBuffer: 10 * 1024 * 1024 },
                 );
 
-                const doc = await vscode.workspace.openTextDocument({ content: stdout, language: 'plaintext' });
+                const doc = await vscode.workspace.openTextDocument({ content: stdout, language: 'utopir' });
                 await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);

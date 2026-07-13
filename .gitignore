@@ -9,3 +9,6 @@ out/
 .vscode-test/
 .docusaurus
 .cache-loader
+xcuserdata/
+*.xcuserstate
+**/*.xcframework/

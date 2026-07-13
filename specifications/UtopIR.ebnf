@@ -1,5 +1,5 @@
-(* UtopIR Formal Grammar v0.0.1-preview1 *)
-(* Based on UtopIR.md v0.0.1-preview1 *)
+(* UtopIR Formal Grammar v0.0.1-preview2 *)
+(* Based on UtopIR.md v0.0.1-preview2 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -50,12 +50,16 @@ AssignmentInstruction = Variable, "=", AssignmentRhs ;
 AssignmentRhs         = WelcomeRhs
                       | AppointRhs
                       | ArithmeticRhs
+                      | BitwiseRhs
+                      | InvRhs
                       | WereRhs
                       | LeaveRhs ;
 
 WelcomeRhs      = "welcome", Type ;
 AppointRhs      = "appoint", Operand ;
 ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
+BitwiseRhs      = BitwiseOp, Operand, ",", Operand ;
+InvRhs          = "inv", Operand ;
 WereRhs         = "were", Operand, ",", Type ;
 LeaveRhs        = "leave" ;
 
@@ -81,7 +85,26 @@ Literal         = IntegerLiteral
 (*----------------------------------------------------------------------------*)
 (* Arithmetic Operations                                                      *)
 (*----------------------------------------------------------------------------*)
-ArithmeticOp    = "sum" | "diff" | "prod" | "quot" | "rem" | "max" | "min" ;
+ArithmeticOp    = IntegerArithmeticOp | FloatArithmeticOp ;
+
+IntegerArithmeticOp = "sum" | "diff" | "prod" | "quot" | "rem" | "max" | "min" ;
+
+FloatArithmeticOp   = "sum.f" | "diff.f" | "prod.f" | "quot.f" | "rem.f"
+                    | "max.f" | "min.f" ;
+(* Floating-point arithmetic instructions carry the same names as their integer
+   counterparts with a .f suffix.  A parser must match the .f form before the
+   plain form, since the plain mnemonic is a prefix of its .f counterpart. *)
+
+(*----------------------------------------------------------------------------*)
+(* Bitwise Operations                                                         *)
+(*----------------------------------------------------------------------------*)
+BitwiseOp       = "chord" | "harmony" | "discord" | "transup" | "transdown" ;
+(* All bitwise operations require integer operands.  The unary bitwise NOT,
+   "inv", has its own single-operand rule (InvRhs) rather than appearing here.
+   For the shifts, the second operand is the shift amount; Topsy Turvy's
+   transposition operators default to a shift of one but accept an optional
+   "BY <expr>" clause to explicitly set it, lowering directly to this same
+   two-operand form. *)
 
 (*----------------------------------------------------------------------------*)
 (* Types                                                                      *)

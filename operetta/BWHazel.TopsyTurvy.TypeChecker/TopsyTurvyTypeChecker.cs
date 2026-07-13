@@ -1,3 +1,4 @@
+using System;
 using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.TypeChecker;
@@ -19,14 +20,18 @@ namespace BWHazel.TopsyTurvy.TypeChecker;
 /// <para>
 /// The type checker defines a single <see cref="Check"/> method that accepts a populated <see cref="ProgramNode"/>
 /// and returns a <see cref="TypeCheckResult"/>.  The result contains any diagnostics and the semantic model.
+/// A delegate can be provided to resolve functions declared in files imported via <c>PRAY ADMIT</c> statements.
+/// If no delegate is provided, imported functions are left unresolved and any attempt to call them will be
+/// reported as a type error.
 /// </para>
 /// <code>
 /// string sourceText = File.ReadAllText("programme.topsy");
 /// TopsyTurvyParser parser = new();
 /// ProgramNode program = parser.Parse(sourceText);
+/// Func&lt;string, string?&gt; sourceFileResolver = filename => File.ReadAllText(filename);
 ///
 /// TopsyTurvyTypeChecker typeChecker = new();
-/// TypeCheckResult result = typeChecker.Check(program);
+/// TypeCheckResult result = typeChecker.Check(program, sourceFileResolver);
 /// </code>
 /// </remarks>
 public sealed class TopsyTurvyTypeChecker
@@ -35,10 +40,11 @@ public sealed class TopsyTurvyTypeChecker
     /// Type-checks the given programme and returns the result.
     /// </summary>
     /// <param name="program">The parsed programme to check.</param>
+    /// <param name="sourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to leave imported functions unresolved.</param>
     /// <returns>A <see cref="TypeCheckResult"/> containing any diagnostics and the semantic model.</returns>
-    public TypeCheckResult Check(ProgramNode program)
+    public TypeCheckResult Check(ProgramNode program, Func<string, string?>? sourceFileResolver = null)
     {
         TypeCheckVisitor visitor = new();
-        return visitor.Visit(program);
+        return visitor.Visit(program, sourceFileResolver);
     }
 }

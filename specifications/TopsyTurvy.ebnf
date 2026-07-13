@@ -1,4 +1,4 @@
-(* Topsy Turvy Formal Grammar v0.5.0 *)
+(* Topsy Turvy Formal Grammar v0.6.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -115,11 +115,17 @@ ArrayLengthExpression = "RECKONING OF", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 
-PrefixExpression = EitherExpression | OtherFixedOpExpression | VariadicExpression ;
+PrefixExpression = EitherExpression | TranspositionExpression | OtherFixedOpExpression | VariadicExpression ;
 
 EitherExpression       = "EITHER", Expression, "OR", Expression ;
 (* EITHER is the sole binary operator that uses "OR" as its argument separator.
-   All other fixed-arity operators use "AND". *)
+   All other fixed-arity operators use "AND", except TRANSPOSITION UP/DOWN below,
+   which use "BY". *)
+
+TranspositionExpression = TranspositionOp, Expression, [ "BY", Expression ] ;
+(* TRANSPOSITION UP/DOWN default to a shift of 1; an optional BY <expr> clause
+   overrides the shift amount.  BY is the sole argument separator for these two
+   operators — AND is not accepted here, mirroring how EITHER does not accept AND. *)
 
 OtherFixedOpExpression = OtherFixedOp, Expression, [ "AND", Expression ] ;
 (* HARDLY EVER is unary so the second operand is optional. *)
@@ -135,8 +141,9 @@ OtherBooleanOp  = "BOTH" | "HARDLY EVER" ;
 
 ComparisonOp    = "ALIKE" | "UNLIKE" | "PRE-ADAMITE" | "LOWER DEGREE" ;
 
-BitwiseOp       = "CHORD OF" | "HARMONY OF" | "DISCORD OF"
-                | "INVERSION OF" | "TRANSPOSITION UP" | "TRANSPOSITION DOWN" ;
+BitwiseOp       = "CHORD OF" | "HARMONY OF" | "DISCORD OF" | "INVERSION OF" ;
+
+TranspositionOp = "TRANSPOSITION UP" | "TRANSPOSITION DOWN" ;
 
 VariadicOp      = "WOVEN OF" | "SUMMON" | "ALL OF" | "ANY OF" ;
 

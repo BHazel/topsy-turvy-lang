@@ -16,7 +16,7 @@ namespace BWHazel.TopsyTurvy.WebEditor.Visual;
 /// Block-producing methods return the opener plus any branch headers and the closer.  All nodes
 /// are added to the diagram and the opener–closer pair IDs are wired.
 /// </remarks>
-internal static class VisualNodeFactory
+public static class VisualNodeFactory
 {
     /// <summary>
     /// Creates a statement node cluster for the given <paramref name="statementType"/> and adds
@@ -241,19 +241,43 @@ internal static class VisualNodeFactory
     /// <param name="position">The position where the block should be created.</param>
     /// <param name="diagram">The diagram to which the block's nodes will be added.</param>
     /// <param name="nodeCounter">A counter used to generate unique node IDs.</param>
-    /// <returns>A list containing the opener and closer nodes of the switch block.</returns>
+    /// <returns>A list containing the opener, the case and default branch headers, and the closer node of the switch block.</returns>
     private static IReadOnlyList<TopsyTurvyVisualNodeModel> CreateSwitchBlock(
         Point position, BlazorDiagram diagram, ref int nodeCounter)
     {
         TopsyTurvyVisualNodeModel openerNode = MakeNode("SwitchOpener", "IN WHICH CAPACITY?", null, VisualNodeKind.Conditional, position, ref nodeCounter);
         openerNode.AddPort(MakePort(openerNode, "In", VisualPortRole.FlowIn));
         openerNode.AddPort(MakePort(openerNode, "Expr", VisualPortRole.DataIn));
-        openerNode.AddPort(MakePort(openerNode, "Case 1", VisualPortRole.BranchOut));
-        openerNode.AddPort(MakePort(openerNode, "Default", VisualPortRole.BranchOut));
+
+        TopsyTurvyVisualPortModel casePort = MakePort(openerNode, "Case 1", VisualPortRole.BranchOut);
+        openerNode.AddPort(casePort);
+
+        TopsyTurvyVisualPortModel defaultPort = MakePort(openerNode, "Default", VisualPortRole.BranchOut);
+        openerNode.AddPort(defaultPort);
+
         diagram.Nodes.Add(openerNode);
 
-        Point closerPosition = new(position.X, position.Y + NodeLayoutContext.RowSpacing);
-        TopsyTurvyVisualNodeModel closerNode = MakeNode("SwitchCloser", "NOTHING COULD BE MORE SATISFACTORY.", null, VisualNodeKind.Conditional, closerPosition, ref nodeCounter);
+        const double switchSpacing = 440.0;
+        double headerY = position.Y + NodeLayoutContext.RowSpacing;
+
+        TopsyTurvyVisualNodeModel caseHeaderNode = MakeNode("SwitchCaseBranch", "WHEN ACTING AS", "case 1", VisualNodeKind.Conditional, new Point(position.X - switchSpacing / 2, headerY), ref nodeCounter);
+        caseHeaderNode.NodeLiteralType = LiteralType.Integer;
+        caseHeaderNode.LiteralValue = "1";
+        TopsyTurvyVisualPortModel caseHeaderInPort = MakePort(caseHeaderNode, "In", VisualPortRole.FlowIn);
+        caseHeaderNode.AddPort(caseHeaderInPort);
+        caseHeaderNode.AddPort(MakePort(caseHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(caseHeaderNode);
+        diagram.Links.Add(new LinkModel(casePort, caseHeaderInPort));
+
+        TopsyTurvyVisualNodeModel defaultHeaderNode = MakeNode("SwitchDefaultBranch", "FAILING ALL OF THE ABOVE,", null, VisualNodeKind.Conditional, new Point(position.X + switchSpacing / 2, headerY), ref nodeCounter);
+        TopsyTurvyVisualPortModel defaultHeaderInPort = MakePort(defaultHeaderNode, "In", VisualPortRole.FlowIn);
+        defaultHeaderNode.AddPort(defaultHeaderInPort);
+        defaultHeaderNode.AddPort(MakePort(defaultHeaderNode, "Out", VisualPortRole.FlowOut));
+        diagram.Nodes.Add(defaultHeaderNode);
+        diagram.Links.Add(new LinkModel(defaultPort, defaultHeaderInPort));
+
+        double closerY = headerY + NodeLayoutContext.RowSpacing;
+        TopsyTurvyVisualNodeModel closerNode = MakeNode("SwitchCloser", "NOTHING COULD BE MORE SATISFACTORY.", null, VisualNodeKind.Conditional, new Point(position.X, closerY), ref nodeCounter);
         closerNode.AddPort(MakePort(closerNode, "In", VisualPortRole.FlowIn));
         closerNode.AddPort(MakePort(closerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(closerNode);
@@ -261,7 +285,7 @@ internal static class VisualNodeFactory
         openerNode.PairedCloserId = closerNode.Id;
         closerNode.PairedOpenerId = openerNode.Id;
 
-        return [openerNode, closerNode];
+        return [openerNode, caseHeaderNode, defaultHeaderNode, closerNode];
     }
 
     /// <summary>

@@ -1,0 +1,94 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Declaration, assignment, cast ────────────────────────────────
+
+£x = welcome peer
+//   ^ keyword.other.declaration.utopir
+
+£x = appoint 42
+//   ^ keyword.operator.assignment.utopir
+
+£y = were £x, chancellor
+//   ^ keyword.operator.cast.utopir
+
+// ── Integer arithmetic ───────────────────────────────────────────
+
+£r = sum £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = diff £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = prod £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = quot £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = rem £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = max £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+£r = min £a, £b
+//   ^ keyword.operator.arithmetic.utopir
+
+// ── Floating-point arithmetic: the caret lands on the ".f" suffix itself, not the mnemonic prefix, so this fails if the plain integer group is ever accidentally reordered before this one ─
+
+£r = sum.f £a, £b
+//       ^ keyword.operator.arithmetic.float.utopir
+
+£r = diff.f £a, £b
+//     ^ keyword.operator.arithmetic.float.utopir
+
+£r = prod.f £a, £b
+//        ^ keyword.operator.arithmetic.float.utopir
+
+£r = quot.f £a, £b
+//        ^ keyword.operator.arithmetic.float.utopir
+
+£r = rem.f £a, £b
+//       ^ keyword.operator.arithmetic.float.utopir
+
+£r = max.f £a, £b
+//       ^ keyword.operator.arithmetic.float.utopir
+
+£r = min.f £a, £b
+//       ^ keyword.operator.arithmetic.float.utopir
+
+// ── Bitwise ──────────────────────────────────────────────────────
+
+£r = chord £a, £b
+//   ^ keyword.operator.bitwise.utopir
+
+£r = harmony £a, £b
+//   ^ keyword.operator.bitwise.utopir
+
+£r = discord £a, £b
+//   ^ keyword.operator.bitwise.utopir
+
+£r = inv £a
+//   ^ keyword.operator.bitwise.utopir
+
+£r = transup £a, 1
+//   ^ keyword.operator.bitwise.utopir
+
+£r = transdown £a, 1
+//   ^ keyword.operator.bitwise.utopir
+
+// ── Stack ────────────────────────────────────────────────────────
+
+prentice 42
+//^ keyword.other.stack.utopir
+
+£r = leave
+//   ^ keyword.other.stack.utopir
+
+// ── Control flow, valued and void ────────────────────────────────
+
+find £r
+//^ keyword.control.utopir
+
+find
+//^ keyword.control.utopir

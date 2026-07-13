@@ -1,0 +1,114 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Strings ──────────────────────────────────────────────────────
+
+£x = appoint "hello world"
+//           ^ string.quoted.double.utopir
+
+// ── String escape sequences ──────────────────────────────────────
+
+£x = appoint "~n"
+//            ^ constant.character.escape.utopir
+
+£x = appoint "~t"
+//            ^ constant.character.escape.utopir
+
+£x = appoint "~""
+//            ^ constant.character.escape.utopir
+
+£x = appoint "~~"
+//            ^ constant.character.escape.utopir
+
+// ── Char literals ────────────────────────────────────────────────
+
+£c = appoint 'A'
+//           ^ string.quoted.single.utopir
+
+// ── Char literal escape sequences ────────────────────────────────
+
+£c = appoint '~n'
+//            ^ constant.character.escape.utopir
+
+£c = appoint '~t'
+//            ^ constant.character.escape.utopir
+
+£c = appoint '~''
+//            ^ constant.character.escape.utopir
+
+£c = appoint '~~'
+//            ^ constant.character.escape.utopir
+
+// ── Integer literals, signed and unsigned ────────────────────────
+
+£n = appoint 42
+//           ^ constant.numeric.integer.utopir
+
+£n = appoint -42
+//           ^ constant.numeric.integer.utopir
+
+// ── Float literals, signed and unsigned ──────────────────────────
+
+£f = appoint 3.14
+//           ^ constant.numeric.float.utopir
+
+£f = appoint -3.14
+//           ^ constant.numeric.float.utopir
+
+// ── Regression: the fractional digits are still part of the float token, not an orphaned unstyled tail after an integer match on "3" ─
+
+£f = appoint 3.14
+//             ^ constant.numeric.float.utopir
+
+// ── Boolean literals ─────────────────────────────────────────────
+
+£b = appoint verity
+//           ^ constant.language.boolean.utopir
+
+£b = appoint nay
+//           ^ constant.language.boolean.utopir
+
+// ── Type names ───────────────────────────────────────────────────
+
+£x = welcome chancellor
+//           ^ storage.type.utopir
+
+£x = welcome peer
+//           ^ storage.type.utopir
+
+£x = welcome pirate
+//           ^ storage.type.utopir
+
+£x = welcome sausageroll
+//           ^ storage.type.utopir
+
+£x = welcome standingchancellor
+//           ^ storage.type.utopir
+
+£x = welcome standingpeer
+//           ^ storage.type.utopir
+
+£x = welcome standingpirate
+//           ^ storage.type.utopir
+
+£x = welcome standingsausageroll
+//           ^ storage.type.utopir
+
+£x = welcome fathom
+//           ^ storage.type.utopir
+
+£x = welcome foot
+//           ^ storage.type.utopir
+
+£x = welcome decree
+//           ^ storage.type.utopir
+
+£x = welcome stitch
+//           ^ storage.type.utopir
+
+£x = welcome yarn
+//           ^ storage.type.utopir
+
+// ── Regression: "standingpeer" is one unbroken token — "peer" is not a literal prefix of "standingpeer" so there is no ordering trap here, unlike the .f arithmetic mnemonics ─
+
+£x = welcome standingpeer
+//                   ^ storage.type.utopir

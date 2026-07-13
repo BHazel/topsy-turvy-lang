@@ -28,6 +28,8 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>WereRhs</c> matches the <c>were</c> keyword, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="OperandParser.Type"/>, producing a <see cref="WereInstruction"/>.
 /// * <c>LeaveRhs</c> matches only the <c>leave</c> keyword, with no operand, producing a <see cref="LeaveInstruction"/>.
 /// * <c>ArithmeticRhs</c> matches an <see cref="OperandParser.ArithmeticOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing an <see cref="ArithmeticInstruction"/>.
+/// * <c>BitwiseRhs</c> matches an <see cref="OperandParser.BitwiseOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="BitwiseInstruction"/>.
+/// * <c>InvRhs</c> matches the <c>inv</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing an <see cref="InvInstruction"/>.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -131,6 +133,30 @@ public static class InstructionParser
         select (UtopIRInstruction)new ArithmeticInstruction(operation, new UtopIRVariable(target), operand1, operand2);
 
     /// <summary>
+    /// Parses a binary bitwise assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> BitwiseRhs(string target) =>
+        from operation in OperandParser.BitwiseOperation
+        from whitespace1 in Lexer.WhitespaceRequired
+        from operand1 in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from operand2 in OperandParser.Operand
+        select (UtopIRInstruction)new BitwiseInstruction(operation, new UtopIRVariable(target), operand1, operand2);
+
+    /// <summary>
+    /// Parses an <c>inv</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> InvRhs(string target) =>
+        from invKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Inv)
+        from whitespace in Lexer.WhitespaceRequired
+        from operand in OperandParser.Operand
+        select (UtopIRInstruction)new InvInstruction(new UtopIRVariable(target), operand);
+
+    /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> AssignmentInstruction =
@@ -144,6 +170,8 @@ public static class InstructionParser
                 .Or(WereRhs(target))
                 .Or(LeaveRhs(target))
                 .Or(ArithmeticRhs(target))
+                .Or(BitwiseRhs(target))
+                .Or(InvRhs(target))
         select instruction;
 
     /// <summary>

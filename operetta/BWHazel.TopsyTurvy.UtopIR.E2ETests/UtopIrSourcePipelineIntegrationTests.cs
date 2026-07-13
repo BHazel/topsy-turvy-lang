@@ -60,6 +60,54 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     }
 
     /// <summary>
+    /// Runs a hand-written UtopIR programme using <c>sum.f</c> on <c>fathom</c> values through the full pipeline, verifying the truncated exit code.
+    /// </summary>
+    [Fact]
+    public void Pipeline_HandWrittenUtopIrSourceWithFloatArithmetic_ProducesCorrectExitCode()
+    {
+        const string source =
+            """
+            £lhs = welcome fathom
+            £lhs = appoint 1.5
+            £rhs = welcome fathom
+            £rhs = appoint 2.75
+            £_sumf_lhs_rhs = sum.f £lhs, £rhs
+            £result = welcome fathom
+            £result = appoint £_sumf_lhs_rhs
+            find £result
+            """;
+
+        UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        string assemblyName = $"TopsyTurvyUtopIrSourceTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                parseResult.Program!,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(4);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tests that a UtopIR programme using <c>were</c> to widen a <c>peer</c> value into a <c>chancellor</c> target parses and runs correctly.
     /// </summary>
     [Fact]

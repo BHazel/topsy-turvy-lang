@@ -107,6 +107,25 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// the <c> OR NAY</c> would be matched by the <c>SingleOrExpression</c> parser, returning the <see cref="LiteralNode"/> <c>NAY</c>.
 /// </para>
 /// <para>
+/// #### Single <c>BY</c> Expressions
+/// The <c>SingleByExpression</c> parser, which is a helper parser not intended to be used directly and documented here for
+/// completeness, matches on a single "BY" keyword
+/// followed by an expression, returning the <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>:
+/// * It first matches on required whitespace, which is then discarded.
+/// * It then matches on the "BY" keyword, which is also discarded.
+/// * It then matches on more required whitespace, which is discarded.
+/// * Finally, it matches on an expression and returns it.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// TRANSPOSITION UP x BY 3
+/// </code>
+/// the <c> BY 3</c> would be matched by the <c>SingleByExpression</c> parser, returning the <see cref="LiteralNode"/> <c>3</c>.
+/// When <c>BY</c> is omitted, the resulting <see cref="PrefixExpressionNode.Arguments"/> holds a single entry and
+/// downstream layers default the shift amount to 1.
+/// </para>
+/// <para>
 /// #### Variadic <c>AND</c> Expressions
 /// The <c>AndExpression</c> parser, also a helper parser not intended to be used directly and documented here for completeness,
 ///  matches on a sequence of zero or more <c>SingleAndExpression</c>, returning an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/><c>[]</c> of the matched
@@ -133,7 +152,8 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Recursive parsing may occur here if the operand is itself an operator expression.
 /// * It then matches the remaining operands, first checking if the operator is variadic (<c>ALL OF</c>, <c>ANY OF</c>, <c>WOVEN OF</c>), thus accepting more than 2 operands.
 ///     * If variadic, parses zero or more <c>AND</c> expressions using the <c>AndExpression</c> parser, returning an array of the matched <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>s or an empty array if none are matched.
-///     * Otherwise, if the operator is <see cref="Operator.Either"/>, it parses a single <c>OR</c> expression using the <c>SingleOrExpression</c> parser; this is the sole exception where the separator is <c>OR</c> instead of <c>AND</c>.
+///     * Otherwise, if the operator is <see cref="Operator.Either"/>, it parses a single <c>OR</c> expression using the <c>SingleOrExpression</c> parser; this is one exception where the separator is <c>OR</c> instead of <c>AND</c>.
+///     * Alternatively, if the operator is <see cref="Operator.TranspositionUp"/> or <see cref="Operator.TranspositionDown"/>, it parses a single <c>BY</c> expression using the <c>SingleByExpression</c> parser; this is the other exception, where the separator is <c>BY</c> instead of <c>AND</c> and represents an optional shift-amount override rather than a second same-kind operand.
 ///     * For all other non-variadic operators, it parses a single <c>AND</c> expression using the <c>SingleAndExpression</c> parser, returning an array of one <see cref="BWHazel.TopsyTurvy.Ast.Expression"/> if matched or an empty array if not matched.
 ///         * The empty array handles single operand operators such as <c>HARDLY EVER</c>.
 /// * Finally, it matches on the closer of the expression, once again checking if the operator is variadic:
@@ -478,6 +498,22 @@ public static class ExpressionParser
             .Try();
 
     /// <summary>
+    /// Parses a single BY keyword followed by one expression.
+    /// </summary>
+    /// <remarks>
+    /// Used exclusively as the argument separator for <see cref="Operator.TranspositionUp"/> and
+    /// <see cref="Operator.TranspositionDown"/> — the sole operators whose optional second operand
+    /// (the shift amount) is introduced by <c>BY</c> rather than <c>AND</c>.  <c>BY</c> is already a
+    /// lexed keyword, shared with the ascending/descending loop step clause.
+    /// </remarks>
+    private static readonly TextParser<Expression> SingleByExpression =
+        Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("BY"))
+            .IgnoreThen(Lexer.WhitespaceRequired)
+            .IgnoreThen(Parse.Ref(() => Expression!))
+            .Try();
+
+    /// <summary>
     /// Parses a sequence of expressions for variadic operators.
     /// </summary>
     private static readonly TextParser<Expression[]> AndExpression =
@@ -495,7 +531,9 @@ public static class ExpressionParser
             ? AndExpression
             : (theOperator == Operator.Either
                 ? SingleOrExpression
-                : SingleAndExpression)
+                : theOperator is Operator.TranspositionUp or Operator.TranspositionDown
+                    ? SingleByExpression
+                    : SingleAndExpression)
                     .Select(expression => new Expression[] { expression })
                     .OptionalOrDefault(Array.Empty<Expression>())
         from expressionCloser in IsVariadic(theOperator)

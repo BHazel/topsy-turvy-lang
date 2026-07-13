@@ -3,6 +3,7 @@
   <Project Path="BWHazel.TopsyTurvy.Analysis/BWHazel.TopsyTurvy.Analysis.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Cli/BWHazel.TopsyTurvy.Cli.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Cli.E2ETests/BWHazel.TopsyTurvy.Cli.E2ETests.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Embedded/BWHazel.TopsyTurvy.Embedded.csproj" />
   <Project Path="BWHazel.TopsyTurvy.LanguageServer/BWHazel.TopsyTurvy.LanguageServer.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj" />
@@ -10,6 +11,7 @@
   <Project Path="BWHazel.TopsyTurvy.TypeChecker/BWHazel.TopsyTurvy.TypeChecker.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor/BWHazel.TopsyTurvy.WebEditor.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor.E2ETests/BWHazel.TopsyTurvy.WebEditor.E2ETests.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.WebEditor.Tests/BWHazel.TopsyTurvy.WebEditor.Tests.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Analysis/BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Ast/BWHazel.TopsyTurvy.UtopIR.Ast.csproj" />
   <Project Path="BWHazel.TopsyTurvy.UtopIR.Transformer/BWHazel.TopsyTurvy.UtopIR.Transformer.csproj" />

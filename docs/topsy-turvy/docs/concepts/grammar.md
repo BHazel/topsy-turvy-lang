@@ -40,10 +40,10 @@ RuleName = definition ;
 The rule **name** is on the left of `=`.  The **definition** is on the right.  A semicolon `;` ends the rule.  For example:
 
 ```ebnf
-Type = "PEER" | "FATHOM" | "YARN" | "DECREE" | "NAUGHT" ;
+Type = "PEER" | "FATHOM" | "YARN" | "DECREE" ;
 ```
 
-This says that a `Type` is one of the five Topsy Turvy type keywords.
+This says that a `Type` is one of the Topsy Turvy type keywords (simplified here, please see `Type` in `GRAMMAR.ebnf` for the full, current set).
 
 ### Terminals and Non-Terminals
 
@@ -119,15 +119,15 @@ Reading left to right:
 3. `"AS A"`: The type annotation keyword.
 4. `[ MutabilityModifier ]`: Optionally `CONSERVATIVE` (constant) or `LIBERAL` (explicitly mutable).
     * The square brackets mean the modifier may be omitted; if absent the variable is mutable by default.
-5. `Type`: The type keyword: `PEER`, `FATHOM`, `YARN`, `DECREE` or `NAUGHT`.
+5. `Type`: The type keyword, for example `PEER`, `FATHOM`, `YARN` or `DECREE`.
 6. `[ "BEING", Expression ]`: Optionally `BEING` followed by an initial value.
-    * The square brackets mean the initial value clause may be omitted; if absent the variable is initialised to `NAUGHT`.
+    * The square brackets mean the initial value clause may be omitted; if absent the variable is initialised to the default value for its type, for example `0` for `PEER`.  Please see the [Runtime](./runtime.md) page for more information.
 
 Finally, alternation with grouping:
 
 ```ebnf
-TypeCast = ( Identifier, "IS HENCEFORTH A", Type )
-         | ( "AS IT WERE", Expression, "AS A", Type ) ;
+LoopType = ( "ASCENDING", Identifier, "UNTIL", Expression )
+         | ( "DESCENDING", Identifier, "UNTIL", Expression ) ;
 ```
 
-The `|` between the two groups means a type cast is either the in-place form (`IS HENCEFORTH A`) or the expression form (`AS IT WERE`).  Both groups are in parentheses so that the `|` applies to each entire form rather than just the adjacent terms.
+The `|` between the two groups means a loop header is either the ascending form or the descending form.  Both groups are in parentheses so that the `|` applies to each entire form rather than just the adjacent terms.
