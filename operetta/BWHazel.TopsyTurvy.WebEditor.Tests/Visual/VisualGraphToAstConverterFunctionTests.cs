@@ -18,6 +18,7 @@ public class VisualGraphToAstConverterFunctionTests : VisualGraphToAstConverterT
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [new TypedParameter("x", LiteralType.Integer, PlaceholderSpan)],
             ReturnType = LiteralType.Integer,
             Body = [new PrintNode { Expression = new IdentifierNode { Name = "x", Span = PlaceholderSpan }, Span = PlaceholderSpan }],
@@ -40,7 +41,7 @@ public class VisualGraphToAstConverterFunctionTests : VisualGraphToAstConverterT
     [Fact]
     public void RoundTrip_FunctionWithNoReturnType_StaysNull()
     {
-        FunctionDefinitionNode function = new() { Name = "f", Parameters = [], Body = [], Span = PlaceholderSpan };
+        FunctionDefinitionNode function = new() { Name = "f", NameSpan = PlaceholderSpan, Parameters = [], Body = [], Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTrip(WrapInProgram(function));
 
@@ -72,6 +73,7 @@ public class VisualGraphToAstConverterFunctionTests : VisualGraphToAstConverterT
         FunctionDefinitionNode function = new()
         {
             Name = "f",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [new ReturnNode
             {
@@ -103,6 +105,7 @@ public class VisualGraphToAstConverterFunctionTests : VisualGraphToAstConverterT
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [new TypedParameter("x", LiteralType.Integer, PlaceholderSpan)],
             Body = [new PrintNode { Expression = new IdentifierNode { Name = "x", Span = PlaceholderSpan }, Span = PlaceholderSpan }],
             Span = PlaceholderSpan,

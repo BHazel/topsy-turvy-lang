@@ -79,6 +79,16 @@ public class FunctionDefinitionNode : Statement
     public required string Name { get; init; }
 
     /// <summary>
+    /// Gets or initialises the source span of the <see cref="Name"/> identifier itself.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Node.Span"/> covers the whole <c>IT IS MY DUTY TO PERFORM</c> ... <c>MY DUTY IS DISCHARGED.</c>
+    /// statement, starting at that keyword, not the name; use <c>NameSpan</c> when only the position of the
+    /// identifier itself is needed, e.g. in <c>SymbolTable</c>.
+    /// </remarks>
+    public required SourceSpan NameSpan { get; init; }
+
+    /// <summary>
     /// Gets or initialises the list of typed parameters.
     /// </summary>
     public required IReadOnlyList<TypedParameter> Parameters { get; init; }

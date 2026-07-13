@@ -36,7 +36,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_DeclarationWithNoInitialValue_EmitsSingleWelcomeInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan });
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan });
 
         UtopIRProgram result = this.transformer.Transform(program);
 
@@ -56,6 +56,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "n",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Integer,
                 InitialValue = new LiteralNode { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -81,6 +82,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "big_number",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Long,
                 InitialValue = new LiteralNode() { Value = 200, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -105,7 +107,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithMismatchedLiteralType_InsertsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "big_number", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "big_number", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "big_number",
@@ -129,10 +131,11 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_DeclarationWithIdentifierInitialValue_EmitsWelcomeThenAppointWithVariable()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode()
             {
                 Name = "y",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Integer,
                 InitialValue = new IdentifierNode { Name = "x", Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -157,8 +160,8 @@ public class TopsyTurvyToUtopIRTransformerTests
             {
                 Declarations =
                 [
-                    new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-                    new DeclarationNode() { Name = "b", Type = LiteralType.Long, Span = PlaceholderSpan }
+                    new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+                    new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan }
                 ],
                 Span = PlaceholderSpan
             });
@@ -177,7 +180,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithLiteralValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "x",
@@ -200,8 +203,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithIdentifierValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "y", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "y", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "y",
@@ -273,9 +276,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRArithmeticOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -314,9 +317,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOperatorOnFloats_MapsToFloatOperation(Operator topsyTurvyOperator, UtopIRArithmeticOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -346,9 +349,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedIntegerAndFloatArithmetic_WidensIntegerAndUsesFloatOperation()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -386,6 +389,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "Foot4",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Single,
                 InitialValue = new LiteralNode() { Value = 8.5, Type = LiteralType.Double, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -409,9 +413,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOnTwoVariables_EmitsArithmeticInstructionWithCorrectTempName()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "Peer1", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "Peer2", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -452,9 +456,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_BinaryBitwiseOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRBitwiseOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -486,8 +490,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_InversionOf_EmitsInvInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -516,8 +520,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpOnChancellor_EmitsBitwiseInstructionWithMatchingShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -546,8 +550,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionDown_EmitsBitwiseInstructionWithShiftAmountOfOne()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -575,9 +579,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpWithByClause_EmitsBitwiseInstructionWithTransformedShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -609,9 +613,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpWithByClauseOfNarrowerType_InsertsWereInstructionForShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -646,9 +650,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedTypeBitwise_WidensNarrowerOperand()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -685,6 +689,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "Letter",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Char,
                 InitialValue = new LiteralNode() { Value = 'A', Type = LiteralType.Char, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -705,8 +710,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ExpressionCastToStitch_EmitsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "n", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "c", Type = LiteralType.Char, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "n", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "c", NameSpan = PlaceholderSpan, Type = LiteralType.Char, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "c",
@@ -736,7 +741,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ExpressionCast_EmitsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -769,9 +774,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedTypeArithmetic_WidensNarrowerOperandRegardlessOfPosition(LiteralType aType, LiteralType bType, string narrowerOperandName)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = aType, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = bType, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = aType, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = bType, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -805,9 +810,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_SameTypeArithmetic_EmitsNoWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -839,7 +844,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOnTwoLiterals_EmbedLiteralValuesInTempName()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -870,10 +875,10 @@ public class TopsyTurvyToUtopIRTransformerTests
     {
         // SUM OF PRODUCT OF a AND b AND c
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "c", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "c", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -936,7 +941,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_DeclarationType_MapsToCorrectUtopIRType(LiteralType topsyTurvyType, UtopIRType expectedUtopirType)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "v", Type = topsyTurvyType, Span = PlaceholderSpan });
+            new DeclarationNode() { Name = "v", NameSpan = PlaceholderSpan, Type = topsyTurvyType, Span = PlaceholderSpan });
 
         UtopIRProgram result = this.transformer.Transform(program);
 
@@ -982,19 +987,19 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode()
             {
-                Name = "Peer1", Type = LiteralType.Integer,
+                Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new LiteralNode() { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
             },
             new DeclarationNode()
             {
-                Name = "Peer2", Type = LiteralType.Integer,
+                Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new LiteralNode() { Value = 30, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
             },
             new DeclarationNode()
             {
-                Name = "PeerResult", Type = LiteralType.Integer,
+                Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new PrefixExpressionNode()
                 {
                     Operator = Operator.Sum,

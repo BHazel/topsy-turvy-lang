@@ -109,6 +109,14 @@ public sealed class VisualGraphBuilder
                 continue;
             }
 
+            if (statement is NamespaceDeclarationNode or RecogniseNode)
+            {
+                // Float namespace directives in the sidebar alongside declarations and imports.
+                TopsyTurvyVisualNodeModel namespaceNode = this.CreateStatementNode(statement, sideLayout, diagram);
+                diagram.Nodes.Add(namespaceNode);
+                continue;
+            }
+
             this.lastBlockCloser = null;
             TopsyTurvyVisualNodeModel statementNode = this.CreateStatementNode(statement, layout, diagram);
             diagram.Nodes.Add(statementNode);
@@ -204,6 +212,8 @@ public sealed class VisualGraphBuilder
             TryCatchNode node => this.CreateTryCatchNode(node, layout, diagram),
             SwitchNode node => this.CreateSwitchNode(node, layout, diagram),
             ImportNode node => this.CreateImportNode(node, layout),
+            NamespaceDeclarationNode node => this.CreateNamespaceDeclarationNode(node, layout),
+            RecogniseNode node => this.CreateRecogniseNode(node, layout),
             GuardNode node => this.CreateGuardNode(node, layout, diagram),
             AssertNode node => this.CreateAssertNode(node, layout, diagram),
             ExpressionStatement node => this.CreateExpressionStatementNode(node, layout, diagram),
@@ -961,6 +971,42 @@ public sealed class VisualGraphBuilder
         TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY ADMIT", node.FilePath, VisualNodeKind.Other);
         statementNode.StatementType = "ImportNode";
         statementNode.SymbolIdentifierNodeName = node.FilePath;
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        return statementNode;
+    }
+
+    /// <summary>
+    /// Creates a visual node for a namespace declaration statement.
+    /// </summary>
+    /// <param name="node">The namespace declaration node to create a visual representation for.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <returns>The created visual node model.</returns>
+    private TopsyTurvyVisualNodeModel CreateNamespaceDeclarationNode(NamespaceDeclarationNode node, NodeLayoutContext layout)
+    {
+        string path = string.Join('*', node.Path);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "TOWN", path, VisualNodeKind.Other);
+        statementNode.StatementType = "NamespaceDeclarationNode";
+        statementNode.SymbolIdentifierNodeName = path;
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        return statementNode;
+    }
+
+    /// <summary>
+    /// Creates a visual node for a namespace recognition directive.
+    /// </summary>
+    /// <param name="node">The recognise node to create a visual representation for.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <returns>The created visual node model.</returns>
+    private TopsyTurvyVisualNodeModel CreateRecogniseNode(RecogniseNode node, NodeLayoutContext layout)
+    {
+        string path = string.Join('*', node.Path);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY RECOGNISE", path, VisualNodeKind.Other);
+        statementNode.StatementType = "RecogniseNode";
+        statementNode.SymbolIdentifierNodeName = path;
         statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
         statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
         statementNode.AstNode = node;

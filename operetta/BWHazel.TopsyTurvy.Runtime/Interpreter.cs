@@ -36,7 +36,20 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// </para>
 /// <para>
 /// The interpreter does not pre-scan the code, therefore, declarations and function definitions must be encountered before they can
-/// be used.
+/// be used.  The sole exception is a file namespace declaration (<c>TOWN</c>): <see cref="Execute"/> and
+/// <see cref="ExecuteImport"/> each pre-scan their own statement list once, before executing any of it, for the
+/// at-most-one <see cref="NamespaceDeclarationNode"/> it may contain, so a function namespace membership never
+/// depends on where in the file the <c>TOWN</c> keyword appears.  A namespace-open directive (<c>PRAY RECOGNISE</c>),
+/// by contrast, follows the interpreter normal order-dependent rule: it only affects bare-name function
+/// resolution from the point it is executed onward, exactly as <c>PRAY ADMIT</c> already does for imports.
+/// </para>
+/// <para>
+/// A function declared in a file with a <c>TOWN</c> namespace is registered under its dot-joined fully-qualified
+/// name, e.g. <c>Accounts.Payroll.CalculateTax</c>, rather than its bare name, and is not reachable by bare name
+/// from outside that namespace.  <c>SUMMON</c> resolves a bare call name in tiers: the namespace of the caller,
+/// then each namespace opened via <c>PRAY RECOGNISE</c>, then the global (non-namespaced) function table via
+/// <see cref="ResolveFunction"/>; a fully-qualified call name is looked up directly.  Please see <see cref="ResolveFunction"/>
+/// for the precise resolution order.
 /// </para>
 /// <para>
 /// During execution, the interpreter can work with the 6 literal types that the lexer can produce:
@@ -77,16 +90,21 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 {
     private readonly ITopsyTurvyIO io = io;
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
+    private readonly Dictionary<FunctionDefinitionNode, string?> functionNamespaces = [];
+    private readonly HashSet<string> openNamespaces = [];
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
     private string? sourceDirectory;
     private Func<string, string?>? fileResolver;
+    private string? currentExecutionNamespace;
 
     /// <summary>
     /// Gets a read-only view of all functions defined in this interpreter instance.
     /// </summary>
     /// <remarks>
-    /// The dictionary is keyed by the function name.
+    /// The dictionary is keyed by the function name, dot-qualified with its declaring file
+    /// namespace path when it was declared under a <c>TOWN</c> declaration, e.g. <c>Accounts.Payroll.CalculateTax</c>,
+    /// or by its bare name when the declaring file has no <c>TOWN</c> declaration.
     /// </remarks>
     public IReadOnlyDictionary<string, FunctionDefinitionNode> Functions => this.functions;
 
@@ -155,6 +173,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         try
         {
+            string? entryNamespace = FindNamespaceDeclaration(program.Statements);
+            if (entryNamespace is not null)
+            {
+                this.currentExecutionNamespace = entryNamespace;
+            }
+
             this.ExecuteStatements(program.Statements, environment);
         }
         catch (ProgrammeReturnSignalException programmeReturnSignal)
@@ -232,7 +256,16 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 this.EvaluateExpression(expressionStatement.Expression, environment);
                 break;
             case FunctionDefinitionNode functionDefinition:
-                this.functions[functionDefinition.Name] = functionDefinition;
+                this.functions[QualifyName(this.currentExecutionNamespace, functionDefinition.Name)] = functionDefinition;
+                this.functionNamespaces[functionDefinition] = this.currentExecutionNamespace;
+                break;
+            case NamespaceDeclarationNode:
+                // No-op here: applied by the pre-scan in Execute()/ExecuteImport() before statement
+                // execution begins, so namespace membership does not depend on the TOWN keyword position
+                // relative to the functions it applies to.
+                break;
+            case RecogniseNode recognise:
+                this.openNamespaces.Add(string.Join('.', recognise.Path));
                 break;
             case ProgrammeReturnNode programmeReturnStatement:
                 throw new ProgrammeReturnSignalException((int)this.EvaluateExpression(programmeReturnStatement.Value, environment).RawValue!);
@@ -740,14 +773,54 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             throw new TopsyTurvyRuntimeException($"Syntax errors in import '{importNode.FilePath}': {errors}", importNode.Span);
         }
 
+        string? importedNamespace = FindNamespaceDeclaration(imported.Statements);
         foreach (Statement statement in imported.Statements)
         {
             if (statement is FunctionDefinitionNode functionDefinition)
             {
-                this.functions[functionDefinition.Name] = functionDefinition;
+                this.functions[QualifyName(importedNamespace, functionDefinition.Name)] = functionDefinition;
+                this.functionNamespaces[functionDefinition] = importedNamespace;
             }
         }
     }
+
+    /// <summary>
+    /// Finds the at-most-one namespace declaration in a top-level statement list.
+    /// </summary>
+    /// <param name="statements">The statements to scan, typically an entire programme or imported file top-level body.</param>
+    /// <returns>The dot-joined namespace path, or <c>null</c> if the file declares no namespace.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when more than one <see cref="NamespaceDeclarationNode"/> is found.</exception>
+    private static string? FindNamespaceDeclaration(IReadOnlyList<Statement> statements)
+    {
+        NamespaceDeclarationNode? declaration = null;
+        foreach (Statement statement in statements)
+        {
+            if (statement is NamespaceDeclarationNode namespaceDeclaration)
+            {
+                if (declaration is not null)
+                {
+                    throw new TopsyTurvyRuntimeException("A file may declare at most one TOWN.", namespaceDeclaration.Span);
+                }
+
+                declaration = namespaceDeclaration;
+            }
+        }
+
+        return declaration is not null
+            ? string.Join('.', declaration.Path)
+            : null;
+    }
+
+    /// <summary>
+    /// Prefixes a function name with its namespace path, if any.
+    /// </summary>
+    /// <param name="namespacePrefix">The dot-joined namespace path, or <c>null</c> for the global namespace.</param>
+    /// <param name="name">The bare function name.</param>
+    /// <returns><paramref name="name"/> unchanged when <paramref name="namespacePrefix"/> is <c>null</c>, otherwise <c>"{namespacePrefix}.{name}"</c>.</returns>
+    private static string QualifyName(string? namespacePrefix, string name) =>
+        namespacePrefix is null
+            ? name
+            : $"{namespacePrefix}.{name}";
 
     /// <summary>
     /// Evaluates an expression and returns its value.
@@ -1351,7 +1424,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <summary>
     /// Evaluates a function call with the given name and arguments in the specified environment.
     /// </summary>
-    /// <param name="functionName">The name of the function to call.</param>
+    /// <param name="functionName">The name of the function to call, either bare or namespace-qualified.</param>
     /// <param name="arguments">The list of arguments to pass to the function.</param>
     /// <param name="callingEnvironment">The environment from which the function is called.</param>
     /// <param name="span">The source span of the function call.</param>
@@ -1363,10 +1436,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         TopsyTurvyEnvironment callingEnvironment,
         SourceSpan span)
     {
-        if (!this.functions.TryGetValue(functionName, out FunctionDefinitionNode? function))
-        {
-            throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
-        }
+        FunctionDefinitionNode function = this.ResolveFunction(functionName, span);
 
         if (arguments.Count != function.Parameters.Count)
         {
@@ -1381,6 +1451,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             scope.Declare(function.Parameters[i].Name, arguments[i]);
         }
 
+        string? callerNamespace = this.currentExecutionNamespace;
+        this.currentExecutionNamespace = this.functionNamespaces.GetValueOrDefault(function);
+
         TopsyTurvyValue returnValue = TopsyTurvyValue.Null();
         try
         {
@@ -1390,8 +1463,76 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         {
             returnValue = returnSignal.Value ?? TopsyTurvyValue.Null();
         }
+        finally
+        {
+            this.currentExecutionNamespace = callerNamespace;
+        }
 
         return returnValue;
+    }
+
+    /// <summary>
+    /// Resolves a function name, bare or namespace-qualified, to its definition.
+    /// </summary>
+    /// <param name="functionName">The name to resolve.</param>
+    /// <param name="span">The source span of the call, used for diagnostics.</param>
+    /// <returns>The resolved <see cref="FunctionDefinitionNode"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target and is looked
+    /// up directly, since <c>.</c> never appears in a bare Topsy Turvy identifier.
+    /// </para>
+    /// <para>
+    /// A bare name is resolved in tiers, the first tier with exactly one match winning:
+    /// * The namespace of the caller (<see cref="currentExecutionNamespace"/>).
+    /// * Then each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
+    ///     * Two or more matches here is an ambiguous reference.
+    /// * Then finally the global (non-namespaced) dictionary entry.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when no function matches or when a bare name matches more than one open namespace.</exception>
+    private FunctionDefinitionNode ResolveFunction(string functionName, SourceSpan span)
+    {
+        if (functionName.Contains('.'))
+        {
+            return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? qualifiedMatch)
+                ? qualifiedMatch
+                : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
+        }
+
+        if (this.currentExecutionNamespace is not null &&
+            this.functions.TryGetValue(QualifyName(this.currentExecutionNamespace, functionName), out FunctionDefinitionNode? sameNamespaceMatch))
+        {
+            return sameNamespaceMatch;
+        }
+
+        List<string> matchedNamespaces = [];
+        FunctionDefinitionNode? openNamespaceMatch = null;
+        foreach (string openNamespace in this.openNamespaces)
+        {
+            if (this.functions.TryGetValue(QualifyName(openNamespace, functionName), out FunctionDefinitionNode? candidate))
+            {
+                matchedNamespaces.Add(openNamespace);
+                openNamespaceMatch = candidate;
+            }
+        }
+
+        if (matchedNamespaces.Count > 1)
+        {
+            string namespaceList = string.Join("', '", matchedNamespaces.OrderBy(name => name, StringComparer.Ordinal));
+            throw new TopsyTurvyRuntimeException(
+                $"Function '{functionName}' is ambiguous between namespaces '{namespaceList}'; please use a fully-qualified name.",
+                span);
+        }
+
+        if (openNamespaceMatch is not null)
+        {
+            return openNamespaceMatch;
+        }
+
+        return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? globalMatch)
+            ? globalMatch
+            : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
     }
 
     /// <summary>

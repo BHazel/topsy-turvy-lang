@@ -65,6 +65,10 @@ window.topsyTurvy = {
             ["MODIFIED RAPTURE",                    "exception handler"],
             ["THAT CONCLUDES THE MATTER.",          "end try/catch"],
             ["PRAY ADMIT",                          "import"],
+            ["TOWN",                                "namespace declaration"],
+            ["WITH DISTRICT",                       "sub-namespace"],
+            ["WITH DUTY",                           "namespace-qualified function target"],
+            ["PRAY RECOGNISE",                      "open namespace"],
             ["SUM OF",                              "addition"],
             ["DIFFERENCE OF",                       "subtraction"],
             ["PRODUCT OF",                          "multiplication"],
@@ -288,6 +292,8 @@ window.topsyTurvy = {
                     [/\bWITH\s+THE\s+GREATEST\s+RESPECT,/, 'keyword'],
                     [/\bWITH\s+GRATITUDE\b/, 'keyword'],
                     [/\bWITH\s+NOTHING\b/, 'keyword'],
+                    [/\bWITH\s+DISTRICT\b/, 'keyword'],
+                    [/\bWITH\s+DUTY\b/, 'keyword'],
 
                     // AS IT WERE must precede AS A
                     [/\bAS\s+IT\s+WERE\b/, 'keyword'],
@@ -300,6 +306,7 @@ window.topsyTurvy = {
                     [/\bPRAY\s+TELL\b/, 'keyword'],
                     [/\bPRAY\s+ADMIT\b/, 'keyword'],
                     [/\bPRAY\s+WELCOME\b/, 'keyword'],
+                    [/\bPRAY\s+RECOGNISE\b/, 'keyword'],
 
                     // Remaining multi-word operators and keywords
                     [/\b(SUM|DIFFERENCE|PRODUCT|QUOTIENT|REMAINDER|LARGER|SMALLER|RECKONING)\s+OF\b/, 'keyword'],
@@ -316,6 +323,7 @@ window.topsyTurvy = {
                     [/\bHARK!/, 'keyword'],
                     [/\bFINALE\./, 'keyword'],
                     [/\bPRINCIPALS\b/, 'keyword'],
+                    [/\bTOWN\b/, 'keyword'],
                     [/\bOTHERWISE,/, 'keyword'],
                     [/\bCONSERVATIVE\b/, 'keyword'],
                     [/\bLIBERAL\b/, 'keyword'],

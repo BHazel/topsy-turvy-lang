@@ -179,12 +179,13 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// <para>
 /// ### Summon Expressions (Function Calls)
 /// The <c>SummonExpression</c> parser matches on a function call in the form of
-/// <c>SUMMON FUNCTION_NAME WITH ARG1 [AND ARG2 ...] IF YOU PLEASE.</c>, returning a <see cref="PrefixExpressionNode"/> with the
-/// operator set to <c>SUMMON</c> and the first argument as an <see cref="IdentifierNode"/> for the function name followed by the
+/// <c>SUMMON TARGET WITH ARG1 [AND ARG2 ...] IF YOU PLEASE.</c>, returning a <see cref="PrefixExpressionNode"/> with the
+/// operator set to <c>SUMMON</c> and the first argument as an <see cref="IdentifierNode"/> for the call target followed by the
 /// argument <see cref="Expression"/>s:
 /// * It first matches on the <c>SUMMON</c> keyword and required whitespace, both of which are discarded.
-/// * It then matches on the function name as an identifier, followed by more required whitespace which is discarded.
-///     * The function name is the first argument in the resulting <see cref="PrefixExpressionNode"/>.
+/// * It then matches on the leading identifier of the call target, followed by the target remaining namespace
+///   segments, if any, via the <c>FunctionCallTargetTail</c> parser; please see **Fully-Qualified Function Call Targets** below.
+///     * The joined target name is the first argument in the resulting <see cref="PrefixExpressionNode"/>.
 /// * It then matches on the <c>WITH</c> keyword and more required whitespace, both of which are also discarded.
 /// * It then matches on the arguments, first checking if there are no arguments by trying to match on the <c>NOTHING</c> keyword.
 ///     * If no arguments, it returns an empty list of <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>s, but if this match fails it back-tracks and attempts to match on arguments.
@@ -202,12 +203,40 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// </code>
 /// * The first example would return a <see cref="PrefixExpressionNode"/> with:
 ///     * The <c>SUMMON</c> operator.
-///     * The function name as an <see cref="IdentifierNode"/> for <c>HowManyMaidens</c>.
+///     * The call target as an <see cref="IdentifierNode"/> for <c>HowManyMaidens</c>.
 ///     * No arguments, so an empty list of <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>s.
 /// * The second example would also return a <see cref="PrefixExpressionNode"/> with:
 ///     * The <c>SUMMON</c> operator.
-///     * The function name as an <see cref="IdentifierNode"/> for <c>TotalLords</c>.
+///     * The call target as an <see cref="IdentifierNode"/> for <c>TotalLords</c>.
 ///     * Two arguments, an <see cref="IdentifierNode"/> each for <c>Conservatives</c> and <c>Liberals</c>.
+/// </para>
+/// <para>
+/// #### Fully-Qualified Function Call Targets
+/// A function declared in a namespace (please see <see cref="StatementParser.NamespaceDeclaration"/>) is called either by its
+/// fully-qualified name or, after a namespace-open directive (<see cref="StatementParser.RecogniseStatement"/>), by its
+/// bare name.  The <c>FunctionCallTargetTail</c> parser matches the portion of a call target following its leading
+/// identifier, trying two forms in order:
+/// * <c>FunctionCallTargetTailLongForm</c>: zero or more <c>WITH DISTRICT &lt;name&gt;</c> namespace segments, via the
+///   shared <see cref="ParserHelpers.NamespaceSegmentLongForm"/> parser, followed by the mandatory
+///   <c>WITH DUTY &lt;name&gt;</c> function-name marker.  This back-tracks so if no <c>WITH DUTY</c> follows,
+///   the whole long form backtracks to the leading identifier so the short form can be tried.
+/// * <c>FunctionCallTargetTailShortForm</c>: zero or more <c>*&lt;name&gt;</c> segments via the shared
+///   <see cref="ParserHelpers.NamespaceSegmentShortForm"/> parser.  An empty match here (no <c>*</c> follows) is
+///   what makes a plain, unqualified call such as <c>SUMMON HowManyMaidens WITH ...</c> continue to work unchanged.
+///
+/// The leading identifier plus every tail segment are joined with <c>.</c>, an internal separator that never appears
+/// in Topsy Turvy source, to form the single <see cref="IdentifierNode.Name"/> used as the call target.  A plain call
+/// therefore still produces a dot-free name; only a namespace-qualified call produces a joined one.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy examples, given a function <c>CalculateTax</c> declared under
+/// <c>TOWN Accounts WITH DISTRICT Payroll</c>:
+/// <code>
+/// SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH Salary IF YOU PLEASE.
+/// SUMMON Accounts*Payroll*CalculateTax WITH Salary IF YOU PLEASE.
+/// </code>
+/// both would return a <see cref="PrefixExpressionNode"/> with the call target as an <see cref="IdentifierNode"/> named
+/// <c>Accounts.Payroll.CalculateTax</c>; the long form and short form are two syntaxes for the same target.
 /// </para>
 /// <para>
 /// ### Array Index Expressions
@@ -319,9 +348,10 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * <see cref="ParserHelpers.WithOffsets{T}"/>: Used for <c>LiteralExpression</c> whose six branches are written as
 ///   chained <c>.Select()</c> calls; this extension wraps any parser to return a <c>(Value, StartOffset, EndOffset)</c> tuple.
 ///
-/// The <c>SummonExpression</c> is the only parser that also captures an inner span: the function name
+/// The <c>SummonExpression</c> is the only parser that also captures an inner span: the call target
 /// <see cref="BWHazel.TopsyTurvy.Ast.IdentifierNode"/> receives its own <c>BuildSpan</c> call using offsets captured
-/// immediately before and after the function name <c>Lexer.Identifier</c> consume.
+/// immediately before the leading identifier and immediately after <c>FunctionCallTargetTail</c>, the full qualified
+/// target, not just its leading identifier.
 /// </para>
 /// <para>
 /// ### Expression Parser
@@ -549,13 +579,43 @@ public static class ExpressionParser
         };
 
     /// <summary>
+    /// Parses the long-form fully-qualified function call target tail: a <c>WITH DISTRICT</c> chain
+    /// (possibly empty) followed by the mandatory <c>WITH DUTY &lt;name&gt;</c> function-name marker.
+    /// </summary>
+    private static readonly TextParser<IReadOnlyList<string>> FunctionCallTargetTailLongForm =
+        (from namespaceSegments in NamespaceSegmentLongForm.Many()
+         from _ in Lexer.WhitespaceRequired.IgnoreThen(Lexer.Keyword("WITH DUTY"))
+         from functionName in Lexer.WhitespaceRequired.IgnoreThen(Lexer.Identifier)
+         select (IReadOnlyList<string>)namespaceSegments.Append(functionName).ToArray())
+        .Try();
+
+    /// <summary>
+    /// Parses the short-form fully-qualified function call target tail: a <c>*</c>-joined chain,
+    /// which is empty for a plain, unqualified call.
+    /// </summary>
+    private static readonly TextParser<IReadOnlyList<string>> FunctionCallTargetTailShortForm =
+        NamespaceSegmentShortForm
+            .Many()
+            .Select(segments => (IReadOnlyList<string>)segments);
+
+    /// <summary>
+    /// Parses the namespace segments following a function call target leading identifier: the
+    /// long-form <c>WITH DISTRICT ... WITH DUTY &lt;name&gt;</c> form, the short-form <c>*</c>-joined
+    /// form, or neither for a plain, unqualified call.
+    /// </summary>
+    private static readonly TextParser<IReadOnlyList<string>> FunctionCallTargetTail =
+        FunctionCallTargetTailLongForm
+            .Or(FunctionCallTargetTailShortForm);
+
+    /// <summary>
     /// Parses a function call.
     /// </summary>
     public static readonly TextParser<Expression> SummonExpression =
         (from startOffset in CurrentOffset
          from _ in Lexer.Keyword("SUMMON")
          from functionNameStart in Lexer.WhitespaceRequired.IgnoreThen(CurrentOffset)
-         from functionName in Lexer.Identifier
+         from firstTargetSegment in Lexer.Identifier
+         from targetTail in FunctionCallTargetTail
          from functionNameEnd in CurrentOffset
          from withKeyword in Lexer.WhitespaceRequired
             .IgnoreThen(Lexer.Keyword("WITH"))
@@ -577,7 +637,13 @@ public static class ExpressionParser
          select (Expression)new PrefixExpressionNode
          {
              Operator = Operator.Summon,
-             Arguments = [.. arguments.Prepend(new IdentifierNode() { Name = functionName, Span = BuildSpan(functionNameStart, functionNameEnd) })],
+             Arguments = [.. arguments.Prepend(new IdentifierNode()
+             {
+                 Name = targetTail.Count == 0
+                     ? firstTargetSegment
+                     : string.Join('.', new[] { firstTargetSegment }.Concat(targetTail)),
+                 Span = BuildSpan(functionNameStart, functionNameEnd)
+             })],
              Span = BuildSpan(startOffset, endOffset)
          }).Try();
 

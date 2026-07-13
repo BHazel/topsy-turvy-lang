@@ -21,6 +21,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         DeclarationNode declaration = new()
         {
             Name = "x",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             IsConstant = true,
             InitialValue = new LiteralNode() { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
@@ -45,6 +46,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             InitialValues = [
                 new LiteralNode() { Value = 1, Type = LiteralType.Integer, Span = PlaceholderSpan },
@@ -71,6 +73,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             Size = 5,
             InitialValues = [],
@@ -129,7 +132,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_Declaration_ReconstructsFromVisualNodePropertiesNotAst()
     {
-        DeclarationNode declaration = new() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode declaration = new() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTripAsFactory(WrapInProgram(declaration), "DeclarationNode");
 
@@ -144,7 +147,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_ArrayDeclarationWithNoWiredPorts_UsesStaticFactoryPath()
     {
-        ArrayDeclarationNode declaration = new() { Name = "items", ElementType = LiteralType.Integer, InitialValues = [], Span = PlaceholderSpan };
+        ArrayDeclarationNode declaration = new() { Name = "items", NameSpan = PlaceholderSpan, ElementType = LiteralType.Integer, InitialValues = [], Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTripAsFactory(WrapInProgram(declaration), "ArrayDeclarationNode");
 
@@ -165,7 +168,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_ArrayDeclarationTypeSwitchedFromScalar_UsesArrayDeclarationFromFactoryPath()
     {
-        DeclarationNode scalar = new() { Name = "items", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode scalar = new() { Name = "items", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
         BlazorDiagram diagram = Build(WrapInProgram(scalar));
 
         TopsyTurvyVisualNodeModel node = diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>().Single(n => n.StatementType == "DeclarationNode");

@@ -151,6 +151,16 @@ The node layout is a vertical stack of rows:
                     }))"
                     Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
             }
+            else if (this.Node.StatementType is "NamespaceDeclarationNode" or "RecogniseNode")
+            {
+                <MudTextField T="string" Label="Path" HelperText="Segments separated by *" Value="@this.Node.SymbolIdentifierNodeName"
+                    ValueChanged="@(value => this.OnPropertyChanged(() =>
+                    {
+                        this.Node.SymbolIdentifierNodeName = value;
+                        this.Node.Subtitle = value;
+                    }))"
+                    Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
             else if (this.Node.StatementType == "ArithmeticNode")
             {
                 <MudSelect T="string" Label="Operator" Value="@this.Node.Title"
@@ -463,6 +473,8 @@ The node layout is a vertical stack of rows:
         (this.Node.Kind == VisualNodeKind.Program && this.Node.Title != "FINALE.") ||
         this.Node.Kind is VisualNodeKind.Declaration or VisualNodeKind.Print or VisualNodeKind.Literal or VisualNodeKind.Operator ||
         this.Node.StatementType == "ImportNode" ||
+        this.Node.StatementType == "NamespaceDeclarationNode" ||
+        this.Node.StatementType == "RecogniseNode" ||
         this.Node.StatementType == "ConditionalOpener" ||
         this.Node.StatementType == "SwitchOpener" ||
         this.Node.StatementType == "SwitchCaseBranch" ||

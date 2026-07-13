@@ -19,6 +19,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [],
             Span = PlaceholderSpan
@@ -42,6 +43,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode innerFunction = new()
         {
             Name = "inner",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [],
             Span = PlaceholderSpan
@@ -50,6 +52,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode outerFunction = new()
         {
             Name = "outer",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [innerFunction],
             Span = PlaceholderSpan
@@ -70,6 +73,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [new TypedParameter("x", LiteralType.Integer, PlaceholderSpan)],
             Body = [],
             Span = PlaceholderSpan,
@@ -93,6 +97,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             ReturnType = LiteralType.Integer,
             Body = [],
@@ -113,6 +118,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "compute",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [],
             Span = PlaceholderSpan
@@ -133,6 +139,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode first = new()
         {
             Name = "first",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [new PrintNode { Expression = IntegerLiteral(1), Span = PlaceholderSpan }],
             Span = PlaceholderSpan,
@@ -141,6 +148,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode second = new()
         {
             Name = "second",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [],
             Span = PlaceholderSpan
@@ -167,6 +175,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "f",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [new ReturnNode { Value = IntegerLiteral(1), Span = PlaceholderSpan }],
             Span = PlaceholderSpan,
@@ -185,6 +194,7 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "f",
+            NameSpan = PlaceholderSpan,
             Parameters = [],
             Body = [new ReturnNode { Span = PlaceholderSpan }],
             Span = PlaceholderSpan,

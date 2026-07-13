@@ -39,9 +39,11 @@ The concrete node types, grouped by their base class, are listed below.
 |`ImportNode`|Import|Imports another `.topsy` file, making its functions available: `PRAY ADMIT`.|
 |`InputNode`|Input|Reads a line from standard input into a variable as a `YARN` (string): `PRAY TELL`.|
 |`LoopNode`|Loop|A loop block supporting ascending, descending, whilst and infinite forms: `BY A LEGAL FICTION` ... `THE TERM EXPIRES.`  The form is determined by the `LoopType` enum (see below).|
+|`NamespaceDeclarationNode`|Namespace Declaration|Declares the namespace the file functions belong to: `TOWN`.  Carries `Path`, the ordered namespace segments (see below).|
 |`PrincipalBlockNode`|Principal Block|Groups variable declarations: `PRINCIPALS` ... `THE CURTAIN RISES.`|
 |`PrintNode`|Print|Evaluates and prints an expression to standard output: `BEHOLD`.|
 |`ProgrammeReturnNode`|Programme Return|Sets the OS exit code from the top level of the programme body, not inside a function: `AND SO I FIND <expr>`.  The expression must evaluate to a `PEER`.  Omitting this statement implicitly exits with code `0`.|
+|`RecogniseNode`|Recognise Namespace|Opens a namespace for bare-name resolution for the remainder of the file: `PRAY RECOGNISE`.  Carries `Path`, the ordered namespace segments (see below).|
 |`ReturnNode`|Return|Returns from a function with or without a value: `AND SO I FIND` / `MY DUTY IS PREMATURELY DISCHARGED.`|
 |`SwitchNode`|Switch|Selects a block based on an expression value: `IN WHICH CAPACITY?` ... `NOTHING COULD BE MORE SATISFACTORY.`|
 |`ThrowNode`|Throw|Raises an exception with a payload expression: `A HIDEOUS CURSE ON`.|
@@ -67,6 +69,8 @@ The concrete node types, grouped by their base class, are listed below.
 |`Name`|`string`|The parameter identifier.|
 |`Type`|`LiteralType`|The declared type.|
 |`Span`|`SourceSpan`|The source position of the parameter declaration.|
+
+`NamespaceDeclarationNode` and `RecogniseNode` both carry a `Path` property of type `IReadOnlyList<string>` containing the ordered namespace segments, regardless of whether the source used the long-hand `WITH DISTRICT` form or the short-hand `*` separator to write them.
 
 ### Enumerations
 
@@ -124,8 +128,8 @@ The `Operator` enum identifies the operation performed by a `PrefixExpressionNod
 |`HarmonyOf`|`HARMONY OF x AND y`|Bitwise OR (`x \| y`).|
 |`DiscordOf`|`DISCORD OF x AND y`|Bitwise XOR (`x ^ y`).|
 |`InversionOf`|`INVERSION OF x`|Bitwise NOT, unary (`~x`).|
-|`TranspositionUp`|`TRANSPOSITION UP x`|Left shift by 1, unary (`x << 1`).|
-|`TranspositionDown`|`TRANSPOSITION DOWN x`|Right shift by 1, unary (`x >> 1`).|
+|`TranspositionUp`|`TRANSPOSITION UP x [BY n]`|Left shift (`x << n`), defaulting to a shift of 1 when the `BY` clause is omitted.|
+|`TranspositionDown`|`TRANSPOSITION DOWN x [BY n]`|Right shift (`x >> n`), defaulting to a shift of 1 when the `BY` clause is omitted.|
 
 **Variadic:** Accept two or more operands, closed by `IF YOU PLEASE.`:
 
@@ -146,6 +150,8 @@ The `Operator` enum identifies the operation performed by a `PrefixExpressionNod
 Every `Node` carries a required `Span` property, of type `SourceSpan`, recording where in the source code the node originated.  This is used by the _Operetta Toolchain_ to report errors and warnings at the correct position.  The `Span` is populated by the [Parser](./parser.md) at parse time by consulting the `SourceMap` produced by the [Pre-Processor](./pre-processor.md), which translates the absolute character offset at the start and end of each parsed construct back to the original source line and column.
 
 A `PlaceholderSpan` of `(Line: 0, Column: 0)` / `(Line: 0, Column: 0)` is returned only when no `SourceMap` is available, which occurs solely in specific intended situations, such as isolated tests that invoke the parser directly without a pre-processing step.  In all normal execution paths every node carries real source positions.
+
+`DeclarationNode`, `ArrayDeclarationNode` and `FunctionDefinitionNode` additionally carry a `NameSpan` property, distinct from `Span`.  `Span` covers the whole statement, starting at its opening keyword (`PRAY WELCOME`, `IT IS MY DUTY TO PERFORM`).  `NameSpan` covers only the declared identifier itself.  Consumers that need to point at the name specifically, such as `SymbolTable` when recording a symbol definition position, use `NameSpan` rather than `Span`.
 
 A `SourceSpan` is a pair of `SourceLocation` values:
 

@@ -93,3 +93,11 @@ Execution of the interpreter can be configured by passing an `InterpreterExecuti
 * A custom file resolver for use in contexts such as a virtual file system.
 * A list of command-line arguments, exposed inside the programme as the built-in `THE PROPS` constant array.
 
+Every `IT IS MY DUTY TO PERFORM` function, whether declared directly or contributed by a `PRAY ADMIT`-imported file, is registered in a single lookup table keyed by its name.  When the declaring file declares a namespace with `TOWN`, the registered key is namespace-qualified rather than bare.  Resolving a `SUMMON` call by a bare name tries, in order:
+
+* The calling code namespace.
+* Each namespace opened with `PRAY RECOGNISE`.
+* Then the global, non-namespaced, table.
+
+This is mirrored by the same tiered resolution the [Type Checker](./type-checker.md) during static type-checking.  A bare name matching more than one open namespace is a runtime error requiring a fully-qualified name to disambiguate.  A fully-qualified call, using either the `WITH DISTRICT` ... `WITH DUTY` long form or the `*` short form, is looked up directly by its qualified key and does not go through this tiered resolution.
+

@@ -33,8 +33,8 @@ public class VisualGraphToAstConverterProgramTests : VisualGraphToAstConverterTe
     [Fact]
     public void RoundTrip_PrincipalBlockDeclarations_CollectsAllFloatingDeclarationsInOrder()
     {
-        DeclarationNode first = new() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan };
-        DeclarationNode second = new() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode first = new() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode second = new() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
         PrincipalBlockNode principals = new() { Declarations = [first, second], Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTrip(WrapInProgram(principals));
@@ -56,6 +56,32 @@ public class VisualGraphToAstConverterProgramTests : VisualGraphToAstConverterTe
         ProgramNode reconstructed = RoundTrip(WrapInProgram(import));
 
         reconstructed.Statements.OfType<ImportNode>().Single().FilePath.ShouldBe("utils.topsy");
+    }
+
+    /// <summary>
+    /// Tests that a namespace declaration round-trips with its path segments preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_NamespaceDeclaration_PreservesPath()
+    {
+        NamespaceDeclarationNode namespaceDeclaration = new() { Path = ["Accounts", "Payroll"], Span = PlaceholderSpan };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(namespaceDeclaration));
+
+        reconstructed.Statements.OfType<NamespaceDeclarationNode>().Single().Path.ShouldBe(["Accounts", "Payroll"]);
+    }
+
+    /// <summary>
+    /// Tests that a recognise directive round-trips with its path segments preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_Recognise_PreservesPath()
+    {
+        RecogniseNode recognise = new() { Path = ["Accounts", "Payroll"], Span = PlaceholderSpan };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(recognise));
+
+        reconstructed.Statements.OfType<RecogniseNode>().Single().Path.ShouldBe(["Accounts", "Payroll"]);
     }
 
     /// <summary>

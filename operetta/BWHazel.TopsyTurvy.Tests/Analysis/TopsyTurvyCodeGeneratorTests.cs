@@ -1192,6 +1192,120 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a TOWN declaration and normalises a long-form WITH DISTRICT chain to the short-form <c>*</c>-joined syntax.
+    /// </summary>
+    [Fact]
+    public void Generate_NamespaceDeclarationLongForm_RoundTripsAsShortForm()
+    {
+        string source = """
+            HARK! "T"
+            TOWN Accounts WITH DISTRICT Payroll
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        NamespaceDeclarationNode node = result.Program!.Statements.OfType<NamespaceDeclarationNode>().First();
+        node.Path.ShouldBe(["Accounts", "Payroll"]);
+        generatedCode.ShouldContain("TOWN Accounts*Payroll");
+        generatedCode.ShouldNotContain("WITH DISTRICT");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a PRAY RECOGNISE directive and normalises a long-form WITH DISTRICT chain to the short-form <c>*</c>-joined syntax.
+    /// </summary>
+    [Fact]
+    public void Generate_RecogniseStatementLongForm_RoundTripsAsShortForm()
+    {
+        string source = """
+            HARK! "T"
+            PRAY RECOGNISE Accounts WITH DISTRICT Payroll
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        RecogniseNode node = result.Program!.Statements.OfType<RecogniseNode>().First();
+        node.Path.ShouldBe(["Accounts", "Payroll"]);
+        generatedCode.ShouldContain("PRAY RECOGNISE Accounts*Payroll");
+        generatedCode.ShouldNotContain("WITH DISTRICT");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a long-form fully-qualified SUMMON call, re-emitting the target with the short-form <c>*</c>-joined syntax rather than the literal dot-joined internal name.
+    /// </summary>
+    [Fact]
+    public void Generate_FullyQualifiedSummonLongForm_RoundTripsAsShortForm()
+    {
+        string source = """
+            HARK! "T"
+            TOWN Accounts WITH DISTRICT Payroll
+            IT IS MY DUTY TO PERFORM CalculateTax UNDER THE TERMS OF Amount AS A PEER TO FIND PEER
+              AND SO I FIND Amount
+            MY DUTY IS DISCHARGED.
+            BEHOLD SUMMON Accounts WITH DISTRICT Payroll WITH DUTY CalculateTax WITH 100 IF YOU PLEASE.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        generatedCode.ShouldContain("SUMMON Accounts*Payroll*CalculateTax WITH 100 IF YOU PLEASE.");
+        generatedCode.ShouldNotContain("WITH DUTY");
+        generatedCode.ShouldNotContain("Accounts.Payroll");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a short-form fully-qualified SUMMON call unchanged.
+    /// </summary>
+    [Fact]
+    public void Generate_FullyQualifiedSummonShortForm_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            TOWN Accounts*Payroll
+            IT IS MY DUTY TO PERFORM CalculateTax UNDER THE TERMS OF Amount AS A PEER TO FIND PEER
+              AND SO I FIND Amount
+            MY DUTY IS DISCHARGED.
+            BEHOLD SUMMON Accounts*Payroll*CalculateTax WITH 100 IF YOU PLEASE.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        generatedCode.ShouldContain("SUMMON Accounts*Payroll*CalculateTax WITH 100 IF YOU PLEASE.");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method leaves a plain, unqualified SUMMON call unaffected by the fully-qualified target handling.
+    /// </summary>
+    [Fact]
+    public void Generate_PlainSummon_RoundTripsWithNoStarCharacter()
+    {
+        string source = """
+            HARK! "T"
+            IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF Name AS A YARN
+              BEHOLD Name
+            MY DUTY IS DISCHARGED.
+            SUMMON Greet WITH "Ko-Ko" IF YOU PLEASE.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        generatedCode.ShouldNotContain("*");
+    }
+
+    /// <summary>
     /// Generates source from a raw Topsy Turvy programme string by parsing it and re-generating.
     /// </summary>
     /// <param name="source">The input Topsy Turvy source.</param>

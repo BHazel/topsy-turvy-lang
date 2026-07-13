@@ -197,6 +197,7 @@ public class VisualGraphBuilderExpressionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "f",
+            NameSpan = PlaceholderSpan,
             Parameters = [new TypedParameter("x", LiteralType.Integer, PlaceholderSpan)],
             Body = [new PrintNode { Expression = Identifier("x"), Span = PlaceholderSpan }],
             Span = PlaceholderSpan,

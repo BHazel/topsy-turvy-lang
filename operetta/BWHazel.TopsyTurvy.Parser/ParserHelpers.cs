@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Superpower;
 using Superpower.Model;
+using Superpower.Parsers;
 using BWHazel.TopsyTurvy.Ast;
 
 namespace BWHazel.TopsyTurvy.Parser;
@@ -168,4 +170,39 @@ internal static class ParserHelpers
     /// </remarks>
     internal static TextParser<T> Ws<T>(TextParser<T> parser) =>
         Lexer.WhitespaceRequired.IgnoreThen(parser);
+
+    /// <summary>
+    /// Parses a single long-form namespace path segment (<c>WITH DISTRICT &lt;name&gt;</c>),
+    /// including its own leading required whitespace.
+    /// </summary>
+    internal static readonly TextParser<string> NamespaceSegmentLongForm =
+        (Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Keyword("WITH DISTRICT"))
+            .IgnoreThen(Lexer.WhitespaceRequired)
+            .IgnoreThen(Lexer.Identifier))
+        .Try();
+
+    /// <summary>
+    /// Parses a single short-form namespace path segment (<c>*&lt;name&gt;</c>).
+    /// </summary>
+    internal static readonly TextParser<string> NamespaceSegmentShortForm =
+        Character.EqualTo('*')
+            .IgnoreThen(Lexer.Identifier);
+
+    /// <summary>
+    /// Parses the namespace path segments following the leading identifier of a namespace
+    /// declaration, a namespace-open directive, or a fully-qualified function call target.
+    /// </summary>
+    /// <remarks>
+    /// Tries a <see cref="NamespaceSegmentLongForm"/> chain first, then a
+    /// <see cref="NamespaceSegmentShortForm"/> chain; either may be empty, in which case the
+    /// namespace path is just the single leading identifier.  A declaration is expected to commit to
+    /// one form, but both are attempted unconditionally: whichever form is absent naturally
+    /// contributes zero segments, since its leading token will not match at the resulting cursor
+    /// position.
+    /// </remarks>
+    internal static readonly TextParser<string[]> NamespacePathTail =
+        from longFormNamespaceSegments in NamespaceSegmentLongForm.Many()
+        from shortFormNamespaceSegments in NamespaceSegmentShortForm.Many()
+        select longFormNamespaceSegments.Concat(shortFormNamespaceSegments).ToArray();
 }
