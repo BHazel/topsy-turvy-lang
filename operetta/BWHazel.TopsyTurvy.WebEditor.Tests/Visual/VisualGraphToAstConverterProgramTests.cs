@@ -59,6 +59,32 @@ public class VisualGraphToAstConverterProgramTests : VisualGraphToAstConverterTe
     }
 
     /// <summary>
+    /// Tests that a namespace declaration round-trips with its path segments preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_NamespaceDeclaration_PreservesPath()
+    {
+        NamespaceDeclarationNode namespaceDeclaration = new() { Path = ["Accounts", "Payroll"], Span = PlaceholderSpan };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(namespaceDeclaration));
+
+        reconstructed.Statements.OfType<NamespaceDeclarationNode>().Single().Path.ShouldBe(["Accounts", "Payroll"]);
+    }
+
+    /// <summary>
+    /// Tests that a recognise directive round-trips with its path segments preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_Recognise_PreservesPath()
+    {
+        RecogniseNode recognise = new() { Path = ["Accounts", "Payroll"], Span = PlaceholderSpan };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(recognise));
+
+        reconstructed.Statements.OfType<RecogniseNode>().Single().Path.ShouldBe(["Accounts", "Payroll"]);
+    }
+
+    /// <summary>
     /// Tests that a print statement round-trips with its expression and suppress-newline flag preserved.
     /// </summary>
     [Theory]

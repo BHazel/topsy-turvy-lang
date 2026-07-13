@@ -32,6 +32,8 @@ public class VisualNodeFactoryTests
     [InlineData("ReturnNode", "AND SO I FIND", new[] { "Value" })]
     [InlineData("ThrowNode", "A HIDEOUS CURSE ON", new[] { "Value" })]
     [InlineData("ImportNode", "PRAY ADMIT", new string[0])]
+    [InlineData("NamespaceDeclarationNode", "TOWN", new string[0])]
+    [InlineData("RecogniseNode", "PRAY RECOGNISE", new string[0])]
     [InlineData("AssertNode", "THE LAW IS", new[] { "Cond", "Msg" })]
     [InlineData("ExpressionStatement", "EXPRESSION", new[] { "Expr" })]
     public void CreateStatement_SimpleTypes_CreatesSingleNodeWithCorrectTitleAndDataInPorts(

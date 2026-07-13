@@ -72,6 +72,15 @@ public sealed class VisualGraphToAstConverter
             .OfType<Statement>()];
         allStatements.AddRange(sidebarImports);
 
+        // Sidebar namespace directives are floating and not in the main flow.
+        List<Statement> sidebarNamespaceDirectives = [.. diagram.Nodes
+            .OfType<TopsyTurvyVisualNodeModel>()
+            .Where(visualNode => (visualNode.StatementType == "NamespaceDeclarationNode" || visualNode.StatementType == "RecogniseNode")
+                        && !HasIncomingFlowLink(visualNode))
+            .Select(visualNode => this.ReconstructSingleStatement(visualNode, diagram))
+            .OfType<Statement>()];
+        allStatements.AddRange(sidebarNamespaceDirectives);
+
         // Function Definitions: Separate subgraphs identified by FunctionBodyOpener nodes.
         // Each opener has its own body flow chain distinct from the main programme flow.
         foreach (TopsyTurvyVisualNodeModel opener in diagram.Nodes
@@ -230,6 +239,8 @@ public sealed class VisualGraphToAstConverter
             "ReturnNode" => this.ReconstructReturnFactory(node, diagram),
             "ThrowNode" => this.ReconstructThrowFactory(node, diagram),
             "ImportNode" => ReconstructImportFactory(node),
+            "NamespaceDeclarationNode" => ReconstructNamespaceDeclarationFactory(node),
+            "RecogniseNode" => ReconstructRecogniseFactory(node),
             "AssertNode" => this.ReconstructAssertFactory(node, diagram),
             "ExpressionStatement" => this.ReconstructExpressionStatementFactory(node, diagram),
             "SummonNode" => new ExpressionStatement() { Expression = this.ReconstructSummonFromNode(node, diagram), Span = PlaceholderSpan },
@@ -503,6 +514,44 @@ public sealed class VisualGraphToAstConverter
             Span = PlaceholderSpan
         };
     }
+
+    /// <summary>
+    /// Reconstructs a namespace declaration statement from a factory node in the diagram.
+    /// </summary>
+    /// <param name="node">The factory node representing the namespace declaration.</param>
+    /// <returns>The reconstructed namespace declaration statement.</returns>
+    private static NamespaceDeclarationNode ReconstructNamespaceDeclarationFactory(TopsyTurvyVisualNodeModel node)
+    {
+        return new()
+        {
+            Path = SplitNamespacePath(node.SymbolIdentifierNodeName),
+            Span = PlaceholderSpan
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a namespace recognition directive from a factory node in the diagram.
+    /// </summary>
+    /// <param name="node">The factory node representing the recognition directive.</param>
+    /// <returns>The reconstructed recognition directive.</returns>
+    private static RecogniseNode ReconstructRecogniseFactory(TopsyTurvyVisualNodeModel node)
+    {
+        return new()
+        {
+            Path = SplitNamespacePath(node.SymbolIdentifierNodeName),
+            Span = PlaceholderSpan
+        };
+    }
+
+    /// <summary>
+    /// Splits a <c>*</c>-joined namespace path string into its ordered segments.
+    /// </summary>
+    /// <param name="path">The <c>*</c>-joined path, as edited by <see cref="Components.VisualEditor.VisualNodeWidget"/>.</param>
+    /// <returns>The ordered, non-empty path segments.</returns>
+    private static IReadOnlyList<string> SplitNamespacePath(string? path) =>
+        string.IsNullOrWhiteSpace(path)
+            ? []
+            : path.Split('*', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>
     /// Reconstructs an assert statement from a factory node in the diagram.
@@ -788,6 +837,8 @@ public sealed class VisualGraphToAstConverter
             TryCatchNode tryCatch when visualNode is not null => this.ReconstructTryCatch(tryCatch, visualNode, diagram),
             SwitchNode switchNode when visualNode is not null => this.ReconstructSwitch(switchNode, visualNode, diagram),
             ImportNode import when visualNode is not null => ReconstructImport(import, visualNode),
+            NamespaceDeclarationNode namespaceDeclaration when visualNode is not null => ReconstructNamespaceDeclaration(namespaceDeclaration, visualNode),
+            RecogniseNode recognise when visualNode is not null => ReconstructRecognise(recognise, visualNode),
             GuardNode guard when visualNode is not null => this.ReconstructGuard(guard, visualNode, diagram),
             AssertNode assert when visualNode is not null => this.ReconstructAssert(assert, visualNode, diagram),
             ExpressionStatement expressionStatement when visualNode is not null => this.ReconstructExpressionStatement(expressionStatement, visualNode, diagram),
@@ -1181,6 +1232,36 @@ public sealed class VisualGraphToAstConverter
         return new()
         {
             FilePath = visualNode.SymbolIdentifierNodeName ?? original.FilePath,
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a namespace declaration statement from the original AST node and its corresponding visual node.
+    /// </summary>
+    /// <param name="original">The original namespace declaration node.</param>
+    /// <param name="visualNode">The visual node corresponding to the namespace declaration.</param>
+    /// <returns>A reconstructed namespace declaration node.</returns>
+    private static NamespaceDeclarationNode ReconstructNamespaceDeclaration(NamespaceDeclarationNode original, TopsyTurvyVisualNodeModel visualNode)
+    {
+        return new()
+        {
+            Path = visualNode.SymbolIdentifierNodeName is null ? original.Path : SplitNamespacePath(visualNode.SymbolIdentifierNodeName),
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a namespace recognition directive from the original AST node and its corresponding visual node.
+    /// </summary>
+    /// <param name="original">The original recognition directive node.</param>
+    /// <param name="visualNode">The visual node corresponding to the recognition directive.</param>
+    /// <returns>A reconstructed recognition directive node.</returns>
+    private static RecogniseNode ReconstructRecognise(RecogniseNode original, TopsyTurvyVisualNodeModel visualNode)
+    {
+        return new()
+        {
+            Path = visualNode.SymbolIdentifierNodeName is null ? original.Path : SplitNamespacePath(visualNode.SymbolIdentifierNodeName),
             Span = PlaceholderSpan,
         };
     }

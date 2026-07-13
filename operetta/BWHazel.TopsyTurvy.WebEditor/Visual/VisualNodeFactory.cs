@@ -49,6 +49,8 @@ public static class VisualNodeFactory
             "ReturnNode" => [SimpleStatement(statementType, "AND SO I FIND", null, VisualNodeKind.Function, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ThrowNode" => [SimpleStatement(statementType, "A HIDEOUS CURSE ON", null, VisualNodeKind.ErrorHandling, position, diagram, ref nodeCounter, dataInLabels: ["Value"])],
             "ImportNode" => [SimpleStatement(statementType, "PRAY ADMIT", null, VisualNodeKind.Other, position, diagram, ref nodeCounter)],
+            "NamespaceDeclarationNode" => [SimpleStatement(statementType, "TOWN", "namespace", VisualNodeKind.Other, position, diagram, ref nodeCounter)],
+            "RecogniseNode" => [SimpleStatement(statementType, "PRAY RECOGNISE", "namespace", VisualNodeKind.Other, position, diagram, ref nodeCounter)],
             "AssertNode" => [SimpleStatement(statementType, "THE LAW IS", null, VisualNodeKind.ControlFlow, position, diagram, ref nodeCounter, dataInLabels: ["Cond", "Msg"])],
             "ExpressionStatement" => [SimpleStatement(statementType, "EXPRESSION", null, VisualNodeKind.Other, position, diagram, ref nodeCounter, dataInLabels: ["Expr"])],
             "ConditionalOpener" => CreateConditionalBlock(position, diagram, ref nodeCounter),

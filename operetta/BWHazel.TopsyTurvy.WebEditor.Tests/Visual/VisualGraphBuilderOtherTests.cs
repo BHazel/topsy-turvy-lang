@@ -76,6 +76,48 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
     }
 
     /// <summary>
+    /// Tests that a namespace declaration floats in the sidebar with no incoming Flow In link, and its
+    /// path segments are joined with <c>*</c> as the node subtitle and symbol identifier.
+    /// </summary>
+    [Fact]
+    public void Build_WithNamespaceDeclaration_FloatsInSidebarWithJoinedPath()
+    {
+        NamespaceDeclarationNode namespaceDeclaration = new()
+        {
+            Path = ["Accounts", "Payroll"],
+            Span = PlaceholderSpan
+        };
+
+        BlazorDiagram diagram = Build(WrapInProgram(namespaceDeclaration));
+
+        TopsyTurvyVisualNodeModel node = Node(diagram, "NamespaceDeclarationNode");
+        IsLinked(Port(node, "In", VisualPortRole.FlowIn)).ShouldBeFalse();
+        node.Subtitle.ShouldBe("Accounts*Payroll");
+        node.SymbolIdentifierNodeName.ShouldBe("Accounts*Payroll");
+    }
+
+    /// <summary>
+    /// Tests that a recognise directive floats in the sidebar with no incoming Flow In link, and its
+    /// path segments are joined with <c>*</c> as the node subtitle and symbol identifier.
+    /// </summary>
+    [Fact]
+    public void Build_WithRecogniseDirective_FloatsInSidebarWithJoinedPath()
+    {
+        RecogniseNode recognise = new()
+        {
+            Path = ["Accounts", "Payroll"],
+            Span = PlaceholderSpan
+        };
+
+        BlazorDiagram diagram = Build(WrapInProgram(recognise));
+
+        TopsyTurvyVisualNodeModel node = Node(diagram, "RecogniseNode");
+        IsLinked(Port(node, "In", VisualPortRole.FlowIn)).ShouldBeFalse();
+        node.Subtitle.ShouldBe("Accounts*Payroll");
+        node.SymbolIdentifierNodeName.ShouldBe("Accounts*Payroll");
+    }
+
+    /// <summary>
     /// Tests that an array declaration with no initial values but a declared size uses the size as the
     /// node literal value.
     /// </summary>
