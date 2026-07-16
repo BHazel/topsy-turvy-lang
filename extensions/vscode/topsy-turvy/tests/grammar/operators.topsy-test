@@ -90,6 +90,14 @@ VICTIM 1 ON arr
 x ON arr
 //^ keyword.operator.topsy
 
+// ── Pointer operations ───────────────────────────────────────────────────────
+
+GALLERY PICTURE TO x
+//^ keyword.operator.topsy
+
+VIEW FROM ptr
+//^ keyword.operator.topsy
+
 // ── User-defined identifiers ──────────────────────────────────────────────────
 
 myVariable

@@ -47,4 +47,13 @@ public class VisualTypeMapsTests
         VisualTypeMaps.TypeToKeyword[LiteralType.Array].ShouldBe("LITTLE LIST OF");
         VisualTypeMaps.TypeToKeyword[LiteralType.Null].ShouldBe("NAUGHT");
     }
+
+    /// <summary>
+    /// Tests that <see cref="LiteralType.Pointer"/> maps to <c>GALLERY PICTURE OF</c>.
+    /// </summary>
+    [Fact]
+    public void TypeToKeyword_Pointer_MapsToGalleryPictureOf()
+    {
+        VisualTypeMaps.TypeToKeyword[LiteralType.Pointer].ShouldBe("GALLERY PICTURE OF");
+    }
 }

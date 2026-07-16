@@ -78,6 +78,11 @@ public sealed class TopsyTurvyVisualNodeModel : NodeModel
     public LiteralType? ArrayElementLiteralType { get; set; }
 
     /// <summary>
+    /// Gets or sets the pointee type for pointer declaration nodes.
+    /// </summary>
+    public LiteralType? PointerPointeeLiteralType { get; set; }
+
+    /// <summary>
     /// Gets or sets the literal value as a string, used for editable Literal nodes.
     /// </summary>
     public string? LiteralValue { get; set; }

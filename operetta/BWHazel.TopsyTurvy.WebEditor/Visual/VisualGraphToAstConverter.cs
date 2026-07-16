@@ -50,7 +50,7 @@ public sealed class VisualGraphToAstConverter
         // factory declaration nodes the user has placed but left floating.
         List<Statement> sidebarDeclarations = [.. diagram.Nodes
             .OfType<TopsyTurvyVisualNodeModel>()
-            .Where(visualNode => (visualNode.StatementType == "DeclarationNode" || visualNode.StatementType == "ArrayDeclarationNode")
+            .Where(visualNode => (visualNode.StatementType == "DeclarationNode" || visualNode.StatementType == "ArrayDeclarationNode" || visualNode.StatementType == "PointerDeclarationNode")
                         && !HasIncomingFlowLink(visualNode))
             .Select(visualNode => this.ReconstructSingleStatement(visualNode, diagram))
             .OfType<Statement>()];
@@ -231,6 +231,7 @@ public sealed class VisualGraphToAstConverter
             "ArrayDeclarationNode" => ReconstructArrayDeclarationFactory(node),
             "AssignmentNode" => this.ReconstructAssignmentFactory(node, diagram),
             "ArrayElementAssignmentNode" => this.ReconstructArrayElementAssignmentFactory(node, diagram),
+            "DereferenceAssignmentNode" => this.ReconstructDereferenceAssignmentFactory(node, diagram),
             "PrintNode" => this.ReconstructPrintFactory(node, diagram),
             "InputNode" => ReconstructInputFactory(node),
             "BreakNode" => new BreakNode() { Span = PlaceholderSpan },
@@ -323,6 +324,11 @@ public sealed class VisualGraphToAstConverter
             return this.ReconstructArrayDeclarationFromFactory(node, diagram);
         }
 
+        if (node.NodeLiteralType == LiteralType.Pointer)
+        {
+            return this.ReconstructPointerDeclarationFactory(node, diagram);
+        }
+
         return new DeclarationNode()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
@@ -394,6 +400,25 @@ public sealed class VisualGraphToAstConverter
     }
 
     /// <summary>
+    /// Reconstructs a pointer declaration statement from a factory node in the diagram.
+    /// </summary>
+    /// <param name="node">The factory node representing the pointer declaration.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
+    /// <returns>The reconstructed pointer declaration statement.</returns>
+    private PointerDeclarationNode ReconstructPointerDeclarationFactory(TopsyTurvyVisualNodeModel node, BlazorDiagram diagram)
+    {
+        return new()
+        {
+            Name = node.SymbolIdentifierNodeName ?? string.Empty,
+            NameSpan = PlaceholderSpan,
+            PointeeType = node.PointerPointeeLiteralType ?? LiteralType.Integer,
+            IsConstant = node.IsIdentifierConstant,
+            InitialValue = this.GetExpressionFromDataIn(node, "Value", diagram),
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
     /// Reconstructs an assignment statement from a factory node in the diagram.
     /// </summary>
     /// <param name="node">The factory node representing the assignment.</param>
@@ -421,6 +446,22 @@ public sealed class VisualGraphToAstConverter
         {
             ArrayName = GetTargetNameFromPort(node) ?? node.SymbolIdentifierNodeName ?? string.Empty,
             Index = this.GetExpressionFromDataIn(node, "Victim", diagram) ?? Fallback(),
+            Value = this.GetExpressionFromDataIn(node, "Value", diagram) ?? Fallback(),
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a pointer write-through assignment statement from a factory node in the diagram.
+    /// </summary>
+    /// <param name="node">The factory node representing the dereference assignment.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
+    /// <returns>The reconstructed dereference assignment statement.</returns>
+    private DereferenceAssignmentNode ReconstructDereferenceAssignmentFactory(TopsyTurvyVisualNodeModel node, BlazorDiagram diagram)
+    {
+        return new()
+        {
+            PointerName = GetTargetNameFromPort(node, "Pointer") ?? node.SymbolIdentifierNodeName ?? string.Empty,
             Value = this.GetExpressionFromDataIn(node, "Value", diagram) ?? Fallback(),
             Span = PlaceholderSpan,
         };
@@ -1378,6 +1419,8 @@ public sealed class VisualGraphToAstConverter
             "TernaryNode" => this.ReconstructTernaryFromNode(node, diagram),
             "ArrayIndexNode" => this.ReconstructArrayIndexFromNode(node, diagram),
             "ArrayLengthNode" => ReconstructArrayLengthFromNode(node),
+            "AddressOfExpressionNode" => ReconstructAddressOfFromNode(node),
+            "DereferenceExpressionNode" => ReconstructDereferenceFromNode(node),
             "ExpressionCastNode" => this.ReconstructExpressionCastFromNode(node, diagram),
             "SummonNode" => this.ReconstructSummonFromNode(node, diagram),
             _ => node.AstNode as Expression ?? new LiteralNode { Type = LiteralType.Null, Value = null, Span = PlaceholderSpan },
@@ -1519,6 +1562,34 @@ public sealed class VisualGraphToAstConverter
     }
 
     /// <summary>
+    /// Reconstructs an address-of expression from the given visual address-of node.
+    /// </summary>
+    /// <param name="visualNode">The visual address-of node.</param>
+    /// <returns>The reconstructed address-of expression node.</returns>
+    private static AddressOfExpressionNode ReconstructAddressOfFromNode(TopsyTurvyVisualNodeModel visualNode)
+    {
+        return new()
+        {
+            VariableName = GetTargetNameFromPort(visualNode) ?? visualNode.SymbolIdentifierNodeName ?? visualNode.Title ?? string.Empty,
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
+    /// Reconstructs a pointer dereference expression from the given visual dereference node.
+    /// </summary>
+    /// <param name="visualNode">The visual dereference node.</param>
+    /// <returns>The reconstructed dereference expression node.</returns>
+    private static DereferenceExpressionNode ReconstructDereferenceFromNode(TopsyTurvyVisualNodeModel visualNode)
+    {
+        return new()
+        {
+            PointerName = GetTargetNameFromPort(visualNode, "Pointer") ?? visualNode.SymbolIdentifierNodeName ?? visualNode.Title ?? string.Empty,
+            Span = PlaceholderSpan,
+        };
+    }
+
+    /// <summary>
     /// Reconstructs an expression cast from the given visual expression cast node.
     /// </summary>
     /// <param name="visualNode">The visual expression cast node.</param>
@@ -1598,16 +1669,17 @@ public sealed class VisualGraphToAstConverter
     }
 
     /// <summary>
-    /// Gets the target name of a variable from a visual node Data In port labeled "Variable".
+    /// Gets the target name of a variable from a visual node Data In port with the given label.
     /// </summary>
     /// <param name="visualNode">The visual node containing the Data In port.</param>
+    /// <param name="portLabel">The label of the Data In port to follow, "Variable" by default.</param>
     /// <returns>The target name of the variable, or <c>null</c> if the port is disconnected or not found.</returns>
-    private static string? GetTargetNameFromPort(TopsyTurvyVisualNodeModel visualNode)
+    private static string? GetTargetNameFromPort(TopsyTurvyVisualNodeModel visualNode, string portLabel = "Variable")
     {
         TopsyTurvyVisualPortModel? port = visualNode.Ports
             .OfType<TopsyTurvyVisualPortModel>()
-            .FirstOrDefault(port => port.Role == VisualPortRole.DataIn && port.Label == "Variable");
-        
+            .FirstOrDefault(port => port.Role == VisualPortRole.DataIn && port.Label == portLabel);
+
         return port is null
             ? null
             : GetExpressionSourceNode(port)?.SymbolIdentifierNodeName;

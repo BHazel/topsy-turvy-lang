@@ -402,6 +402,10 @@
         },
         {
           "name": "storage.type.topsy",
+          "match": "(?i)\\bGALLERY\\s+PICTURE\\s+OF\\b"
+        },
+        {
+          "name": "storage.type.topsy",
           "match": "(?i)\\b(PEER|CHANCELLOR|PIRATE|SAUSAGE-ROLL|FATHOM|FOOT|YARN|STITCH|DECREE)\\b"
         }
       ]
@@ -471,6 +475,14 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\bRECKONING\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bGALLERY\\s+PICTURE\\s+TO\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bVIEW\\s+FROM\\b"
         },
         {
           "name": "keyword.operator.topsy",

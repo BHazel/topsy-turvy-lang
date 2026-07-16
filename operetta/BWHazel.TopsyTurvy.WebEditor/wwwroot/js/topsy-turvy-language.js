@@ -111,6 +111,9 @@ window.topsyTurvy = {
             ["VICTIM",                              "array element access / assignment"],
             ["ON",                                  "array index separator"],
             ["RECKONING OF",                        "array length expression"],
+            ["A GALLERY PICTURE OF",                "pointer type annotation"],
+            ["GALLERY PICTURE TO",                  "address-of / pointer assignment"],
+            ["VIEW FROM",                           "pointer dereference"],
         ];
 
         monaco.languages.registerCompletionItemProvider('topsy-turvy', {
@@ -245,6 +248,8 @@ window.topsyTurvy = {
 
                     // A LITTLE LIST OF: after "AS A" consumes the leading A, only "LITTLE LIST OF" remains in the token stream
                     [/\bLITTLE\s+LIST\s+OF\b/, 'type'],
+                    // A GALLERY PICTURE OF: after "AS A" consumes the leading A, only "GALLERY PICTURE OF" remains in the token stream
+                    [/\bGALLERY\s+PICTURE\s+OF\b/, 'type'],
                     [/\bYEOMAN\b/, 'keyword'],
                     [/\bUNDER\s+ORDERS\./, 'keyword'],
                     [/\bTHE\s+LAW\s+IS\b/, 'keyword'],
@@ -318,6 +323,9 @@ window.topsyTurvy = {
                     [/\bALL\s+OF\b/, 'keyword'],
                     [/\bANY\s+OF\b/, 'keyword'],
                     [/\bKNOWN\s+AS\b/, 'keyword'],
+                    // GALLERY PICTURE TO and GALLERY PICTURE OF (type, above) share a prefix but diverge on the last word
+                    [/\bGALLERY\s+PICTURE\s+TO\b/, 'keyword'],
+                    [/\bVIEW\s+FROM\b/, 'keyword'],
 
                     // Single-word keywords
                     [/\bHARK!/, 'keyword'],
