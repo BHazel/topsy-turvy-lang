@@ -35,6 +35,7 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// | `DECREE`                | `Boolean`                  | `bool`                       |
 /// | `NAUGHT`                | `Null`                     | `null`                       |
 /// | `A LITTLE LIST OF`      | `Array`                    | `List&lt;TopsyTurvyValue&gt;`|
+/// | `A GALLERY PICTURE OF`  | `Pointer`                  | `TopsyTurvyPointerTarget`    |
 ///
 /// </para>
 /// </remarks>
@@ -223,6 +224,21 @@ public sealed class TopsyTurvyValue
     public static TopsyTurvyValue Array(List<TopsyTurvyValue> elements) => new(elements, LiteralType.Array);
 
     /// <summary>
+    /// Creates a pointer value referring to the given target (<c>A GALLERY PICTURE OF</c>).
+    /// </summary>
+    /// <param name="target">The location this pointer refers to.</param>
+    /// <remarks>
+    /// An unassigned pointer is represented by <see cref="Null"/>, not by this factory: a
+    /// <see cref="LiteralType"/><c>.Pointer</c> value always carries a real target.
+    /// </remarks>
+    /// <returns>A new <see cref="TopsyTurvyValue"/> wrapping the pointer target.</returns>
+    /// <code>
+    /// TopsyTurvyPointerTarget target = TopsyTurvyPointerTarget.ForVariable(environment, "Number");
+    /// TopsyTurvyValue value = TopsyTurvyValue.Pointer(target);
+    /// </code>
+    public static TopsyTurvyValue Pointer(TopsyTurvyPointerTarget target) => new(target, LiteralType.Pointer);
+
+    /// <summary>
     /// Evaluates the truthiness of this value in a boolean context.
     /// </summary>
     /// <remarks>
@@ -235,6 +251,7 @@ public sealed class TopsyTurvyValue
     /// * <c>DECREE</c>: <c>true</c>.
     /// * <c>NAUGHT</c>: Never truthy.
     /// * Arrays: Non-empty.
+    /// * Pointers: Always truthy, since an unassigned pointer is represented by <c>NAUGHT</c> rather than a pointer value.
     /// </para>
     /// </remarks>
     /// <returns><c>true</c> for truthy values; otherwise <c>false</c>.</returns>
@@ -262,6 +279,7 @@ public sealed class TopsyTurvyValue
         LiteralType.Boolean => (bool)this.RawValue!,
         LiteralType.Null => false,
         LiteralType.Array => ((List<TopsyTurvyValue>)this.RawValue!).Count > 0,
+        LiteralType.Pointer => true,
         _ => true
     };
 
@@ -282,7 +300,9 @@ public sealed class TopsyTurvyValue
     /// </para>
     /// <para>
     /// Arrays can only be cast to <c>YARN</c> (via <see cref="ToString"/>) or <c>DECREE</c> (via <see cref="IsTruthy"/>).
-    /// Casting an array to any other type throws a <see cref="TopsyTurvyRuntimeException"/>.
+    /// Casting an array to any other type throws a <see cref="TopsyTurvyRuntimeException"/>.  Pointers follow the
+    /// same restriction: a pointer can only be cast to <c>YARN</c>, which renders its synthetic display address, or
+    /// <c>DECREE</c>.
     /// </para>
     /// </remarks>
     /// <returns>A new <see cref="TopsyTurvyValue"/> of the target type.</returns>
@@ -306,6 +326,11 @@ public sealed class TopsyTurvyValue
         if (this.LiteralType == LiteralType.Array && targetType is not (LiteralType.String or LiteralType.Boolean))
         {
             throw new TopsyTurvyRuntimeException($"Cannot cast an array to {targetType}.");
+        }
+
+        if (this.LiteralType == LiteralType.Pointer && targetType is not (LiteralType.String or LiteralType.Boolean))
+        {
+            throw new TopsyTurvyRuntimeException($"Cannot cast a pointer to {targetType}.");
         }
 
         return targetType switch
@@ -332,10 +357,15 @@ public sealed class TopsyTurvyValue
     /// Returns the string representation of this value.
     /// </summary>
     /// <remarks>
-    /// Boolean values render as <c>VERITY</c> (<c>true</c>) or <c>NAY</c> (<c>false</c>).  Null renders as
-    /// <c>NAUGHT</c>.  Arrays render as a comma-separated, bracket-enclosed list.  All other types use the default
-    /// .NET <see cref="object.ToString"/> of their underlying value.  Character values render as the bare character,
-    /// not quoted.
+    /// Values render according to the following rules:
+    /// * Numeric values render as their decimal representation.
+    /// * String values render as the raw string, not quoted.
+    /// * Boolean values render as <c>VERITY</c> (<c>true</c>) or <c>NAY</c> (<c>false</c>).
+    /// * Character values render as the bare character, not quoted.
+    /// * Null renders as <c>NAUGHT</c>.
+    /// * Arrays render as a comma-separated, bracket-enclosed list.
+    /// * Pointers render as a synthetic, address-shaped hexadecimal string derived from the target handle identifier, with no relation to any real memory location.
+    /// * All other types use the default .NET <see cref="object.ToString"/> of their underlying value.
     /// </remarks>
     /// <returns>A string representation of this value.</returns>
     /// <code>
@@ -352,6 +382,7 @@ public sealed class TopsyTurvyValue
             : Keywords.Literals.Nay,
         LiteralType.Null => Keywords.Literals.Naught,
         LiteralType.Array => "[" + string.Join(", ", ((List<TopsyTurvyValue>)this.RawValue!).Select(v => v.ToString())) + "]",
+        LiteralType.Pointer => ((TopsyTurvyPointerTarget)this.RawValue!).ToString(),
         LiteralType.Char => ((char)this.RawValue!).ToString(),
         _ => this.RawValue?.ToString() ?? Keywords.Literals.Naught
     };

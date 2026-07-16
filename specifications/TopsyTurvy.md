@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.7.0
+### Language Specification — Version 0.8.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
@@ -370,7 +370,7 @@ BEHOLD "My name is {name}, Lord High {title}."
 
 ### Escape Characters
 
-The escape character within `YARN` literals is `~` (the Victorian flourish). `~` also serves as the line-continuation character outside string literals — both roles are fully documented in §18.
+The escape character within `YARN` literals is `~` (the Victorian flourish). `~` also serves as the line-continuation character outside string literals — both roles are fully documented in §23.
 
 | Sequence | Meaning              |
 |----------|----------------------|
@@ -837,7 +837,7 @@ SUMMON Add WITH 2 AND 3 IF YOU PLEASE.
 - `*` — the short-hand equivalent of `WITH DISTRICT`, e.g. `TOWN A*B*C`.
 - `WITH DUTY <name>` — in a fully-qualified `SUMMON`, marks the end of the namespace path and the start of the function name being summoned, echoing `IT IS MY DUTY TO PERFORM`.
 - `PRAY RECOGNISE <Namespace path>` — formally recognises a town or district as already known to the company, so its citizens (functions) may thereafter be addressed by bare name for the rest of the file. `PRAY` verbatim, matching `PRAY WELCOME`/`PRAY ADMIT`/`PRAY TELL` (*The Mikado*). Does not itself require `PRAY ADMIT` to have already happened for that namespace — it only affects name resolution, not which functions exist.
-- Namespace membership is exclusive: a function declared under `TOWN` is **not** also reachable by its bare name from outside that namespace, even after `PRAY ADMIT` — see §21 Scoping.
+- Namespace membership is exclusive: a function declared under `TOWN` is **not** also reachable by its bare name from outside that namespace, even after `PRAY ADMIT` — see §22 Scoping.
 
 ---
 
@@ -954,13 +954,102 @@ length IS APPOINTED RECKONING OF word    ASIDE: evaluates to 6
 
 ---
 
-## 17. Documentation Comments
+## 17. Pointers
+
+A pointer refers to the storage location of an existing variable, array element, or string character, rather than holding a value directly — like a portrait hung in a gallery, each pointer refers to the sitter it depicts without being the sitter itself. A pointer is declared with the `GALLERY PICTURE OF` type annotation, pointed at a variable with `GALLERY PICTURE TO`, and read or written through with `VIEW FROM`.
+
+### Declaring a Pointer
+
+```
+PRAY WELCOME <name> AS A [CONSERVATIVE | LIBERAL] GALLERY PICTURE OF <type>
+    [BEING GALLERY PICTURE TO <variable>]
+```
+
+```topsy
+PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+PRAY WELCOME ValuesPointer AS A GALLERY PICTURE OF SAUSAGE-ROLL BEING GALLERY PICTURE TO Values
+```
+
+- `A GALLERY PICTURE OF <type>` — the pointer type annotation, naming the type of the value the pointer refers to (the *pointee type*). `<type>` may be any scalar type (`PEER`, `FATHOM`, `YARN`, `DECREE`, `STITCH`, etc.). `NAUGHT` is not a valid pointee type.
+- If no `BEING` clause is given, the pointer is initialised to `NAUGHT` (unassigned). Dereferencing an unassigned pointer is a runtime error.
+- `CONSERVATIVE` — a constant pointer; the variable cannot be re-pointed after declaration. This does not prevent writing through the pointer with `VIEW FROM ... IS APPOINTED`.
+
+### Pointing at a Variable
+
+```topsy
+<pointer> IS APPOINTED GALLERY PICTURE TO <variable>
+```
+
+```topsy
+NumberPointer IS APPOINTED GALLERY PICTURE TO Number
+```
+
+`GALLERY PICTURE TO <variable>` is an **expression** that resolves to a pointer aimed at `<variable>`. It is valid only as the `BEING` initial value of a pointer declaration, or as the value assigned to an existing pointer variable — a literal or a bare identifier is not accepted in either position, so a pointer can only ever be formed directly from a named variable, never copied or aliased from another pointer.
+
+- When `<variable>` is a scalar, the pointer refers to that variable directly, and its pointee type must exactly match the variable's own type — no numeric widening is permitted, since a write through the pointer must preserve the variable's real type.
+- When `<variable>` is an array (`A LITTLE LIST OF <type>`), the pointer decays to the array's first element, and its pointee type must exactly match the array's element type.
+- When `<variable>` is a `YARN`, the pointer decays to the string's first character, and its pointee type must be `STITCH`.
+
+### Dereferencing a Pointer
+
+```topsy
+VIEW FROM <pointer>
+```
+
+```topsy
+PRAY WELCOME Number2 AS A PEER BEING VIEW FROM NumberPointer
+BEHOLD VIEW FROM NumberPointer
+```
+
+`VIEW FROM <pointer>` is an **expression** that evaluates to the value currently referred to by `<pointer>`. Dereferencing an unassigned (`NAUGHT`) pointer is a runtime error.
+
+### Writing Through a Pointer
+
+```topsy
+VIEW FROM <pointer> IS APPOINTED <value>
+```
+
+```topsy
+VIEW FROM NumberPointer IS APPOINTED 23
+```
+
+Replaces the value at the location `<pointer>` refers to. Writing through an unassigned pointer is a runtime error. Writing through a pointer that refers to a character within a `YARN` is also a runtime error, since strings are immutable — the same restriction that applies to `VICTIM n ON <yarn> IS APPOINTED val`.
+
+### Pointer Arithmetic
+
+```topsy
+<pointer> IS APPOINTED SUM OF <pointer> AND <expr>
+<pointer> IS APPOINTED DIFFERENCE OF <pointer> AND <expr>
+```
+
+```topsy
+ValuesPointer IS APPOINTED SUM OF ValuesPointer AND 2
+BEHOLD VIEW FROM ValuesPointer
+```
+
+`SUM OF` and `DIFFERENCE OF` move a pointer forward or backward by `<expr>` elements when the pointer refers to an array element or string character, producing a new pointer at the shifted position. `<expr>` must evaluate to an integer type. Bounds-checking is performed at the point of the arithmetic operation itself: moving a pointer before the first element or beyond the last is a runtime error, as is any attempt to perform arithmetic on a pointer that refers to a plain variable, since a single variable has no notion of a next element.
+
+### Display
+
+`BEHOLD` renders a pointer as a hexadecimal, address-shaped string, for example `0x00000002`. Each pointer target is assigned this display identifier once, the first time it is formed with `GALLERY PICTURE TO`, so the same target always renders the same identifier for as long as it is referred to. The identifier's relationship, if any, to real memory is unspecified and must not be relied upon by a programme.
+
+### Comparing Pointers
+
+A pointer may be compared against `NAUGHT` with `ALIKE` or `UNLIKE` to test whether it has been assigned, since there is no dedicated is-null construct:
+
+```topsy
+SHOULD IT TRANSPIRE THAT ALIKE NumberPointer AND NAUGHT
+```
+
+---
+
+## 18. Documentation Comments
 
 A **documentation comment** is an `(ASIDE, AT SOME LENGTH: ... END OF ASIDE.)` block placed immediately before a `PRAY WELCOME` declaration or an `IT IS MY DUTY TO PERFORM` function declaration. Blank lines between the block and the declaration are allowed; any intervening non-blank line breaks the association and the block is treated as a plain comment with no special meaning.
 
 Documentation comments are not executed. They annotate the programme for human readers and tooling that can display rich descriptions when hovering over a symbol in an editor.
 
-### 15.1 Tags
+### 18.1 Tags
 
 Within a documentation comment, content is organised by **keyword tags**. Each tag opens a section that continues across as many lines as needed, until the next tag or the end of the block. Tags are case-insensitive.
 
@@ -977,7 +1066,7 @@ Within a documentation comment, content is organised by **keyword tags**. Each t
 
 A block with no recognised tags is treated as a plain comment.
 
-### 15.2 Examples
+### 18.2 Examples
 
 **Documented variable:**
 
@@ -1023,7 +1112,7 @@ PRAY WELCOME OldSum AS A PEER
 
 ---
 
-## 18. Complete Keyword Reference
+## 19. Complete Keyword Reference
 
 | Keyword                                          | Role                        | G&S Source / Note                                                                 |
 |--------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------|
@@ -1123,10 +1212,14 @@ PRAY WELCOME OldSum AS A PEER
 | `VICTIM <index> ON <array> IS APPOINTED <value>` | Array element assignment    | Replaces the item at position `<index>` with `<value>`; not valid on YARN (strings are immutable) |
 | `RECKONING OF <array-or-yarn>`                   | Array / string length       | Ko-Ko's careful reckoning of his list; on a YARN, evaluates to the number of characters |
 | `STANDING`                                       | Unsigned integer modifier   | Makes an integer type unsigned; placed between the mutability modifier and the integer type keyword (`STANDING PEER`, `STANDING CHANCELLOR`, `STANDING PIRATE`, `STANDING SAUSAGE-ROLL`) |
+| `A GALLERY PICTURE OF <type>`                    | Pointer type annotation     | Each pointer is a portrait hung in a gallery, referring to the sitter — the variable, array element, or string character — it depicts |
+| `GALLERY PICTURE TO <variable>`                  | Address-of expression       | Forms a pointer aimed at `<variable>`; valid only as a pointer's initial value or as the value assigned to an existing pointer variable |
+| `VIEW FROM <pointer>`                            | Pointer dereference         | Reads the value currently referred to by `<pointer>`; a runtime error if `<pointer>` is `NAUGHT` |
+| `VIEW FROM <pointer> IS APPOINTED <value>`       | Pointer write-through       | Replaces the value at the location `<pointer>` refers to; a runtime error if `<pointer>` is `NAUGHT` or refers to a YARN character |
 
 ---
 
-## 19. Type Reference
+## 20. Type Reference
 
 | Keyword                    | Width                        | Values / Range |
 |----------------------------|------------------------------|----------------|
@@ -1145,10 +1238,11 @@ PRAY WELCOME OldSum AS A PEER
 | `DECREE`                   | boolean                      | `VERITY` or `NAY` |
 | `NAUGHT`                   | null value only              | `NAUGHT` is a value, not a type. It may only be assigned to `YARN` or array variables. `AS A NAUGHT` is a type error. |
 | `A LITTLE LIST OF <T>`     | ordered list                 | Ordered 1-based collection; element type is enforced — assigning a wrong-type element is a type error |
+| `A GALLERY PICTURE OF <T>` | reference                    | Refers to the storage location of a variable, array element, or string character of type `<T>`; `NAUGHT` until pointed at something with `GALLERY PICTURE TO` |
 
 ---
 
-## 20. Operator Precedence
+## 21. Operator Precedence
 
 Because Topsy uses prefix notation throughout, there is no operator precedence ambiguity. Expressions are parsed left-to-right, with each operator consuming its arguments greedily.
 
@@ -1161,7 +1255,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 21. Scoping
+## 22. Scoping
 
 - Variables declared in `PRINCIPALS` or at the top level are **global**.
 - Variables declared with `PRAY WELCOME` inside a function body are **local** to that function.
@@ -1171,7 +1265,7 @@ ASIDE: then SUM OF 12 AND 5 = 17
 
 ---
 
-## 22. Line Structure
+## 23. Line Structure
 
 - Each statement occupies one line.
 - `;` may be used to place two statements on one line (use sparingly; it is not very Victorian).
@@ -1208,7 +1302,7 @@ A `~` at the end of a line is always a continuation character; a `~` inside a st
 
 ---
 
-## 23. A Note on Style
+## 24. A Note on Style
 
 The spirit of Topsy is the spirit of Gilbert & Sullivan: **formal, absurd, and utterly deadpan.** Programmers are encouraged to:
 
@@ -1223,7 +1317,7 @@ A well-written Topsy program, read aloud, should be indistinguishable from the l
 
 ---
 
-## 24. Complete Example
+## 25. Complete Example
 
 ```topsy
 HARK! "The Gondolier's Dilemma"

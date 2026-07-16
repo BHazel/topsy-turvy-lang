@@ -1,4 +1,4 @@
-(* Topsy Turvy Formal Grammar v0.6.0 *)
+(* Topsy Turvy Formal Grammar v0.7.0 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -36,8 +36,10 @@ ProgrammeReturn = "AND SO I FIND", Expression ;
 StatementList   = { Statement } ;
 
 Statement       = PrincipalBlock
+                | PointerDeclaration
                 | ArrayDeclaration
                 | Declaration
+                | DereferenceAssignment
                 | ArrayAssignment
                 | Assignment
                 | PrintStatement
@@ -55,7 +57,7 @@ Statement       = PrincipalBlock
 (*----------------------------------------------------------------------------*)
 (* Declarations & Assignments                                                 *)
 (*----------------------------------------------------------------------------*)
-PrincipalBlock  = "PRINCIPALS", { Declaration | ArrayDeclaration }, "THE CURTAIN RISES." ;
+PrincipalBlock  = "PRINCIPALS", { PointerDeclaration | Declaration | ArrayDeclaration }, "THE CURTAIN RISES." ;
 
 Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], ScalarType, [ "BEING", Expression ] ;
 
@@ -65,6 +67,14 @@ ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ]
    leaving "LITTLE LIST OF" as the array-type marker.  The "A" is shared between the two tokens.
    The optional Integer pre-allocates that many NAUGHT elements; mutually exclusive with the BEING clause
    (providing both is a runtime error).  A negative Integer is also a runtime error. *)
+
+PointerDeclaration  = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "GALLERY PICTURE OF", ScalarType,
+                      [ "BEING", Expression ] ;
+(* Note: "AS A GALLERY PICTURE OF" is the user-visible phrase; the parser consumes "AS A" first,
+   leaving "GALLERY PICTURE OF" as the pointer-type marker, sharing the "A" the same way ArrayDeclaration
+   does with "LITTLE LIST OF".  With no BEING clause the pointer defaults to NAUGHT (unassigned).  When
+   present, the BEING expression must be an AddressOfExpression (or NAUGHT); this is a type-checker
+   constraint, not a grammar one, since the grammar accepts any Expression in this position. *)
 
 MutabilityModifier  = "CONSERVATIVE" | "LIBERAL" ;
 
@@ -81,11 +91,18 @@ ScalarType      = BaseIntegerType
 ArrayType       = "LITTLE LIST OF", ScalarType ;
 (* Appears after "AS A" in a declaration; the user writes "AS A LITTLE LIST OF <type>". *)
 
-Type            = ScalarType | ArrayType ;
+PointerType     = "GALLERY PICTURE OF", ScalarType ;
+(* Appears after "AS A" in a declaration; the user writes "AS A GALLERY PICTURE OF <type>".  The
+   pointee type is always a ScalarType: pointing at an array or YARN decays to the element/character
+   type, and pointer-to-pointer is not supported. *)
+
+Type            = ScalarType | ArrayType | PointerType ;
 
 Assignment      = Identifier, "IS APPOINTED", Expression ;
 
 ArrayAssignment = "VICTIM", Expression, "ON", Identifier, "IS APPOINTED", Expression ;
+
+DereferenceAssignment = "VIEW FROM", Identifier, "IS APPOINTED", Expression ;
 
 (*----------------------------------------------------------------------------*)
 (* Expressions (Prefix Notation)                                              *)
@@ -94,6 +111,8 @@ Expression      = TernaryExpression
                 | CastExpression
                 | ArrayIndexExpression
                 | ArrayLengthExpression
+                | AddressOfExpression
+                | DereferenceExpression
                 | PrefixExpression
                 | StringLiteral
                 | CharLit
@@ -113,6 +132,8 @@ TernaryExpression = NonTernaryExpression, "SHOULD IT TRANSPIRE THAT", NonTernary
 NonTernaryExpression = CastExpression
                      | ArrayIndexExpression
                      | ArrayLengthExpression
+                     | AddressOfExpression
+                     | DereferenceExpression
                      | PrefixExpression
                      | StringLiteral
                      | CharLit
@@ -125,6 +146,12 @@ NonTernaryExpression = CastExpression
 ArrayIndexExpression = "VICTIM", Expression, "ON", Identifier ;
 
 ArrayLengthExpression = "RECKONING OF", Identifier ;
+
+AddressOfExpression = "GALLERY PICTURE TO", Identifier ;
+(* <variable> must be an already-declared variable name; only a bare Identifier is accepted, so
+   literals and arbitrary expressions are rejected by the grammar itself. *)
+
+DereferenceExpression = "VIEW FROM", Identifier ;
 
 CastExpression  = "AS IT WERE", Expression, "AS A", Type ;
 

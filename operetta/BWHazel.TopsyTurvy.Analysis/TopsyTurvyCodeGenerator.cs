@@ -106,6 +106,18 @@ public sealed class TopsyTurvyCodeGenerator
 
                 generatedCodeBuilder.AppendLine();
                 break;
+            case PointerDeclarationNode pointerDeclaration:
+                string pointerConstantModifier = pointerDeclaration.IsConstant ? "CONSERVATIVE " : string.Empty;
+                string pointeeTypeName = this.TypeKeyword(pointerDeclaration.PointeeType);
+                generatedCodeBuilder.Append($"{indent}PRAY WELCOME {pointerDeclaration.Name} AS A {pointerConstantModifier}GALLERY PICTURE OF {pointeeTypeName}");
+                if (pointerDeclaration.InitialValue is not null)
+                {
+                    generatedCodeBuilder.Append(" BEING ");
+                    this.WriteExpression(pointerDeclaration.InitialValue, generatedCodeBuilder);
+                }
+
+                generatedCodeBuilder.AppendLine();
+                break;
             case AssignmentNode assignment:
                 generatedCodeBuilder.Append($"{indent}{assignment.Target} IS APPOINTED ");
                 this.WriteExpression(assignment.Value, generatedCodeBuilder);
@@ -116,6 +128,11 @@ public sealed class TopsyTurvyCodeGenerator
                 this.WriteExpression(arrayElementAssignment.Index, generatedCodeBuilder);
                 generatedCodeBuilder.Append($" ON {arrayElementAssignment.ArrayName} IS APPOINTED ");
                 this.WriteExpression(arrayElementAssignment.Value, generatedCodeBuilder);
+                generatedCodeBuilder.AppendLine();
+                break;
+            case DereferenceAssignmentNode dereferenceAssignment:
+                generatedCodeBuilder.Append($"{indent}VIEW FROM {dereferenceAssignment.PointerName} IS APPOINTED ");
+                this.WriteExpression(dereferenceAssignment.Value, generatedCodeBuilder);
                 generatedCodeBuilder.AppendLine();
                 break;
             case PrintNode print:
@@ -382,6 +399,12 @@ public sealed class TopsyTurvyCodeGenerator
             case ArrayLengthNode arrayLength:
                 generatedCodeBuilder.Append($"RECKONING OF {arrayLength.ArrayName}");
                 break;
+            case AddressOfExpressionNode addressOf:
+                generatedCodeBuilder.Append($"GALLERY PICTURE TO {addressOf.VariableName}");
+                break;
+            case DereferenceExpressionNode dereference:
+                generatedCodeBuilder.Append($"VIEW FROM {dereference.PointerName}");
+                break;
             case ExpressionCastNode cast:
                 generatedCodeBuilder.Append("AS IT WERE ");
                 this.WriteExpression(cast.Expression, generatedCodeBuilder);
@@ -587,6 +610,7 @@ public sealed class TopsyTurvyCodeGenerator
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,
+        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown literal type.")
     };
 

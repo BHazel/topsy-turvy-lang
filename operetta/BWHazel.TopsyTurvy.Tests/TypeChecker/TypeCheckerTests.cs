@@ -989,6 +989,212 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer is declared pointing at a variable of the same declared type.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationExactTypeMatch_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer type is declared as A GALLERY PICTURE OF NAUGHT.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationOfNaughtPointeeType_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME BadPointer AS A GALLERY PICTURE OF NAUGHT
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is pointed at a variable of a different type, since no numeric widening is permitted for pointee types.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationPointeeTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Amount AS A FATHOM BEING 1.0
+            PRAY WELCOME AmountPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Amount
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer to an array pointee type does not match the array declared element type.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerToArrayElementTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Words AS A LITTLE LIST OF YARN BEING "Ruddigore" IF YOU PLEASE.
+            PRAY WELCOME WordsPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Words
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer to a YARN is declared with a STITCH pointee type, since a string decays to its first character.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerToStringDeclaredAsStitch_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Word AS A YARN BEING "Ruddigore"
+            PRAY WELCOME WordPointer AS A GALLERY PICTURE OF STITCH BEING GALLERY PICTURE TO Word
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is assigned a literal value directly rather than an address-of expression.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerAssignedLiteral_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING 42
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is assigned another pointer directly by bare identifier rather than by address-of.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerAssignedBareIdentifier_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            PRAY WELCOME OtherPointer AS A GALLERY PICTURE OF PEER BEING NumberPointer
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer is reassigned the result of pointer arithmetic on itself.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerReassignedPointerArithmetic_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Values AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+            PRAY WELCOME ValuesPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Values
+            ValuesPointer IS APPOINTED SUM OF ValuesPointer AND 1
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a dereference assignment writes a value of the wrong type through a pointer.
+    /// </summary>
+    [Fact]
+    public void Check_WithDereferenceAssignmentTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            VIEW FROM NumberPointer IS APPOINTED "wrong"
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a dereference assignment targets a variable that is not a pointer.
+    /// </summary>
+    [Fact]
+    public void Check_WithDereferenceAssignmentOnNonPointer_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            VIEW FROM Number IS APPOINTED 5
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer variable is compared against NAUGHT.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerComparedToNaught_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+            PRAY WELCOME IsUnassigned AS A DECREE BEING ALIKE NumberPointer AND NAUGHT
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

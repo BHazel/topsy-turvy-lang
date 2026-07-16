@@ -240,11 +240,17 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case ArrayDeclarationNode arrayDeclaration:
                 this.ExecuteArrayDeclaration(arrayDeclaration, environment);
                 break;
+            case PointerDeclarationNode pointerDeclaration:
+                this.ExecutePointerDeclaration(pointerDeclaration, environment);
+                break;
             case AssignmentNode assignment:
                 this.ExecuteAssignment(assignment, environment);
                 break;
             case ArrayElementAssignmentNode arrayElementAssignment:
                 this.ExecuteArrayElementAssignment(arrayElementAssignment, environment);
+                break;
+            case DereferenceAssignmentNode dereferenceAssignment:
+                this.ExecuteDereferenceAssignment(dereferenceAssignment, environment);
                 break;
             case PrintNode print:
                 this.ExecutePrint(print, environment);
@@ -362,6 +368,29 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
+    /// Executes a pointer declaration statement.
+    /// </summary>
+    /// <param name="node">The pointer declaration node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <remarks>
+    /// When no initial value is present, the pointer is declared as <c>NAUGHT</c> (unassigned).  When present, this
+    /// method evaluates <see cref="PointerDeclarationNode.InitialValue"/> exactly as <see cref="ExecuteDeclaration"/>
+    /// does for a scalar declaration, with no restriction on the expression form here: this method does not check
+    /// that the initial value is an address-of expression.  That restriction, and the exact pointee-type match
+    /// between the address-of expression and the declared pointee type, are enforced entirely by the type checker
+    /// before execution ever reaches this method; an interpreter running on already type-checked input can rely on
+    /// the initial value always being a well-formed pointer value or <c>NAUGHT</c>.
+    /// </remarks>
+    private void ExecutePointerDeclaration(PointerDeclarationNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue value = node.InitialValue != null
+            ? this.EvaluateExpression(node.InitialValue, environment)
+            : TopsyTurvyValue.Null();
+
+        environment.Declare(node.Name, value, isConstant: node.IsConstant);
+    }
+
+    /// <summary>
     /// Executes an array element assignment statement.
     /// </summary>
     /// <param name="node">The array element assignment node.</param>
@@ -431,6 +460,53 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         }
 
         return (index, elements);
+    }
+
+    /// <summary>
+    /// Executes a write-through assignment via a pointer dereference.
+    /// </summary>
+    /// <param name="node">The dereference assignment node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is not a pointer, the pointer is <c>NAUGHT</c> (unassigned), the target
+    /// position is out of bounds, or the pointer refers to a string character, since string characters cannot be
+    /// reassigned individually.
+    /// </exception>
+    private void ExecuteDereferenceAssignment(DereferenceAssignmentNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyPointerTarget target = this.ResolvePointerTarget(node.PointerName, node.Span, environment);
+        TopsyTurvyValue value = this.EvaluateExpression(node.Value, environment);
+        target.Write(value, node.Span);
+    }
+
+    /// <summary>
+    /// Resolves the target a named pointer variable currently refers to.
+    /// </summary>
+    /// <param name="pointerName">The name of the pointer variable.</param>
+    /// <param name="span">The source span used in error messages.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The target the pointer currently refers to.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is <c>NAUGHT</c> (an unassigned pointer) or is not a pointer at all.
+    /// </exception>
+    private TopsyTurvyPointerTarget ResolvePointerTarget(string pointerName, SourceSpan span, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue pointerValue = environment.Get(pointerName);
+        if (pointerValue.LiteralType == LiteralType.Null)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Cannot dereference '{pointerName}': it is NAUGHT (an unassigned pointer).",
+                span);
+        }
+
+        if (pointerValue.LiteralType != LiteralType.Pointer)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{pointerName}' is not a pointer.",
+                span);
+        }
+
+        return (TopsyTurvyPointerTarget)pointerValue.RawValue!;
     }
 
     /// <summary>
@@ -837,6 +913,8 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
         ArrayIndexNode arrayIndex => this.EvaluateArrayIndex(arrayIndex, environment),
         ArrayLengthNode arrayLength => this.EvaluateArrayLength(arrayLength, environment),
+        AddressOfExpressionNode addressOf => this.EvaluateAddressOf(addressOf, environment),
+        DereferenceExpressionNode dereference => this.EvaluateDereference(dereference, environment),
         TernaryExpressionNode ternary => this.EvaluateTernary(ternary, environment),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
@@ -929,6 +1007,46 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)arrayValue.RawValue!;
         return TopsyTurvyValue.Integer(elements.Count);
+    }
+
+    /// <summary>
+    /// Evaluates an address-of expression and returns a new pointer value referring to the named variable.
+    /// </summary>
+    /// <remarks>
+    /// When the named variable is an array, the pointer refers to the first element, and when it is a <c>YARN</c>,
+    /// the pointer refers to the first character; both enable subsequent pointer arithmetic.  For any other type,
+    /// the pointer refers to the variable directly.
+    /// </remarks>
+    /// <param name="node">The address-of node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>A pointer value referring to the named variable, array element, or string character.</returns>
+    private TopsyTurvyValue EvaluateAddressOf(AddressOfExpressionNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue targetValue = environment.Get(node.VariableName);
+        TopsyTurvyPointerTarget target = targetValue.LiteralType switch
+        {
+            LiteralType.Array => TopsyTurvyPointerTarget.ForArrayElement((List<TopsyTurvyValue>)targetValue.RawValue!, index: 0),
+            LiteralType.String => TopsyTurvyPointerTarget.ForStringElement(environment, node.VariableName, index: 0),
+            _ => TopsyTurvyPointerTarget.ForVariable(environment, node.VariableName)
+        };
+
+        return TopsyTurvyValue.Pointer(target);
+    }
+
+    /// <summary>
+    /// Evaluates a pointer dereference expression and returns the value currently referred to.
+    /// </summary>
+    /// <param name="node">The dereference node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The value at the pointer target.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is <c>NAUGHT</c> (an unassigned pointer), is not a pointer at all, or the
+    /// target position is out of bounds.
+    /// </exception>
+    private TopsyTurvyValue EvaluateDereference(DereferenceExpressionNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyPointerTarget target = this.ResolvePointerTarget(node.PointerName, node.Span, environment);
+        return target.Read(node.Span);
     }
 
     /// <summary>
@@ -1026,9 +1144,13 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         switch (binaryOperator)
         {
             case Operator.Sum:
-                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
+                return leftOperand.LiteralType == LiteralType.Pointer
+                    ? ApplyPointerArithmetic(leftOperand, rightOperand, offsetSign: 1, span, "SUM OF")
+                    : ApplyArithmetic(leftOperand, rightOperand, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
             case Operator.Difference:
-                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
+                return leftOperand.LiteralType == LiteralType.Pointer
+                    ? ApplyPointerArithmetic(leftOperand, rightOperand, offsetSign: -1, span, "DIFFERENCE OF")
+                    : ApplyArithmetic(leftOperand, rightOperand, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
             case Operator.Product:
                 return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a * b, (a, b) => a * b, span, "PRODUCT OF");
             case Operator.Quotient:
@@ -1119,6 +1241,44 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
         long result = integerOperation(ToLong(leftOperand), ToLong(rightOperand));
         return CreateIntegerFromLong(resultType, result);
+    }
+
+    /// <summary>
+    /// Applies pointer arithmetic, moving a pointer forward or backward through an array or YARN by a given offset.
+    /// </summary>
+    /// <remarks>
+    /// Bounds checking is performed by <see cref="TopsyTurvyPointerTarget.WithOffset"/> at the point of the
+    /// arithmetic operation itself, so an out-of-bounds move fails immediately rather than being deferred to a
+    /// later dereference.  A pointer to a single variable does not support arithmetic since there is no notion of a
+    /// next element; this is likewise enforced by <see cref="TopsyTurvyPointerTarget.WithOffset"/>.
+    /// </remarks>
+    /// <param name="pointerOperand">The pointer operand.</param>
+    /// <param name="offsetOperand">The integer offset operand.</param>
+    /// <param name="offsetSign">1 to move forward (<c>SUM OF</c>), or -1 to move backward (<c>DIFFERENCE OF</c>).</param>
+    /// <param name="span">The source span of the operation.</param>
+    /// <param name="operatorName">The Topsy Turvy keyword for the operator, used in error messages.</param>
+    /// <returns>A new pointer value at the shifted target.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the offset operand is not an integer type, the pointer refers to a single variable, or the
+    /// shifted target position is out of bounds.
+    /// </exception>
+    private static TopsyTurvyValue ApplyPointerArithmetic(
+        TopsyTurvyValue pointerOperand,
+        TopsyTurvyValue offsetOperand,
+        int offsetSign,
+        SourceSpan span,
+        string operatorName)
+    {
+        if (!IsIntegerType(offsetOperand))
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"{operatorName} on a pointer requires an integer offset, got {offsetOperand.LiteralType}.",
+                span);
+        }
+
+        TopsyTurvyPointerTarget target = (TopsyTurvyPointerTarget)pointerOperand.RawValue!;
+        long offset = ToLong(offsetOperand) * offsetSign;
+        return TopsyTurvyValue.Pointer(target.WithOffset(offset, span));
     }
 
     /// <summary>

@@ -188,9 +188,13 @@ public class SymbolTable
                     {
                         AddVariable(scalarDeclaration, collectedSymbols, sourceLines);
                     }
-                    else if (declaration is ArrayDeclarationNode arrayDecl)
+                    else if (declaration is ArrayDeclarationNode arrayDeclaration)
                     {
-                        AddArrayVariable(arrayDecl, collectedSymbols, sourceLines);
+                        AddArrayVariable(arrayDeclaration, collectedSymbols, sourceLines);
+                    }
+                    else if (declaration is PointerDeclarationNode pointerDeclaration)
+                    {
+                        AddPointerVariable(pointerDeclaration, collectedSymbols, sourceLines);
                     }
                 }
 
@@ -200,6 +204,9 @@ public class SymbolTable
                 break;
             case ArrayDeclarationNode arrayDeclaration:
                 AddArrayVariable(arrayDeclaration, collectedSymbols, sourceLines);
+                break;
+            case PointerDeclarationNode pointerDeclaration:
+                AddPointerVariable(pointerDeclaration, collectedSymbols, sourceLines);
                 break;
             case FunctionDefinitionNode function:
                 AddFunction(function, collectedSymbols, sourceLines);
@@ -287,6 +294,34 @@ public class SymbolTable
             TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
                 ? $"{declaration.Size.Value} "
                 : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
+            DefinitionLine = declaration.NameSpan.Start.Line,
+            DefinitionColumn = declaration.NameSpan.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
+        };
+    }
+
+    /// <summary>
+    /// Adds a pointer variable to the collected symbol information.
+    /// </summary>
+    /// <remarks>
+    /// If the variable name already exists, it is not added again.
+    /// </remarks>
+    /// <param name="declaration">The pointer declaration node representing the variable.</param>
+    /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="sourceLines">The original source lines.</param>
+    private static void AddPointerVariable(PointerDeclarationNode declaration, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    {
+        if (collectedSymbols.ContainsKey(declaration.Name))
+        {
+            return;
+        }
+
+        collectedSymbols[declaration.Name] = new SymbolInfo()
+        {
+            Name = declaration.Name,
+            Kind = SymbolKind.Variable,
+            IsConstant = declaration.IsConstant,
+            TypeDisplayName = $"{Keywords.TypeNames.GalleryPictureOf} {LiteralTypeToDisplayName(declaration.PointeeType)}",
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,
             Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
@@ -450,6 +485,7 @@ public class SymbolTable
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,
+        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => "unknown"
     };
 }

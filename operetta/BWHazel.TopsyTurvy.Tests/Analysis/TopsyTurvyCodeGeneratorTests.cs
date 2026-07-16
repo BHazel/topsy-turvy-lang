@@ -1306,6 +1306,141 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a <c>GALLERY PICTURE OF</c> pointer declaration.
+    /// </summary>
+    [Fact]
+    public void Generate_PointerDeclaration_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            PRAY WELCOME num AS A PEER BEING 5
+            PRAY WELCOME ptr AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO num
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        PointerDeclarationNode pointerDeclaration = result.Program!.Statements.OfType<PointerDeclarationNode>().First();
+        pointerDeclaration.Name.ShouldBe("ptr");
+        pointerDeclaration.PointeeType.ShouldBe(LiteralType.Integer);
+        AddressOfExpressionNode addressOf = (AddressOfExpressionNode)pointerDeclaration.InitialValue!;
+        addressOf.VariableName.ShouldBe("num");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a pointer declaration with no initial value.
+    /// </summary>
+    [Fact]
+    public void Generate_PointerDeclarationWithoutInitialValue_RoundTrips()
+    {
+        string source = "HARK! \"T\"\nPRAY WELCOME ptr AS A GALLERY PICTURE OF YARN\nFINALE.";
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        PointerDeclarationNode pointerDeclaration = result.Program!.Statements.OfType<PointerDeclarationNode>().First();
+        pointerDeclaration.PointeeType.ShouldBe(LiteralType.String);
+        pointerDeclaration.InitialValue.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a <c>GALLERY PICTURE TO</c> address-of expression used as an assignment value.
+    /// </summary>
+    [Fact]
+    public void Generate_AddressOfExpression_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            PRAY WELCOME num AS A PEER BEING 5
+            PRAY WELCOME ptr AS A GALLERY PICTURE OF PEER
+            ptr IS APPOINTED GALLERY PICTURE TO num
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        AssignmentNode assignment = result.Program!.Statements.OfType<AssignmentNode>().First();
+        assignment.Target.ShouldBe("ptr");
+        AddressOfExpressionNode addressOf = (AddressOfExpressionNode)assignment.Value;
+        addressOf.VariableName.ShouldBe("num");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a <c>VIEW FROM</c> pointer dereference expression.
+    /// </summary>
+    [Fact]
+    public void Generate_DereferenceExpression_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            PRAY WELCOME num AS A PEER BEING 5
+            PRAY WELCOME ptr AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO num
+            BEHOLD VIEW FROM ptr
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        PrintNode print = result.Program!.Statements.OfType<PrintNode>().First();
+        DereferenceExpressionNode dereference = (DereferenceExpressionNode)print.Expression;
+        dereference.PointerName.ShouldBe("ptr");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a <c>VIEW FROM … IS APPOINTED</c> write-through pointer assignment.
+    /// </summary>
+    [Fact]
+    public void Generate_DereferenceAssignment_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            PRAY WELCOME num AS A PEER BEING 5
+            PRAY WELCOME ptr AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO num
+            VIEW FROM ptr IS APPOINTED 23
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        DereferenceAssignmentNode dereferenceAssignment = result.Program!.Statements.OfType<DereferenceAssignmentNode>().First();
+        dereferenceAssignment.PointerName.ShouldBe("ptr");
+        ((LiteralNode)dereferenceAssignment.Value).Value.ShouldBe(23);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips pointer arithmetic reassigned onto the same pointer variable.
+    /// </summary>
+    [Fact]
+    public void Generate_PointerArithmetic_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            PRAY WELCOME arr AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+            PRAY WELCOME ptr AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO arr
+            ptr IS APPOINTED SUM OF ptr AND 1
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        AssignmentNode assignment = result.Program!.Statements.OfType<AssignmentNode>().First();
+        assignment.Target.ShouldBe("ptr");
+        PrefixExpressionNode prefix = (PrefixExpressionNode)assignment.Value;
+        prefix.Operator.ShouldBe(Operator.Sum);
+    }
+
+    /// <summary>
     /// Generates source from a raw Topsy Turvy programme string by parsing it and re-generating.
     /// </summary>
     /// <param name="source">The input Topsy Turvy source.</param>
