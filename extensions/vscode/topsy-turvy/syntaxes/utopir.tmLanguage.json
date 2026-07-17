@@ -15,10 +15,14 @@
     { "include": "#arithmetic-float" },
     { "include": "#arithmetic-integer" },
     { "include": "#bitwise" },
+    { "include": "#comparison-float" },
+    { "include": "#comparison-integer" },
+    { "include": "#logical" },
     { "include": "#stack" },
     { "include": "#control-flow" },
     { "include": "#types" },
-    { "include": "#variables" }
+    { "include": "#variables" },
+    { "include": "#labels" }
   ],
   "repository": {
     "comments": {
@@ -83,13 +87,25 @@
       "name": "keyword.operator.bitwise.utopir",
       "match": "(?i)\\b(chord|harmony|discord|inv|transup|transdown)\\b"
     },
+    "comparison-float": {
+      "name": "keyword.operator.comparison.float.utopir",
+      "match": "(?i)\\b(alike|unlike|preadam|lowerdeg)\\.f\\b"
+    },
+    "comparison-integer": {
+      "name": "keyword.operator.comparison.utopir",
+      "match": "(?i)\\b(alike|unlike|preadam|lowerdeg)\\b"
+    },
+    "logical": {
+      "name": "keyword.operator.logical.utopir",
+      "match": "(?i)\\b(both|either|hardly)\\b"
+    },
     "stack": {
       "name": "keyword.other.stack.utopir",
       "match": "(?i)\\b(prentice|leave)\\b"
     },
     "control-flow": {
       "name": "keyword.control.utopir",
-      "match": "(?i)\\bfind\\b"
+      "match": "(?i)\\b(sailalike|sailunlike|sail|find)\\b"
     },
     "types": {
       "name": "storage.type.utopir",
@@ -98,6 +114,10 @@
     "variables": {
       "name": "variable.other.utopir",
       "match": "£[A-Za-z_][A-Za-z0-9_-]*"
+    },
+    "labels": {
+      "name": "entity.name.label.utopir",
+      "match": "![A-Za-z_][A-Za-z0-9_-]*"
     }
   }
 }
