@@ -34,10 +34,15 @@ namespace BWHazel.TopsyTurvy.UtopIR.Transformer;
 /// </para>
 /// <para>
 /// ## Scope
-/// This implementation covers the instruction set defined in UtopIR v0.0.1-preview2:
+/// This implementation covers the instruction set defined in UtopIR v0.0.1-preview3:
 /// variable declaration/assignment, integer and floating-point arithmetic operations, bitwise
-/// operations and top-level programme return.  Constant inlining, functions, control flow, and
-/// non-numeric types are deferred to later versions.
+/// operations, comparison and logical operations, and top-level programme return.  Comparison and
+/// logical operators are only reachable from ordinary expression contexts, e.g. a declaration
+/// initial value or an assignment right-hand side.  This transformer does not yet lower
+/// control-flow statements (<c>SHOULD IT TRANSPIRE THAT</c>, ternary, <c>YEOMAN</c>, <c>IN WHICH
+/// CAPACITY?</c>) into the corresponding <c>sail</c>/<c>sailalike</c>/<c>sailunlike</c>/label
+/// sequences; that remains a later addition.  Constant inlining, functions and non-numeric types
+/// are likewise deferred to later versions.
 /// </para>
 /// <para>
 /// ## Constants
@@ -217,6 +222,10 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
                 return this.TransformArithmetic(prefix, instructions, declaredTypes);
             case PrefixExpressionNode prefix when this.IsBitwiseOperator(prefix.Operator):
                 return this.TransformBitwise(prefix, instructions, declaredTypes);
+            case PrefixExpressionNode prefix when this.IsComparisonOperator(prefix.Operator):
+                return this.TransformComparison(prefix, instructions, declaredTypes);
+            case PrefixExpressionNode prefix when this.IsLogicalOperator(prefix.Operator):
+                return this.TransformLogical(prefix, instructions, declaredTypes);
             case ExpressionCastNode cast:
                 return this.TransformCast(cast, instructions, declaredTypes);
             default:
@@ -355,6 +364,88 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     }
 
     /// <summary>
+    /// Transforms a comparison <see cref="PrefixExpressionNode"/> by recursively flattening
+    /// its operands, widening the narrower operand into a temporary register if the operand
+    /// types differ, emitting a <see cref="ComparisonInstruction"/> into a temporary register,
+    /// and returning a <see cref="VariableOperand"/> referencing that register.
+    /// </summary>
+    /// <remarks>
+    /// The instruction group is selected by the widened operand type: floating-point operands
+    /// produce the <c>.f</c>-suffixed operation variants, all other operands the integer variants.
+    /// The target recorded type is always <see cref="UtopIRType.Decree"/>, not the widened operand type.
+    /// </remarks>
+    /// <param name="prefix">The comparison prefix expression to transform.</param>
+    /// <param name="instructions">The instruction list being built.</param>
+    /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
+    /// <returns>A <see cref="VariableOperand"/> for the temporary register holding the <c>decree</c> result.</returns>
+    private VariableOperand TransformComparison(PrefixExpressionNode prefix, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
+    {
+        UtopIROperand operand1 = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+        UtopIROperand operand2 = this.TransformExpression(prefix.Arguments[1], instructions, declaredTypes);
+
+        UtopIRType type1 = this.InferOperandType(operand1, declaredTypes);
+        UtopIRType type2 = this.InferOperandType(operand2, declaredTypes);
+        UtopIRType widenedType = this.Widen(type1, type2);
+
+        operand1 = this.CastOperandIfNeeded(operand1, type1, widenedType, instructions, declaredTypes);
+        operand2 = this.CastOperandIfNeeded(operand2, type2, widenedType, instructions, declaredTypes);
+
+        UtopIRComparisonOperation operation = this.MapComparisonOperator(prefix.Operator);
+        if (this.IsFloatType(widenedType))
+        {
+            operation = this.ToFloatComparisonOperation(operation);
+        }
+
+        string mnemonic = this.ComparisonOperationMnemonic(operation);
+        string temporaryVariableName = this.formatter.CreateName(mnemonic, this.OperandName(operand1), this.OperandName(operand2));
+        UtopIRVariable temporaryVariable = new(temporaryVariableName);
+        instructions.Add(new ComparisonInstruction(operation, temporaryVariable, operand1, operand2));
+        declaredTypes[temporaryVariableName] = UtopIRType.Decree;
+        return new VariableOperand(temporaryVariable);
+    }
+
+    /// <summary>
+    /// Transforms a logical <see cref="PrefixExpressionNode"/> by recursively flattening its
+    /// operand(s), emitting a <see cref="LogicalInstruction"/> or <see cref="HardlyInstruction"/>
+    /// into a temporary register, and returning a <see cref="VariableOperand"/> referencing that
+    /// register.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="TransformBitwise"/>'s binary operators, <c>BOTH</c>/<c>EITHER</c> operands
+    /// are not widened: the Topsy Turvy type checking already guarantees both operands are <c>decree</c>
+    /// before the transformer sees this node.
+    /// </remarks>
+    /// <param name="prefix">The logical prefix expression to transform.</param>
+    /// <param name="instructions">The instruction list being built.</param>
+    /// <param name="declaredTypes">The map from variable name to its known <see cref="UtopIRType"/>, used for widening.</param>
+    /// <returns>A <see cref="VariableOperand"/> for the temporary register holding the <c>decree</c> result.</returns>
+    private VariableOperand TransformLogical(PrefixExpressionNode prefix, List<UtopIRInstruction> instructions, Dictionary<string, UtopIRType> declaredTypes)
+    {
+        if (prefix.Operator == Operator.HardlyEver)
+        {
+            UtopIROperand operand = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+
+            string hardlyTemporaryName = this.formatter.CreateName(UtopIRKeywords.Instructions.Hardly, this.OperandName(operand));
+            UtopIRVariable hardlyTemporary = new(hardlyTemporaryName);
+            instructions.Add(new HardlyInstruction(hardlyTemporary, operand));
+            declaredTypes[hardlyTemporaryName] = UtopIRType.Decree;
+            return new VariableOperand(hardlyTemporary);
+        }
+
+        UtopIROperand operand1 = this.TransformExpression(prefix.Arguments[0], instructions, declaredTypes);
+        UtopIROperand operand2 = this.TransformExpression(prefix.Arguments[1], instructions, declaredTypes);
+
+        UtopIRLogicalOperation operation = this.MapLogicalOperator(prefix.Operator);
+        string mnemonic = this.LogicalOperationMnemonic(operation);
+
+        string temporaryVariableName = this.formatter.CreateName(mnemonic, this.OperandName(operand1), this.OperandName(operand2));
+        UtopIRVariable temporaryVariable = new(temporaryVariableName);
+        instructions.Add(new LogicalInstruction(operation, temporaryVariable, operand1, operand2));
+        declaredTypes[temporaryVariableName] = UtopIRType.Decree;
+        return new VariableOperand(temporaryVariable);
+    }
+
+    /// <summary>
     /// Transforms an <c>AS IT WERE</c> cast by flattening its source expression,
     /// emitting a <see cref="WereInstruction"/> into a temporary register and
     /// returning a <see cref="VariableOperand"/> referencing that register.
@@ -477,6 +568,7 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
             double => UtopIRType.Fathom,
             float => UtopIRType.Foot,
             char => UtopIRType.Stitch,
+            bool => UtopIRType.Decree,
             _ => throw new NotSupportedException($"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },
         _ => throw new NotSupportedException($"Operand type '{operand.GetType().Name}' is not supported.")
@@ -539,6 +631,29 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
             or Operator.InversionOf
             or Operator.TranspositionUp
             or Operator.TranspositionDown;
+
+    /// <summary>
+    /// Returns whether the given <see cref="Operator"/> is one of the comparison operators
+    /// supported by the transformer.
+    /// </summary>
+    /// <param name="theOperator">The operator to test.</param>
+    /// <returns><c>true</c> if the operator maps to a <see cref="UtopIRComparisonOperation"/>, otherwise <c>false</c>.</returns>
+    private bool IsComparisonOperator(Operator theOperator) =>
+        theOperator is Operator.Alike
+            or Operator.Unlike
+            or Operator.PreAdamite
+            or Operator.LowerDegree;
+
+    /// <summary>
+    /// Returns whether the given <see cref="Operator"/> is one of the logical operators
+    /// supported by the transformer.
+    /// </summary>
+    /// <param name="theOperator">The operator to test.</param>
+    /// <returns><c>true</c> if the operator lowers to a <see cref="LogicalInstruction"/> or <see cref="HardlyInstruction"/>, otherwise <c>false</c>.</returns>
+    private bool IsLogicalOperator(Operator theOperator) =>
+        theOperator is Operator.Both
+            or Operator.Either
+            or Operator.HardlyEver;
 
     /// <summary>
     /// Maps a binary bitwise Topsy Turvy <see cref="Operator"/> to the corresponding
@@ -649,6 +764,81 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         UtopIRArithmeticOperation.MaxFloat => UtopIRKeywords.Instructions.MaxFloat,
         UtopIRArithmeticOperation.MinFloat => UtopIRKeywords.Instructions.MinFloat,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown arithmetic operation.")
+    };
+
+    /// <summary>
+    /// Maps a Topsy Turvy <see cref="Operator"/> to the corresponding
+    /// <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <param name="theOperator">The Topsy Turvy operator to map.</param>
+    /// <returns>The corresponding <see cref="UtopIRComparisonOperation"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="theOperator"/> is not a comparison operator.</exception>
+    private UtopIRComparisonOperation MapComparisonOperator(Operator theOperator) => theOperator switch
+    {
+        Operator.Alike => UtopIRComparisonOperation.Alike,
+        Operator.Unlike => UtopIRComparisonOperation.Unlike,
+        Operator.PreAdamite => UtopIRComparisonOperation.PreAdam,
+        Operator.LowerDegree => UtopIRComparisonOperation.LowerDeg,
+        _ => throw new ArgumentOutOfRangeException(nameof(theOperator), theOperator, "Operator is not a comparison operator.")
+    };
+
+    /// <summary>
+    /// Returns the floating-point variant of the given integer <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <param name="operation">The integer comparison operation.</param>
+    /// <returns>The corresponding <c>.f</c>-suffixed <see cref="UtopIRComparisonOperation"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="operation"/> is not an integer comparison operation.</exception>
+    private UtopIRComparisonOperation ToFloatComparisonOperation(UtopIRComparisonOperation operation) => operation switch
+    {
+        UtopIRComparisonOperation.Alike => UtopIRComparisonOperation.AlikeFloat,
+        UtopIRComparisonOperation.Unlike => UtopIRComparisonOperation.UnlikeFloat,
+        UtopIRComparisonOperation.PreAdam => UtopIRComparisonOperation.PreAdamFloat,
+        UtopIRComparisonOperation.LowerDeg => UtopIRComparisonOperation.LowerDegFloat,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Operation has no floating-point variant.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic string for the given <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <param name="operation">The comparison operation.</param>
+    /// <returns>The mnemonic string.</returns>
+    private string ComparisonOperationMnemonic(UtopIRComparisonOperation operation) => operation switch
+    {
+        UtopIRComparisonOperation.Alike => UtopIRKeywords.Instructions.Alike,
+        UtopIRComparisonOperation.Unlike => UtopIRKeywords.Instructions.Unlike,
+        UtopIRComparisonOperation.PreAdam => UtopIRKeywords.Instructions.PreAdam,
+        UtopIRComparisonOperation.LowerDeg => UtopIRKeywords.Instructions.LowerDeg,
+        UtopIRComparisonOperation.AlikeFloat => UtopIRKeywords.Instructions.AlikeFloat,
+        UtopIRComparisonOperation.UnlikeFloat => UtopIRKeywords.Instructions.UnlikeFloat,
+        UtopIRComparisonOperation.PreAdamFloat => UtopIRKeywords.Instructions.PreAdamFloat,
+        UtopIRComparisonOperation.LowerDegFloat => UtopIRKeywords.Instructions.LowerDegFloat,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown comparison operation.")
+    };
+
+    /// <summary>
+    /// Maps a binary logical Topsy Turvy <see cref="Operator"/> to the corresponding
+    /// <see cref="UtopIRLogicalOperation"/>.
+    /// </summary>
+    /// <param name="theOperator">The Topsy Turvy operator to map.</param>
+    /// <returns>The corresponding <see cref="UtopIRLogicalOperation"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="theOperator"/> is not a binary logical operator.</exception>
+    private UtopIRLogicalOperation MapLogicalOperator(Operator theOperator) => theOperator switch
+    {
+        Operator.Both => UtopIRLogicalOperation.Both,
+        Operator.Either => UtopIRLogicalOperation.Either,
+        _ => throw new ArgumentOutOfRangeException(nameof(theOperator), theOperator, "Operator is not a binary logical operator.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic string for the given <see cref="UtopIRLogicalOperation"/>.
+    /// </summary>
+    /// <param name="operation">The logical operation.</param>
+    /// <returns>The mnemonic string.</returns>
+    private string LogicalOperationMnemonic(UtopIRLogicalOperation operation) => operation switch
+    {
+        UtopIRLogicalOperation.Both => UtopIRKeywords.Instructions.Both,
+        UtopIRLogicalOperation.Either => UtopIRKeywords.Instructions.Either,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown logical operation.")
     };
 
     /// <summary>

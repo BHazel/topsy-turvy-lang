@@ -57,6 +57,31 @@ public sealed class UtopIRCodeGenerator
             case InvInstruction inv:
                 builder.AppendLine($"£{inv.Target.Name} = {UtopIRKeywords.Instructions.Inv} {this.FormatOperand(inv.Operand)}");
                 break;
+            case ComparisonInstruction comparison:
+                builder.AppendLine(
+                    $"£{comparison.Target.Name} = {this.ComparisonOperationMnemonic(comparison.Operation)} " +
+                    $"{this.FormatOperand(comparison.Operand1)}, {this.FormatOperand(comparison.Operand2)}");
+                break;
+            case LogicalInstruction logical:
+                builder.AppendLine(
+                    $"£{logical.Target.Name} = {this.LogicalOperationMnemonic(logical.Operation)} " +
+                    $"{this.FormatOperand(logical.Operand1)}, {this.FormatOperand(logical.Operand2)}");
+                break;
+            case HardlyInstruction hardly:
+                builder.AppendLine($"£{hardly.Target.Name} = {UtopIRKeywords.Instructions.Hardly} {this.FormatOperand(hardly.Operand)}");
+                break;
+            case SailAlikeInstruction sailAlike:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.SailAlike} {this.FormatOperand(sailAlike.Value)}, !{sailAlike.Label.Name}");
+                break;
+            case SailUnlikeInstruction sailUnlike:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.SailUnlike} {this.FormatOperand(sailUnlike.Value)}, !{sailUnlike.Label.Name}");
+                break;
+            case SailInstruction sail:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.Sail} !{sail.Label.Name}");
+                break;
+            case LabelInstruction label:
+                builder.AppendLine($"!{label.Name.Name}");
+                break;
             case PrenticeInstruction prentice:
                 builder.AppendLine($"{UtopIRKeywords.Instructions.Prentice} {this.FormatOperand(prentice.Value)}");
                 break;
@@ -220,5 +245,35 @@ public sealed class UtopIRCodeGenerator
         UtopIRBitwiseOperation.TransUp => UtopIRKeywords.Instructions.TransUp,
         UtopIRBitwiseOperation.TransDown => UtopIRKeywords.Instructions.TransDown,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown bitwise operation.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic for the given <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <param name="operation">The comparison operation to convert.</param>
+    /// <returns>The UtopIR operation mnemonic.</returns>
+    private string ComparisonOperationMnemonic(UtopIRComparisonOperation operation) => operation switch
+    {
+        UtopIRComparisonOperation.Alike => UtopIRKeywords.Instructions.Alike,
+        UtopIRComparisonOperation.Unlike => UtopIRKeywords.Instructions.Unlike,
+        UtopIRComparisonOperation.PreAdam => UtopIRKeywords.Instructions.PreAdam,
+        UtopIRComparisonOperation.LowerDeg => UtopIRKeywords.Instructions.LowerDeg,
+        UtopIRComparisonOperation.AlikeFloat => UtopIRKeywords.Instructions.AlikeFloat,
+        UtopIRComparisonOperation.UnlikeFloat => UtopIRKeywords.Instructions.UnlikeFloat,
+        UtopIRComparisonOperation.PreAdamFloat => UtopIRKeywords.Instructions.PreAdamFloat,
+        UtopIRComparisonOperation.LowerDegFloat => UtopIRKeywords.Instructions.LowerDegFloat,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown comparison operation.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic for the given <see cref="UtopIRLogicalOperation"/>.
+    /// </summary>
+    /// <param name="operation">The logical operation to convert.</param>
+    /// <returns>The UtopIR operation mnemonic.</returns>
+    private string LogicalOperationMnemonic(UtopIRLogicalOperation operation) => operation switch
+    {
+        UtopIRLogicalOperation.Both => UtopIRKeywords.Instructions.Both,
+        UtopIRLogicalOperation.Either => UtopIRKeywords.Instructions.Either,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown logical operation.")
     };
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BWHazel.TopsyTurvy.UtopIR.Analysis;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
+using BWHazel.TopsyTurvy.UtopIR.Parser;
 
 namespace BWHazel.TopsyTurvy.UtopIR.Tests.Analysis;
 
@@ -348,6 +349,135 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that each <see cref="UtopIRComparisonOperation"/> value produces the correct mnemonic in the emitted comparison instruction.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRComparisonOperation"/> to test.</param>
+    /// <param name="expectedMnemonic">The expected mnemonic in the emitted instruction.</param>
+    [Theory]
+    [InlineData(UtopIRComparisonOperation.Alike, "alike")]
+    [InlineData(UtopIRComparisonOperation.Unlike, "unlike")]
+    [InlineData(UtopIRComparisonOperation.PreAdam, "preadam")]
+    [InlineData(UtopIRComparisonOperation.LowerDeg, "lowerdeg")]
+    [InlineData(UtopIRComparisonOperation.AlikeFloat, "alike.f")]
+    [InlineData(UtopIRComparisonOperation.UnlikeFloat, "unlike.f")]
+    [InlineData(UtopIRComparisonOperation.PreAdamFloat, "preadam.f")]
+    [InlineData(UtopIRComparisonOperation.LowerDegFloat, "lowerdeg.f")]
+    public void Generate_ComparisonInstruction_EmitsCorrectMnemonic(UtopIRComparisonOperation operation, string expectedMnemonic)
+    {
+        UtopIRProgram program = new([
+            new ComparisonInstruction(
+                operation,
+                new UtopIRVariable("result"),
+                new VariableOperand(new UtopIRVariable("a")),
+                new VariableOperand(new UtopIRVariable("b")))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe($"£result = {expectedMnemonic} £a, £b");
+    }
+
+    /// <summary>
+    /// Tests that each <see cref="UtopIRLogicalOperation"/> value produces the correct mnemonic in the emitted logical instruction.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRLogicalOperation"/> to test.</param>
+    /// <param name="expectedMnemonic">The expected mnemonic in the emitted instruction.</param>
+    [Theory]
+    [InlineData(UtopIRLogicalOperation.Both, "both")]
+    [InlineData(UtopIRLogicalOperation.Either, "either")]
+    public void Generate_LogicalInstruction_EmitsCorrectMnemonic(UtopIRLogicalOperation operation, string expectedMnemonic)
+    {
+        UtopIRProgram program = new([
+            new LogicalInstruction(
+                operation,
+                new UtopIRVariable("result"),
+                new LiteralOperand(true),
+                new LiteralOperand(false))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe($"£result = {expectedMnemonic} verity, nay");
+    }
+
+    /// <summary>
+    /// Tests that a <c>hardly</c> instruction is emitted with its single operand.
+    /// </summary>
+    [Fact]
+    public void Generate_HardlyInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new HardlyInstruction(
+                new UtopIRVariable("result"),
+                new VariableOperand(new UtopIRVariable("a")))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£result = hardly £a");
+    }
+
+    /// <summary>
+    /// Tests that a <c>sail</c> instruction is emitted with its label, prefixed with <c>!</c>.
+    /// </summary>
+    [Fact]
+    public void Generate_SailInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new SailInstruction(new UtopIRLabel("LOGIC"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("sail !LOGIC");
+    }
+
+    /// <summary>
+    /// Tests that a <c>sailalike</c> instruction is emitted with its value operand and label, in that order.
+    /// </summary>
+    [Fact]
+    public void Generate_SailAlikeInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new SailAlikeInstruction(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_ALIKE"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("sailalike £Boolean, !IS_ALIKE");
+    }
+
+    /// <summary>
+    /// Tests that a <c>sailunlike</c> instruction is emitted with its value operand and label, in that order.
+    /// </summary>
+    [Fact]
+    public void Generate_SailUnlikeInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new SailUnlikeInstruction(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_UNLIKE"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("sailunlike £Boolean, !IS_UNLIKE");
+    }
+
+    /// <summary>
+    /// Tests that a label declaration is emitted as a bare <c>!name</c> line with no leading indentation, matching the flat-marker semantics of <see cref="LabelInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_LabelInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new LabelInstruction(new UtopIRLabel("LOGIC"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("!LOGIC");
+    }
+
+    /// <summary>
     /// Tests that a <c>were</c> instruction is emitted with its value operand and destination type.
     /// </summary>
     [Fact]
@@ -497,5 +627,75 @@ public class UtopIRCodeGeneratorTests
         string result = this.generator.Generate(program);
 
         result.ShouldBe(string.Empty);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>alike</c> comparison instruction re-parses to an equal <see cref="ComparisonInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_ComparisonInstruction_RoundTripsThroughParser()
+    {
+        ComparisonInstruction original = new(
+            UtopIRComparisonOperation.Alike,
+            new UtopIRVariable("result"),
+            new VariableOperand(new UtopIRVariable("a")),
+            new VariableOperand(new UtopIRVariable("b")));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>hardly</c> instruction re-parses to an equal <see cref="HardlyInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_HardlyInstruction_RoundTripsThroughParser()
+    {
+        HardlyInstruction original = new(
+            new UtopIRVariable("result"),
+            new VariableOperand(new UtopIRVariable("a")));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>sailalike</c> instruction re-parses to an equal <see cref="SailAlikeInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_SailAlikeInstruction_RoundTripsThroughParser()
+    {
+        SailAlikeInstruction original = new(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_ALIKE"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated bare label declaration re-parses to an equal <see cref="LabelInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_LabelInstruction_RoundTripsThroughParser()
+    {
+        LabelInstruction original = new(new UtopIRLabel("LOGIC"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
     }
 }

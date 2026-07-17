@@ -680,6 +680,231 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that each comparison Topsy Turvy operator maps to the correct <see cref="UtopIRComparisonOperation"/> in the emitted instruction, and that the target is always declared as <see cref="UtopIRType.Decree"/> regardless of the integer operand type.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR operation.</param>
+    [Theory]
+    [InlineData(Operator.Alike, UtopIRComparisonOperation.Alike)]
+    [InlineData(Operator.Unlike, UtopIRComparisonOperation.Unlike)]
+    [InlineData(Operator.PreAdamite, UtopIRComparisonOperation.PreAdam)]
+    [InlineData(Operator.LowerDegree, UtopIRComparisonOperation.LowerDeg)]
+    public void Transform_ComparisonOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRComparisonOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(expectedUtopirOperation);
+    }
+
+    /// <summary>
+    /// Tests that each comparison Topsy Turvy operator maps to the corresponding <c>.f</c>-suffixed <see cref="UtopIRComparisonOperation"/> when the operands are floating-point.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR floating-point operation.</param>
+    [Theory]
+    [InlineData(Operator.Alike, UtopIRComparisonOperation.AlikeFloat)]
+    [InlineData(Operator.Unlike, UtopIRComparisonOperation.UnlikeFloat)]
+    [InlineData(Operator.PreAdamite, UtopIRComparisonOperation.PreAdamFloat)]
+    [InlineData(Operator.LowerDegree, UtopIRComparisonOperation.LowerDegFloat)]
+    public void Transform_ComparisonOperatorOnFloats_MapsToFloatOperation(Operator topsyTurvyOperator, UtopIRComparisonOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(expectedUtopirOperation);
+    }
+
+    /// <summary>
+    /// Tests that a comparison between mismatched integer widths widens the narrower operand into a temporary register before comparing, matching the widening behaviour of <c>TransformArithmetic</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_MixedTypeComparison_WidensNarrowerOperand()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.PreAdamite,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        ComparisonInstruction comparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        comparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        comparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that a comparison temporary register is always recorded with a declared type of <see cref="UtopIRType.Decree"/>, not the widened operand type, by nesting the comparison as an operand of an outer comparison and confirming no spurious <see cref="WereInstruction"/> is inserted for it.
+    /// </summary>
+    [Fact]
+    public void Transform_NestedComparison_RecordsDecreeTypeForComparisonTarget()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.Alike,
+                    Arguments =
+                    [
+                        new PrefixExpressionNode()
+                        {
+                            Operator = Operator.Alike,
+                            Arguments =
+                            [
+                                new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                                new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                            ],
+                            Span = PlaceholderSpan
+                        },
+                        new IdentifierNode() { Name = "flag", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction innerComparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction outerComparison = result.Instructions[5].ShouldBeOfType<ComparisonInstruction>();
+        outerComparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(innerComparison.Target.Name);
+        outerComparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("flag");
+    }
+
+    /// <summary>
+    /// Tests that each binary logical Topsy Turvy operator maps to the correct <see cref="UtopIRLogicalOperation"/> in the emitted instruction, with no widening of the already-<c>decree</c> operands.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR operation.</param>
+    [Theory]
+    [InlineData(Operator.Both, UtopIRLogicalOperation.Both)]
+    [InlineData(Operator.Either, UtopIRLogicalOperation.Either)]
+    public void Transform_LogicalOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRLogicalOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        LogicalInstruction logical = result.Instructions[3].ShouldBeOfType<LogicalInstruction>();
+        logical.Operation.ShouldBe(expectedUtopirOperation);
+        logical.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        logical.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <c>HARDLY EVER</c> emits a <see cref="HardlyInstruction"/> with the operand and a temporary register named after the operation.
+    /// </summary>
+    [Fact]
+    public void Transform_HardlyEver_EmitsHardlyInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.HardlyEver,
+                    Arguments = [new IdentifierNode() { Name = "a", Span = PlaceholderSpan }],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        HardlyInstruction hardly = result.Instructions[2].ShouldBeOfType<HardlyInstruction>();
+        hardly.Target.Name.ShouldBe("_hardly_a");
+        hardly.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        result.Instructions[3].ShouldBeOfType<AppointInstruction>()
+            .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_hardly_a");
+    }
+
+    /// <summary>
     /// Tests that a <c>stitch</c> declaration initialised with a character literal emits <c>welcome</c> then <c>appoint</c> with no intermediate cast.
     /// </summary>
     [Fact]
@@ -960,7 +1185,7 @@ public class TopsyTurvyToUtopIRTransformerTests
                 Target = "x",
                 Value = new PrefixExpressionNode
                 {
-                    Operator = Operator.Both,
+                    Operator = Operator.WovenOf,
                     Arguments =
                     [
                         new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
