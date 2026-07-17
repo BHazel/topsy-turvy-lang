@@ -34,6 +34,7 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// * <see cref="LiteralType"/><c>.Boolean</c>: A boolean value, represented in Topsy Turvy as a <c>DECREE</c>, e.g. <c>VERITY</c> or <c>NAY</c>.
 /// * <see cref="LiteralType"/><c>.Null</c>: A null value, represented in Topsy Turvy as <c>NAUGHT</c>, e.g. <c>NAUGHT</c>.
 /// * <see cref="LiteralType"/><c>.Array</c>: An ordered collection declared with <c>A LITTLE LIST OF &lt;type&gt;</c>.
+/// * <see cref="LiteralType"/><c>.Pointer</c>: A reference to a variable, array element or string character, declared with <c>A GALLERY PICTURE OF &lt;type&gt;</c>.
 /// </para>
 /// <para>
 /// ### Widening Rules
@@ -101,5 +102,8 @@ public enum LiteralType
     Null,
 
     /// <summary>An ordered collection (<c>A LITTLE LIST OF &lt;type&gt;</c>).</summary>
-    Array
+    Array,
+
+    /// <summary>A reference to a variable, array element or string character (<c>A GALLERY PICTURE OF &lt;type&gt;</c>).</summary>
+    Pointer
 }

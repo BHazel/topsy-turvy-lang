@@ -26,6 +26,7 @@ public class VisualNodeFactoryTests
     [InlineData("ArrayDeclarationNode", "PRAY WELCOME", new string[0])]
     [InlineData("AssignmentNode", "IS APPOINTED", new[] { "Variable", "Value" })]
     [InlineData("ArrayElementAssignmentNode", "VICTIM IS APPOINTED", new[] { "Variable", "Victim", "Value" })]
+    [InlineData("DereferenceAssignmentNode", "VIEW FROM IS APPOINTED", new[] { "Pointer", "Value" })]
     [InlineData("PrintNode", "BEHOLD", new[] { "Expr" })]
     [InlineData("InputNode", "PRAY TELL", new[] { "Variable" })]
     [InlineData("ProgrammeReturnNode", "AND SO I FIND", new[] { "Value" })]
@@ -230,6 +231,8 @@ public class VisualNodeFactoryTests
     [InlineData("TernaryNode", "SHOULD IT TRANSPIRE THAT")]
     [InlineData("ArrayIndexNode", "VICTIM")]
     [InlineData("ArrayLengthNode", "RECKONING OF")]
+    [InlineData("AddressOfExpressionNode", "GALLERY PICTURE TO")]
+    [InlineData("DereferenceExpressionNode", "VIEW FROM")]
     [InlineData("FunctionReferenceNode", "function")]
     public void CreateExpression_SimpleTypes_AddsNodeToDiagramWithDataOutPort(string statementType, string expectedTitle)
     {

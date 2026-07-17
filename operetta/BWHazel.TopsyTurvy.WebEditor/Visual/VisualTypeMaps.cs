@@ -27,6 +27,7 @@ public static class VisualTypeMaps
         [LiteralType.Char]            = Keywords.TypeNames.Stitch,
         [LiteralType.Boolean]         = Keywords.TypeNames.Decree,
         [LiteralType.Array]           = Keywords.TypeNames.LittleListOf,
+        [LiteralType.Pointer]         = Keywords.TypeNames.GalleryPictureOf,
         [LiteralType.Null]            = Keywords.TypeNames.Naught,
     };
 }

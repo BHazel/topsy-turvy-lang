@@ -566,6 +566,58 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// the leading <c>VICTIM</c> keyword disambiguates them.
 /// </para>
 /// <para>
+/// ### Pointer Declarations
+/// The <c>PointerDeclaration</c> parser matches on pointer variable declarations, returning a
+/// <see cref="PointerDeclarationNode"/> with the variable name, the type being pointed to, optional mutability modifier and
+/// optional initial value:
+/// * It first matches the <c>PRAY WELCOME</c> keyword and required whitespace.
+/// * It then matches the variable name identifier.
+/// * It then matches <c>AS A</c>.
+/// * It optionally matches a mutability modifier, <c>CONSERVATIVE</c> or <c>LIBERAL</c>, back-tracking if absent.
+/// * It then matches the <c>GALLERY PICTURE OF</c> keyword.
+///     * This does not match <c>A GALLERY PICTURE OF</c>, because the <c>A</c> was already consumed with <c>AS A</c> above.
+/// * It then matches a scalar type keyword using <see cref="ExpressionParser.TypeKeyword"/> for the type being pointed to.
+/// * Finally it tries to match on an initial value, back-tracking if not matched:
+///     * It first matches more required whitespace followed by the <c>BEING</c> keyword.
+///     * It then matches more required whitespace followed by an expression for the initial value using the
+///     <see cref="ExpressionParser"/><c>.Expression</c> parser.
+///     * If no initial value is parsed, a default value of <c>null</c> is used.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+/// </code>
+/// the statement would be matched by the <c>PointerDeclaration</c> parser, returning a
+/// <see cref="PointerDeclarationNode"/> with the type being pointed to of <see cref="LiteralType"/><c>.Integer</c>, no initial value,
+/// and <see cref="PointerDeclarationNode.IsConstant"/> set to <c>false</c>.
+/// </para>
+/// <para>
+/// This parser must be tried before <c>Declaration</c> because both begin with <c>PRAY WELCOME</c>; the
+/// <c>GALLERY PICTURE OF</c> keyword after <c>AS A</c> is the disambiguator.
+/// </para>
+/// <para>
+/// ### Dereference Assignments
+/// The <c>DereferenceAssignment</c> parser matches on a write-through assignment performed via a pointer, returning a
+/// <see cref="DereferenceAssignmentNode"/>:
+/// * It first matches the <c>VIEW FROM</c> keyword.
+/// * It then matches required whitespace followed by the pointer variable name identifier.
+/// * It then matches required whitespace followed by the <c>IS APPOINTED</c> keyword.
+/// * Finally it matches required whitespace followed by the new value expression.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// VIEW FROM NumberPointer IS APPOINTED 23
+/// </code>
+/// the statement would be matched by the <c>DereferenceAssignment</c> parser, returning a
+/// <see cref="DereferenceAssignmentNode"/> with pointer name <c>NumberPointer</c> and value <c>23</c>.
+/// </para>
+/// <para>
+/// This parser must be tried before <c>Assignment</c> because both eventually match <c>IS APPOINTED</c>;
+/// the leading <c>VIEW FROM</c> keyword disambiguates them.
+/// </para>
+/// <para>
 /// ### Source Spans
 /// Every statement node produced by this class carries a <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/> mapping the node back to its
 /// position in the original (pre-processed) source.  The mechanism is identical to that used in <see cref="ExpressionParser"/>:
@@ -578,8 +630,9 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// after each <c>Lexer.Identifier</c> consume in the parameter list, to populate the
 /// <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter.Span"/> of each <see cref="BWHazel.TopsyTurvy.Ast.TypedParameter"/>.
 ///
-/// <c>FunctionDefinition</c>, <c>Declaration</c> and <c>ArrayDeclaration</c> each also capture a narrower
-/// <see cref="FunctionDefinitionNode.NameSpan"/>/<see cref="DeclarationNode.NameSpan"/>/<see cref="ArrayDeclarationNode.NameSpan"/>
+/// <c>FunctionDefinition</c>, <c>Declaration</c>, <c>ArrayDeclaration</c> and <c>PointerDeclaration</c> each also
+/// capture a narrower <see cref="FunctionDefinitionNode.NameSpan"/>/<see cref="DeclarationNode.NameSpan"/>/
+/// <see cref="ArrayDeclarationNode.NameSpan"/>/<see cref="PointerDeclarationNode.NameSpan"/>
 /// around just the name identifier, separate from <see cref="BWHazel.TopsyTurvy.Ast.Node.Span"/>, which still covers
 /// the whole statement, opening keyword to close.  Consumers needing the position of the name itself, such as
 /// <c>SymbolTable</c> and every LSP feature built on it, must use <c>NameSpan</c>: <c>Span.Start</c> points at
@@ -605,8 +658,10 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// **<c>Statement</c>** is the entry point for all other contexts: function bodies, loop bodies, conditional branches, etc..
 /// It tries every statement parser in turn:
 /// * <c>PrincipalBlock</c>
+/// * <c>PointerDeclaration</c>
 /// * <c>ArrayDeclaration</c>
 /// * <c>Declaration</c>
+/// * <c>DereferenceAssignment</c>
 /// * <c>ArrayElementAssignment</c>
 /// * <c>Assignment</c>
 /// * <c>Print</c>
@@ -713,6 +768,67 @@ public static class StatementParser
          {
              Index = index,
              ArrayName = arrayName,
+             Value = value,
+             Span = BuildSpan(startOffset, endOffset)
+         })
+         .Try();
+
+    /// <summary>
+    /// Parses a pointer variable declaration.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>PRAY WELCOME &lt;name&gt; AS A [CONSERVATIVE|LIBERAL] GALLERY PICTURE OF &lt;type&gt; [BEING ...]</c>
+    /// and returns a <see cref="PointerDeclarationNode"/>.  This parser must be tried before <see cref="Declaration"/>
+    /// because both begin with <c>PRAY WELCOME</c>.
+    /// </remarks>
+    public static readonly TextParser<Statement> PointerDeclaration =
+        (from startOffset in CurrentOffset
+         from _ in Lexer.Keyword("PRAY WELCOME")
+         from nameStartOffset in Ws(CurrentOffset)
+         from variableName in Lexer.Identifier
+         from nameEndOffset in CurrentOffset
+         from asAKeyword in Ws(Lexer.Keyword("AS A"))
+         from mutabilityModifier in Ws(Lexer.Keyword("CONSERVATIVE")
+             .Try()
+             .Or(Lexer.Keyword("LIBERAL")
+             .Try()))
+             .OptionalOrDefault(null!)
+         from galleryPictureOfKeyword in Ws(Lexer.Keyword("GALLERY PICTURE OF"))
+         from pointeeType in Ws(ExpressionParser.TypeKeyword)
+         from initialValue in Ws(Lexer.Keyword("BEING")
+             .IgnoreThen(Ws(ExpressionParser.Expression)))
+             .Try()
+             .OptionalOrDefault(null!)
+         from endOffset in CurrentOffset
+         select (Statement)new PointerDeclarationNode()
+         {
+             Name = variableName,
+             NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
+             PointeeType = pointeeType,
+             IsConstant = mutabilityModifier == "CONSERVATIVE",
+             InitialValue = initialValue,
+             Span = BuildSpan(startOffset, endOffset)
+         })
+         .Try();
+
+    /// <summary>
+    /// Parses a pointer write-through assignment statement.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>VIEW FROM &lt;pointer&gt; IS APPOINTED &lt;value&gt;</c> and returns a
+    /// <see cref="DereferenceAssignmentNode"/>.  This parser must be tried before <see cref="Assignment"/> because both
+    /// eventually match <c>IS APPOINTED</c>; the <c>VIEW FROM</c> prefix disambiguates them.
+    /// </remarks>
+    public static readonly TextParser<Statement> DereferenceAssignment =
+        (from startOffset in CurrentOffset
+         from viewFromKeyword in Lexer.Keyword("VIEW FROM")
+         from pointerName in Ws(Lexer.Identifier)
+         from isAppointedKeyword in Ws(Lexer.Keyword("IS APPOINTED"))
+         from value in Ws(ExpressionParser.Expression)
+         from endOffset in CurrentOffset
+         select (Statement)new DereferenceAssignmentNode()
+         {
+             PointerName = pointerName,
              Value = value,
              Span = BuildSpan(startOffset, endOffset)
          })
@@ -1132,7 +1248,9 @@ public static class StatementParser
     public static readonly TextParser<Statement> PrincipalBlock =
         from startOffset in CurrentOffset
         from _ in Lexer.Keyword("PRINCIPALS")
-        from declarations in WsMany(ArrayDeclaration.Or(Declaration))
+        from declarations in WsMany(PointerDeclaration
+            .Or(ArrayDeclaration)
+            .Or(Declaration))
         from closer in Ws(Lexer.Keyword("THE CURTAIN RISES.")
             .Named("THE CURTAIN RISES. (end of declarations)"))
         from endOffset in CurrentOffset
@@ -1234,8 +1352,10 @@ public static class StatementParser
     /// </summary>
     public static readonly TextParser<Statement> Statement =
         PrincipalBlock
+            .Or(PointerDeclaration)
             .Or(ArrayDeclaration)
             .Or(Declaration)
+            .Or(DereferenceAssignment)
             .Or(ArrayElementAssignment)
             .Or(Assignment)
             .Or(Print)

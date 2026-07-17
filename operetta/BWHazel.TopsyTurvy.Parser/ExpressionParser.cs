@@ -286,6 +286,45 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// and <c>THE PROPS</c> respectively.
 /// </para>
 /// <para>
+/// ### Address-Of Expressions
+/// The <c>AddressOfExpression</c> parser matches on a pointer being formed from an existing variable, returning an
+/// <see cref="AddressOfExpressionNode"/> that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>
+/// is expected.
+/// * It first matches the <c>GALLERY PICTURE TO</c> keyword.
+/// * Then it matches required whitespace followed by an identifier for the target variable name.
+///     * Only a bare identifier is accepted here, so a literal or a nested expression is rejected by this parser rather than parsed and rejected later by the type checker.
+///
+/// This parser supports back-tracking on failure and must appear before <c>IdentifierExpression</c> so that
+/// <c>GALLERY PICTURE TO</c> is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// NumberPointer IS APPOINTED GALLERY PICTURE TO Number
+/// </code>
+/// the right-hand side would return an <see cref="AddressOfExpressionNode"/> with the variable name set to
+/// <c>Number</c>.
+/// </para>
+/// <para>
+/// ### Dereference Expressions
+/// The <c>DereferenceExpression</c> parser matches on a pointer being read, returning a
+/// <see cref="DereferenceExpressionNode"/> that can be used wherever an <see cref="BWHazel.TopsyTurvy.Ast.Expression"/>
+/// is expected.
+/// * It first matches the <c>VIEW FROM</c> keyword.
+/// * Then it matches required whitespace followed by an identifier for the pointer variable name.
+///
+/// This parser supports back-tracking on failure and must appear before <c>IdentifierExpression</c> so that
+/// <c>VIEW FROM</c> is recognised as a keyword rather than consumed as an identifier.
+/// </para>
+/// <para>
+/// In the following Topsy Turvy example:
+/// <code>
+/// PRAY WELCOME Number2 AS A PEER BEING VIEW FROM NumberPointer
+/// </code>
+/// the right-hand side would return a <see cref="DereferenceExpressionNode"/> with the pointer name set to
+/// <c>NumberPointer</c>.
+/// </para>
+/// <para>
 /// ### Cast Expressions
 /// The <c>ExpressionCast</c> parser matches on a non-mutating type cast in the form
 /// <c>AS IT WERE &lt;expression&gt; AS A &lt;type&gt;</c>, returning an
@@ -367,6 +406,10 @@ namespace BWHazel.TopsyTurvy.Parser;
 ///     * Checked before <c>IdentifierExpression</c> so <c>VICTIM</c> is matched as a keyword.
 /// * Array Length Expression (<c>ArrayLengthExpression</c>)
 ///     * Checked before <c>IdentifierExpression</c> so <c>RECKONING</c> is matched as a keyword.
+/// * Address-Of Expression (<c>AddressOfExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>GALLERY PICTURE TO</c> is matched as a keyword.
+/// * Dereference Expression (<c>DereferenceExpression</c>)
+///     * Checked before <c>IdentifierExpression</c> so <c>VIEW FROM</c> is matched as a keyword.
 /// * Prefix Expression (<c>PrefixExpression</c>)
 /// * Literal Expression (<c>LiteralExpression</c>)
 /// * Just So Expression (<c>JustSoExpression</c>)
@@ -740,6 +783,47 @@ public static class ExpressionParser
          }).Try();
 
     /// <summary>
+    /// Parses an address-of expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>GALLERY PICTURE TO &lt;variable&gt;</c> and returns an <see cref="AddressOfExpressionNode"/>.
+    /// Only a bare identifier is accepted, so literals and arbitrary expressions are rejected.
+    /// This parser must appear in the <see cref="Expression"/> alternatives before <see cref="IdentifierExpression"/>
+    /// so that <c>GALLERY PICTURE TO</c> is matched as a keyword rather than consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> AddressOfExpression =
+        (from startOffset in CurrentOffset
+         from galleryPictureToKeyword in Lexer.Keyword("GALLERY PICTURE TO")
+         from variableName in Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Identifier)
+         from endOffset in CurrentOffset
+         select (Expression)new AddressOfExpressionNode()
+         {
+             VariableName = variableName,
+             Span = BuildSpan(startOffset, endOffset)
+         }).Try();
+
+    /// <summary>
+    /// Parses a pointer dereference expression.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>VIEW FROM &lt;pointer&gt;</c> and returns a <see cref="DereferenceExpressionNode"/>.
+    /// This parser must appear in the <see cref="Expression"/> alternatives before <see cref="IdentifierExpression"/>
+    /// so that <c>VIEW FROM</c> is matched as a keyword rather than consumed as an identifier.
+    /// </remarks>
+    public static readonly TextParser<Expression> DereferenceExpression =
+        (from startOffset in CurrentOffset
+         from viewFromKeyword in Lexer.Keyword("VIEW FROM")
+         from pointerName in Lexer.WhitespaceRequired
+            .IgnoreThen(Lexer.Identifier)
+         from endOffset in CurrentOffset
+         select (Expression)new DereferenceExpressionNode()
+         {
+             PointerName = pointerName,
+             Span = BuildSpan(startOffset, endOffset)
+         }).Try();
+
+    /// <summary>
     /// Parses a non-mutating expression cast.
     /// </summary>
     public static readonly TextParser<Expression> ExpressionCast =
@@ -770,6 +854,8 @@ public static class ExpressionParser
             .Or(ExpressionCast)
             .Or(ArrayIndexExpression)
             .Or(ArrayLengthExpression)
+            .Or(AddressOfExpression)
+            .Or(DereferenceExpression)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)
@@ -812,6 +898,8 @@ public static class ExpressionParser
             .Or(ExpressionCast)
             .Or(ArrayIndexExpression)
             .Or(ArrayLengthExpression)
+            .Or(AddressOfExpression)
+            .Or(DereferenceExpression)
             .Or(Parse.Ref(() => PrefixExpression))
             .Or(Parse.Ref(() => LiteralExpression))
             .Or(JustSoExpression)
