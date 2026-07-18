@@ -1,6 +1,6 @@
 # UtopIR
 ## An Intermediary Representation for Topsy Turvy
-### Language Specification: Version 0.0.1-preview2
+### Language Specification: Version 0.0.1-preview3
 
 ---
 
@@ -66,6 +66,26 @@ In UtopIR, using temporary variables, would be:
 ### 3.2.3. Constants
 
 Constants are not directly supported in UtopIR.  A constant declared in Topsy Turvy using the `CONSERVATIVE` modifier will never change throughout the lifetime of a programme, therefore, its literal value can be used inline directly in UtopIR code.
+
+### 3.3. Labels
+
+Labels are specific points in UtopIR code to enable branching for control flow.  All labels start with the `!` character and follow the same naming rules as variables.  However, a naming convention is, when using letter characters, to only the upper-case variants.  Additionally, although indentation is not a requirement, a convention is to indent all code lines following a label up to another label or branch.
+
+In UtopIR an example of using labels would be:
+
+```utopir
+£VarA = welcome decree
+£VarA = appoint verity
+£VarB = welcome decree
+£VarB = appoint nay
+
+£AreEqual_AB = both £VarA, £VarB
+sailunlike £AreEqual_AB, !ARE_EQUAL_NAY
+find 1
+
+!ARE_EQUAL_NAY
+  find 0
+```
 
 ## 4. Instructions
 
@@ -141,7 +161,7 @@ the following UtopIR is equivalent:
 
 #### 4.1.3. `were` Instruction
 
-The `were` instruction casts a value to a different type and assign it to a declared virtual register.
+The `were` instruction casts a value to a different type and assigns it to a declared virtual register.
 
 **Operands**
 
@@ -470,8 +490,8 @@ The `prod.f` instruction multiples two floating-point operands together (`<op1> 
 
 **Operands**
 
-* **`<op1>`:** The first numeric operand, either literal or variable.
-* **`<op2>`:** The second numeric operand, either literal or variable.
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
 
 **Format**
 
@@ -853,15 +873,375 @@ There is no direct equivalent of the stack operations in Topsy Turvy.  The follo
 £LovesickMaidens = leave
 ```
 
-### 4.5. Control Flow Instructions
+### 4.5. Comparison Instructions
+
+This section describes comparison operations on supported types. They are split into two groups:
+
+* Integer Comparison, supporting all integer and the `stitch` character types.
+* Floating-Point Comparison, supporting all floating-point types; these have the same names as the integer instructions but appended with the .f suffix.
+
+#### 4.5.1. Integer Comparison
+
+The following instructions provide basic comparison operations for integers. Operands must be of the same type in the same instruction; using two types that are incompatible is a compilation error.
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`alike <op1>, <op2>`|Equality Comparison (`<op1> == <op2>`)|Virtual Register|`£Equal = alike £NumLords, £NumMaidens`|
+|`unlike <op1>, <op2>`|Inequality Comparison (`<op1> != <op2>`)|Virtual Register|`£NotEqual = unlike £NumLords, £NumMaidens`|
+|`preadam <op1>, <op2>`|Larger Than (`<op1> > <op2>`)|Virtual Register|`£MoreLords = preadam £NumLords, £NumMaidens`|
+|`lowerdeg <op1>, <op2>`|Less Than (`<op1> < <op2>`)|Virtual Register|`£MoreMaidens = lowerdeg £NumLords, £NumMaidens`|
+
+##### 4.5.1.1. `alike` Instruction
+
+The `alike` instruction compares two integer values for equality (`<op1> == <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same integer type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = alike <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Equal = ALIKE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Equal = alike £NumLords, £NumMaidens
+```
+
+##### 4.5.1.2. `unlike` Instruction
+
+The `unlike` instruction compares two integer values for inequality (`<op1> != <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same integer type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = unlike <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NotEqual = UNLIKE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NotEqual = unlike £NumLords, £NumMaidens
+```
+
+##### 4.5.1.3. `preadam` Instruction
+
+The `preadam` instruction compares two integer values to determine if the first is greater than the second (`<op1> > <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same integer type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = preadam <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+MoreLords = PRE-ADAMITE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£MoreLords = preadam £NumLords, £NumMaidens
+```
+
+##### 4.5.1.4. `lowerdeg` Instruction
+
+The `lowerdeg` instruction compares two integer values to determine if the first is less than the second (`<op1> < <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same integer type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first integer operand, either literal or variable.
+* **`<op2>`:** The second integer operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = lowerdeg <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+MoreMaidens = LOWER DEGREE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£MoreMaidens = lowerdeg £NumLords, £NumMaidens
+```
+
+#### 4.5.2. Floating-Point Comparison
+
+The following instructions provide basic comparison operations for floating-point numbers. Operands must be of the same type in the same instruction; using two types that are incompatible is a compilation error.
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`alike.f <op1>, <op2>`|Equality Comparison (`<op1> == <op2>`)|Virtual Register|`£Equal = alike.f £NumLords, £NumMaidens`|
+|`unlike.f <op1>, <op2>`|Inequality Comparison (`<op1> != <op2>`)|Virtual Register|`£NotEqual = unlike.f £NumLords, £NumMaidens`|
+|`preadam.f <op1>, <op2>`|Larger Than (`<op1> > <op2>`)|Virtual Register|`£MoreLords = preadam.f £NumLords, £NumMaidens`|
+|`lowerdeg.f <op1>, <op2>`|Less Than (`<op1> < <op2>`)|Virtual Register|`£MoreMaidens = lowerdeg.f £NumLords, £NumMaidens`|
+
+##### 4.5.2.1. `alike.f` Instruction
+
+The `alike.f` instruction compares two floating-point values for equality (`<op1> == <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same floating-point type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = alike.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Equal = ALIKE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Equal = alike.f £NumLords, £NumMaidens
+```
+
+##### 4.5.2.2. `unlike.f` Instruction
+
+The `unlike.f` instruction compares two floating-point values for inequality (`<op1> != <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same floating-point type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = unlike.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NotEqual = UNLIKE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NotEqual = unlike.f £NumLords, £NumMaidens
+```
+
+##### 4.5.2.3. `preadam.f` Instruction
+
+The `preadam.f` instruction compares two floating-point values to determine if the first is greater than the second (`<op1> > <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same floating-point type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = preadam.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+MoreLords = PRE-ADAMITE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£MoreLords = preadam.f £NumLords, £NumMaidens
+```
+
+##### 4.5.2.4. `lowerdeg.f` Instruction
+
+The `lowerdeg.f` instruction compares two floating-point values to determine if the first is less than the second (`<op1> < <op2>`) and assigns the result to a variable of `decree` type.  Operands must be of the same floating-point type in the same instruction and the result must be assigned to a variable of the `decree` type; using two different operand types is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first floating-point operand, either literal or variable.
+* **`<op2>`:** The second floating-point operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = lowerdeg.f <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+MoreMaidens = LOWER DEGREE NumLords AND NumMaidens
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£MoreMaidens = lowerdeg £NumLords, £NumMaidens
+```
+
+### 4.6. Logical Operations
+
+The following instructions provide logical operations for `decree` types.  Operands must be of `decree` type in the same instruction; using a non-`decree` type is a compilation error.
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`both <op1>, <op2>`|Logical AND|Virtual Register|`£Result = both verity, nay`|
+|`either <op1>, <op2>`|Logical OR|Virtual Register|`£Result = either verity, nay`|
+|`hardly <op1>`|Logical NOT|Virtual Register|`£Result = hardly verity`|
+
+#### 4.6.1. `both` Instruction
+
+The `both` instruction calculates the logical AND of two values (`<op1> AND <op2>`) and assigns the result to a variable.  Operands must be of the `decree` type in the same instruction; using a non-`decree` type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first `decree` operand, either literal or variable.
+* **`<op2>`:** The second `decree` operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = both <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Result = BOTH VERITY AND NAY
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Result = both verity, nay
+```
+
+#### 4.6.2. `either` Instruction
+
+The `either` instruction calculates the logical OR of two values (`<op1> OR <op2>`) and assigns the result to a variable.  Operands must be of the `decree` type in the same instruction; using a non-`decree` type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first `decree` operand, either literal or variable.
+* **`<op2>`:** The second `decree` operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = either <op1>, <op2>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Result = EITHER VERITY OR NAY
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Result = either verity, nay
+```
+
+#### 4.6.3. `hardly` Instruction
+
+The `hardly` instruction performs the logical NOT of a values (`NOT <op1>`) and assigns the result to a variable.  The operand must be of the `decree` type; using a non-`decree` type is a compilation error.
+
+**Operands**
+
+* **`<op1>`:** The first `decree` operand, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = hardly <op1>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+Result = HARDLY EVER VERITY
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Result = hardly verity
+```
+
+### 4.7. Control Flow Instructions
 
 The following instructions control the flow of the programme:
 
 |Instruction|Description|Mechanism|Example|
 |-|-|-|-|
 |`find <value>`|Returns a value to the calling scope.|Virtual Register/Stack|`find 42`|
+|`sail <label>`|Branches to the specified label.|N/A|`sail LABEL`|
+|`sailalike <value>, <label>`|Branches to the specified label if the `decree` value indicates equality.|`sailalike £IsLord, !LABEL`|
+|`sailunlike <value>, <label>`|Branches to the specified label if the `decree` value indicates inequality.|`sailunlike £IsLord, !LABEL`|
 
-#### 4.5.1. `find` Instruction
+#### 4.7.1. `find` Instruction
 
 The `find` instruction returns a value to a calling scope and can be a literal or variable value.
 
@@ -893,6 +1273,92 @@ To return no value the `find` instruction is called without an operand:
 
 ```utopir
 find
+```
+
+#### 4.7.2. `sail` Instruction
+
+The `sail` instruction branches the code to the specified label, unconditionally.
+
+**Operands**
+
+* **`<label>`:** The label to branch to.
+
+**Format**
+
+```utopir
+sail <label>
+```
+
+**Example**
+
+There is no direct equivalent of the branch operations in Topsy Turvy.  The following example branches unconditionally to the specified label.  It should be noted the `find 0` line will never be executed.
+
+```utopir
+sail !LOGIC
+find 0
+
+!LOGIC
+  find 1
+```
+
+#### 4.7.3. `sailalike` Instruction
+
+The `sailalike` instruction branches the code to the specified label if the specified `decree` value is `verity`.  The value operand must be of type `decree`; any other type is a compilation error.
+
+**Operands**
+
+* **`<value>`:** The `decree` value being evaluated.
+* **`<label>`:** The label to branch to.
+
+**Format**
+
+```utopir
+sailalike <value>, <label>
+```
+
+**Example**
+
+There is no direct equivalent of the branch operations in Topsy Turvy.  The following example branches unconditionally to the specified label.  It should be noted the `find 0` line will only be executed if `£Boolean` evaluates to `nay`.
+
+```utopir
+£Boolean = welcome decree
+£Boolean = appoint verity
+
+sailalike £Boolean, !IS_ALIKE
+find 0
+
+!IS_ALIKE
+  find 1
+```
+
+#### 4.7.4. `sailunlike` Instruction
+
+The `sailunlike` instruction branches the code to the specified label if the specified `decree` value is `nay`.  The value operand must be of type `decree`; any other type is a compilation error.
+
+**Operands**
+
+* **`<value>`:** The `decree` value being evaluated.
+* **`<label>`:** The label to branch to.
+
+**Format**
+
+```utopir
+sailunlike <value>, <label>
+```
+
+**Example**
+
+There is no direct equivalent of the branch operations in Topsy Turvy.  The following example branches unconditionally to the specified label.  It should be noted the `find 0` line will only be executed if `£Boolean` evaluates to `verity`.
+
+```utopir
+£Boolean = welcome decree
+£Boolean = appoint nay
+
+sailunlike £Boolean, !IS_UNLIKE
+find 0
+
+!IS_UNLIKE
+  find 1
 ```
 
 ## 5. Examples
@@ -998,6 +1464,10 @@ find £FathomResultB
 
 ### 5.3. Bitwise Operations
 
+The following example demonstrates bitwise operations.
+
+For the following Topsy Turvy code:
+
 ```topsy
 ASIDE: 0b1001
 PRAY WELCOME PeerMask AS A PEER BEING 9
@@ -1012,6 +1482,8 @@ ASIDE: 0b1110
 PRAY WELCOME PeerNotResult AS A PEER BEING INVERSION OF PeerAndResult
 ```
 
+the following is the equivalent UtopIR code:
+
 ```utopir
 £PeerMask = welcome peer
 £PeerMask = appoint 9
@@ -1025,6 +1497,402 @@ PRAY WELCOME PeerNotResult AS A PEER BEING INVERSION OF PeerAndResult
 £PeerNotResult = appoint £_inv_PeerAndResult
 
 find £PeerNotResult
+```
+
+### 5.4. Comparison, Logical & Branch Instructions
+
+#### 5.4.1. If/Else-If/Else Conditional Blocks
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent a conditional If/Else-If/Else block in Topsy Turvy.
+
+For the following example in Topsy Turvy
+
+```topsy
+PRAY WELCOME Peer1 AS A PEER BEING 42
+PRAY WELCOME Peer2 AS A PEER BEING 23
+PRAY WELCOME PeerResult AS A PEER
+
+SHOULD IT TRANSPIRE THAT PRE-ADAMITE Peer1 AND Peer2
+  QUITE SO.
+    PeerResult IS APPOINTED 1
+  OR, IF NOT, ALIKE Peer1 AND Peer2
+    PeerResult IS APPOINTED 0
+  OTHERWISE,
+    PeerResult IS APPOINTED -1
+SO MUCH FOR THAT.
+
+AND SO I FIND PeerResult
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Peer1 = welcome peer
+£Peer1 = appoint 42
+£Peer2 = welcome peer
+£Peer2 = appoint 23
+£PeerResult = welcome peer
+
+£_preadam_Peer1_Peer2 = preadam £Peer1, £Peer2
+£_alike_Peer1_Peer2 = alike £Peer1, £Peer2
+sailalike £_preadam_Peer1_Peer2, !T1QS_PREADAM_PEER1_PEER2
+sailalike £_alike_Peer1_Peer2, !T1OIN_ALIKE_PEER1_PEER2
+sail !T1O
+
+@ If "QUITE SO." branch.
+!T1QS_PREADAM_PEER1_PEER2
+  £PeerResult = appoint 1
+  sail !T1SMFT
+
+@ If Else "OR, IF NOT," branch.
+!T1OIN_ALIKE_PEER1_PEER2
+  £PeerResult = appoint 0
+  sail !T1SMFT
+
+@ Else "OTHERWISE," branch.
+!T1O
+  £PeerResult = appoint -1
+
+!T1SMFT
+
+find £PeerResult
+```
+
+#### 5.4.2. Ternary Expressions
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent a ternary expression in Topsy Turvy.
+
+For the following example in Topsy Turvy
+
+```topsy
+PRAY WELCOME Peer1 AS A PEER BEING 42
+PRAY WELCOME Peer2 AS A PEER BEING 23
+PRAY WELCOME PeerResult AS A PEER
+
+PeerResult IS APPOINTED 1 SHOULD IT TRANSPIRE THAT ALIKE Peer1 AND Peer2 OTHERWISE, 0
+
+AND SO I FIND PeerResult
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Peer1 = welcome peer
+£Peer1 = appoint 42
+£Peer2 = welcome peer
+£Peer2 = appoint 23
+£PeerResult = welcome peer
+
+@ Additional variable created for ternary result to support nested expressions.
+£_alike_Peer1_Peer2 = alike £Peer1, £Peer2
+£_ternary_alike_Peer1_Peer2 = welcome peer
+sailalike £_alike_Peer1_Peer2, !T1QS_ALIKE_PEER1_PEER2
+sail !T1O
+
+@ Ternary expressions are converted into If/Else equivalent blocks.
+@ True Value, equivalent to If "QUITE SO." branch.
+!T1QS_ALIKE_PEER1_PEER2
+  £_ternary_alike_Peer1_Peer2 = appoint 1
+  sail !T1SMFT
+
+@ False Value, equivalent to Else "OTHERWISE," branch.
+!T1O
+  £_ternary_alike_Peer1_Peer2 = appoint 0
+
+!T1SMFT
+
+£PeerResult = appoint £_ternary_alike_Peer1_Peer2
+find £PeerResult
+```
+
+#### 5.4.3. Guard Blocks
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent a guard clause in Topsy Turvy.
+
+For the following example in Topsy Turvy
+
+```topsy
+PRAY WELCOME Peer1 AS A PEER BEING 42
+PRAY WELCOME Peer2 AS A PEER BEING 23
+PRAY WELCOME PeerResult AS A PEER
+
+YEOMAN ALIKE Peer1 AND Peer2
+  OTHERWISE,
+    PeerResult IS APPOINTED 0
+UNDER ORDERS.
+
+PeerResult IS APPOINTED 1
+AND SO I FIND PeerResult
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Peer1 = welcome peer
+£Peer1 = appoint 42
+£Peer2 = welcome peer
+£Peer2 = appoint 23
+£PeerResult = welcome peer
+
+£_alike_Peer1_Peer2 = alike £Peer1, £Peer2
+sailunlike £_alike_Peer1_Peer2, !G1O
+sail !G1UO
+
+@ Guard condition failed, equivalent to the "OTHERWISE," block.
+!G1O
+  £PeerResult = appoint 0
+
+!G1UO
+
+£PeerResult = appoint 1
+find £PeerResult
+```
+
+#### 5.4.4. Switch Blocks
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent a Switch block in Topsy Turvy.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Peer1 AS A PEER BEING 10
+PRAY WELCOME PeerResult AS A PEER
+
+IN WHICH CAPACITY? Peer1
+  WHEN ACTING AS 10
+    PeerResult IS APPOINTED 1
+    THAT WILL DO.
+  WHEN ACTING AS 20
+  WHEN ACTING AS 40
+    PeerResult IS APPOINTED 2
+    THAT WILL DO.
+  WHEN ACTING AS 100
+    PeerResult IS APPOINTED 3
+  FAILING ALL OF THE ABOVE,
+    PeerResult IS APPOINTED -1
+NOTHING COULD BE MORE SATISFACTORY.
+
+AND SO I FIND PeerResult
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Peer1 = welcome peer
+£Peer1 = appoint 10
+£PeerResult = welcome peer
+
+£_alike_Peer1_10 = alike £Peer1, 10
+sailalike £_alike_Peer1_10, !C1AS_10
+
+£_alike_Peer1_20 = alike £Peer1, 20
+sailalike £_alike_Peer1_20, !C1AS_20
+
+£_alike_Peer1_40 = alike £Peer1, 40
+sailalike £_alike_Peer1_40, !C1AS_40
+
+£_alike_Peer1_100 = alike £Peer1, 100
+sailalike £_alike_Peer1_100, !C1AS_100
+
+sail !C1FAIL
+
+!C1AS_10
+  £PeerResult = appoint 1
+  sail !C1NCBMS
+!C1AS_20
+!C1AS_40
+  £PeerResult = appoint 2
+  sail !C1NCBMS
+!C1AS_100
+  £PeerResult = appoint 3
+  sail !C1NCBMS
+!C1FAIL
+  £PeerResult = appoint -1
+
+!C1NCBMS
+
+find £PeerResult
+```
+
+#### 5.4.5. Basic Loops
+
+This example demonstrates how branching instructions represent basic loops.
+
+**It should be note this example is an infinite loop.**
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Toggle AS A DECREE BEING VERITY
+
+BY A LEGAL FICTION
+  Toggle IS APPOINTED HARDLY EVER Toggle
+THE TERM EXPIRES.
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Toggle = welcome decree
+£Toggle = appoint verity
+
+!L1
+  £_hardly_Toggle = hardly £Toggle
+  £Toggle = appoint £_hardly_Toggle
+  sail !L1
+
+!L1TTE
+```
+
+#### 5.4.6. Whilst Loops
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent basic loops with condition checking.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Counter AS A PEER BEING 1
+PRAY WELCOME Total AS A PEER BEING 0
+
+BY A LEGAL FICTION WHILST LOWER DEGREE Counter AND 10
+  Total IS APPOINTED SUM OF Total AND Counter
+  Counter IS APPOINTED SUM OF Counter AND 2
+THE TERM EXPIRES.
+
+AND SO I FIND Total
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Counter = welcome peer
+£Counter = appoint 1
+£Total = welcome peer
+£Total = appoint 0
+
+!L1W_LOWERDEG_COUNTER_10
+  £_lowerdeg_Counter_10 = lowerdeg £Counter, 10
+  sailunlike £_lowerdeg_Counter_10, !L1WTTE
+
+  £_sum_Total_Counter = sum £Total, £Counter
+  £Total = appoint £_sum_Total_Counter
+
+  £_sum_Counter_2 = sum £Counter, 2
+  £Counter = appoint £_sum_Counter_2
+  sail !L1W_LOWERDEG_COUNTER_10
+
+!L1WTTE
+
+find £Total
+```
+
+#### 5.4.7. Ascending & Descending Loops
+
+This example demonstrates how comparison and logical operators are used in combination with branching instructions to represent ascending and descending loops in Topsy Turvy.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Counter AS A PEER BEING 1
+PRAY WELCOME Total AS A PEER BEING 0
+
+BY A LEGAL FICTION KNOWN AS Incrementer ASCENDING Counter UNTIL PRE-ADAMITE Counter AND 10
+  Total IS APPOINTED SUM OF Total AND Counter
+THE TERM EXPIRES.
+
+AND SO I FIND Total
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Counter = welcome peer
+£Counter = appoint 1
+£Total = welcome peer
+£Total = appoint 0
+
+!L1ASC_INCREMENTER_PREADAM_COUNTER_10
+  £_preadam_Counter_10 = preadam £Counter, 10
+  sailalike £_preadam_Counter_10, !L1ASCTTE
+
+  £_sum_Total_Counter = sum £Total, £Counter
+  £Total = appoint £_sum_Total_Counter
+
+@ Always included as a "continue" target to ensure counter is incremented/decremented.
+!L1ASCOM
+  @ Descending loops would use the diff instruction instead of sum.
+  £_sum_Counter_1 = sum £Counter, 1
+  £Counter = appoint £_sum_Counter_1
+  sail !L1ASC_INCREMENTER_PREADAM_COUNTER_10
+
+!L1ASCTTE
+
+find £Total
+```
+
+#### 5.4.8. Break and Continue Clauses
+
+UtopIR has no equivalent of the Topsy Turvy `THAT WILL DO.` break clause or `ONCE MORE.` continue clause.  Use of the `sail`, `sailalike` and `sailunlike` instructions with labels will suffice.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Counter AS A PEER BEING 1
+PRAY WELCOME Total AS A PEER BEING 0
+
+BY A LEGAL FICTION WHILST LOWER DEGREE Counter AND 20
+  Counter IS APPOINTED SUM OF Counter AND 1
+
+  SHOULD IT TRANSPIRE THAT ALIKE REMAINDER OF Counter AND 2 AND 0
+    QUITE SO.
+      ONCE MORE.
+    OR, IF NOT, ALIKE Counter AND 13
+      THAT WILL DO.
+  SO MUCH FOR THAT.
+
+  Total IS APPOINTED SUM OF Total AND Counter
+THE TERM EXPIRES.
+
+AND SO I FIND Total
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Counter = welcome peer
+£Counter = appoint 1
+£Total = welcome peer
+£Total = appoint 0
+
+!L1W_LOWERDEG_COUNTER_20
+  £_lowerdeg_Counter_20 = lowerdeg £Counter, 20
+  sailunlike £_lowerdeg_Counter_20, !L1WTTE
+
+  £_sum_Counter_1 = sum £Counter, 1
+  £Counter = appoint £_sum_Counter_1
+
+  £_rem_Counter_2 = rem £Counter, 2
+  £_alike__rem_Counter_2_0 = alike £_rem_Counter_2, 0
+  £_alike_Counter_13 = alike £Counter, 13
+  sailalike £_alike__rem_Counter_2_0, !T2QS_ALIKE_REM_COUNTER_2_0
+  sailalike £_alike_Counter_13, !T2OIN_ALIKE_COUNTER_13
+  sail !T2SMFT
+
+  !T2QS_ALIKE_REM_COUNTER_2_0
+    sail !L1W_LOWERDEG_COUNTER_20
+
+  !T2OIN_ALIKE_COUNTER_13
+    sail !L1WTTE
+
+  !T2SMFT
+
+  £_sum_Total_Counter = sum £Total, £Counter
+  £Total = appoint £_sum_Total_Counter
+  sail !L1W_LOWERDEG_COUNTER_20
+
+!L1WTTE
+
+find £Total
 ```
 
 ## Appendix A. Instruction Reference
@@ -1057,6 +1925,20 @@ find £PeerNotResult
 |`inv <op1>`|Bitwise NOT|`£Result = inv 10`|
 |`transup <op1>, <op2>`|Left Shift by `<op2>`|`£Result = transup 10, 1`|
 |`transdown <op1>, <op2>`|Right Shift by `<op2>`|`£Result = transdown 10, 1`|
+|`alike <op1>, <op2>`|Integer Equality Comparison (`<op1> == <op2>`)|`£Equal = alike £NumLords, £NumMaidens`|
+|`unlike <op1>, <op2>`|Integer Inequality Comparison (`<op1> != <op2>`)|`£NotEqual = unlike £NumLords, £NumMaidens`|
+|`preadam <op1>, <op2>`|Integer Larger Than (`<op1> > <op2>`)|`£MoreLords = preadam £NumLords, £NumMaidens`|
+|`lowerdeg <op1>, <op2>`|Integer Less Than (`<op1> < <op2>`)|`£MoreMaidens = lowerdeg £NumLords, £NumMaidens`|
+|`alike.f <op1>, <op2>`|Floating-Point Equality Comparison (`<op1> == <op2>`)|`£Equal = alike.f £NumLords, £NumMaidens`|
+|`unlike.f <op1>, <op2>`|Floating-Point Inequality Comparison (`<op1> != <op2>`)|`£NotEqual = unlike.f £NumLords, £NumMaidens`|
+|`preadam.f <op1>, <op2>`|Floating-Point Larger Than (`<op1> > <op2>`)|`£MoreLords = preadam.f £NumLords, £NumMaidens`|
+|`lowerdeg.f <op1>, <op2>`|Floating-Point Less Than (`<op1> < <op2>`)|`£MoreMaidens = lowerdeg.f £NumLords, £NumMaidens`|
+|`both <op1>, <op2>`|Logical AND|`£Result = both verity, nay`|
+|`either <op1>, <op2>`|Logical OR|`£Result = either verity, nay`|
+|`hardly <op1>`|Logical NOT|`£Result = hardly verity`|
+|`sail <label>`|Branches to the specified label.|`sail LABEL`|
+|`sailalike <value>, <label>`|Branches to the specified label if the `decree` value indicates equality.|`sailalike £IsLord, !LABEL`|
+|`sailunlike <value>, <label>`|Branches to the specified label if the `decree` value indicates inequality.|`sailunlike £IsLord, !LABEL`|
 
 ## Appendix B. Type Reference
 

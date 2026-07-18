@@ -30,6 +30,9 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>ArithmeticRhs</c> matches an <see cref="OperandParser.ArithmeticOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing an <see cref="ArithmeticInstruction"/>.
 /// * <c>BitwiseRhs</c> matches an <see cref="OperandParser.BitwiseOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="BitwiseInstruction"/>.
 /// * <c>InvRhs</c> matches the <c>inv</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing an <see cref="InvInstruction"/>.
+/// * <c>ComparisonRhs</c> matches an <see cref="OperandParser.ComparisonOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="ComparisonInstruction"/>.
+/// * <c>LogicalRhs</c> matches an <see cref="OperandParser.LogicalOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="LogicalInstruction"/>.
+/// * <c>HardlyRhs</c> matches the <c>hardly</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing a <see cref="HardlyInstruction"/>.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -38,12 +41,22 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 ///     * Whichever of the right-hand-side helpers above matches the keyword that follows.
 ///
 /// ### Standalone Instructions
-/// Standalone instructions consist of a single keyword and have no operands.
+/// Standalone instructions consist of a single keyword and have no assignment target.
 /// * <see cref="Prentice"/> matches the <c>prentice</c> keyword, required whitespace, then an <see cref="OperandParser.Operand"/>, producing a <see cref="PrenticeInstruction"/>.
 /// * <see cref="Find"/> matches the <c>find</c> keyword followed by an optional <see cref="OperandParser.Operand"/>, producing a <see cref="FindInstruction"/>.
+/// * <see cref="Sail"/> matches the <c>sail</c> keyword, required whitespace, then a <see cref="Lexer.Label"/>, producing a <see cref="SailInstruction"/>.
+/// * <see cref="SailAlike"/> matches the <c>sailalike</c> keyword, required whitespace, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="Lexer.Label"/>, producing a <see cref="SailAlikeInstruction"/>.
+/// * <see cref="SailUnlike"/> matches the <c>sailunlike</c> keyword the same way as <see cref="SailAlike"/>, producing a <see cref="SailUnlikeInstruction"/>.
+/// * <see cref="Label"/> matches a bare <see cref="Lexer.Label"/> on its own line, producing a <see cref="LabelInstruction"/>.
 /// * <see cref="StandaloneInstruction"/> tries all standalone instructions in turn:
 ///     * <see cref="Prentice"/>.
 ///     * <see cref="Find"/>.
+///     * <see cref="SailAlike"/> and <see cref="SailUnlike"/>, tried before <see cref="Sail"/> for consistency
+///     with the longest-mnemonic-first discipline used elsewhere, even though <c>sail</c> is not
+///     itself a textual prefix of either (<see cref="Lexer.Keyword(string)"/> matches raw text with
+///     no trailing word-boundary check, so this ordering costs nothing and avoids relying on that
+///     absence being permanent).
+///     * <see cref="Label"/>.
 ///
 /// ### Instruction
 /// The top-level parser for all instructions, trying each type in turn:
@@ -157,6 +170,44 @@ public static class InstructionParser
         select (UtopIRInstruction)new InvInstruction(new UtopIRVariable(target), operand);
 
     /// <summary>
+    /// Parses a comparison assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> ComparisonRhs(string target) =>
+        from operation in OperandParser.ComparisonOperation
+        from whitespace1 in Lexer.WhitespaceRequired
+        from operand1 in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from operand2 in OperandParser.Operand
+        select (UtopIRInstruction)new ComparisonInstruction(operation, new UtopIRVariable(target), operand1, operand2);
+
+    /// <summary>
+    /// Parses a binary logical assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> LogicalRhs(string target) =>
+        from operation in OperandParser.LogicalOperation
+        from whitespace1 in Lexer.WhitespaceRequired
+        from operand1 in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from operand2 in OperandParser.Operand
+        select (UtopIRInstruction)new LogicalInstruction(operation, new UtopIRVariable(target), operand1, operand2);
+
+    /// <summary>
+    /// Parses a <c>hardly</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> HardlyRhs(string target) =>
+        from hardlyKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Hardly)
+        from whitespace in Lexer.WhitespaceRequired
+        from operand in OperandParser.Operand
+        select (UtopIRInstruction)new HardlyInstruction(new UtopIRVariable(target), operand);
+
+    /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> AssignmentInstruction =
@@ -172,6 +223,9 @@ public static class InstructionParser
                 .Or(ArithmeticRhs(target))
                 .Or(BitwiseRhs(target))
                 .Or(InvRhs(target))
+                .Or(ComparisonRhs(target))
+                .Or(LogicalRhs(target))
+                .Or(HardlyRhs(target))
         select instruction;
 
     /// <summary>
@@ -194,11 +248,57 @@ public static class InstructionParser
         select (UtopIRInstruction)new FindInstruction(value);
 
     /// <summary>
-    /// Parses either of the two standalone instruction forms with no assignment target.
+    /// Parses a <c>sailalike</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> SailAlike =
+        from sailAlikeKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.SailAlike)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from value in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from label in Lexer.Label
+        select (UtopIRInstruction)new SailAlikeInstruction(value, new UtopIRLabel(label));
+
+    /// <summary>
+    /// Parses a <c>sailunlike</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> SailUnlike =
+        from sailUnlikeKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.SailUnlike)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from value in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from label in Lexer.Label
+        select (UtopIRInstruction)new SailUnlikeInstruction(value, new UtopIRLabel(label));
+
+    /// <summary>
+    /// Parses an unconditional <c>sail</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> Sail =
+        from sailKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Sail)
+        from whitespace in Lexer.WhitespaceRequired
+        from label in Lexer.Label
+        select (UtopIRInstruction)new SailInstruction(new UtopIRLabel(label));
+
+    /// <summary>
+    /// Parses a bare label declaration.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> Label =
+        from label in Lexer.Label
+        select (UtopIRInstruction)new LabelInstruction(new UtopIRLabel(label));
+
+    /// <summary>
+    /// Parses any of the standalone instruction forms with no assignment target.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> StandaloneInstruction =
         Prentice
-            .Or(Find);
+            .Or(Find)
+            .Or(SailAlike)
+            .Or(SailUnlike)
+            .Or(Sail)
+            .Or(Label);
 
     /// <summary>
     /// Parses any single UtopIR instruction.

@@ -735,6 +735,370 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that each <see cref="UtopIRComparisonOperation"/> computes the correct <c>decree</c> result, returned as <c>0</c> or <c>1</c>, on <c>peer</c> operands.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRComparisonOperation"/> to test.</param>
+    /// <param name="operand1">The first operand value.</param>
+    /// <param name="operand2">The second operand value.</param>
+    /// <param name="expectedResult">The expected exit code, <c>1</c> for <c>verity</c> or <c>0</c> for <c>nay</c>.</param>
+    [Theory]
+    [InlineData(UtopIRComparisonOperation.Alike, 5, 5, 1)]
+    [InlineData(UtopIRComparisonOperation.Alike, 5, 6, 0)]
+    [InlineData(UtopIRComparisonOperation.Unlike, 5, 6, 1)]
+    [InlineData(UtopIRComparisonOperation.Unlike, 5, 5, 0)]
+    [InlineData(UtopIRComparisonOperation.PreAdam, 5, 3, 1)]
+    [InlineData(UtopIRComparisonOperation.PreAdam, 3, 5, 0)]
+    [InlineData(UtopIRComparisonOperation.LowerDeg, 3, 5, 1)]
+    [InlineData(UtopIRComparisonOperation.LowerDeg, 5, 3, 0)]
+    public void Emit_Comparison_ComputesCorrectResult(UtopIRComparisonOperation operation, int operand1, int operand2, int expectedResult)
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Peer),
+            new WelcomeInstruction(new("b"), UtopIRType.Peer),
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new AppointInstruction(new("a"), new LiteralOperand(operand1)),
+            new AppointInstruction(new("b"), new LiteralOperand(operand2)),
+            new ComparisonInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(expectedResult);
+    }
+
+    /// <summary>
+    /// Tests that each floating-point <see cref="UtopIRComparisonOperation"/> computes the correct <c>decree</c> result on <c>fathom</c> operands.
+    /// </summary>
+    /// <param name="operation">The floating-point <see cref="UtopIRComparisonOperation"/> to test.</param>
+    /// <param name="operand1">The first operand value.</param>
+    /// <param name="operand2">The second operand value.</param>
+    /// <param name="expectedResult">The expected exit code, <c>1</c> for <c>verity</c> or <c>0</c> for <c>nay</c>.</param>
+    [Theory]
+    [InlineData(UtopIRComparisonOperation.AlikeFloat, 1.5, 1.5, 1)]
+    [InlineData(UtopIRComparisonOperation.AlikeFloat, 1.5, 2.5, 0)]
+    [InlineData(UtopIRComparisonOperation.PreAdamFloat, 2.5, 1.5, 1)]
+    [InlineData(UtopIRComparisonOperation.LowerDegFloat, 1.5, 2.5, 1)]
+    public void Emit_ComparisonFloat_ComputesCorrectResult(UtopIRComparisonOperation operation, double operand1, double operand2, int expectedResult)
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("b"), UtopIRType.Fathom),
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new AppointInstruction(new("a"), new LiteralOperand(operand1)),
+            new AppointInstruction(new("b"), new LiteralOperand(operand2)),
+            new ComparisonInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(expectedResult);
+    }
+
+    /// <summary>
+    /// Tests that <c>preadam</c> on <c>standingpeer</c> operands uses <c>cgt.un</c> so a value whose top bit is
+    /// set is compared as a large positive magnitude rather than a negative signed value.
+    /// </summary>
+    [Fact]
+    public void Emit_PreAdam_UnsignedStandingPeer_UsesCgtUn()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new AppointInstruction(new("a"), new LiteralOperand(4_000_000_000u)),
+            new AppointInstruction(new("b"), new LiteralOperand(1u)),
+            new ComparisonInstruction(UtopIRComparisonOperation.PreAdam, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("cgt.un");
+        exitCode.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <c>lowerdeg</c> on <c>standingpeer</c> operands uses <c>clt.un</c> so a value whose top bit is
+    /// set is compared as a large positive magnitude rather than a negative signed value.
+    /// </summary>
+    [Fact]
+    public void Emit_LowerDeg_UnsignedStandingPeer_UsesCltUn()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new AppointInstruction(new("a"), new LiteralOperand(1u)),
+            new AppointInstruction(new("b"), new LiteralOperand(4_000_000_000u)),
+            new ComparisonInstruction(UtopIRComparisonOperation.LowerDeg, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        (int exitCode, string ilSource) = RunProgramWithIlSource(program);
+
+        ilSource.ShouldContain("clt.un");
+        exitCode.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="ComparisonInstruction"/> with mismatched operand types throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_ComparisonWithMismatchedOperandTypes_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new ComparisonInstruction(UtopIRComparisonOperation.Alike, new("r"), new LiteralOperand(1), new LiteralOperand(1.5))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that each <see cref="UtopIRLogicalOperation"/> computes the correct <c>decree</c> result, returned as <c>0</c> or <c>1</c>, with an undeclared target auto-declared as <see cref="bool"/>.
+    /// </summary>
+    /// <param name="operation">The <see cref="UtopIRLogicalOperation"/> to test.</param>
+    /// <param name="operand1">The first operand value.</param>
+    /// <param name="operand2">The second operand value.</param>
+    /// <param name="expectedResult">The expected exit code, <c>1</c> for <c>verity</c> or <c>0</c> for <c>nay</c>.</param>
+    [Theory]
+    [InlineData(UtopIRLogicalOperation.Both, true, true, 1)]
+    [InlineData(UtopIRLogicalOperation.Both, true, false, 0)]
+    [InlineData(UtopIRLogicalOperation.Either, false, false, 0)]
+    [InlineData(UtopIRLogicalOperation.Either, true, false, 1)]
+    public void Emit_Logical_ComputesCorrectResult(UtopIRLogicalOperation operation, bool operand1, bool operand2, int expectedResult)
+    {
+        UtopIRProgram program = new([
+            new LogicalInstruction(operation, new("r"), new LiteralOperand(operand1), new LiteralOperand(operand2)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(expectedResult);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="LogicalInstruction"/> with a non-<c>decree</c> operand throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_LogicalWithNonDecreeOperand_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new LogicalInstruction(UtopIRLogicalOperation.Both, new("r"), new LiteralOperand(1), new LiteralOperand(2))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="HardlyInstruction"/> negates its <c>decree</c> operand.
+    /// </summary>
+    /// <param name="operand">The operand value.</param>
+    /// <param name="expectedResult">The expected exit code, the negation of <paramref name="operand"/>.</param>
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public void Emit_Hardly_NegatesOperand(bool operand, int expectedResult)
+    {
+        UtopIRProgram program = new([
+            new HardlyInstruction(new("r"), new LiteralOperand(operand)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(expectedResult);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="HardlyInstruction"/> with a non-<c>decree</c> operand throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_HardlyWithNonDecreeOperand_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("r"), UtopIRType.Decree),
+            new HardlyInstruction(new("r"), new LiteralOperand(1))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that an unconditional <see cref="SailInstruction"/> skips the instruction immediately following it.
+    /// </summary>
+    [Fact]
+    public void Emit_Sail_UnconditionalBranch_SkipsIntermediateInstruction()
+    {
+        UtopIRProgram program = new([
+            new SailInstruction(new UtopIRLabel("LOGIC")),
+            new FindInstruction(new LiteralOperand(0)),
+            new LabelInstruction(new UtopIRLabel("LOGIC")),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="LabelInstruction"/> reached without a preceding branch does not disrupt normal
+    /// sequential execution, matching its flat-marker semantics.
+    /// </summary>
+    [Fact]
+    public void Emit_Label_WithNoPrecedingBranch_ExecutesInstructionsInOrder()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("x"), UtopIRType.Peer),
+            new AppointInstruction(new("x"), new LiteralOperand(1)),
+            new LabelInstruction(new UtopIRLabel("MARK")),
+            new AppointInstruction(new("x"), new LiteralOperand(2)),
+            new FindInstruction(new VariableOperand(new("x")))
+        ]);
+
+        RunProgram(program).ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SailAlikeInstruction"/> branches to the label when the <c>decree</c> value is
+    /// <c>verity</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_SailAlike_ValueVerity_BranchesToLabel()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
+            new AppointInstruction(new("Boolean"), new LiteralOperand(true)),
+            new SailAlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_ALIKE")),
+            new FindInstruction(new LiteralOperand(0)),
+            new LabelInstruction(new UtopIRLabel("IS_ALIKE")),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SailAlikeInstruction"/> falls through without branching when the <c>decree</c> value
+    /// is <c>nay</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_SailAlike_ValueNay_FallsThroughWithoutBranching()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
+            new AppointInstruction(new("Boolean"), new LiteralOperand(false)),
+            new SailAlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_ALIKE")),
+            new FindInstruction(new LiteralOperand(0)),
+            new LabelInstruction(new UtopIRLabel("IS_ALIKE")),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SailUnlikeInstruction"/> branches to the label when the <c>decree</c> value is
+    /// <c>nay</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_SailUnlike_ValueNay_BranchesToLabel()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
+            new AppointInstruction(new("Boolean"), new LiteralOperand(false)),
+            new SailUnlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_UNLIKE")),
+            new FindInstruction(new LiteralOperand(0)),
+            new LabelInstruction(new UtopIRLabel("IS_UNLIKE")),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SailUnlikeInstruction"/> falls through without branching when the <c>decree</c>
+    /// value is <c>verity</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_SailUnlike_ValueVerity_FallsThroughWithoutBranching()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
+            new AppointInstruction(new("Boolean"), new LiteralOperand(true)),
+            new SailUnlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_UNLIKE")),
+            new FindInstruction(new LiteralOperand(0)),
+            new LabelInstruction(new UtopIRLabel("IS_UNLIKE")),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that a branch instruction referencing a label with no matching <see cref="LabelInstruction"/>
+    /// anywhere in the programme throws <see cref="InvalidOperationException"/> naming the missing label,
+    /// rather than surfacing an opaque CLR metadata exception.
+    /// </summary>
+    [Fact]
+    public void Emit_SailToUndeclaredLabel_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new SailInstruction(new UtopIRLabel("NOWHERE")),
+            new FindInstruction(new LiteralOperand(0))
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tests that a <see cref="PrenticeInstruction"/> pushes a value onto the stack and a subsequent <see cref="LeaveInstruction"/> stores it in the target register.
     /// </summary>
     [Fact]
@@ -811,7 +1175,6 @@ public class CilEmitterTests
     /// </summary>
     /// <param name="type">The unsupported <see cref="UtopIRType"/> to declare.</param>
     [Theory]
-    [InlineData(UtopIRType.Decree)]
     [InlineData(UtopIRType.Yarn)]
     public void Emit_UnsupportedType_ThrowsNotSupportedException(UtopIRType type)
     {

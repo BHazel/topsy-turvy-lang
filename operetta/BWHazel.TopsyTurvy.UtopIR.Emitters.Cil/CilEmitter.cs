@@ -58,8 +58,11 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// </para>
 /// <para>
 /// ### Supported Types
-/// All integer, floating-point and character types are supported as of v0.0.1-preview2.
-/// Boolean and string types are not currently supported.
+/// All integer, floating-point and character types are supported as of v0.0.1-preview2.  As of
+/// v0.0.1-preview3, the <c>decree</c> (boolean) type is supported as the result of a comparison or
+/// logical instruction, and as the operand of a conditional branch but not yet as a <c>were</c>
+/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  String types
+/// are not currently supported.
 /// </para>
 /// </remarks>
 public sealed class CilEmitter
@@ -97,6 +100,9 @@ public sealed class CilEmitter
 
         Dictionary<string, LocalBuilder> locals = [];
         Dictionary<string, UtopIRType> localTypes = [];
+        Dictionary<string, Label> labels = [];
+
+        this.ValidateLabelReferences(program);
 
         bool hasReturn = false;
         foreach (UtopIRInstruction instruction in program.Instructions)
@@ -106,7 +112,7 @@ public sealed class CilEmitter
                 hasReturn = true;
             }
 
-            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes);
+            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, labels);
         }
 
         if (!hasReturn)
@@ -136,6 +142,47 @@ public sealed class CilEmitter
         }
 
         return new(cilGenerator.ToIlText(assemblyBytes));
+    }
+
+    /// <summary>
+    /// Validates that every label referenced by a <see cref="SailInstruction"/>,
+    /// <see cref="SailAlikeInstruction"/> or <see cref="SailUnlikeInstruction"/> has a matching
+    /// <see cref="LabelInstruction"/> declared somewhere in the programme.
+    /// </summary>
+    /// <remarks>
+    /// Without this check, a mistyped label name would surface as an opaque CLR metadata exception
+    /// when <see cref="ILGenerator"/> finalises a branch to a <see cref="Label"/> that was never
+    /// marked, rather than a clear UtopIR-level error naming the offending instruction.
+    /// </remarks>
+    /// <param name="program">The UtopIR programme to validate.</param>
+    /// <exception cref="InvalidOperationException">Thrown when a branch instruction references a label with no matching declaration.</exception>
+    private void ValidateLabelReferences(UtopIRProgram program)
+    {
+        HashSet<string> declaredLabels = [];
+        foreach (UtopIRInstruction instruction in program.Instructions)
+        {
+            if (instruction is LabelInstruction label)
+            {
+                declaredLabels.Add(label.Name.Name);
+            }
+        }
+
+        foreach (UtopIRInstruction instruction in program.Instructions)
+        {
+            string? referencedLabel = instruction switch
+            {
+                SailInstruction sail => sail.Label.Name,
+                SailAlikeInstruction sailAlike => sailAlike.Label.Name,
+                SailUnlikeInstruction sailUnlike => sailUnlike.Label.Name,
+                _ => null
+            };
+
+            if (referencedLabel is not null && !declaredLabels.Contains(referencedLabel))
+            {
+                throw new InvalidOperationException(
+                    $"Branch instruction references undeclared label '!{referencedLabel}'.");
+            }
+        }
     }
 
     /// <summary>
@@ -223,12 +270,14 @@ public sealed class CilEmitter
     /// <param name="cilGenerator">The CIL generator to record UtopIR names for locals declared while emitting this instruction.</param>
     /// <param name="locals">The map from variable name (without <c>£</c>) to its <see cref="LocalBuilder"/> slot.</param>
     /// <param name="localTypes">The map from variable name to its <see cref="UtopIRType"/> for type-context lookups.</param>
+    /// <param name="labels">The map from label name (without <c>!</c>) to its <see cref="Label"/>, lazily populated via <see cref="GetOrDefineLabel"/>.</param>
     private void EmitInstruction(
         UtopIRInstruction instruction,
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
-        Dictionary<string, UtopIRType> localTypes)
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, Label> labels)
     {
         switch (instruction)
         {
@@ -247,6 +296,15 @@ public sealed class CilEmitter
             case InvInstruction inv:
                 this.EmitInv(inv, ilGenerator, cilGenerator, locals, localTypes);
                 break;
+            case ComparisonInstruction comparison:
+                this.EmitComparison(comparison, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case LogicalInstruction logical:
+                this.EmitLogical(logical, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case HardlyInstruction hardly:
+                this.EmitHardly(hardly, ilGenerator, cilGenerator, locals, localTypes);
+                break;
             case PrenticeInstruction prentice:
                 this.EmitPrentice(prentice, ilGenerator, locals);
                 break;
@@ -258,6 +316,18 @@ public sealed class CilEmitter
                 break;
             case WereInstruction were:
                 this.EmitWere(were, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case LabelInstruction label:
+                this.EmitLabel(label, ilGenerator, labels);
+                break;
+            case SailInstruction sail:
+                this.EmitSail(sail, ilGenerator, labels);
+                break;
+            case SailAlikeInstruction sailAlike:
+                this.EmitSailAlike(sailAlike, ilGenerator, locals, labels);
+                break;
+            case SailUnlikeInstruction sailUnlike:
+                this.EmitSailUnlike(sailUnlike, ilGenerator, locals, labels);
                 break;
         }
     }
@@ -528,6 +598,133 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits CIL for a <see cref="ComparisonInstruction"/>.
+    /// </summary>
+    /// <remarks>
+    /// The target local is always declared as <see cref="bool"/> regardless of the
+    /// operand type, since a comparison result is always <c>decree</c>.
+    /// </remarks>
+    /// <param name="comparisonInstruction">The comparison instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the two operands have different inferred types.</exception>
+    private void EmitComparison(
+        ComparisonInstruction comparisonInstruction,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        UtopIRType operand1Type = this.InferOperandType(comparisonInstruction.Operand1, localTypes);
+        UtopIRType operand2Type = this.InferOperandType(comparisonInstruction.Operand2, localTypes);
+        if (operand1Type != operand2Type)
+        {
+            throw new InvalidOperationException(
+                $"Comparison instruction targeting '£{comparisonInstruction.Target.Name}' has mismatched " +
+                $"operand types ('{operand1Type}' and '{operand2Type}').");
+        }
+
+        if (!locals.TryGetValue(comparisonInstruction.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(UtopIRType.Decree));
+            cilGenerator.RegisterLocalName(declaredLocal, comparisonInstruction.Target.Name);
+            locals[comparisonInstruction.Target.Name] = declaredLocal;
+            localTypes[comparisonInstruction.Target.Name] = UtopIRType.Decree;
+        }
+
+        this.EmitStackLoadOperand(comparisonInstruction.Operand1, ilGenerator, locals);
+        this.EmitStackLoadOperand(comparisonInstruction.Operand2, ilGenerator, locals);
+        this.EmitComparisonOpcode(comparisonInstruction.Operation, operand1Type, ilGenerator);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="LogicalInstruction"/>.
+    /// </summary>
+    /// <remarks>
+    /// A CIL <see cref="bool"/> is always a 0/1 <c>int32</c> on the evaluation stack, so bitwise
+    /// <c>and</c>/<c>or</c> on the two operands is equivalent to logical <c>and</c>/<c>or</c>.
+    /// </remarks>
+    /// <param name="logicalInstruction">The logical instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when either operand is not of the <c>decree</c> type.</exception>
+    private void EmitLogical(
+        LogicalInstruction logicalInstruction,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        UtopIRType operand1Type = this.InferOperandType(logicalInstruction.Operand1, localTypes);
+        UtopIRType operand2Type = this.InferOperandType(logicalInstruction.Operand2, localTypes);
+        if (!this.IsDecreeType(operand1Type) || !this.IsDecreeType(operand2Type))
+        {
+            throw new InvalidOperationException(
+                $"Logical instruction targeting '£{logicalInstruction.Target.Name}' requires " +
+                $"decree operands but was given '{operand1Type}' and '{operand2Type}'.");
+        }
+
+        if (!locals.TryGetValue(logicalInstruction.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(UtopIRType.Decree));
+            cilGenerator.RegisterLocalName(declaredLocal, logicalInstruction.Target.Name);
+            locals[logicalInstruction.Target.Name] = declaredLocal;
+            localTypes[logicalInstruction.Target.Name] = UtopIRType.Decree;
+        }
+
+        this.EmitStackLoadOperand(logicalInstruction.Operand1, ilGenerator, locals);
+        this.EmitStackLoadOperand(logicalInstruction.Operand2, ilGenerator, locals);
+        ilGenerator.Emit(logicalInstruction.Operation == UtopIRLogicalOperation.Both
+            ? OpCodes.And
+            : OpCodes.Or);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="HardlyInstruction"/> by loading the operand, negating it via the
+    /// <c>x == false</c> idiom, and storing the result into the target local.
+    /// </summary>
+    /// <param name="hardlyInstruction">The hardly instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the operand is not of the <c>decree</c> type.</exception>
+    private void EmitHardly(
+        HardlyInstruction hardlyInstruction,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        UtopIRType operandType = this.InferOperandType(hardlyInstruction.Operand, localTypes);
+        if (!this.IsDecreeType(operandType))
+        {
+            throw new InvalidOperationException(
+                $"Hardly instruction targeting '£{hardlyInstruction.Target.Name}' " +
+                $"requires a decree operand but was given '{operandType}'.");
+        }
+
+        if (!locals.TryGetValue(hardlyInstruction.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(UtopIRType.Decree));
+            cilGenerator.RegisterLocalName(declaredLocal, hardlyInstruction.Target.Name);
+            locals[hardlyInstruction.Target.Name] = declaredLocal;
+            localTypes[hardlyInstruction.Target.Name] = UtopIRType.Decree;
+        }
+
+        this.EmitStackLoadOperand(hardlyInstruction.Operand, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_0);
+        ilGenerator.Emit(OpCodes.Ceq);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
     /// Emits CIL for a <see cref="PrenticeInstruction"/> pushing the operand value onto the
     /// evaluation stack.
     /// </summary>
@@ -585,6 +782,89 @@ public sealed class CilEmitter
 
         localTypes[were.Target.Name] = were.Type;
         ilGenerator.Emit(OpCodes.Stloc, target);
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="Label"/> for the given name, lazily calling
+    /// <see cref="ILGenerator.DefineLabel"/> the first time the name is seen.
+    /// </summary>
+    /// <remarks>
+    /// <c>sail</c>/<c>sailalike</c>/<c>sailunlike</c> can forward-reference a label not yet marked, which
+    /// <see cref="ILGenerator"/> supports natively: a <see cref="Label"/> may be referenced before
+    /// <see cref="ILGenerator.MarkLabel"/> is called on it.
+    /// </remarks>
+    /// <param name="name">The label name, without the <c>!</c> prefix.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
+    /// <returns>The existing or newly-defined <see cref="Label"/> for <paramref name="name"/>.</returns>
+    private Label GetOrDefineLabel(string name, ILGenerator ilGenerator, Dictionary<string, Label> labels)
+    {
+        if (!labels.TryGetValue(name, out Label label))
+        {
+            label = ilGenerator.DefineLabel();
+            labels[name] = label;
+        }
+
+        return label;
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="LabelInstruction"/> by marking the current position with its
+    /// <see cref="Label"/>.
+    /// </summary>
+    /// <param name="labelInstruction">The label instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
+    private void EmitLabel(LabelInstruction labelInstruction, ILGenerator ilGenerator, Dictionary<string, Label> labels)
+    {
+        ilGenerator.MarkLabel(this.GetOrDefineLabel(labelInstruction.Name.Name, ilGenerator, labels));
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="SailInstruction"/> as an unconditional branch.
+    /// </summary>
+    /// <param name="sailInstruction">The sail instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
+    private void EmitSail(SailInstruction sailInstruction, ILGenerator ilGenerator, Dictionary<string, Label> labels)
+    {
+        ilGenerator.Emit(OpCodes.Br, this.GetOrDefineLabel(sailInstruction.Label.Name, ilGenerator, labels));
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="SailAlikeInstruction"/> as a branch taken when the <c>decree</c>
+    /// value is <c>verity</c>.
+    /// </summary>
+    /// <param name="sailAlikeInstruction">The sailalike instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
+    private void EmitSailAlike(
+        SailAlikeInstruction sailAlikeInstruction,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, Label> labels)
+    {
+        this.EmitStackLoadOperand(sailAlikeInstruction.Value, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Brtrue, this.GetOrDefineLabel(sailAlikeInstruction.Label.Name, ilGenerator, labels));
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="SailUnlikeInstruction"/> as a branch taken when the <c>decree</c>
+    /// value is <c>nay</c>.
+    /// </summary>
+    /// <param name="sailUnlikeInstruction">The sailunlike instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
+    private void EmitSailUnlike(
+        SailUnlikeInstruction sailUnlikeInstruction,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, Label> labels)
+    {
+        this.EmitStackLoadOperand(sailUnlikeInstruction.Value, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Brfalse, this.GetOrDefineLabel(sailUnlikeInstruction.Label.Name, ilGenerator, labels));
     }
 
     /// <summary>
@@ -714,6 +994,9 @@ public sealed class CilEmitter
             case char character:
                 ilGenerator.Emit(OpCodes.Ldc_I4, (int)character);
                 break;
+            case bool boolean:
+                ilGenerator.Emit(OpCodes.Ldc_I4, boolean ? 1 : 0);
+                break;
             default:
                 throw new NotSupportedException(
                     $"Literal value of CLR type '{value.GetType().Name}' is not supported by the CIL emitter in this version.");
@@ -805,6 +1088,46 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits the CIL comparison opcode(s) corresponding to the given <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <remarks>
+    /// * <c>alike</c> uses <c>ceq</c> directly.
+    /// * <c>unlike</c> has no direct CIL opcode, so it is synthesised as <c>ceq</c> followed by <c>ldc.i4.0</c>/<c>ceq</c> (the standard "not equal" idiom: negate an equality result).
+    /// * <c>preadam</c> and <c>lowerdeg</c> use <c>cgt</c> and <c>clt</c> respectively, selecting the unsigned variant for unsigned operand types for the same reason <see cref="EmitArithmeticOpcode"/> selects <c>div.un</c>/<c>rem.un</c>.
+    /// </remarks>
+    /// <param name="operation">The comparison operation.</param>
+    /// <param name="operandType">The operand type used to select the signed or unsigned relational opcode.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="operation"/> is not a recognised comparison operation.</exception>
+    private void EmitComparisonOpcode(UtopIRComparisonOperation operation, UtopIRType operandType, ILGenerator ilGenerator)
+    {
+        bool isUnsigned = this.IsUnsignedType(operandType);
+        switch (operation)
+        {
+            case UtopIRComparisonOperation.Alike or UtopIRComparisonOperation.AlikeFloat:
+                ilGenerator.Emit(OpCodes.Ceq);
+                break;
+            case UtopIRComparisonOperation.Unlike or UtopIRComparisonOperation.UnlikeFloat:
+                ilGenerator.Emit(OpCodes.Ceq);
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.Emit(OpCodes.Ceq);
+                break;
+            case UtopIRComparisonOperation.PreAdam or UtopIRComparisonOperation.PreAdamFloat:
+                ilGenerator.Emit(isUnsigned
+                    ? OpCodes.Cgt_Un
+                    : OpCodes.Cgt);
+                break;
+            case UtopIRComparisonOperation.LowerDeg or UtopIRComparisonOperation.LowerDegFloat:
+                ilGenerator.Emit(isUnsigned
+                    ? OpCodes.Clt_Un
+                    : OpCodes.Clt);
+                break;
+            default:
+                throw new InvalidOperationException($"Operation '{operation}' not supported.");
+        }
+    }
+
+    /// <summary>
     /// Emits the <c>conv.*</c> opcode that converts whatever is currently on the CIL evaluation stack
     /// to the given target type true CLR width and signedness.
     /// </summary>
@@ -878,6 +1201,14 @@ public sealed class CilEmitter
             or UtopIRType.StandingSausageRoll;
 
     /// <summary>
+    /// Determines if the <see cref="UtopIRType"/> is the <c>decree</c> (boolean) type.
+    /// </summary>
+    /// <param name="type">The UtopIR type to test.</param>
+    /// <returns><c>true</c> for <see cref="UtopIRType.Decree"/>, otherwise <c>false</c>.</returns>
+    private bool IsDecreeType(UtopIRType type) =>
+        type is UtopIRType.Decree;
+
+    /// <summary>
     /// Determines if the <see cref="UtopIRArithmeticOperation"/> is a floating-point operation.
     /// </summary>
     /// <param name="operation">The arithmetic operation to test.</param>
@@ -924,6 +1255,7 @@ public sealed class CilEmitter
         UtopIRType.Fathom => typeof(double),
         UtopIRType.Foot => typeof(float),
         UtopIRType.Stitch => typeof(char),
+        UtopIRType.Decree => typeof(bool),
         _ => throw new NotSupportedException(
             $"UtopIR type '{utopirType}' is not supported by the CIL emitter in this version.")
     };
@@ -957,6 +1289,7 @@ public sealed class CilEmitter
             double => UtopIRType.Fathom,
             float => UtopIRType.Foot,
             char => UtopIRType.Stitch,
+            bool => UtopIRType.Decree,
             _ => throw new NotSupportedException(
                 $"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },

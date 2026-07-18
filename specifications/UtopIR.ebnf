@@ -1,5 +1,5 @@
-(* UtopIR Formal Grammar v0.0.1-preview2 *)
-(* Based on UtopIR.md v0.0.1-preview2 *)
+(* UtopIR Formal Grammar v0.0.1-preview3 *)
+(* Based on UtopIR.md v0.0.1-preview3 *)
 
 (*----------------------------------------------------------------------------*)
 (* Lexical Tokens                                                              *)
@@ -15,6 +15,14 @@ Variable        = "£", Identifier ;
    By convention (not a grammar requirement), temporary registers produced by
    the transformer begin with £_ (e.g. £_sum_Peer1_Peer2) to visually
    distinguish them from user-declared variables. *)
+
+Label           = "!", Identifier ;
+(* The ! sigil is a dedicated prefix and is not considered part of Identifier,
+   mirroring Variable exactly.  A Label names a branch target, not a virtual
+   register.  Indentation of the instructions following a label declaration
+   is a documentation convention only, with no grammar significance: a label
+   is a flat marker in the instruction sequence, introducing no block or
+   scope of its own. *)
 
 IntegerLiteral  = [ "-" ], Digit, { Digit } ;
 FloatLiteral    = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
@@ -52,6 +60,9 @@ AssignmentRhs         = WelcomeRhs
                       | ArithmeticRhs
                       | BitwiseRhs
                       | InvRhs
+                      | ComparisonRhs
+                      | LogicalRhs
+                      | HardlyRhs
                       | WereRhs
                       | LeaveRhs ;
 
@@ -60,17 +71,35 @@ AppointRhs      = "appoint", Operand ;
 ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
 BitwiseRhs      = BitwiseOp, Operand, ",", Operand ;
 InvRhs          = "inv", Operand ;
+ComparisonRhs   = ComparisonOp, Operand, ",", Operand ;
+LogicalRhs      = LogicalOp, Operand, ",", Operand ;
+HardlyRhs       = "hardly", Operand ;
 WereRhs         = "were", Operand, ",", Type ;
 LeaveRhs        = "leave" ;
 
 (* Standalone form: no assignment target *)
-StandaloneInstruction = PrenticeInstruction | FindInstruction ;
+StandaloneInstruction = PrenticeInstruction
+                      | FindInstruction
+                      | SailAlikeInstruction
+                      | SailUnlikeInstruction
+                      | SailInstruction
+                      | LabelDeclaration ;
 PrenticeInstruction   = "prentice", Operand ;
 FindInstruction       = "find", [ Operand ] ;
 (* When no token follows "find" before the next newline or EOF the instruction
    is a void return; when an Operand follows it is a valued return.  The parser
    commits to "no operand" on encountering a newline or EOF immediately after
    the "find" keyword. *)
+
+SailInstruction       = "sail", Label ;
+SailAlikeInstruction  = "sailalike", Operand, ",", Label ;
+SailUnlikeInstruction = "sailunlike", Operand, ",", Label ;
+(* "sailalike" and "sailunlike" must be matched before the plain "sail" form,
+   since "sail" is a prefix of both mnemonics. *)
+
+LabelDeclaration      = Label ;
+(* A bare Label on its own line declares a branch target at that position in
+   the instruction sequence. *)
 
 (*----------------------------------------------------------------------------*)
 (* Operands                                                                   *)
@@ -107,6 +136,28 @@ BitwiseOp       = "chord" | "harmony" | "discord" | "transup" | "transdown" ;
    two-operand form. *)
 
 (*----------------------------------------------------------------------------*)
+(* Comparison Operations                                                      *)
+(*----------------------------------------------------------------------------*)
+ComparisonOp    = IntegerComparisonOp | FloatComparisonOp ;
+
+IntegerComparisonOp = "alike" | "unlike" | "preadam" | "lowerdeg" ;
+
+FloatComparisonOp   = "alike.f" | "unlike.f" | "preadam.f" | "lowerdeg.f" ;
+(* Floating-point comparison instructions carry the same names as their
+   integer counterparts with a .f suffix, mirroring ArithmeticOp.  A parser
+   must match the .f form before the plain form, since the plain mnemonic is
+   a prefix of its .f counterpart.  A comparison result is always of type
+   decree, regardless of the operand type. *)
+
+(*----------------------------------------------------------------------------*)
+(* Logical Operations                                                         *)
+(*----------------------------------------------------------------------------*)
+LogicalOp       = "both" | "either" ;
+(* Both operands, and the result, are of type decree.  The unary logical NOT,
+   "hardly", has its own single-operand rule (HardlyRhs) rather than
+   appearing here, mirroring how InvRhs stands apart from BitwiseOp. *)
+
+(*----------------------------------------------------------------------------*)
 (* Types                                                                      *)
 (*----------------------------------------------------------------------------*)
 Type            = SignedIntegerType
@@ -126,3 +177,11 @@ UnsignedIntegerType = "standingchancellor" | "standingpeer"
    a single UtopIR keyword. *)
 
 FloatType           = "fathom" | "foot" ;
+
+(*----------------------------------------------------------------------------*)
+(* Control Flow                                                               *)
+(*----------------------------------------------------------------------------*)
+(* See SailInstruction, SailAlikeInstruction, SailUnlikeInstruction and
+   LabelDeclaration under Instructions, and Label under Lexical Tokens.  The
+   value operand of SailAlikeInstruction and SailUnlikeInstruction must be of
+   type decree; any other type is a compilation error. *)

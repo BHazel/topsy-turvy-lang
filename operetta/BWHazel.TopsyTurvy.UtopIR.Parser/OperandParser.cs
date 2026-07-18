@@ -13,6 +13,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// <see cref="UtopIRType"/>.
 /// * <see cref="ArithmeticOperation"/> matches one of the supported arithmetic instructions,
 /// returning the corresponding <see cref="UtopIRArithmeticOperation"/>.
+/// * <see cref="BitwiseOperation"/> matches one of the supported binary bitwise instructions,
+/// returning the corresponding <see cref="UtopIRBitwiseOperation"/>.
+/// * <see cref="ComparisonOperation"/> matches one of the supported comparison instructions,
+/// returning the corresponding <see cref="UtopIRComparisonOperation"/>.
+/// * <see cref="LogicalOperation"/> matches one of the supported binary logical instructions,
+/// returning the corresponding <see cref="UtopIRLogicalOperation"/>.
 /// * <see cref="Literal"/> matches a compile-time constant, trying boolean, character, float,
 /// integer then string in that order.  This is the same disambiguation order as the Topsy Turvy expression
 /// parser in its own literal parsing, minus the null literal, which UtopIR has no equivalent of.  The
@@ -87,6 +93,36 @@ public static class OperandParser
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.TransUp).Value(UtopIRBitwiseOperation.TransUp))
             .Or(Lexer.Keyword(UtopIRKeywords.Instructions.TransDown).Value(UtopIRBitwiseOperation.TransDown))
             .Named("bitwise operator");
+
+    /// <summary>
+    /// Parses a comparison operation mnemonic returning the corresponding <see cref="UtopIRComparisonOperation"/>.
+    /// </summary>
+    /// <remarks>
+    /// Each <c>.f</c>-suffixed floating-point mnemonic is tried before its plain integer
+    /// counterpart, for the same reason documented on <see cref="ArithmeticOperation"/>.
+    /// </remarks>
+    public static readonly TextParser<UtopIRComparisonOperation> ComparisonOperation =
+        Lexer.Keyword(UtopIRKeywords.Instructions.AlikeFloat).Value(UtopIRComparisonOperation.AlikeFloat)
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Alike).Value(UtopIRComparisonOperation.Alike))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.UnlikeFloat).Value(UtopIRComparisonOperation.UnlikeFloat))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Unlike).Value(UtopIRComparisonOperation.Unlike))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.PreAdamFloat).Value(UtopIRComparisonOperation.PreAdamFloat))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.PreAdam).Value(UtopIRComparisonOperation.PreAdam))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.LowerDegFloat).Value(UtopIRComparisonOperation.LowerDegFloat))
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.LowerDeg).Value(UtopIRComparisonOperation.LowerDeg))
+            .Named("comparison operator");
+
+    /// <summary>
+    /// Parses a binary logical operation mnemonic returning the corresponding <see cref="UtopIRLogicalOperation"/>.
+    /// </summary>
+    /// <remarks>
+    /// The unary <c>hardly</c> mnemonic is not included here as its instruction shape is different. It is
+    /// matched directly by the instruction parser.
+    /// </remarks>
+    public static readonly TextParser<UtopIRLogicalOperation> LogicalOperation =
+        Lexer.Keyword(UtopIRKeywords.Instructions.Both).Value(UtopIRLogicalOperation.Both)
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.Either).Value(UtopIRLogicalOperation.Either))
+            .Named("logical operator");
 
     /// <summary>
     /// Parses a compile-time constant literal value returning it boxed as its natural CLR type.

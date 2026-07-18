@@ -23,7 +23,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// ### Variables
 /// * <see cref="Variable"/> matches a <c>£</c> character followed by an <see cref="Identifier"/>,
 /// returning just the identifier text with the <c>£</c> stripped.
-/// 
+///
+/// ### Labels
+/// * <see cref="Label"/> matches a <c>!</c> character followed by an <see cref="Identifier"/>,
+/// returning just the identifier text with the <c>!</c> stripped.  Mirrors <see cref="Variable"/>
+/// exactly, but for branch targets rather than virtual registers.
+///
 /// ### Literals
 /// * <see cref="StringLiteral"/> and <see cref="CharacterLiteral"/> match on an individual string or
 /// character respectively.  The use the same <c>~</c>-escape "Victoria Flourish" convention as Topsy
@@ -184,6 +189,15 @@ public static class Lexer
          from name in Identifier
          select name)
             .Named("variable");
+
+    /// <summary>
+    /// Parses a <c>!</c>-starting label reference, returning the identifier text without the <c>!</c> character.
+    /// </summary>
+    public static readonly TextParser<string> Label =
+        (from sigil in Character.EqualTo('!')
+         from name in Identifier
+         select name)
+            .Named("label");
 
     /// <summary>
     /// Returns a parser that matches the exact <paramref name="keyword"/> text case-insensitively.
