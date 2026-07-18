@@ -1583,22 +1583,25 @@ the following is the equivalent UtopIR code:
 £Peer2 = appoint 23
 £PeerResult = welcome peer
 
+@ Additional variable created for ternary result to support nested expressions.
 £_alike_Peer1_Peer2 = alike £Peer1, £Peer2
+£_ternary_alike_Peer1_Peer2 = welcome peer
 sailalike £_alike_Peer1_Peer2, !T1QS_ALIKE_PEER1_PEER2
 sail !T1O
 
 @ Ternary expressions are converted into If/Else equivalent blocks.
 @ True Value, equivalent to If "QUITE SO." branch.
 !T1QS_ALIKE_PEER1_PEER2
-  £PeerResult = appoint 1
+  £_ternary_alike_Peer1_Peer2 = appoint 1
   sail !T1SMFT
 
 @ False Value, equivalent to Else "OTHERWISE," branch.
 !T1O
-  £PeerResult = appoint 0
+  £_ternary_alike_Peer1_Peer2 = appoint 0
 
 !T1SMFT
 
+£PeerResult = appoint £_ternary_alike_Peer1_Peer2
 find £PeerResult
 ```
 
@@ -1632,21 +1635,16 @@ the following is the equivalent UtopIR code:
 £PeerResult = welcome peer
 
 £_alike_Peer1_Peer2 = alike £Peer1, £Peer2
-sailalike £_alike_Peer1_Peer2, !G1QS_ALIKE_PEER1_PEER2
+sailunlike £_alike_Peer1_Peer2, !G1O
 sail !G1UO
 
-@ Guard clauses are converted into If/Else equivalent blocks.
-@ Guard condition passed, equivalent to If "QUITE SO." branch.
-!G1QS_ALIKE_PEER1_PEER2
-  £PeerResult = appoint 1
-  sail !G1UO
-
-@ Guard condition failed, equivalent to Else "OTHERWISE," branch.
+@ Guard condition failed, equivalent to the "OTHERWISE," block.
 !G1O
   £PeerResult = appoint 0
 
 !G1UO
 
+£PeerResult = appoint 1
 find £PeerResult
 ```
 
@@ -1681,7 +1679,7 @@ the following is the equivalent UtopIR code:
 
 ```utopir
 £Peer1 = welcome peer
-£Peer2 = appoint 10
+£Peer1 = appoint 10
 £PeerResult = welcome peer
 
 £_alike_Peer1_10 = alike £Peer1, 10
@@ -1772,7 +1770,7 @@ the following is the equivalent UtopIR code:
 £Total = welcome peer
 £Total = appoint 0
 
-!L1W_LOWER_DEGREE_COUNTER_10
+!L1W_LOWERDEG_COUNTER_10
   £_lowerdeg_Counter_10 = lowerdeg £Counter, 10
   sailunlike £_lowerdeg_Counter_10, !L1WTTE
 
@@ -1781,7 +1779,7 @@ the following is the equivalent UtopIR code:
 
   £_sum_Counter_2 = sum £Counter, 2
   £Counter = appoint £_sum_Counter_2
-  sail !L1W_LOWER_DEGREE_COUNTER_10
+  sail !L1W_LOWERDEG_COUNTER_10
 
 !L1WTTE
 
@@ -1813,15 +1811,19 @@ the following is the equivalent UtopIR code:
 £Total = welcome peer
 £Total = appoint 0
 
-!L1ASC_INCREMENTER_PRE_ADAMITE_COUNTER_10
+!L1ASC_INCREMENTER_PREADAM_COUNTER_10
+  £_preadam_Counter_10 = preadam £Counter, 10
+  sailalike £_preadam_Counter_10, !L1ASCTTE
+
   £_sum_Total_Counter = sum £Total, £Counter
   £Total = appoint £_sum_Total_Counter
 
+@ Always included as a "continue" target to ensure counter is incremented/decremented.
+!L1ASCOM
   @ Descending loops would use the diff instruction instead of sum.
   £_sum_Counter_1 = sum £Counter, 1
   £Counter = appoint £_sum_Counter_1
-  £_preadam_Counter_10 = preadam £Counter, 10
-  sailunlike £_preadam_Counter_10, !L1ASC_INCREMENTER_PRE_ADAMITE_COUNTER_10
+  sail !L1ASC_INCREMENTER_PREADAM_COUNTER_10
 
 !L1ASCTTE
 
@@ -1839,16 +1841,19 @@ PRAY WELCOME Counter AS A PEER BEING 1
 PRAY WELCOME Total AS A PEER BEING 0
 
 BY A LEGAL FICTION WHILST LOWER DEGREE Counter AND 20
-  SHOULD IT TRANSPIRE THAT REMAINDER OF Counter AND 2
+  Counter IS APPOINTED SUM OF Counter AND 1
+
+  SHOULD IT TRANSPIRE THAT ALIKE REMAINDER OF Counter AND 2 AND 0
     QUITE SO.
       ONCE MORE.
-    OR, IF NOT, ALIKE Counter AND 12
+    OR, IF NOT, ALIKE Counter AND 13
       THAT WILL DO.
   SO MUCH FOR THAT.
 
   Total IS APPOINTED SUM OF Total AND Counter
-  Counter IS APPOINTED SUM OF Counter AND 1
 THE TERM EXPIRES.
+
+AND SO I FIND Total
 ```
 
 the following is the equivalent UtopIR code:
@@ -1859,31 +1864,35 @@ the following is the equivalent UtopIR code:
 £Total = welcome peer
 £Total = appoint 0
 
-!L1W_LOWER_DEGREE_COUNTER_20
+!L1W_LOWERDEG_COUNTER_20
   £_lowerdeg_Counter_20 = lowerdeg £Counter, 20
   sailunlike £_lowerdeg_Counter_20, !L1WTTE
 
+  £_sum_Counter_1 = sum £Counter, 1
+  £Counter = appoint £_sum_Counter_1
+
   £_rem_Counter_2 = rem £Counter, 2
-  £_alike_Counter_12 = alike £Counter, 12
-  sailalike £_rem_Counter_2, !T1QS_REM_COUNTER_12
-  sailalike £_alike_Counter_12, !T1OIN_ALIKE_COUNTER_12
-  sail !T1SMFT
+  £_alike__rem_Counter_2_0 = alike £_rem_Counter_2, 0
+  £_alike_Counter_13 = alike £Counter, 13
+  sailalike £_alike__rem_Counter_2_0, !T2QS_ALIKE_REM_COUNTER_2_0
+  sailalike £_alike_Counter_13, !T2OIN_ALIKE_COUNTER_13
+  sail !T2SMFT
 
-  !T1QS_REM_COUNTER_12
-    sail !L1W_LOWER_DEGREE_COUNTER_20
+  !T2QS_ALIKE_REM_COUNTER_2_0
+    sail !L1W_LOWERDEG_COUNTER_20
 
-  !T1OIN_ALIKE_COUNTER_12
+  !T2OIN_ALIKE_COUNTER_13
     sail !L1WTTE
 
-  !T1SMFT
+  !T2SMFT
 
   £_sum_Total_Counter = sum £Total, £Counter
   £Total = appoint £_sum_Total_Counter
-  £_sum_Counter_1 = sum £Counter, 1
-  £Counter = appoint £_sum_Counter_1
-  sail !L1W_LOWER_DEGREE_COUNTER_20
+  sail !L1W_LOWERDEG_COUNTER_20
 
 !L1WTTE
+
+find £Total
 ```
 
 ## Appendix A. Instruction Reference
