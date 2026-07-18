@@ -155,6 +155,106 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     }
 
     /// <summary>
+    /// Runs a hand-written UtopIR programme containing a <c>sailalike</c> instruction through the
+    /// full pipeline, verifying it branches to the labelled <c>find 1</c> when the <c>decree</c>
+    /// value is <c>verity</c>.
+    /// </summary>
+    [Fact]
+    public void Pipeline_SailAlikeWithVerity_BranchesAndReturnsOne()
+    {
+        const string source =
+            """
+            £Boolean = welcome decree
+            £Boolean = appoint verity
+
+            sailalike £Boolean, !IS_ALIKE
+            find 0
+
+            !IS_ALIKE
+              find 1
+            """;
+
+        UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        string assemblyName = $"TopsyTurvyUtopIrSourceTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                parseResult.Program!,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(1);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs the same programme as <see cref="Pipeline_SailAlikeWithVerity_BranchesAndReturnsOne"/>
+    /// with the <c>decree</c> value set to <c>nay</c>, verifying the <c>sailalike</c> instruction
+    /// falls through to <c>find 0</c> without branching.
+    /// </summary>
+    [Fact]
+    public void Pipeline_SailAlikeWithNay_FallsThroughAndReturnsZero()
+    {
+        const string source =
+            """
+            £Boolean = welcome decree
+            £Boolean = appoint nay
+
+            sailalike £Boolean, !IS_ALIKE
+            find 0
+
+            !IS_ALIKE
+              find 1
+            """;
+
+        UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        string assemblyName = $"TopsyTurvyUtopIrSourceTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                parseResult.Program!,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(0);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tests that malformed UtopIR source produces a diagnostic rather than an exception, and does not produce a parsed programme.
     /// </summary>
     [Fact]

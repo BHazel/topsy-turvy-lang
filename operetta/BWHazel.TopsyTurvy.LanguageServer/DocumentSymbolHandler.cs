@@ -8,6 +8,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
 using LspSymbolKind = OmniSharp.Extensions.LanguageServer.Protocol.Models.SymbolKind;
+using TopsyTurvySymbolKind = BWHazel.TopsyTurvy.Analysis.SymbolKind;
 
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
@@ -18,6 +19,11 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// <para>
 /// This handler handles the following LSP request:
 /// * <c>textDocument/documentSymbol</c>: The client requests all symbols in a text document.
+/// </para>
+/// <para>
+/// Returns the older, flat <see cref="SymbolInformation"/> shape, not a hierarchical <see cref="DocumentSymbol"/>
+/// tree.  Function-to-namespace nesting in the Outline/breadcrumb is still achieved via <see cref="SymbolInformation.ContainerName"/>, set to the
+/// namespace path of the file on every function symbol.
 /// </para>
 /// </remarks>
 /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
@@ -50,8 +56,9 @@ public class DocumentSymbolHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * First, the document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>,
     ///   an empty list is returned so nothing is displayed in the Outline panel.
+    /// * The namespace path declared by the document, if any, is read from <see cref="DocumentState.NamespacePath"/> and <c>*</c>-joined into a container name.
     /// * All symbols in the <see cref="SymbolTable"/> are visited and added to the list of symbols to be returned to the client.
-    /// * Conversions from internal to LSP types are performed.
+    /// * Conversions from internal to LSP types are performed.  Function symbols have their <see cref="SymbolInformation.ContainerName"/> set to the namespace container name so editors that group by it nest the function under its namespace.
     /// * LSP symbol information is built and returned to the client.
     /// </remarks>
     /// <returns>
@@ -68,6 +75,10 @@ public class DocumentSymbolHandler(DocumentStateManager documentStateManager)
                 return Task.FromResult<SymbolInformationOrDocumentSymbolContainer?>(new());
             }
 
+            string? namespaceContainerName = state.NamespacePath.Count > 0
+                ? string.Join('*', state.NamespacePath)
+                : null;
+
             List<SymbolInformationOrDocumentSymbol> outlineItems = [];
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
             {
@@ -78,7 +89,8 @@ public class DocumentSymbolHandler(DocumentStateManager documentStateManager)
                 {
                     Name = symbol.Name,
                     Kind = lspKind,
-                    Location = location
+                    Location = location,
+                    ContainerName = symbol.Kind == TopsyTurvySymbolKind.Function ? namespaceContainerName : null
                 };
 
                 outlineItems.Add(new(symbolInformation));

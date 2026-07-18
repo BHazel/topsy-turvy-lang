@@ -78,7 +78,7 @@ public class SymbolTableTests
         table.TryGetSymbol("myVar", out SymbolInfo? info);
 
         info!.DefinitionLine.ShouldBe(2);
-        info.DefinitionColumn.ShouldBe(1);
+        info.DefinitionColumn.ShouldBe(14);
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class SymbolTableTests
         table.TryGetSymbol("greet", out SymbolInfo? info);
 
         info!.DefinitionLine.ShouldBe(2);
-        info.DefinitionColumn.ShouldBe(1);
+        info.DefinitionColumn.ShouldBe(26);
     }
 
     /// <summary>
@@ -502,7 +502,6 @@ public class SymbolTableTests
     [Fact]
     public void Build_WithFunctionParameters_ParameterColumnsAreGreaterThanFunctionColumn()
     {
-        // Function declaration starts at column 1; parameters alpha and beta appear later on the same line.
         string source = "HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF alpha AS A PEER AND beta AS A PEER\nMY DUTY IS DISCHARGED.\nFINALE.";
 
         SymbolTable table = this.BuildTable(source);
@@ -510,7 +509,7 @@ public class SymbolTableTests
         table.TryGetSymbol("alpha", out SymbolInfo? alphaInfo);
         table.TryGetSymbol("beta", out SymbolInfo? betaInfo);
 
-        greetInfo!.DefinitionColumn.ShouldBe(1);
+        greetInfo!.DefinitionColumn.ShouldBe(26);
         (alphaInfo!.DefinitionColumn > greetInfo.DefinitionColumn).ShouldBeTrue();
         (betaInfo!.DefinitionColumn > alphaInfo.DefinitionColumn).ShouldBeTrue();
     }
@@ -533,6 +532,72 @@ public class SymbolTableTests
         alphaInfo.DefinitionColumn.ShouldBe(51);
         betaInfo!.DefinitionLine.ShouldBe(2);
         betaInfo.DefinitionColumn.ShouldBe(71);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SymbolTable.ExtractWordAt"/>, called at a symbol own reported
+    /// <see cref="SymbolInfo.DefinitionLine"/> and <see cref="SymbolInfo.DefinitionColumn"/>, returns the symbol
+    /// own name for a variable, an array variable and a function.
+    /// </summary>
+    [Theory]
+    [InlineData("HARK! \"Test\"\nPRAY WELCOME myVar AS A PEER BEING 0\nFINALE.", "myVar")]
+    [InlineData("HARK! \"Test\"\nPRAY WELCOME items AS A LITTLE LIST OF PEER BEING 1 AND 2 IF YOU PLEASE.\nFINALE.", "items")]
+    [InlineData("HARK! \"Test\"\nIT IS MY DUTY TO PERFORM greet UNDER NO OBLIGATION\nMY DUTY IS DISCHARGED.\nFINALE.", "greet")]
+    public void ExtractWordAt_AtSymbolOwnDefinitionPosition_ReturnsSymbolName(string source, string symbolName)
+    {
+        SymbolTable table = this.BuildTable(source);
+        table.TryGetSymbol(symbolName, out SymbolInfo? info);
+
+        string? word = SymbolTable.ExtractWordAt(source, info!.DefinitionLine - 1, info.DefinitionColumn - 1);
+
+        word.ShouldBe(symbolName);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method collects a single-segment namespace declaration as a
+    /// <see cref="SymbolKind.Namespace"/> symbol keyed by its bare name.
+    /// </summary>
+    [Fact]
+    public void Build_WithSingleSegmentNamespaceDeclaration_CollectsNamespaceSymbol()
+    {
+        string source = "HARK! \"Test\"\nTOWN Accounts\nFINALE.\n";
+
+        SymbolTable table = this.BuildTable(source);
+        table.TryGetSymbol("Accounts", out SymbolInfo? info);
+
+        info.ShouldNotBeNull();
+        info!.Kind.ShouldBe(SymbolKind.Namespace);
+        info.Name.ShouldBe("Accounts");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method collects a multi-segment namespace declaration as a
+    /// single <see cref="SymbolKind.Namespace"/> symbol keyed by its <c>*</c>-joined path.
+    /// </summary>
+    [Fact]
+    public void Build_WithMultiSegmentNamespaceDeclaration_CollectsNamespaceSymbolWithJoinedName()
+    {
+        string source = "HARK! \"Test\"\nTOWN Accounts WITH DISTRICT Payroll\nFINALE.\n";
+
+        SymbolTable table = this.BuildTable(source);
+        table.TryGetSymbol("Accounts*Payroll", out SymbolInfo? info);
+
+        info.ShouldNotBeNull();
+        info!.Kind.ShouldBe(SymbolKind.Namespace);
+        info.Name.ShouldBe("Accounts*Payroll");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method leaves no namespace symbol when a file declares no namespace.
+    /// </summary>
+    [Fact]
+    public void Build_WithoutNamespaceDeclaration_CollectsNoNamespaceSymbol()
+    {
+        string source = "HARK! \"Test\"\nFINALE.\n";
+
+        SymbolTable table = this.BuildTable(source);
+
+        table.AllSymbols().ShouldNotContain(symbol => symbol.Kind == SymbolKind.Namespace);
     }
 
     /// <summary>

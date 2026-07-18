@@ -106,6 +106,18 @@ public sealed class TopsyTurvyCodeGenerator
 
                 generatedCodeBuilder.AppendLine();
                 break;
+            case PointerDeclarationNode pointerDeclaration:
+                string pointerConstantModifier = pointerDeclaration.IsConstant ? "CONSERVATIVE " : string.Empty;
+                string pointeeTypeName = this.TypeKeyword(pointerDeclaration.PointeeType);
+                generatedCodeBuilder.Append($"{indent}PRAY WELCOME {pointerDeclaration.Name} AS A {pointerConstantModifier}GALLERY PICTURE OF {pointeeTypeName}");
+                if (pointerDeclaration.InitialValue is not null)
+                {
+                    generatedCodeBuilder.Append(" BEING ");
+                    this.WriteExpression(pointerDeclaration.InitialValue, generatedCodeBuilder);
+                }
+
+                generatedCodeBuilder.AppendLine();
+                break;
             case AssignmentNode assignment:
                 generatedCodeBuilder.Append($"{indent}{assignment.Target} IS APPOINTED ");
                 this.WriteExpression(assignment.Value, generatedCodeBuilder);
@@ -116,6 +128,11 @@ public sealed class TopsyTurvyCodeGenerator
                 this.WriteExpression(arrayElementAssignment.Index, generatedCodeBuilder);
                 generatedCodeBuilder.Append($" ON {arrayElementAssignment.ArrayName} IS APPOINTED ");
                 this.WriteExpression(arrayElementAssignment.Value, generatedCodeBuilder);
+                generatedCodeBuilder.AppendLine();
+                break;
+            case DereferenceAssignmentNode dereferenceAssignment:
+                generatedCodeBuilder.Append($"{indent}VIEW FROM {dereferenceAssignment.PointerName} IS APPOINTED ");
+                this.WriteExpression(dereferenceAssignment.Value, generatedCodeBuilder);
                 generatedCodeBuilder.AppendLine();
                 break;
             case PrintNode print:
@@ -336,6 +353,12 @@ public sealed class TopsyTurvyCodeGenerator
             case ImportNode import:
                 generatedCodeBuilder.AppendLine($"{indent}PRAY ADMIT \"{import.FilePath}\"");
                 break;
+            case NamespaceDeclarationNode namespaceDeclaration:
+                generatedCodeBuilder.AppendLine($"{indent}TOWN {string.Join('*', namespaceDeclaration.Path)}");
+                break;
+            case RecogniseNode recognise:
+                generatedCodeBuilder.AppendLine($"{indent}PRAY RECOGNISE {string.Join('*', recognise.Path)}");
+                break;
             case ExpressionStatement expressionStatement:
                 this.WriteExpression(expressionStatement.Expression, generatedCodeBuilder);
                 generatedCodeBuilder.AppendLine();
@@ -375,6 +398,12 @@ public sealed class TopsyTurvyCodeGenerator
                 break;
             case ArrayLengthNode arrayLength:
                 generatedCodeBuilder.Append($"RECKONING OF {arrayLength.ArrayName}");
+                break;
+            case AddressOfExpressionNode addressOf:
+                generatedCodeBuilder.Append($"GALLERY PICTURE TO {addressOf.VariableName}");
+                break;
+            case DereferenceExpressionNode dereference:
+                generatedCodeBuilder.Append($"VIEW FROM {dereference.PointerName}");
                 break;
             case ExpressionCastNode cast:
                 generatedCodeBuilder.Append("AS IT WERE ");
@@ -458,7 +487,19 @@ public sealed class TopsyTurvyCodeGenerator
                 break;
             case Operator.Summon:
                 generatedCodeBuilder.Append("SUMMON ");
-                this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                if (prefix.Arguments[0] is IdentifierNode { Name: string qualifiedTargetName } && qualifiedTargetName.Contains('.'))
+                {
+                    // A namespace-qualified call target is stored as a dot-joined internal name
+                    // (please see ExpressionParser.FunctionCallTargetTail).  It is re-emited as the
+                    // short-form *-joined syntax rather than delegating to the generic identifier writer,
+                    // which would emit the literal, invalid dot-joined text.
+                    generatedCodeBuilder.Append(qualifiedTargetName.Replace('.', '*'));
+                }
+                else
+                {
+                    this.WriteExpression(prefix.Arguments[0], generatedCodeBuilder);
+                }
+
                 if (prefix.Arguments.Count > 1)
                 {
                     generatedCodeBuilder.Append(" WITH ");
@@ -569,6 +610,7 @@ public sealed class TopsyTurvyCodeGenerator
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,
+        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown literal type.")
     };
 

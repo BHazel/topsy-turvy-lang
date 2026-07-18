@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BWHazel.TopsyTurvy.Analysis;
@@ -94,10 +95,23 @@ public class CompletionHandler(DocumentStateManager documentStateManager)
                 ? lastWord
                 : string.Empty;
 
+            IReadOnlyList<string>? scopedFunctionNamespace = TryGetFunctionNameNamespaceContext(phrase);
+
             List<CompletionItem> items = [];
-            if (state?.SymbolTable is not null)
+            if (scopedFunctionNamespace is not null)
+            {
+                IEnumerable<CompletionItem> scopedFunctionItems = this.documentStateManager
+                    .GetFunctionsInNamespace(scopedFunctionNamespace)
+                    .Where(symbol => lastWord.Length == 0
+                        || symbol.Name.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase))
+                    .Select(BuildSymbolItem);
+
+                items.AddRange(scopedFunctionItems);
+            }
+            else if (state?.SymbolTable is not null)
             {
                 IEnumerable<SymbolInfo> allSymbols = state.SymbolTable.AllSymbols()
+                    .Where(symbol => symbol.Kind != TopsyTurvySymbolKind.Namespace)
                     .Concat(this.documentStateManager.GetImportedFunctionSymbols(request.TextDocument.Uri));
 
                 IEnumerable<CompletionItem> symbolItems = allSymbols
@@ -115,6 +129,16 @@ public class CompletionHandler(DocumentStateManager documentStateManager)
                 .Select(keywordInfo => BuildKeywordItem(keywordInfo, keywordFilterText, insertOffset));
 
             items.AddRange(keywordItems);
+
+            (IReadOnlyList<string> TypedSegments, string CurrentSegmentPrefix)? namespaceTypingContext =
+                TryGetNamespacePathTypingContext(phrase);
+            if (namespaceTypingContext is not null)
+            {
+                items.AddRange(this.BuildNamespaceSegmentItems(
+                    namespaceTypingContext.Value.TypedSegments,
+                    namespaceTypingContext.Value.CurrentSegmentPrefix));
+            }
+
             return Task.FromResult(new CompletionList(items, isIncomplete: true));
         }
         catch (Exception)
@@ -156,6 +180,150 @@ public class CompletionHandler(DocumentStateManager documentStateManager)
                 _ => null
             }
         };
+
+    /// <summary>
+    /// Builds a completion item for a candidate next namespace path segment.
+    /// </summary>
+    /// <param name="segment">The candidate namespace segment name.</param>
+    /// <returns>A completion item representing the namespace segment.</returns>
+    private static CompletionItem BuildNamespaceSegmentItem(string segment) =>
+        new()
+        {
+            Label = segment,
+            Kind = CompletionItemKind.Module,
+            Detail = "namespace"
+        };
+
+    /// <summary>
+    /// The keywords that introduce a namespace path.
+    /// </summary>
+    private static readonly string[] NamespacePathIntroducers = ["PRAY RECOGNISE", "TOWN", "SUMMON"];
+
+    /// <summary>
+    /// Matches the long-form <c>WITH DISTRICT</c> segment separator or the short-form <c>*</c> separator between
+    /// namespace path segments.
+    /// </summary>
+    private static readonly Regex NamespaceSegmentSeparator = new(@"\s+WITH\s+DISTRICT\s+|\*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Finds the offset within <paramref name="phrase"/> immediately after a namespace path introducer keyword, if
+    /// the phrase starts with one.
+    /// </summary>
+    /// <param name="phrase">The trimmed phrase before the cursor.</param>
+    /// <returns>The offset immediately after the introducer keyword, or <c>null</c> if the phrase does not start with one.</returns>
+    private static int? FindNamespacePathStart(string phrase)
+    {
+        foreach (string introducer in NamespacePathIntroducers)
+        {
+            if (phrase.Length >= introducer.Length
+                && phrase[..introducer.Length].Equals(introducer, StringComparison.OrdinalIgnoreCase)
+                && (phrase.Length == introducer.Length || phrase[introducer.Length] == ' '))
+            {
+                return introducer.Length;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Determines whether the cursor is positioned where a namespace path segment is being typed, and if so, which
+    /// segments have already been typed and the in-progress prefix of the current one.
+    /// </summary>
+    /// <param name="phrase">The trimmed phrase before the cursor.</param>
+    /// <remarks>
+    /// Returns <c>null</c> once a <c>WITH DUTY</c> segment has appeared in the phrase, since at that point the
+    /// cursor is typing the function name of a fully-qualified <c>SUMMON</c> target, not a namespace segment.
+    /// </remarks>
+    /// <returns>The already-typed segments and the in-progress segment prefix, or <c>null</c> if not in this position.</returns>
+    private static (IReadOnlyList<string> TypedSegments, string CurrentSegmentPrefix)? TryGetNamespacePathTypingContext(string phrase)
+    {
+        int? pathStart = FindNamespacePathStart(phrase);
+        if (pathStart is null)
+        {
+            return null;
+        }
+
+        string pathText = phrase[pathStart.Value..].TrimStart();
+        if (pathText.Contains("WITH DUTY", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (pathText.Length == 0)
+        {
+            return (Array.Empty<string>(), string.Empty);
+        }
+
+        string[] segments = NamespaceSegmentSeparator.Split(pathText);
+        return (segments[..^1], segments[^1]);
+    }
+
+    /// <summary>
+    /// Determines whether the cursor is positioned where the function name of a long-form fully-qualified <c>SUMMON</c>
+    /// target is being typed (immediately after <c>WITH DUTY</c>), and if so, the namespace path segments typed before it.
+    /// </summary>
+    /// <param name="phrase">The trimmed phrase before the cursor.</param>
+    /// <returns>The namespace path segments typed before <c>WITH DUTY</c>, or <c>null</c> if not in this position.</returns>
+    private static IReadOnlyList<string>? TryGetFunctionNameNamespaceContext(string phrase)
+    {
+        int? pathStart = FindNamespacePathStart(phrase);
+        if (pathStart is null)
+        {
+            return null;
+        }
+
+        string pathText = phrase[pathStart.Value..].TrimStart();
+        int withDutyIndex = pathText.IndexOf("WITH DUTY", StringComparison.OrdinalIgnoreCase);
+        if (withDutyIndex < 0)
+        {
+            return null;
+        }
+
+        string namespacePart = pathText[..withDutyIndex].Trim();
+        return [.. NamespaceSegmentSeparator.Split(namespacePart).Select(segment => segment.Trim()).Where(segment => segment.Length > 0)];
+    }
+
+    /// <summary>
+    /// Builds completion items for every known next namespace segment following the already-typed segments.
+    /// </summary>
+    /// <param name="typedSegments">The namespace path segments already typed.</param>
+    /// <param name="currentSegmentPrefix">The in-progress prefix of the segment currently being typed.</param>
+    /// <returns>A completion item for each distinct, matching next segment across the namespaces declared by all open documents.</returns>
+    private IEnumerable<CompletionItem> BuildNamespaceSegmentItems(IReadOnlyList<string> typedSegments, string currentSegmentPrefix)
+    {
+        HashSet<string> candidateSegments = new(StringComparer.OrdinalIgnoreCase);
+        foreach (IReadOnlyList<string> knownPath in this.documentStateManager.GetKnownNamespacePaths())
+        {
+            if (knownPath.Count <= typedSegments.Count)
+            {
+                continue;
+            }
+
+            bool prefixMatches = true;
+            for (int i = 0; i < typedSegments.Count; i++)
+            {
+                if (!string.Equals(knownPath[i], typedSegments[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    prefixMatches = false;
+                    break;
+                }
+            }
+
+            if (!prefixMatches)
+            {
+                continue;
+            }
+
+            string nextSegment = knownPath[typedSegments.Count];
+            if (currentSegmentPrefix.Length == 0 || nextSegment.StartsWith(currentSegmentPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                candidateSegments.Add(nextSegment);
+            }
+        }
+
+        return candidateSegments.Select(BuildNamespaceSegmentItem);
+    }
 
     /// <summary>
     /// Builds a completion item from a keyword entry.

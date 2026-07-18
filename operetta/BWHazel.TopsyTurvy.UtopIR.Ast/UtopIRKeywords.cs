@@ -148,5 +148,47 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>transdown</c> instruction.</summary>
         public const string TransDown = "transdown";
+
+        /// <summary>The <c>alike</c> instruction.</summary>
+        public const string Alike = "alike";
+
+        /// <summary>The <c>unlike</c> instruction.</summary>
+        public const string Unlike = "unlike";
+
+        /// <summary>The <c>preadam</c> instruction.</summary>
+        public const string PreAdam = "preadam";
+
+        /// <summary>The <c>lowerdeg</c> instruction.</summary>
+        public const string LowerDeg = "lowerdeg";
+
+        /// <summary>The <c>alike.f</c> instruction.</summary>
+        public const string AlikeFloat = "alike.f";
+
+        /// <summary>The <c>unlike.f</c> instruction.</summary>
+        public const string UnlikeFloat = "unlike.f";
+
+        /// <summary>The <c>preadam.f</c> instruction.</summary>
+        public const string PreAdamFloat = "preadam.f";
+
+        /// <summary>The <c>lowerdeg.f</c> instruction.</summary>
+        public const string LowerDegFloat = "lowerdeg.f";
+
+        /// <summary>The <c>both</c> instruction.</summary>
+        public const string Both = "both";
+
+        /// <summary>The <c>either</c> instruction.</summary>
+        public const string Either = "either";
+
+        /// <summary>The <c>hardly</c> instruction.</summary>
+        public const string Hardly = "hardly";
+
+        /// <summary>The <c>sail</c> instruction.</summary>
+        public const string Sail = "sail";
+
+        /// <summary>The <c>sailalike</c> instruction.</summary>
+        public const string SailAlike = "sailalike";
+
+        /// <summary>The <c>sailunlike</c> instruction.</summary>
+        public const string SailUnlike = "sailunlike";
     }
 }

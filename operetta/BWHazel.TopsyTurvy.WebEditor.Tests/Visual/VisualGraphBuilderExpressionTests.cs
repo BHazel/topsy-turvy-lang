@@ -99,6 +99,48 @@ public class VisualGraphBuilderExpressionTests : VisualGraphBuilderTestBase
     }
 
     /// <summary>
+    /// Tests that an address-of expression creates a separate identifier node for the target variable,
+    /// distinct from the address-of node itself, wired to its Variable Data In port.
+    /// </summary>
+    [Fact]
+    public void Build_WithAddressOf_CreatesSeparateIdentifierNodeForTargetVariable()
+    {
+        AddressOfExpressionNode addressOf = new()
+        {
+            VariableName = "Number",
+            Span = PlaceholderSpan
+        };
+
+        BlazorDiagram diagram = BuildExpression(addressOf);
+
+        TopsyTurvyVisualNodeModel node = Node(diagram, "AddressOfExpressionNode");
+        IsLinked(Port(node, "Variable", VisualPortRole.DataIn)).ShouldBeTrue();
+        TopsyTurvyVisualNodeModel identifierNode = Nodes(diagram, "IdentifierNode").Single(n => n.SymbolIdentifierNodeName == "Number");
+        identifierNode.Title.ShouldBe("Number");
+    }
+
+    /// <summary>
+    /// Tests that a dereference expression creates a separate identifier node for the pointer variable,
+    /// distinct from the dereference node itself, wired to its Pointer Data In port.
+    /// </summary>
+    [Fact]
+    public void Build_WithDereference_CreatesSeparateIdentifierNodeForPointerVariable()
+    {
+        DereferenceExpressionNode dereference = new()
+        {
+            PointerName = "NumberPointer",
+            Span = PlaceholderSpan
+        };
+
+        BlazorDiagram diagram = BuildExpression(dereference);
+
+        TopsyTurvyVisualNodeModel node = Node(diagram, "DereferenceExpressionNode");
+        IsLinked(Port(node, "Pointer", VisualPortRole.DataIn)).ShouldBeTrue();
+        TopsyTurvyVisualNodeModel identifierNode = Nodes(diagram, "IdentifierNode").Single(n => n.SymbolIdentifierNodeName == "NumberPointer");
+        identifierNode.Title.ShouldBe("NumberPointer");
+    }
+
+    /// <summary>
     /// Tests that an expression cast subtitle shows the arrow and target type keyword.
     /// </summary>
     [Fact]
@@ -197,6 +239,7 @@ public class VisualGraphBuilderExpressionTests : VisualGraphBuilderTestBase
         FunctionDefinitionNode function = new()
         {
             Name = "f",
+            NameSpan = PlaceholderSpan,
             Parameters = [new TypedParameter("x", LiteralType.Integer, PlaceholderSpan)],
             Body = [new PrintNode { Expression = Identifier("x"), Span = PlaceholderSpan }],
             Span = PlaceholderSpan,

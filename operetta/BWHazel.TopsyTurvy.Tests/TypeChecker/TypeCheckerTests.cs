@@ -818,6 +818,383 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a cross-file fully-qualified SUMMON call in both the long-form and short-form syntax.
+    /// </summary>
+    [Fact]
+    public void Check_WithCrossFileFullyQualifiedSummon_Succeeds()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            BEHOLD SUMMON Mathematical WITH DUTY Add WITH 2 AND 3 IF YOU PLEASE.
+            BEHOLD SUMMON Mathematical*Add WITH 10 AND 20 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a bare SUMMON call after PRAY RECOGNISE opens the declaring namespace.
+    /// </summary>
+    [Fact]
+    public void Check_WithRecogniseThenBareSummon_Succeeds()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            PRAY RECOGNISE Mathematical
+            BEHOLD SUMMON Add WITH 7 AND 8 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds for a bare SUMMON call between two functions declared in the same namespace, without requiring PRAY RECOGNISE.
+    /// </summary>
+    [Fact]
+    public void Check_WithSameNamespaceBareSummon_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "SameNamespace"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Double UNDER THE TERMS OF N AS A PEER TO FIND PEER
+              AND SO I FIND SUMMON Add WITH N AND N IF YOU PLEASE.
+            MY DUTY IS DISCHARGED.
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            BEHOLD SUMMON Double WITH 21 IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a bare SUMMON name matches functions in two different open namespaces.
+    /// </summary>
+    [Fact]
+    public void Check_WithBareSummonMatchingTwoOpenNamespaces_ReportsAmbiguousReference()
+    {
+        string fileA = """
+            HARK! "A"
+            TOWN Alpha
+            IT IS MY DUTY TO PERFORM Greet UNDER NO OBLIGATION
+              BEHOLD "Alpha"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string fileB = """
+            HARK! "B"
+            TOWN Beta
+            IT IS MY DUTY TO PERFORM Greet UNDER NO OBLIGATION
+              BEHOLD "Beta"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "a.topsy"
+            PRAY ADMIT "b.topsy"
+            PRAY RECOGNISE Alpha
+            PRAY RECOGNISE Beta
+            SUMMON Greet WITH NOTHING IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename switch
+            {
+                "a.topsy" => fileA,
+                "b.topsy" => fileB,
+                _ => null,
+            });
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("ambiguous"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an undefined function when a bare SUMMON call targets a namespaced function whose namespace has not been recognised.
+    /// </summary>
+    [Fact]
+    public void Check_WithBareSummonToNamespacedFunctionWithoutRecognise_ReportsUndefinedFunction()
+    {
+        string importedSource = """
+            HARK! "Mathematical"
+            TOWN Mathematical
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+              AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        TypeCheckResult result = this.Check(
+            """
+            HARK! "Main"
+            PRAY ADMIT "mathematical.topsy"
+            BEHOLD SUMMON Add WITH 1 AND 2 IF YOU PLEASE.
+            FINALE.
+            """,
+            filename => filename == "mathematical.topsy" ? importedSource : null);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("Add"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a programme declares more than one TOWN.
+    /// </summary>
+    [Fact]
+    public void Check_WithDuplicateNamespaceDeclaration_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Duplicate"
+            TOWN Alpha
+            TOWN Beta
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Message.Contains("TOWN"));
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer is declared pointing at a variable of the same declared type.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationExactTypeMatch_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer type is declared as A GALLERY PICTURE OF NAUGHT.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationOfNaughtPointeeType_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME BadPointer AS A GALLERY PICTURE OF NAUGHT
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is pointed at a variable of a different type, since no numeric widening is permitted for pointee types.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerDeclarationPointeeTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Amount AS A FATHOM BEING 1.0
+            PRAY WELCOME AmountPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Amount
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer to an array pointee type does not match the array declared element type.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerToArrayElementTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Words AS A LITTLE LIST OF YARN BEING "Ruddigore" IF YOU PLEASE.
+            PRAY WELCOME WordsPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Words
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer to a YARN is declared with a STITCH pointee type, since a string decays to its first character.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerToStringDeclaredAsStitch_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Word AS A YARN BEING "Ruddigore"
+            PRAY WELCOME WordPointer AS A GALLERY PICTURE OF STITCH BEING GALLERY PICTURE TO Word
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is assigned a literal value directly rather than an address-of expression.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerAssignedLiteral_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING 42
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a pointer is assigned another pointer directly by bare identifier rather than by address-of.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerAssignedBareIdentifier_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            PRAY WELCOME OtherPointer AS A GALLERY PICTURE OF PEER BEING NumberPointer
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer is reassigned the result of pointer arithmetic on itself.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerReassignedPointerArithmetic_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Values AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+            PRAY WELCOME ValuesPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Values
+            ValuesPointer IS APPOINTED SUM OF ValuesPointer AND 1
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a dereference assignment writes a value of the wrong type through a pointer.
+    /// </summary>
+    [Fact]
+    public void Check_WithDereferenceAssignmentTypeMismatch_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+            VIEW FROM NumberPointer IS APPOINTED "wrong"
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a dereference assignment targets a variable that is not a pointer.
+    /// </summary>
+    [Fact]
+    public void Check_WithDereferenceAssignmentOnNonPointer_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME Number AS A PEER BEING 42
+            VIEW FROM Number IS APPOINTED 5
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+        result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when a pointer variable is compared against NAUGHT.
+    /// </summary>
+    [Fact]
+    public void Check_WithPointerComparedToNaught_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+            PRAY WELCOME IsUnassigned AS A DECREE BEING ALIKE NumberPointer AND NAUGHT
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

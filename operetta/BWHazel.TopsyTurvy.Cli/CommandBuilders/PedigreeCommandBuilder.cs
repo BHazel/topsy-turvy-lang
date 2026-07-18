@@ -10,7 +10,7 @@ namespace BWHazel.TopsyTurvy.Cli.CommandBuilders;
 public static class PedigreeCommandBuilder
 {
     private const string TopsyTurvySpecVersion = "0.7.0";
-    private const string UtopirSpecVersion = "0.0.1-preview2";
+    private const string UtopirSpecVersion = "0.0.1-preview3";
 
     /// <summary>
     /// Builds and configures the <c>pedigree</c> command.

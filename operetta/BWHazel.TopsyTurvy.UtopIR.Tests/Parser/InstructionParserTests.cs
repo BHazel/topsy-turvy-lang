@@ -173,6 +173,131 @@ public class InstructionParserTests
     }
 
     /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses each comparison mnemonic to the correct operation.
+    /// </summary>
+    /// <param name="mnemonic">The UtopIR comparison mnemonic.</param>
+    /// <param name="expectedOperation">The expected <see cref="UtopIRComparisonOperation"/>.</param>
+    [Theory]
+    [InlineData("alike", UtopIRComparisonOperation.Alike)]
+    [InlineData("unlike", UtopIRComparisonOperation.Unlike)]
+    [InlineData("preadam", UtopIRComparisonOperation.PreAdam)]
+    [InlineData("lowerdeg", UtopIRComparisonOperation.LowerDeg)]
+    [InlineData("alike.f", UtopIRComparisonOperation.AlikeFloat)]
+    [InlineData("unlike.f", UtopIRComparisonOperation.UnlikeFloat)]
+    [InlineData("preadam.f", UtopIRComparisonOperation.PreAdamFloat)]
+    [InlineData("lowerdeg.f", UtopIRComparisonOperation.LowerDegFloat)]
+    public void AssignmentInstruction_WithComparisonMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRComparisonOperation expectedOperation)
+    {
+        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
+
+        result.HasValue.ShouldBeTrue();
+        ComparisonInstruction comparison = result.Value.ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(expectedOperation);
+        comparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        comparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses each binary logical mnemonic to the correct operation.
+    /// </summary>
+    /// <param name="mnemonic">The UtopIR logical mnemonic.</param>
+    /// <param name="expectedOperation">The expected <see cref="UtopIRLogicalOperation"/>.</param>
+    [Theory]
+    [InlineData("both", UtopIRLogicalOperation.Both)]
+    [InlineData("either", UtopIRLogicalOperation.Either)]
+    public void AssignmentInstruction_WithLogicalMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRLogicalOperation expectedOperation)
+    {
+        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} verity, nay"));
+
+        result.HasValue.ShouldBeTrue();
+        LogicalInstruction logical = result.Value.ShouldBeOfType<LogicalInstruction>();
+        logical.Operation.ShouldBe(expectedOperation);
+        logical.Operand1.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(true);
+        logical.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(false);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>hardly</c> assignment with a single operand.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithHardly_ReturnsHardlyInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = hardly £a"));
+
+        result.HasValue.ShouldBeTrue();
+        HardlyInstruction hardly = result.Value.ShouldBeOfType<HardlyInstruction>();
+        hardly.Target.Name.ShouldBe("r");
+        hardly.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.Sail"/> parses an unconditional branch to a label.
+    /// </summary>
+    [Fact]
+    public void Sail_WithLabel_ReturnsSailInstruction()
+    {
+        var result = InstructionParser.Sail(new("sail !LOGIC"));
+
+        result.HasValue.ShouldBeTrue();
+        SailInstruction sail = result.Value.ShouldBeOfType<SailInstruction>();
+        sail.Label.Name.ShouldBe("LOGIC");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.SailAlike"/> parses a conditional branch with a value and a label.
+    /// </summary>
+    [Fact]
+    public void SailAlike_WithValueAndLabel_ReturnsSailAlikeInstruction()
+    {
+        var result = InstructionParser.SailAlike(new("sailalike £Boolean, !IS_ALIKE"));
+
+        result.HasValue.ShouldBeTrue();
+        SailAlikeInstruction sailAlike = result.Value.ShouldBeOfType<SailAlikeInstruction>();
+        sailAlike.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Boolean");
+        sailAlike.Label.Name.ShouldBe("IS_ALIKE");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.SailUnlike"/> parses a conditional branch with a value and a label.
+    /// </summary>
+    [Fact]
+    public void SailUnlike_WithValueAndLabel_ReturnsSailUnlikeInstruction()
+    {
+        var result = InstructionParser.SailUnlike(new("sailunlike £Boolean, !IS_UNLIKE"));
+
+        result.HasValue.ShouldBeTrue();
+        SailUnlikeInstruction sailUnlike = result.Value.ShouldBeOfType<SailUnlikeInstruction>();
+        sailUnlike.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Boolean");
+        sailUnlike.Label.Name.ShouldBe("IS_UNLIKE");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.Label"/> parses a bare label declaration.
+    /// </summary>
+    [Fact]
+    public void Label_WithBareName_ReturnsLabelInstruction()
+    {
+        var result = InstructionParser.Label(new("!LOGIC"));
+
+        result.HasValue.ShouldBeTrue();
+        LabelInstruction label = result.Value.ShouldBeOfType<LabelInstruction>();
+        label.Name.Name.ShouldBe("LOGIC");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.StandaloneInstruction"/> parses <c>sailalike</c> rather than
+    /// stopping short at the shared <c>sail</c> prefix.
+    /// </summary>
+    [Fact]
+    public void StandaloneInstruction_WithSailAlike_ReturnsSailAlikeInstructionNotSail()
+    {
+        var result = InstructionParser.StandaloneInstruction(new("sailalike £Boolean, !IS_ALIKE"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeOfType<SailAlikeInstruction>();
+    }
+
+    /// <summary>
     /// Tests that <see cref="InstructionParser.Prentice"/> parses a <c>prentice</c> instruction.
     /// </summary>
     [Fact]

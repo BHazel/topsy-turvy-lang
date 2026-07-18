@@ -204,4 +204,20 @@ public sealed class CadenzaCommandTests(CliFixture fixture)
 
         stdout.ShouldContain("15");
     }
+
+    /// <summary>
+    /// Tests that the :armoury command lists a function parameter as a readable "name: TYPE" pair.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithArmouryCommand_ListsFunctionParameterAsReadablePair()
+    {
+        (int _, string stdout, string _) = await this.RunWithStdinAsync(
+            "cadenza",
+            "IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF name AS A YARN TO FIND YARN AND SO I FIND name MY DUTY IS DISCHARGED.\n" +
+            ":armoury\n" +
+            ":exit\n");
+
+        stdout.ShouldContain("name: YARN");
+        stdout.ShouldNotContain("TypedParameter");
+    }
 }

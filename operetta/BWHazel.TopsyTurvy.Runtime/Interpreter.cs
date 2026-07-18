@@ -36,7 +36,20 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// </para>
 /// <para>
 /// The interpreter does not pre-scan the code, therefore, declarations and function definitions must be encountered before they can
-/// be used.
+/// be used.  The sole exception is a file namespace declaration (<c>TOWN</c>): <see cref="Execute"/> and
+/// <see cref="ExecuteImport"/> each pre-scan their own statement list once, before executing any of it, for the
+/// at-most-one <see cref="NamespaceDeclarationNode"/> it may contain, so a function namespace membership never
+/// depends on where in the file the <c>TOWN</c> keyword appears.  A namespace-open directive (<c>PRAY RECOGNISE</c>),
+/// by contrast, follows the interpreter normal order-dependent rule: it only affects bare-name function
+/// resolution from the point it is executed onward, exactly as <c>PRAY ADMIT</c> already does for imports.
+/// </para>
+/// <para>
+/// A function declared in a file with a <c>TOWN</c> namespace is registered under its dot-joined fully-qualified
+/// name, e.g. <c>Accounts.Payroll.CalculateTax</c>, rather than its bare name, and is not reachable by bare name
+/// from outside that namespace.  <c>SUMMON</c> resolves a bare call name in tiers: the namespace of the caller,
+/// then each namespace opened via <c>PRAY RECOGNISE</c>, then the global (non-namespaced) function table via
+/// <see cref="ResolveFunction"/>; a fully-qualified call name is looked up directly.  Please see <see cref="ResolveFunction"/>
+/// for the precise resolution order.
 /// </para>
 /// <para>
 /// During execution, the interpreter can work with the 6 literal types that the lexer can produce:
@@ -77,16 +90,21 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 {
     private readonly ITopsyTurvyIO io = io;
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
+    private readonly Dictionary<FunctionDefinitionNode, string?> functionNamespaces = [];
+    private readonly HashSet<string> openNamespaces = [];
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
     private string? sourceDirectory;
     private Func<string, string?>? fileResolver;
+    private string? currentExecutionNamespace;
 
     /// <summary>
     /// Gets a read-only view of all functions defined in this interpreter instance.
     /// </summary>
     /// <remarks>
-    /// The dictionary is keyed by the function name.
+    /// The dictionary is keyed by the function name, dot-qualified with its declaring file
+    /// namespace path when it was declared under a <c>TOWN</c> declaration, e.g. <c>Accounts.Payroll.CalculateTax</c>,
+    /// or by its bare name when the declaring file has no <c>TOWN</c> declaration.
     /// </remarks>
     public IReadOnlyDictionary<string, FunctionDefinitionNode> Functions => this.functions;
 
@@ -155,6 +173,12 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         try
         {
+            string? entryNamespace = FindNamespaceDeclaration(program.Statements);
+            if (entryNamespace is not null)
+            {
+                this.currentExecutionNamespace = entryNamespace;
+            }
+
             this.ExecuteStatements(program.Statements, environment);
         }
         catch (ProgrammeReturnSignalException programmeReturnSignal)
@@ -216,11 +240,17 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             case ArrayDeclarationNode arrayDeclaration:
                 this.ExecuteArrayDeclaration(arrayDeclaration, environment);
                 break;
+            case PointerDeclarationNode pointerDeclaration:
+                this.ExecutePointerDeclaration(pointerDeclaration, environment);
+                break;
             case AssignmentNode assignment:
                 this.ExecuteAssignment(assignment, environment);
                 break;
             case ArrayElementAssignmentNode arrayElementAssignment:
                 this.ExecuteArrayElementAssignment(arrayElementAssignment, environment);
+                break;
+            case DereferenceAssignmentNode dereferenceAssignment:
+                this.ExecuteDereferenceAssignment(dereferenceAssignment, environment);
                 break;
             case PrintNode print:
                 this.ExecutePrint(print, environment);
@@ -232,7 +262,16 @@ public sealed class Interpreter(ITopsyTurvyIO io)
                 this.EvaluateExpression(expressionStatement.Expression, environment);
                 break;
             case FunctionDefinitionNode functionDefinition:
-                this.functions[functionDefinition.Name] = functionDefinition;
+                this.functions[QualifyName(this.currentExecutionNamespace, functionDefinition.Name)] = functionDefinition;
+                this.functionNamespaces[functionDefinition] = this.currentExecutionNamespace;
+                break;
+            case NamespaceDeclarationNode:
+                // No-op here: applied by the pre-scan in Execute()/ExecuteImport() before statement
+                // execution begins, so namespace membership does not depend on the TOWN keyword position
+                // relative to the functions it applies to.
+                break;
+            case RecogniseNode recognise:
+                this.openNamespaces.Add(string.Join('.', recognise.Path));
                 break;
             case ProgrammeReturnNode programmeReturnStatement:
                 throw new ProgrammeReturnSignalException((int)this.EvaluateExpression(programmeReturnStatement.Value, environment).RawValue!);
@@ -329,6 +368,29 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
+    /// Executes a pointer declaration statement.
+    /// </summary>
+    /// <param name="node">The pointer declaration node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <remarks>
+    /// When no initial value is present, the pointer is declared as <c>NAUGHT</c> (unassigned).  When present, this
+    /// method evaluates <see cref="PointerDeclarationNode.InitialValue"/> exactly as <see cref="ExecuteDeclaration"/>
+    /// does for a scalar declaration, with no restriction on the expression form here: this method does not check
+    /// that the initial value is an address-of expression.  That restriction, and the exact pointee-type match
+    /// between the address-of expression and the declared pointee type, are enforced entirely by the type checker
+    /// before execution ever reaches this method; an interpreter running on already type-checked input can rely on
+    /// the initial value always being a well-formed pointer value or <c>NAUGHT</c>.
+    /// </remarks>
+    private void ExecutePointerDeclaration(PointerDeclarationNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue value = node.InitialValue != null
+            ? this.EvaluateExpression(node.InitialValue, environment)
+            : TopsyTurvyValue.Null();
+
+        environment.Declare(node.Name, value, isConstant: node.IsConstant);
+    }
+
+    /// <summary>
     /// Executes an array element assignment statement.
     /// </summary>
     /// <param name="node">The array element assignment node.</param>
@@ -398,6 +460,53 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         }
 
         return (index, elements);
+    }
+
+    /// <summary>
+    /// Executes a write-through assignment via a pointer dereference.
+    /// </summary>
+    /// <param name="node">The dereference assignment node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is not a pointer, the pointer is <c>NAUGHT</c> (unassigned), the target
+    /// position is out of bounds, or the pointer refers to a string character, since string characters cannot be
+    /// reassigned individually.
+    /// </exception>
+    private void ExecuteDereferenceAssignment(DereferenceAssignmentNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyPointerTarget target = this.ResolvePointerTarget(node.PointerName, node.Span, environment);
+        TopsyTurvyValue value = this.EvaluateExpression(node.Value, environment);
+        target.Write(value, node.Span);
+    }
+
+    /// <summary>
+    /// Resolves the target a named pointer variable currently refers to.
+    /// </summary>
+    /// <param name="pointerName">The name of the pointer variable.</param>
+    /// <param name="span">The source span used in error messages.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The target the pointer currently refers to.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is <c>NAUGHT</c> (an unassigned pointer) or is not a pointer at all.
+    /// </exception>
+    private TopsyTurvyPointerTarget ResolvePointerTarget(string pointerName, SourceSpan span, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue pointerValue = environment.Get(pointerName);
+        if (pointerValue.LiteralType == LiteralType.Null)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Cannot dereference '{pointerName}': it is NAUGHT (an unassigned pointer).",
+                span);
+        }
+
+        if (pointerValue.LiteralType != LiteralType.Pointer)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"'{pointerName}' is not a pointer.",
+                span);
+        }
+
+        return (TopsyTurvyPointerTarget)pointerValue.RawValue!;
     }
 
     /// <summary>
@@ -740,14 +849,54 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             throw new TopsyTurvyRuntimeException($"Syntax errors in import '{importNode.FilePath}': {errors}", importNode.Span);
         }
 
+        string? importedNamespace = FindNamespaceDeclaration(imported.Statements);
         foreach (Statement statement in imported.Statements)
         {
             if (statement is FunctionDefinitionNode functionDefinition)
             {
-                this.functions[functionDefinition.Name] = functionDefinition;
+                this.functions[QualifyName(importedNamespace, functionDefinition.Name)] = functionDefinition;
+                this.functionNamespaces[functionDefinition] = importedNamespace;
             }
         }
     }
+
+    /// <summary>
+    /// Finds the at-most-one namespace declaration in a top-level statement list.
+    /// </summary>
+    /// <param name="statements">The statements to scan, typically an entire programme or imported file top-level body.</param>
+    /// <returns>The dot-joined namespace path, or <c>null</c> if the file declares no namespace.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when more than one <see cref="NamespaceDeclarationNode"/> is found.</exception>
+    private static string? FindNamespaceDeclaration(IReadOnlyList<Statement> statements)
+    {
+        NamespaceDeclarationNode? declaration = null;
+        foreach (Statement statement in statements)
+        {
+            if (statement is NamespaceDeclarationNode namespaceDeclaration)
+            {
+                if (declaration is not null)
+                {
+                    throw new TopsyTurvyRuntimeException("A file may declare at most one TOWN.", namespaceDeclaration.Span);
+                }
+
+                declaration = namespaceDeclaration;
+            }
+        }
+
+        return declaration is not null
+            ? string.Join('.', declaration.Path)
+            : null;
+    }
+
+    /// <summary>
+    /// Prefixes a function name with its namespace path, if any.
+    /// </summary>
+    /// <param name="namespacePrefix">The dot-joined namespace path, or <c>null</c> for the global namespace.</param>
+    /// <param name="name">The bare function name.</param>
+    /// <returns><paramref name="name"/> unchanged when <paramref name="namespacePrefix"/> is <c>null</c>, otherwise <c>"{namespacePrefix}.{name}"</c>.</returns>
+    private static string QualifyName(string? namespacePrefix, string name) =>
+        namespacePrefix is null
+            ? name
+            : $"{namespacePrefix}.{name}";
 
     /// <summary>
     /// Evaluates an expression and returns its value.
@@ -764,6 +913,8 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         ExpressionCastNode cast => this.EvaluateExpression(cast.Expression, environment).CastTo(cast.NewType),
         ArrayIndexNode arrayIndex => this.EvaluateArrayIndex(arrayIndex, environment),
         ArrayLengthNode arrayLength => this.EvaluateArrayLength(arrayLength, environment),
+        AddressOfExpressionNode addressOf => this.EvaluateAddressOf(addressOf, environment),
+        DereferenceExpressionNode dereference => this.EvaluateDereference(dereference, environment),
         TernaryExpressionNode ternary => this.EvaluateTernary(ternary, environment),
         _ => throw new TopsyTurvyRuntimeException(
             $"Unhandled expression type: {expression.GetType().Name}",
@@ -856,6 +1007,46 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)arrayValue.RawValue!;
         return TopsyTurvyValue.Integer(elements.Count);
+    }
+
+    /// <summary>
+    /// Evaluates an address-of expression and returns a new pointer value referring to the named variable.
+    /// </summary>
+    /// <remarks>
+    /// When the named variable is an array, the pointer refers to the first element, and when it is a <c>YARN</c>,
+    /// the pointer refers to the first character; both enable subsequent pointer arithmetic.  For any other type,
+    /// the pointer refers to the variable directly.
+    /// </remarks>
+    /// <param name="node">The address-of node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>A pointer value referring to the named variable, array element, or string character.</returns>
+    private TopsyTurvyValue EvaluateAddressOf(AddressOfExpressionNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyValue targetValue = environment.Get(node.VariableName);
+        TopsyTurvyPointerTarget target = targetValue.LiteralType switch
+        {
+            LiteralType.Array => TopsyTurvyPointerTarget.ForArrayElement((List<TopsyTurvyValue>)targetValue.RawValue!, index: 0),
+            LiteralType.String => TopsyTurvyPointerTarget.ForStringElement(environment, node.VariableName, index: 0),
+            _ => TopsyTurvyPointerTarget.ForVariable(environment, node.VariableName)
+        };
+
+        return TopsyTurvyValue.Pointer(target);
+    }
+
+    /// <summary>
+    /// Evaluates a pointer dereference expression and returns the value currently referred to.
+    /// </summary>
+    /// <param name="node">The dereference node.</param>
+    /// <param name="environment">The environment.</param>
+    /// <returns>The value at the pointer target.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the named variable is <c>NAUGHT</c> (an unassigned pointer), is not a pointer at all, or the
+    /// target position is out of bounds.
+    /// </exception>
+    private TopsyTurvyValue EvaluateDereference(DereferenceExpressionNode node, TopsyTurvyEnvironment environment)
+    {
+        TopsyTurvyPointerTarget target = this.ResolvePointerTarget(node.PointerName, node.Span, environment);
+        return target.Read(node.Span);
     }
 
     /// <summary>
@@ -953,9 +1144,13 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         switch (binaryOperator)
         {
             case Operator.Sum:
-                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
+                return leftOperand.LiteralType == LiteralType.Pointer
+                    ? ApplyPointerArithmetic(leftOperand, rightOperand, offsetSign: 1, span, "SUM OF")
+                    : ApplyArithmetic(leftOperand, rightOperand, (a, b) => a + b, (a, b) => a + b, span, "SUM OF");
             case Operator.Difference:
-                return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
+                return leftOperand.LiteralType == LiteralType.Pointer
+                    ? ApplyPointerArithmetic(leftOperand, rightOperand, offsetSign: -1, span, "DIFFERENCE OF")
+                    : ApplyArithmetic(leftOperand, rightOperand, (a, b) => a - b, (a, b) => a - b, span, "DIFFERENCE OF");
             case Operator.Product:
                 return ApplyArithmetic(leftOperand, rightOperand, (a, b) => a * b, (a, b) => a * b, span, "PRODUCT OF");
             case Operator.Quotient:
@@ -1046,6 +1241,44 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         LiteralType resultType = GetWidestIntegerType(leftOperand.LiteralType, rightOperand.LiteralType);
         long result = integerOperation(ToLong(leftOperand), ToLong(rightOperand));
         return CreateIntegerFromLong(resultType, result);
+    }
+
+    /// <summary>
+    /// Applies pointer arithmetic, moving a pointer forward or backward through an array or YARN by a given offset.
+    /// </summary>
+    /// <remarks>
+    /// Bounds checking is performed by <see cref="TopsyTurvyPointerTarget.WithOffset"/> at the point of the
+    /// arithmetic operation itself, so an out-of-bounds move fails immediately rather than being deferred to a
+    /// later dereference.  A pointer to a single variable does not support arithmetic since there is no notion of a
+    /// next element; this is likewise enforced by <see cref="TopsyTurvyPointerTarget.WithOffset"/>.
+    /// </remarks>
+    /// <param name="pointerOperand">The pointer operand.</param>
+    /// <param name="offsetOperand">The integer offset operand.</param>
+    /// <param name="offsetSign">1 to move forward (<c>SUM OF</c>), or -1 to move backward (<c>DIFFERENCE OF</c>).</param>
+    /// <param name="span">The source span of the operation.</param>
+    /// <param name="operatorName">The Topsy Turvy keyword for the operator, used in error messages.</param>
+    /// <returns>A new pointer value at the shifted target.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">
+    /// Thrown when the offset operand is not an integer type, the pointer refers to a single variable, or the
+    /// shifted target position is out of bounds.
+    /// </exception>
+    private static TopsyTurvyValue ApplyPointerArithmetic(
+        TopsyTurvyValue pointerOperand,
+        TopsyTurvyValue offsetOperand,
+        int offsetSign,
+        SourceSpan span,
+        string operatorName)
+    {
+        if (!IsIntegerType(offsetOperand))
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"{operatorName} on a pointer requires an integer offset, got {offsetOperand.LiteralType}.",
+                span);
+        }
+
+        TopsyTurvyPointerTarget target = (TopsyTurvyPointerTarget)pointerOperand.RawValue!;
+        long offset = ToLong(offsetOperand) * offsetSign;
+        return TopsyTurvyValue.Pointer(target.WithOffset(offset, span));
     }
 
     /// <summary>
@@ -1351,7 +1584,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     /// <summary>
     /// Evaluates a function call with the given name and arguments in the specified environment.
     /// </summary>
-    /// <param name="functionName">The name of the function to call.</param>
+    /// <param name="functionName">The name of the function to call, either bare or namespace-qualified.</param>
     /// <param name="arguments">The list of arguments to pass to the function.</param>
     /// <param name="callingEnvironment">The environment from which the function is called.</param>
     /// <param name="span">The source span of the function call.</param>
@@ -1363,10 +1596,7 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         TopsyTurvyEnvironment callingEnvironment,
         SourceSpan span)
     {
-        if (!this.functions.TryGetValue(functionName, out FunctionDefinitionNode? function))
-        {
-            throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
-        }
+        FunctionDefinitionNode function = this.ResolveFunction(functionName, span);
 
         if (arguments.Count != function.Parameters.Count)
         {
@@ -1381,6 +1611,9 @@ public sealed class Interpreter(ITopsyTurvyIO io)
             scope.Declare(function.Parameters[i].Name, arguments[i]);
         }
 
+        string? callerNamespace = this.currentExecutionNamespace;
+        this.currentExecutionNamespace = this.functionNamespaces.GetValueOrDefault(function);
+
         TopsyTurvyValue returnValue = TopsyTurvyValue.Null();
         try
         {
@@ -1390,8 +1623,76 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         {
             returnValue = returnSignal.Value ?? TopsyTurvyValue.Null();
         }
+        finally
+        {
+            this.currentExecutionNamespace = callerNamespace;
+        }
 
         return returnValue;
+    }
+
+    /// <summary>
+    /// Resolves a function name, bare or namespace-qualified, to its definition.
+    /// </summary>
+    /// <param name="functionName">The name to resolve.</param>
+    /// <param name="span">The source span of the call, used for diagnostics.</param>
+    /// <returns>The resolved <see cref="FunctionDefinitionNode"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target and is looked
+    /// up directly, since <c>.</c> never appears in a bare Topsy Turvy identifier.
+    /// </para>
+    /// <para>
+    /// A bare name is resolved in tiers, the first tier with exactly one match winning:
+    /// * The namespace of the caller (<see cref="currentExecutionNamespace"/>).
+    /// * Then each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
+    ///     * Two or more matches here is an ambiguous reference.
+    /// * Then finally the global (non-namespaced) dictionary entry.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when no function matches or when a bare name matches more than one open namespace.</exception>
+    private FunctionDefinitionNode ResolveFunction(string functionName, SourceSpan span)
+    {
+        if (functionName.Contains('.'))
+        {
+            return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? qualifiedMatch)
+                ? qualifiedMatch
+                : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
+        }
+
+        if (this.currentExecutionNamespace is not null &&
+            this.functions.TryGetValue(QualifyName(this.currentExecutionNamespace, functionName), out FunctionDefinitionNode? sameNamespaceMatch))
+        {
+            return sameNamespaceMatch;
+        }
+
+        List<string> matchedNamespaces = [];
+        FunctionDefinitionNode? openNamespaceMatch = null;
+        foreach (string openNamespace in this.openNamespaces)
+        {
+            if (this.functions.TryGetValue(QualifyName(openNamespace, functionName), out FunctionDefinitionNode? candidate))
+            {
+                matchedNamespaces.Add(openNamespace);
+                openNamespaceMatch = candidate;
+            }
+        }
+
+        if (matchedNamespaces.Count > 1)
+        {
+            string namespaceList = string.Join("', '", matchedNamespaces.OrderBy(name => name, StringComparer.Ordinal));
+            throw new TopsyTurvyRuntimeException(
+                $"Function '{functionName}' is ambiguous between namespaces '{namespaceList}'; please use a fully-qualified name.",
+                span);
+        }
+
+        if (openNamespaceMatch is not null)
+        {
+            return openNamespaceMatch;
+        }
+
+        return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? globalMatch)
+            ? globalMatch
+            : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
     }
 
     /// <summary>

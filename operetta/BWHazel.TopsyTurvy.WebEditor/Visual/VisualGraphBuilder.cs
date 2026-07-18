@@ -109,6 +109,14 @@ public sealed class VisualGraphBuilder
                 continue;
             }
 
+            if (statement is NamespaceDeclarationNode or RecogniseNode)
+            {
+                // Float namespace directives in the sidebar alongside declarations and imports.
+                TopsyTurvyVisualNodeModel namespaceNode = this.CreateStatementNode(statement, sideLayout, diagram);
+                diagram.Nodes.Add(namespaceNode);
+                continue;
+            }
+
             this.lastBlockCloser = null;
             TopsyTurvyVisualNodeModel statementNode = this.CreateStatementNode(statement, layout, diagram);
             diagram.Nodes.Add(statementNode);
@@ -189,8 +197,10 @@ public sealed class VisualGraphBuilder
         {
             DeclarationNode node  => this.CreateDeclarationNode(node, layout, diagram),
             ArrayDeclarationNode node => this.CreateArrayDeclarationNode(node, layout, diagram),
+            PointerDeclarationNode node => this.CreatePointerDeclarationNode(node, layout, diagram),
             AssignmentNode node => this.CreateAssignmentNode(node, layout, diagram),
             ArrayElementAssignmentNode node => this.CreateArrayElementAssignmentNode(node, layout, diagram),
+            DereferenceAssignmentNode node => this.CreateDereferenceAssignmentNode(node, layout, diagram),
             PrintNode node => this.CreatePrintNode(node, layout, diagram),
             InputNode node => this.CreateInputNode(node, layout, diagram),
             ConditionalNode node => this.CreateConditionalNode(node, layout, diagram),
@@ -204,6 +214,8 @@ public sealed class VisualGraphBuilder
             TryCatchNode node => this.CreateTryCatchNode(node, layout, diagram),
             SwitchNode node => this.CreateSwitchNode(node, layout, diagram),
             ImportNode node => this.CreateImportNode(node, layout),
+            NamespaceDeclarationNode node => this.CreateNamespaceDeclarationNode(node, layout),
+            RecogniseNode node => this.CreateRecogniseNode(node, layout),
             GuardNode node => this.CreateGuardNode(node, layout, diagram),
             AssertNode node => this.CreateAssertNode(node, layout, diagram),
             ExpressionStatement node => this.CreateExpressionStatementNode(node, layout, diagram),
@@ -292,6 +304,42 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
+    /// Creates a visual node for a pointer declaration statement.
+    /// </summary>
+    /// <param name="node">The pointer declaration node.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <param name="diagram">The diagram to which the node will be added.</param>
+    /// <returns>The visual node model for the pointer declaration.</returns>
+    private TopsyTurvyVisualNodeModel CreatePointerDeclarationNode(PointerDeclarationNode node, NodeLayoutContext layout, BlazorDiagram diagram)
+    {
+        string pointeeTypeLabel = FormatLiteralType(node.PointeeType);
+        string constantLabel = node.IsConstant
+            ? "CONSERVATIVE "
+            : string.Empty;
+
+        string subtitle = $"{node.Name} : {constantLabel}GALLERY PICTURE OF {pointeeTypeLabel}";
+
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY WELCOME", subtitle, VisualNodeKind.Declaration);
+        statementNode.StatementType = "PointerDeclarationNode";
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        statementNode.SymbolIdentifierNodeName = node.Name;
+        statementNode.NodeLiteralType = LiteralType.Pointer;
+        statementNode.PointerPointeeLiteralType = node.PointeeType;
+        statementNode.IsIdentifierConstant = node.IsConstant;
+
+        if (node.InitialValue is not null)
+        {
+            TopsyTurvyVisualPortModel dataInPort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
+            statementNode.AddPort(dataInPort);
+            this.CreateExpressionNode(node.InitialValue, dataInPort, layout, diagram, anchor: statementNode.Position);
+        }
+
+        return statementNode;
+    }
+
+    /// <summary>
     /// Creates a visual node for an assignment statement.
     /// </summary>
     /// <param name="node">The assignment node.</param>
@@ -343,6 +391,31 @@ public sealed class VisualGraphBuilder
 
         this.CreateExpressionNode(node.Index, indexPort, layout, diagram, anchor: statementNode.Position, portIndex: 1);
         this.CreateExpressionNode(node.Value, valuePort, layout, diagram, anchor: statementNode.Position, portIndex: 2);
+        return statementNode;
+    }
+
+    /// <summary>
+    /// Creates a visual node for a pointer write-through assignment statement.
+    /// </summary>
+    /// <param name="node">The dereference assignment node.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <param name="diagram">The diagram to which the node will be added.</param>
+    /// <returns>The visual node model for the dereference assignment.</returns>
+    private TopsyTurvyVisualNodeModel CreateDereferenceAssignmentNode(DereferenceAssignmentNode node, NodeLayoutContext layout, BlazorDiagram diagram)
+    {
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "VIEW FROM IS APPOINTED", null, VisualNodeKind.Assignment);
+        statementNode.StatementType = "DereferenceAssignmentNode";
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+
+        TopsyTurvyVisualPortModel targetPort = this.MakePort(statementNode, "Pointer", VisualPortRole.DataIn);
+        statementNode.AddPort(targetPort);
+        this.CreateTargetIdentifierNode(node.PointerName, targetPort, statementNode.Position, diagram);
+
+        TopsyTurvyVisualPortModel valuePort = this.MakePort(statementNode, "Value", VisualPortRole.DataIn);
+        statementNode.AddPort(valuePort);
+        this.CreateExpressionNode(node.Value, valuePort, layout, diagram, anchor: statementNode.Position, portIndex: 1);
         return statementNode;
     }
 
@@ -968,6 +1041,42 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
+    /// Creates a visual node for a namespace declaration statement.
+    /// </summary>
+    /// <param name="node">The namespace declaration node to create a visual representation for.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <returns>The created visual node model.</returns>
+    private TopsyTurvyVisualNodeModel CreateNamespaceDeclarationNode(NamespaceDeclarationNode node, NodeLayoutContext layout)
+    {
+        string path = string.Join('*', node.Path);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "TOWN", path, VisualNodeKind.Other);
+        statementNode.StatementType = "NamespaceDeclarationNode";
+        statementNode.SymbolIdentifierNodeName = path;
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        return statementNode;
+    }
+
+    /// <summary>
+    /// Creates a visual node for a namespace recognition directive.
+    /// </summary>
+    /// <param name="node">The recognise node to create a visual representation for.</param>
+    /// <param name="layout">The layout context for positioning the node.</param>
+    /// <returns>The created visual node model.</returns>
+    private TopsyTurvyVisualNodeModel CreateRecogniseNode(RecogniseNode node, NodeLayoutContext layout)
+    {
+        string path = string.Join('*', node.Path);
+        TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY RECOGNISE", path, VisualNodeKind.Other);
+        statementNode.StatementType = "RecogniseNode";
+        statementNode.SymbolIdentifierNodeName = path;
+        statementNode.AddPort(this.MakePort(statementNode, "In", VisualPortRole.FlowIn));
+        statementNode.AddPort(this.MakePort(statementNode, "Out", VisualPortRole.FlowOut));
+        statementNode.AstNode = node;
+        return statementNode;
+    }
+
+    /// <summary>
     /// Creates a named header node at the top of a branch column and wires it to the body subgraph.
     /// </summary>
     /// <remarks>
@@ -1369,6 +1478,70 @@ public sealed class VisualGraphBuilder
             return;
         }
 
+        if (expression is AddressOfExpressionNode addressOf)
+        {
+            TopsyTurvyVisualNodeModel addressOfNode = this.MakeNode(position, "GALLERY PICTURE TO", null, VisualNodeKind.Operator);
+            addressOfNode.StatementType = "AddressOfExpressionNode";
+            addressOfNode.SymbolIdentifierNodeName = addressOf.VariableName;
+            TopsyTurvyVisualPortModel addressOfVariablePort = this.MakePort(addressOfNode, "Variable", VisualPortRole.DataIn);
+            addressOfNode.AddPort(addressOfVariablePort);
+            addressOfNode.AddPort(this.MakePort(addressOfNode, "Out", VisualPortRole.DataOut));
+            diagram.Nodes.Add(addressOfNode);
+
+            PortModel? addressOfOutPort = FindPort(addressOfNode, VisualPortRole.DataOut);
+            if (addressOfOutPort is not null)
+            {
+                diagram.Links.Add(new LinkModel(addressOfOutPort, targetDataInPort));
+            }
+
+            BlazorDiagramsPoint addressOfVariablePosition = new(position.X - ExpressionColumnWidth, position.Y);
+            TopsyTurvyVisualNodeModel addressOfVariableNode = this.MakeNode(addressOfVariablePosition, addressOf.VariableName, null, VisualNodeKind.Identifier);
+            addressOfVariableNode.StatementType = "IdentifierNode";
+            addressOfVariableNode.SymbolIdentifierNodeName = addressOf.VariableName;
+            addressOfVariableNode.AddPort(this.MakePort(addressOfVariableNode, "Out", VisualPortRole.DataOut));
+            diagram.Nodes.Add(addressOfVariableNode);
+
+            PortModel? addressOfVariableOutPort = FindPort(addressOfVariableNode, VisualPortRole.DataOut);
+            if (addressOfVariableOutPort is not null)
+            {
+                diagram.Links.Add(new LinkModel(addressOfVariableOutPort, addressOfVariablePort));
+            }
+
+            return;
+        }
+
+        if (expression is DereferenceExpressionNode dereference)
+        {
+            TopsyTurvyVisualNodeModel dereferenceNode = this.MakeNode(position, "VIEW FROM", null, VisualNodeKind.Operator);
+            dereferenceNode.StatementType = "DereferenceExpressionNode";
+            dereferenceNode.SymbolIdentifierNodeName = dereference.PointerName;
+            TopsyTurvyVisualPortModel dereferencePointerPort = this.MakePort(dereferenceNode, "Pointer", VisualPortRole.DataIn);
+            dereferenceNode.AddPort(dereferencePointerPort);
+            dereferenceNode.AddPort(this.MakePort(dereferenceNode, "Out", VisualPortRole.DataOut));
+            diagram.Nodes.Add(dereferenceNode);
+
+            PortModel? dereferenceOutPort = FindPort(dereferenceNode, VisualPortRole.DataOut);
+            if (dereferenceOutPort is not null)
+            {
+                diagram.Links.Add(new LinkModel(dereferenceOutPort, targetDataInPort));
+            }
+
+            BlazorDiagramsPoint dereferencePointerPosition = new(position.X - ExpressionColumnWidth, position.Y);
+            TopsyTurvyVisualNodeModel dereferencePointerNode = this.MakeNode(dereferencePointerPosition, dereference.PointerName, null, VisualNodeKind.Identifier);
+            dereferencePointerNode.StatementType = "IdentifierNode";
+            dereferencePointerNode.SymbolIdentifierNodeName = dereference.PointerName;
+            dereferencePointerNode.AddPort(this.MakePort(dereferencePointerNode, "Out", VisualPortRole.DataOut));
+            diagram.Nodes.Add(dereferencePointerNode);
+
+            PortModel? dereferencePointerOutPort = FindPort(dereferencePointerNode, VisualPortRole.DataOut);
+            if (dereferencePointerOutPort is not null)
+            {
+                diagram.Links.Add(new LinkModel(dereferencePointerOutPort, dereferencePointerPort));
+            }
+
+            return;
+        }
+
         if (expression is ExpressionCastNode cast)
         {
             string castSubtitle = $"→ {FormatLiteralType(cast.NewType)}";
@@ -1635,6 +1808,7 @@ public sealed class VisualGraphBuilder
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,
+        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => type.ToString(),
     };
 

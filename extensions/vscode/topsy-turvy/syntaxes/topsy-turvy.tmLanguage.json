@@ -21,6 +21,7 @@
     { "include": "#functions" },
     { "include": "#io" },
     { "include": "#import" },
+    { "include": "#namespace" },
     { "include": "#cast" },
     { "include": "#declaration" },
     { "include": "#assignment" },
@@ -266,8 +267,19 @@
           "match": "(?i)\\bAND\\s+SO\\s+I\\s+FIND\\b"
         },
         {
+          "match": "(?i)(\\bSUMMON\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)(?=\\s+WITH\\s+DISTRICT\\b|\\s+WITH\\s+DUTY\\b|\\*)",
+          "captures": {
+            "1": { "name": "keyword.other.function.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
           "name": "keyword.other.function.topsy",
           "match": "(?i)\\bSUMMON\\b"
+        },
+        {
+          "name": "keyword.other.function.topsy",
+          "match": "(?i)\\bWITH\\s+DUTY\\b"
         },
         {
           "name": "keyword.other.function.topsy",
@@ -298,6 +310,49 @@
     "import": {
       "name": "keyword.control.import.topsy",
       "match": "(?i)\\bPRAY\\s+ADMIT\\b"
+    },
+    "namespace": {
+      "patterns": [
+        {
+          "match": "(?i)(\\bTOWN\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
+          "match": "(?i)(\\bWITH\\s+DISTRICT\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
+          "match": "(?i)(\\bPRAY\\s+RECOGNISE\\b)\\s+([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.namespace.topsy" },
+            "2": { "name": "entity.name.namespace.topsy" }
+          }
+        },
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bTOWN\\b"
+        },
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bWITH\\s+DISTRICT\\b"
+        },
+        {
+          "name": "keyword.control.namespace.topsy",
+          "match": "(?i)\\bPRAY\\s+RECOGNISE\\b"
+        },
+        {
+          "match": "\\*([A-Za-z][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "entity.name.namespace.topsy" }
+          }
+        }
+      ]
     },
     "cast": {
       "patterns": [
@@ -344,6 +399,10 @@
         {
           "name": "storage.type.topsy",
           "match": "(?i)\\bLITTLE\\s+LIST\\s+OF\\b"
+        },
+        {
+          "name": "storage.type.topsy",
+          "match": "(?i)\\bGALLERY\\s+PICTURE\\s+OF\\b"
         },
         {
           "name": "storage.type.topsy",
@@ -416,6 +475,14 @@
         {
           "name": "keyword.operator.topsy",
           "match": "(?i)\\bRECKONING\\s+OF\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bGALLERY\\s+PICTURE\\s+TO\\b"
+        },
+        {
+          "name": "keyword.operator.topsy",
+          "match": "(?i)\\bVIEW\\s+FROM\\b"
         },
         {
           "name": "keyword.operator.topsy",

@@ -71,6 +71,9 @@ public static class Keywords
 
         /// <summary>Array type annotation prefix (<c>LITTLE LIST OF</c>).</summary>
         public const string LittleListOf = "LITTLE LIST OF";
+
+        /// <summary>Pointer type annotation prefix (<c>GALLERY PICTURE OF</c>).</summary>
+        public const string GalleryPictureOf = "GALLERY PICTURE OF";
     }
 
     /// <summary>
@@ -83,5 +86,17 @@ public static class Keywords
 
         /// <summary>The constant array of command-line arguments.</summary>
         public const string TheProps = "THE PROPS";
+    }
+
+    /// <summary>
+    /// Pointer-related keywords.
+    /// </summary>
+    public static class Pointers
+    {
+        /// <summary>Address-of operator, assigning a pointer to an existing variable (<c>GALLERY PICTURE TO</c>).</summary>
+        public const string GalleryPictureTo = "GALLERY PICTURE TO";
+
+        /// <summary>Pointer dereference operator (<c>VIEW FROM</c>).</summary>
+        public const string ViewFrom = "VIEW FROM";
     }
 }

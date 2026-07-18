@@ -196,6 +196,40 @@ public class VisualGraphToAstConverterExpressionTests : VisualGraphToAstConverte
     }
 
     /// <summary>
+    /// Tests that an address-of expression round-trips with its target variable name preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_AddressOf_PreservesVariableName()
+    {
+        AddressOfExpressionNode addressOf = new()
+        {
+            VariableName = "Number",
+            Span = PlaceholderSpan
+        };
+
+        AddressOfExpressionNode result = (AddressOfExpressionNode)ExtractExpression(RoundTripExpression(addressOf));
+
+        result.VariableName.ShouldBe("Number");
+    }
+
+    /// <summary>
+    /// Tests that a dereference expression round-trips with its pointer name preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_Dereference_PreservesPointerName()
+    {
+        DereferenceExpressionNode dereference = new()
+        {
+            PointerName = "NumberPointer",
+            Span = PlaceholderSpan
+        };
+
+        DereferenceExpressionNode result = (DereferenceExpressionNode)ExtractExpression(RoundTripExpression(dereference));
+
+        result.PointerName.ShouldBe("NumberPointer");
+    }
+
+    /// <summary>
     /// Tests that an expression cast round-trips with its inner expression and target type preserved.
     /// </summary>
     [Fact]

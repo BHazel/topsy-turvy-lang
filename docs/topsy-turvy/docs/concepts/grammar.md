@@ -6,22 +6,22 @@ sidebar_position: 1
 
 A programming language needs two things to be well-defined: a human-readable specification that explains what every construct means, and a formal grammar that defines precisely what the language looks like in text.  For Topsy Turvy these are:
 
-* **`SPEC.md`:** The authoritative language specification, written in prose in human-friendly language and for those who want to understand what the language does.  It describes every keyword, its meaning, examples and edge cases.
-* **`GRAMMAR.ebnf`:** The formal grammar, derived from `SPEC.md`, for tools to understand what a valid programme looks like.  It gives an exact, unambiguous definition of what a valid Topsy Turvy programme looks like.
+* **`specifications/TopsyTurvy.md`:** The authoritative language specification, written in prose in human-friendly language and for those who want to understand what the language does.  It describes every keyword, its meaning, examples and edge cases.
+* **`specifications/TopsyTurvy.ebnf`:** The formal grammar, derived from `TopsyTurvy.md`, for tools to understand what a valid programme looks like.  It gives an exact, unambiguous definition of what a valid Topsy Turvy programme looks like.
 
-## The Language Specification (SPEC.md)
+## The Language Specification (TopsyTurvy.md)
 
-`SPEC.md` is the primary reference for writing Topsy Turvy programmes.  It is structured into sections for each language feature and for each feature explains:
+`TopsyTurvy.md` is the primary reference for writing Topsy Turvy programmes.  It is structured into sections for each language feature and for each feature explains:
 
 * **The Syntax:** What keywords to use and in what order.
 * **The Semantics**: What the construct actually does when the programme runs.
 * **Examples:** Concrete code snippets showing the construct in use.
 
-When `SPEC.md` and `GRAMMAR.ebnf` disagree, `SPEC.md` is the authority.  The grammar captures the shape of the language precisely, but it does not capture everything: semantic rules such as type casting behaviour, scoping, _truthiness_ and the meaning of each keyword are documented only in `SPEC.md`.
+When `TopsyTurvy.md` and `TopsyTurvy.ebnf` disagree, `TopsyTurvy.md` is the authority.  The grammar captures the shape of the language precisely, but it does not capture everything: semantic rules such as type casting behaviour, scoping, _truthiness_ and the meaning of each keyword are documented only in `TopsyTurvy.md`.
 
-## The Grammar (GRAMMAR.ebnf)
+## The Grammar (TopsyTurvy.ebnf)
 
-`GRAMMAR.ebnf` is written in  **Extended Backus-Naur Form (EBNF)**, a standard notation for writing down the grammar of any language.  It was originally developed in the 1960s as Backus-Naur Form (BNF) by John Backus and Peter Naur to describe the syntax of ALGOL 60, one of the first high-level programming languages.  The "extended" variant adds shorthand for optional parts and repetition, making grammars more concise.
+`TopsyTurvy.ebnf` is written in  **Extended Backus-Naur Form (EBNF)**, a standard notation for writing down the grammar of any language.  It was originally developed in the 1960s as Backus-Naur Form (BNF) by John Backus and Peter Naur to describe the syntax of ALGOL 60, one of the first high-level programming languages.  The "extended" variant adds shorthand for optional parts and repetition, making grammars more concise.
 
 A grammar written in EBNF is a set of **rules**.  Each rule defines a named language construct by saying what it must look like in terms of literal text and other named constructs.  Together the rules describe every valid programme in the language, starting from the top-level `Program` rule and expanding down to individual characters.
 
@@ -43,7 +43,7 @@ The rule **name** is on the left of `=`.  The **definition** is on the right.  A
 Type = "PEER" | "FATHOM" | "YARN" | "DECREE" ;
 ```
 
-This says that a `Type` is one of the Topsy Turvy type keywords (simplified here, please see `Type` in `GRAMMAR.ebnf` for the full, current set).
+This says that a `Type` is one of the Topsy Turvy type keywords (simplified here, please see `Type` in `TopsyTurvy.ebnf` for the full, current set).
 
 ### Terminals and Non-Terminals
 
@@ -52,7 +52,7 @@ A grammar uses two kinds of element:
 * **Terminals** are literal text that appears verbatim in the source code.  In EBNF they are written in double quotes: `"PRAY WELCOME"`, `"AS A"`, `"VERITY"`.  They are called terminals because they are final, irreducible tokens: you cannot expand them further.
 * **Non-terminals** are names of other rules: `Identifier`, `Type`, `Expression`.  They are expanded by looking up their own rule definition.  Non-terminals are written without quotes.
 
-`GRAMMAR.ebnf` also uses character-class notation (similar to regular expressions) for individual characters:
+`TopsyTurvy.ebnf` also uses character-class notation (similar to regular expressions) for individual characters:
 
 ```ebnf
 Identifier = [a-zA-Z], { [a-zA-Z0-9_-] } ;

@@ -49,12 +49,15 @@ The `SymbolKind` enum classifies what type of named entity a symbol represents:
 |`Variable`|A variable declared with `PRAY WELCOME`.|
 |`Function`|A function declared with `IT IS MY DUTY TO PERFORM`.|
 |`Parameter`|A function parameter named in `UNDER THE TERMS OF`.|
+|`Namespace`|A namespace declared with `TOWN`.|
 
 #### Constructing the Symbol Table
 
 The `SymbolTable` is constructed by calling `SymbolTable.Build(program, originalSource)`, which takes the root `ProgramNode` from the [AST](./ast.md) and the original, unprocessed source text.
 
-The builder walks the AST recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.  Definition positions are taken directly from each node `Span` (please see the Source Positions section on the [AST](./ast.md#source-positions) page).  Parameters carry their own `Span` independently of the function they belong to, so each reports its own position within the `UNDER THE TERMS OF` clause rather than reusing the position of the function.
+The builder walks the AST recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.  For declarations and functions, definition positions are taken from the node `NameSpan`, not `Span`: `Span` covers the whole statement starting at its opening keyword, while `NameSpan` covers only the declared identifier (please see the Source Positions section on the [AST](./ast.md#source-positions) page).  Parameters carry their own `Span` independently of the function they belong to, so each reports its own position within the `UNDER THE TERMS OF` clause rather than reusing the position of the function.
+
+A file `NamespaceDeclarationNode`, if present, is also collected as a `Namespace` symbol.  Its entry `Name` is not a literal source identifier but the node path segments joined with `*`, for example `Accounts*Payroll`, the same short-hand form accepted in source, and the canonical form the code generator emits regardless of whether the source used `WITH DISTRICT` or `*` to write it.
 
 #### Example
 
@@ -225,3 +228,5 @@ Variables and functions in Topsy Turvy can have in-line documentation applied ab
 `HoverMarkdownBuilder` produces the Markdown string displayed in a hover tooltip when the cursor rests over a symbol.  It has a single entry point, `Build(symbolInfo)`, which switches on the symbol kind.  The output is passed directly to the Language Server `HoverHandler`, which wraps it in an LSP `MarkupContent` response for the editor to display.
 
 Function signatures are rendered with their full typed parameter list drawn from `TypedParameters`, so tooltips reflects the declared types of each parameter rather than bare names.  When present on a symbol, any documentation is appended to the Markdown string for display in the hover tooltip.
+
+Namespace hovers use a separate entry point, `BuildNamespaceHover(namespacePath, functions)`, rather than `Build(symbolInfo)`, since the tooltip content, the namespace path plus a list of the functions declared under it, is gathered from across every open document sharing that namespace, not from a single `SymbolInfo`.  The Language Server `HoverHandler` calls this instead of `Build` whenever the symbol under the cursor is a `Namespace`, or the cursor is over a bare namespace segment that has no `SymbolInfo` of its own.

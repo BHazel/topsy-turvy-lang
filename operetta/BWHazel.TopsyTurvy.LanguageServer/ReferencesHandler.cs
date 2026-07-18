@@ -13,7 +13,8 @@ using LspRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace BWHazel.TopsyTurvy.LanguageServer;
 
 /// <summary>
-/// Locates all occurrences of a symbol across all open documents.
+/// Locates all occurrences of a symbol in the current document and any other open document connected to it by a
+/// <c>PRAY ADMIT</c> import.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,6 +25,11 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// Every whole-word, case-insensitive occurrence is returned, skipping occurrences inside comments and string literals.
 /// When the request context specifies that the declaration should be excluded, the occurrence on the definition line
 /// of the current document is omitted from the result.
+/// </para>
+/// <para>
+/// The cross-file search is scoped to <see cref="DocumentStateManager.GetImportConnectedDocuments"/>, not every
+/// open document, so a same-named symbol in a genuinely unrelated file is not reported.  This is still a whole-word
+/// text scan, not semantic resolution, so it does not model <c>PRAY RECOGNISE</c>/FQN visibility precisely.
 /// </para>
 /// </remarks>
 /// <param name="documentStateManager">The manager providing per-document symbol state.</param>
@@ -59,11 +65,11 @@ public class ReferencesHandler(DocumentStateManager documentStateManager)
     /// * The word at the cursor position is extracted using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
     /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, or the symbol name contains a space, indicating a multi-word built-in, <c>null</c> is returned.
     /// * The current document is scanned for occurrences using <see cref="SourceAnalyser.FindWordOccurrences"/>.  If <c>IncludeDeclaration</c> in the request context is <c>false</c>, the occurrence on the definition line is skipped.
-    /// * All other open documents are then scanned and their occurrences appended to the result.
+    /// * Every other open document connected to the current one by a <c>PRAY ADMIT</c> import, in either direction, is then scanned and its occurrences appended to the result.
     /// </remarks>
     /// <returns>
-    /// A task resolving to a <see cref="LocationContainer"/> with one <see cref="Location"/> per occurrence across all
-    /// open documents, or <c>null</c> if the symbol cannot be found.
+    /// A task resolving to a <see cref="LocationContainer"/> with one <see cref="Location"/> per occurrence across the
+    /// current document and any import-connected open documents, or <c>null</c> if the symbol cannot be found.
     /// </returns>
     public override Task<LocationContainer?> Handle(ReferenceParams request, CancellationToken cancellationToken)
     {
@@ -122,13 +128,8 @@ public class ReferencesHandler(DocumentStateManager documentStateManager)
                 });
             }
 
-            foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.AllDocuments())
+            foreach ((DocumentUri otherUri, DocumentState otherState) in this.documentStateManager.GetImportConnectedDocuments(request.TextDocument.Uri))
             {
-                if (otherUri.ToString() == request.TextDocument.Uri.ToString())
-                {
-                    continue;
-                }
-
                 string otherSource = otherState.Source;
                 if (string.IsNullOrEmpty(otherSource))
                 {

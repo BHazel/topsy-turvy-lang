@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
@@ -17,26 +18,13 @@ public class TopsyTurvyToUtopIRTransformerTests
     private static readonly SourceSpan PlaceholderSpan = new(new(0, 0), new(0, 0));
 
     /// <summary>
-    /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.
-    /// </summary>
-    /// <param name="statements">The statements to include.</param>
-    /// <returns>A <see cref="ProgramNode"/> containing those statements.</returns>
-    private static ProgramNode Programme(params Statement[] statements) =>
-        new()
-        {
-            Title = "Test",
-            Statements = statements,
-            Span = PlaceholderSpan
-        };
-
-    /// <summary>
     /// Tests that a declaration with no initial value emits a single <c>welcome</c> instruction.
     /// </summary>
     [Fact]
     public void Transform_DeclarationWithNoInitialValue_EmitsSingleWelcomeInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan });
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan });
 
         UtopIRProgram result = this.transformer.Transform(program);
 
@@ -56,6 +44,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "n",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Integer,
                 InitialValue = new LiteralNode { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -81,6 +70,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "big_number",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Long,
                 InitialValue = new LiteralNode() { Value = 200, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -105,7 +95,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithMismatchedLiteralType_InsertsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "big_number", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "big_number", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "big_number",
@@ -129,10 +119,11 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_DeclarationWithIdentifierInitialValue_EmitsWelcomeThenAppointWithVariable()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new DeclarationNode()
             {
                 Name = "y",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Integer,
                 InitialValue = new IdentifierNode { Name = "x", Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -157,8 +148,8 @@ public class TopsyTurvyToUtopIRTransformerTests
             {
                 Declarations =
                 [
-                    new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-                    new DeclarationNode() { Name = "b", Type = LiteralType.Long, Span = PlaceholderSpan }
+                    new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+                    new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan }
                 ],
                 Span = PlaceholderSpan
             });
@@ -177,7 +168,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithLiteralValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "x",
@@ -200,8 +191,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_AssignmentWithIdentifierValue_EmitsSingleAppointInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "y", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "y", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "y",
@@ -273,9 +264,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRArithmeticOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -314,9 +305,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOperatorOnFloats_MapsToFloatOperation(Operator topsyTurvyOperator, UtopIRArithmeticOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -346,9 +337,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedIntegerAndFloatArithmetic_WidensIntegerAndUsesFloatOperation()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Double, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -386,6 +377,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "Foot4",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Single,
                 InitialValue = new LiteralNode() { Value = 8.5, Type = LiteralType.Double, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -409,9 +401,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOnTwoVariables_EmitsArithmeticInstructionWithCorrectTempName()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "Peer1", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "Peer2", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -452,9 +444,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_BinaryBitwiseOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRBitwiseOperation expectedUtopirOperation)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -486,8 +478,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_InversionOf_EmitsInvInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -516,8 +508,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpOnChancellor_EmitsBitwiseInstructionWithMatchingShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -546,8 +538,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionDown_EmitsBitwiseInstructionWithShiftAmountOfOne()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -575,9 +567,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpWithByClause_EmitsBitwiseInstructionWithTransformedShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -609,9 +601,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_TranspositionUpWithByClauseOfNarrowerType_InsertsWereInstructionForShiftAmount()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "shiftAmount", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "shiftAmount", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -646,9 +638,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedTypeBitwise_WidensNarrowerOperand()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Long, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -676,6 +668,231 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that each comparison Topsy Turvy operator maps to the correct <see cref="UtopIRComparisonOperation"/> in the emitted instruction, and that the target is always declared as <see cref="UtopIRType.Decree"/> regardless of the integer operand type.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR operation.</param>
+    [Theory]
+    [InlineData(Operator.Alike, UtopIRComparisonOperation.Alike)]
+    [InlineData(Operator.Unlike, UtopIRComparisonOperation.Unlike)]
+    [InlineData(Operator.PreAdamite, UtopIRComparisonOperation.PreAdam)]
+    [InlineData(Operator.LowerDegree, UtopIRComparisonOperation.LowerDeg)]
+    public void Transform_ComparisonOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRComparisonOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(expectedUtopirOperation);
+    }
+
+    /// <summary>
+    /// Tests that each comparison Topsy Turvy operator maps to the corresponding <c>.f</c>-suffixed <see cref="UtopIRComparisonOperation"/> when the operands are floating-point.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR floating-point operation.</param>
+    [Theory]
+    [InlineData(Operator.Alike, UtopIRComparisonOperation.AlikeFloat)]
+    [InlineData(Operator.Unlike, UtopIRComparisonOperation.UnlikeFloat)]
+    [InlineData(Operator.PreAdamite, UtopIRComparisonOperation.PreAdamFloat)]
+    [InlineData(Operator.LowerDegree, UtopIRComparisonOperation.LowerDegFloat)]
+    public void Transform_ComparisonOperatorOnFloats_MapsToFloatOperation(Operator topsyTurvyOperator, UtopIRComparisonOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Double, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(expectedUtopirOperation);
+    }
+
+    /// <summary>
+    /// Tests that a comparison between mismatched integer widths widens the narrower operand into a temporary register before comparing, matching the widening behaviour of <c>TransformArithmetic</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_MixedTypeComparison_WidensNarrowerOperand()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.PreAdamite,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        ComparisonInstruction comparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
+        comparison.Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        comparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        comparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that a comparison temporary register is always recorded with a declared type of <see cref="UtopIRType.Decree"/>, not the widened operand type, by nesting the comparison as an operand of an outer comparison and confirming no spurious <see cref="WereInstruction"/> is inserted for it.
+    /// </summary>
+    [Fact]
+    public void Transform_NestedComparison_RecordsDecreeTypeForComparisonTarget()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.Alike,
+                    Arguments =
+                    [
+                        new PrefixExpressionNode()
+                        {
+                            Operator = Operator.Alike,
+                            Arguments =
+                            [
+                                new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                                new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                            ],
+                            Span = PlaceholderSpan
+                        },
+                        new IdentifierNode() { Name = "flag", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ComparisonInstruction innerComparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction outerComparison = result.Instructions[5].ShouldBeOfType<ComparisonInstruction>();
+        outerComparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(innerComparison.Target.Name);
+        outerComparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("flag");
+    }
+
+    /// <summary>
+    /// Tests that each binary logical Topsy Turvy operator maps to the correct <see cref="UtopIRLogicalOperation"/> in the emitted instruction, with no widening of the already-<c>decree</c> operands.
+    /// </summary>
+    /// <param name="topsyTurvyOperator">The Topsy Turvy operator to test.</param>
+    /// <param name="expectedUtopirOperation">The expected UtopIR operation.</param>
+    [Theory]
+    [InlineData(Operator.Both, UtopIRLogicalOperation.Both)]
+    [InlineData(Operator.Either, UtopIRLogicalOperation.Either)]
+    public void Transform_LogicalOperator_MapsToCorrectOperation(Operator topsyTurvyOperator, UtopIRLogicalOperation expectedUtopirOperation)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = topsyTurvyOperator,
+                    Arguments =
+                    [
+                        new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
+                        new IdentifierNode() { Name = "b", Span = PlaceholderSpan }
+                    ],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        LogicalInstruction logical = result.Instructions[3].ShouldBeOfType<LogicalInstruction>();
+        logical.Operation.ShouldBe(expectedUtopirOperation);
+        logical.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        logical.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
+    }
+
+    /// <summary>
+    /// Tests that <c>HARDLY EVER</c> emits a <see cref="HardlyInstruction"/> with the operand and a temporary register named after the operation.
+    /// </summary>
+    [Fact]
+    public void Transform_HardlyEver_EmitsHardlyInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new AssignmentNode()
+            {
+                Target = "result",
+                Value = new PrefixExpressionNode()
+                {
+                    Operator = Operator.HardlyEver,
+                    Arguments = [new IdentifierNode() { Name = "a", Span = PlaceholderSpan }],
+                    Span = PlaceholderSpan
+                },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        HardlyInstruction hardly = result.Instructions[2].ShouldBeOfType<HardlyInstruction>();
+        hardly.Target.Name.ShouldBe("_hardly_a");
+        hardly.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
+        result.Instructions[3].ShouldBeOfType<AppointInstruction>()
+            .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_hardly_a");
+    }
+
+    /// <summary>
     /// Tests that a <c>stitch</c> declaration initialised with a character literal emits <c>welcome</c> then <c>appoint</c> with no intermediate cast.
     /// </summary>
     [Fact]
@@ -685,6 +902,7 @@ public class TopsyTurvyToUtopIRTransformerTests
             new DeclarationNode()
             {
                 Name = "Letter",
+                NameSpan = PlaceholderSpan,
                 Type = LiteralType.Char,
                 InitialValue = new LiteralNode() { Value = 'A', Type = LiteralType.Char, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
@@ -705,8 +923,8 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ExpressionCastToStitch_EmitsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "n", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "c", Type = LiteralType.Char, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "n", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "c", NameSpan = PlaceholderSpan, Type = LiteralType.Char, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "c",
@@ -736,7 +954,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ExpressionCast_EmitsWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -769,9 +987,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_MixedTypeArithmetic_WidensNarrowerOperandRegardlessOfPosition(LiteralType aType, LiteralType bType, string narrowerOperandName)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = aType, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = bType, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = aType, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = bType, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -805,9 +1023,9 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_SameTypeArithmetic_EmitsNoWereInstruction()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -839,7 +1057,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_ArithmeticOnTwoLiterals_EmbedLiteralValuesInTempName()
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -870,10 +1088,10 @@ public class TopsyTurvyToUtopIRTransformerTests
     {
         // SUM OF PRODUCT OF a AND b AND c
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "a", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "b", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "c", Type = LiteralType.Integer, Span = PlaceholderSpan },
-            new DeclarationNode() { Name = "result", Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "a", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "b", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "c", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
             new AssignmentNode()
             {
                 Target = "result",
@@ -936,7 +1154,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     public void Transform_DeclarationType_MapsToCorrectUtopIRType(LiteralType topsyTurvyType, UtopIRType expectedUtopirType)
     {
         ProgramNode program = Programme(
-            new DeclarationNode() { Name = "v", Type = topsyTurvyType, Span = PlaceholderSpan });
+            new DeclarationNode() { Name = "v", NameSpan = PlaceholderSpan, Type = topsyTurvyType, Span = PlaceholderSpan });
 
         UtopIRProgram result = this.transformer.Transform(program);
 
@@ -955,7 +1173,7 @@ public class TopsyTurvyToUtopIRTransformerTests
                 Target = "x",
                 Value = new PrefixExpressionNode
                 {
-                    Operator = Operator.Both,
+                    Operator = Operator.WovenOf,
                     Arguments =
                     [
                         new IdentifierNode() { Name = "a", Span = PlaceholderSpan },
@@ -982,19 +1200,19 @@ public class TopsyTurvyToUtopIRTransformerTests
         ProgramNode program = Programme(
             new DeclarationNode()
             {
-                Name = "Peer1", Type = LiteralType.Integer,
+                Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new LiteralNode() { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
             },
             new DeclarationNode()
             {
-                Name = "Peer2", Type = LiteralType.Integer,
+                Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new LiteralNode() { Value = 30, Type = LiteralType.Integer, Span = PlaceholderSpan },
                 Span = PlaceholderSpan
             },
             new DeclarationNode()
             {
-                Name = "PeerResult", Type = LiteralType.Integer,
+                Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer,
                 InitialValue = new PrefixExpressionNode()
                 {
                     Operator = Operator.Sum,
@@ -1037,4 +1255,886 @@ public class TopsyTurvyToUtopIRTransformerTests
         result.Instructions[7].ShouldBeOfType<FindInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PeerResult");
     }
+
+    /// <summary>
+    /// Tests that an If/Else-If/Else conditional produces the exact expected instruction and
+    /// label sequence.
+    /// </summary>
+    [Fact]
+    public void Transform_ConditionalWithElseIfAndElse_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(23), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new ConditionalNode()
+            {
+                Condition = Prefix(Operator.PreAdamite, Identifier("Peer1"), Identifier("Peer2")),
+                TrueBlock = [Assign("PeerResult", IntLiteral(1))],
+                ElseIfs = [new ElseIfBranch(Prefix(Operator.Alike, Identifier("Peer1"), Identifier("Peer2")), [Assign("PeerResult", IntLiteral(0))])],
+                ElseBlock = [Assign("PeerResult", IntLiteral(-1))],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(19);
+        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        result.Instructions[6].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
+        result.Instructions[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
+        result.Instructions[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
+        result.Instructions[9].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
+        result.Instructions[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
+        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Instructions[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
+        result.Instructions[14].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
+        result.Instructions[15].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Instructions[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
+        result.Instructions[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
+        result.Instructions[18].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
+    }
+
+    /// <summary>
+    /// Tests that a conditional with no else block branches its fallback directly to the closing
+    /// label, with no else label emitted at all.
+    /// </summary>
+    [Fact]
+    public void Transform_ConditionalWithNoElseBlock_FallsThroughToClosingLabel()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "A", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "R", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new ConditionalNode()
+            {
+                Condition = Identifier("A"),
+                TrueBlock = [Assign("R", IntLiteral(1))],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(8);
+        result.Instructions[2].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_A");
+        result.Instructions[3].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Instructions.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name == "T1O");
+    }
+
+    /// <summary>
+    /// Tests that a ternary expression produces the exact expected instruction and label
+    /// sequence.
+    /// </summary>
+    /// <remarks>
+    /// Follows the generic expression-transform contract: both branches <c>appoint</c> into a
+    /// shared temporary register that is declared with <c>welcome</c> before the branch, with the enclosing
+    /// assignment appointing from that register afterwards.
+    /// </remarks>
+    [Fact]
+    public void Transform_Ternary_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(23), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            Assign("PeerResult", new TernaryExpressionNode()
+            {
+                TrueValue = IntLiteral(1),
+                Condition = Prefix(Operator.Alike, Identifier("Peer1"), Identifier("Peer2")),
+                FalseValue = IntLiteral(0),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(16);
+        ComparisonInstruction comparison = result.Instructions[5].ShouldBeOfType<ComparisonInstruction>();
+        UtopIRVariable sharedTemporary = result.Instructions[6].ShouldBeOfType<WelcomeInstruction>().Target;
+        sharedTemporary.Name.ShouldNotBe(comparison.Target.Name);
+        result.Instructions[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
+        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
+        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
+        AppointInstruction trueAppoint = result.Instructions[10].ShouldBeOfType<AppointInstruction>();
+        trueAppoint.Target.Name.ShouldBe(sharedTemporary.Name);
+        trueAppoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
+        AppointInstruction falseAppoint = result.Instructions[13].ShouldBeOfType<AppointInstruction>();
+        falseAppoint.Target.Name.ShouldBe(sharedTemporary.Name);
+        falseAppoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
+        result.Instructions[14].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
+        AppointInstruction finalAppoint = result.Instructions[15].ShouldBeOfType<AppointInstruction>();
+        finalAppoint.Target.Name.ShouldBe("PeerResult");
+        finalAppoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(sharedTemporary.Name);
+    }
+
+    /// <summary>
+    /// Tests that a guard clause produces the exact expected instruction and label sequence.
+    /// </summary>
+    [Fact]
+    public void Transform_Guard_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Peer2", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(23), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new GuardNode()
+            {
+                Condition = Prefix(Operator.Alike, Identifier("Peer1"), Identifier("Peer2")),
+                ElseBlock = [Assign("PeerResult", IntLiteral(0))],
+                Span = PlaceholderSpan
+            },
+            Assign("PeerResult", IntLiteral(1)));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(12);
+        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
+        result.Instructions[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("G1O");
+        result.Instructions[7].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("G1UO");
+        result.Instructions[8].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1O");
+        result.Instructions[9].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
+        result.Instructions[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1UO");
+        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name.StartsWith("G1QS"));
+    }
+
+    /// <summary>
+    /// Tests that a switch block with a fallthrough case and a default block produces the exact
+    /// expected instruction and label sequence.
+    /// </summary>
+    [Fact]
+    public void Transform_SwitchWithFallthroughAndDefault_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Peer1", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(10), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "PeerResult", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new SwitchNode()
+            {
+                Expression = Identifier("Peer1"),
+                Cases =
+                [
+                    new SwitchCase(10, [Assign("PeerResult", IntLiteral(1)), new BreakNode() { Span = PlaceholderSpan }]),
+                    new SwitchCase(20, []),
+                    new SwitchCase(40, [Assign("PeerResult", IntLiteral(2)), new BreakNode() { Span = PlaceholderSpan }]),
+                    new SwitchCase(100, [Assign("PeerResult", IntLiteral(3))])
+                ],
+                DefaultBlock = [Assign("PeerResult", IntLiteral(-1))],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(24);
+        result.Instructions[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_10");
+        result.Instructions[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_20");
+        result.Instructions[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_40");
+        result.Instructions[10].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_100");
+        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1FAIL");
+        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_10");
+        result.Instructions[13].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions[14].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
+        result.Instructions[15].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_20");
+        result.Instructions[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_40");
+        result.Instructions[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+        result.Instructions[18].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
+        result.Instructions[19].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_100");
+        result.Instructions[20].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
+        result.Instructions[21].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1FAIL");
+        result.Instructions[22].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
+        result.Instructions[23].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1NCBMS");
+    }
+
+    /// <summary>
+    /// Tests that an infinite loop produces the exact expected instruction and label sequence.
+    /// </summary>
+    [Fact]
+    public void Transform_InfiniteLoop_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Toggle", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Infinite,
+                Body = [Assign("Toggle", Prefix(Operator.HardlyEver, Identifier("Toggle")))],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(7);
+        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1");
+        result.Instructions[3].ShouldBeOfType<HardlyInstruction>();
+        result.Instructions[4].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Toggle");
+        result.Instructions[5].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1");
+        result.Instructions[6].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1TTE");
+    }
+
+    /// <summary>
+    /// Tests that a Whilst loop produces the exact expected instruction and label sequence.
+    /// </summary>
+    [Fact]
+    public void Transform_WhilstLoop_ReproducesSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Total", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(0), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Prefix(Operator.LowerDegree, Identifier("Counter"), IntLiteral(10)),
+                Body =
+                [
+                    Assign("Total", Prefix(Operator.Sum, Identifier("Total"), Identifier("Counter"))),
+                    Assign("Counter", Prefix(Operator.Sum, Identifier("Counter"), IntLiteral(2)))
+                ],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(13);
+        result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
+        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.LowerDeg);
+        result.Instructions[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("L1WTTE");
+        result.Instructions[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
+        result.Instructions[9].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Instructions[10].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
+        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
+        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1WTTE");
+    }
+
+    /// <summary>
+    /// Tests that an ascending loop produces the exact expected instruction and label sequence.
+    /// </summary>
+    /// <remarks>
+    /// The condition is checked before the first iteration (a <c>sailalike</c> exit), and a
+    /// distinct <c>OM</c> label separates the body from the increment.
+    /// </remarks>
+    [Fact]
+    public void Transform_AscendingLoop_ReproducesCorrectedSpecificationExample()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Total", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(0), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Label = "Incrementer",
+                Type = LoopType.Ascending,
+                Condition = Prefix(Operator.PreAdamite, Identifier("Counter"), IntLiteral(10)),
+                LoopVariable = "Counter",
+                Body = [Assign("Total", Prefix(Operator.Sum, Identifier("Total"), Identifier("Counter")))],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(14);
+        result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
+        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        result.Instructions[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1ASCTTE");
+        result.Instructions[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
+        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCOM");
+        ArithmeticInstruction step = result.Instructions[10].ShouldBeOfType<ArithmeticInstruction>();
+        step.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        step.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
+        result.Instructions[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
+        result.Instructions[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCTTE");
+    }
+
+    /// <summary>
+    /// Tests that a descending loop uses <c>diff</c> for its step and the <c>DESC</c> label forms,
+    /// distinguishing it from the ascending case.
+    /// </summary>
+    [Fact]
+    public void Transform_DescendingLoop_UsesDiffAndDescendingLabels()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(10), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Descending,
+                Condition = Prefix(Operator.LowerDegree, Identifier("Counter"), IntLiteral(0)),
+                LoopVariable = "Counter",
+                Body = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(10);
+        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
+        result.Instructions[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1DESCTTE");
+        result.Instructions[5].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCOM");
+        result.Instructions[6].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Diff);
+        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
+        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCTTE");
+    }
+
+    /// <summary>
+    /// Tests that the explicit <c>BY</c> step expression of an ascending loop is transformed
+    /// dynamically each time and not treated as a compile-time constant.
+    /// </summary>
+    [Fact]
+    public void Transform_AscendingLoop_WithExplicitStep_TransformsStepExpression()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(0), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "StepAmount", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(3), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Ascending,
+                Condition = Prefix(Operator.PreAdamite, Identifier("Counter"), IntLiteral(20)),
+                LoopVariable = "Counter",
+                Step = Identifier("StepAmount"),
+                Body = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ArithmeticInstruction step = result.Instructions.OfType<ArithmeticInstruction>().Single();
+        step.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        step.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("StepAmount");
+    }
+
+    /// <summary>
+    /// Tests that an ascending loop with no explicit step defaults to a literal <c>1</c> boxed as
+    /// the declared type of the loop variable itself.
+    /// </summary>
+    [Fact]
+    public void Transform_AscendingLoop_WithNoStepAndChancellorLoopVariable_DefaultsToLongOne()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Long, InitialValue = LongLiteral(1L), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Ascending,
+                Condition = Prefix(Operator.PreAdamite, Identifier("Counter"), LongLiteral(10L)),
+                LoopVariable = "Counter",
+                Body = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ArithmeticInstruction step = result.Instructions.OfType<ArithmeticInstruction>().Single();
+        LiteralOperand stepOperand = step.Operand2.ShouldBeOfType<LiteralOperand>();
+        stepOperand.Value.ShouldBeOfType<long>();
+        stepOperand.Value.ShouldBe(1L);
+    }
+
+    /// <summary>
+    /// Tests that <c>THAT WILL DO.</c> inside the body of a Whilst loop sails to the closing
+    /// label of the loop itself.
+    /// </summary>
+    [Fact]
+    public void Transform_BreakInsideWhilstLoop_SailsToLoopClosingLabel()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body = [new BreakNode() { Span = PlaceholderSpan }],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        string closingLabel = result.Instructions[3].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
+        result.Instructions[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(closingLabel);
+    }
+
+    /// <summary>
+    /// Tests that <c>ONCE MORE.</c> inside the body of a Whilst loop sails to the opening
+    /// (condition-check) label of the loop itself.
+    /// </summary>
+    [Fact]
+    public void Transform_ContinueInsideWhilstLoop_SailsToLoopOpeningLabel()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body = [new ContinueNode() { Span = PlaceholderSpan }],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        string openingLabel = result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name;
+        result.Instructions[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(openingLabel);
+    }
+
+    /// <summary>
+    /// Tests that <c>THAT WILL DO.</c> inside a switch nested in a loop targets the closing label
+    /// of the switch itself, not that of the enclosing loop.
+    /// </summary>
+    /// <remarks>
+    /// Matches <c>Interpreter.ExecuteSwitch</c> catching the break itself.
+    /// </remarks>
+    [Fact]
+    public void Transform_BreakInsideSwitchInsideLoop_SailsToSwitchClosingLabel_NotLoopClosingLabel()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "X", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body =
+                [
+                    new SwitchNode()
+                    {
+                        Expression = Identifier("X"),
+                        Cases = [new SwitchCase(1, [new BreakNode() { Span = PlaceholderSpan }])],
+                        Span = PlaceholderSpan
+                    }
+                ],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        string loopClosingLabel = result.Instructions[5].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
+        SailInstruction breakSail = result.Instructions.OfType<SailInstruction>().First(s => s.Label.Name.StartsWith("C2"));
+        breakSail.Label.Name.ShouldBe("C2NCBMS");
+        breakSail.Label.Name.ShouldNotBe(loopClosingLabel);
+    }
+
+    /// <summary>
+    /// Tests that <c>ONCE MORE.</c> inside a switch nested in a loop skips the switch entirely and
+    /// targets the continue target of the loop itself.
+    /// </summary>
+    [Fact]
+    public void Transform_ContinueInsideSwitchInsideLoop_SailsToLoopContinueTarget_SkippingSwitch()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "X", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body =
+                [
+                    new SwitchNode()
+                    {
+                        Expression = Identifier("X"),
+                        Cases = [new SwitchCase(1, [new ContinueNode() { Span = PlaceholderSpan }])],
+                        Span = PlaceholderSpan
+                    }
+                ],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        string loopOpeningLabel = result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name;
+        SailInstruction continueSail = result.Instructions.OfType<SailInstruction>().First(sailInstruction => sailInstruction.Label.Name == loopOpeningLabel);
+        continueSail.Label.Name.ShouldBe(loopOpeningLabel);
+    }
+
+    /// <summary>
+    /// Tests that <c>THAT WILL DO.</c> with no enclosing switch or loop throws
+    /// <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_BreakWithNoEnclosingConstruct_ThrowsInvalidOperationException()
+    {
+        ProgramNode program = Programme(new BreakNode() { Span = PlaceholderSpan });
+
+        Should.Throw<InvalidOperationException>(() => this.transformer.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>ONCE MORE.</c> with no enclosing loop throws
+    /// <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_ContinueWithNoEnclosingConstruct_ThrowsInvalidOperationException()
+    {
+        ProgramNode program = Programme(new ContinueNode() { Span = PlaceholderSpan });
+
+        Should.Throw<InvalidOperationException>(() => this.transformer.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that the label counter is a single sequence shared across every control-flow
+    /// construct kind.
+    /// </summary>
+    /// <remarks>
+    /// A loop containing a nested conditional numbers the loop <c>1</c> and the conditional
+    /// <c>2</c>, not <c>1</c> again.
+    /// </remarks>
+    [Fact]
+    public void Transform_LoopContainingConditional_SharesGlobalCounterAcrossConstructKinds()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body =
+                [
+                    new ConditionalNode()
+                    {
+                        Condition = Identifier("Flag"),
+                        TrueBlock = [new BreakNode() { Span = PlaceholderSpan }],
+                        Span = PlaceholderSpan
+                    }
+                ],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_FLAG");
+        LabelInstruction conditionalTrueLabel = result.Instructions.OfType<LabelInstruction>().First(l => l.Name.Name.StartsWith("T"));
+        conditionalTrueLabel.Name.Name.ShouldBe("T2QS_FLAG");
+    }
+
+    /// <summary>
+    /// Tests that a conditional whose true branch ends in <c>ONCE MORE.</c> and whose else-if
+    /// branch ends in <c>THAT WILL DO.</c> does not append a redundant, unreachable sail after
+    /// either branch.
+    /// </summary>
+    [Fact]
+    public void Transform_ConditionalWithBreakAndContinueBranches_SkipsRedundantClosingSails()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Identifier("Flag"),
+                Body =
+                [
+                    new ConditionalNode()
+                    {
+                        Condition = Identifier("A"),
+                        TrueBlock = [new ContinueNode() { Span = PlaceholderSpan }],
+                        ElseIfs = [new ElseIfBranch(Identifier("B"), [new BreakNode() { Span = PlaceholderSpan }])],
+                        Span = PlaceholderSpan
+                    }
+                ],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(14);
+        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_FLAG");
+        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2OIN_B");
+        result.Instructions[10].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1WTTE");
+        result.Instructions[11].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2SMFT");
+    }
+
+    /// <summary>
+    /// Tests that a ternary expression with branches of different literal types widens the shared
+    /// temporary to the wider type, casting only the narrower branch.
+    /// </summary>
+    [Fact]
+    public void Transform_Ternary_WithDifferentBranchTypes_WidensToWiderType()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            Assign("Result", new TernaryExpressionNode()
+            {
+                TrueValue = IntLiteral(1),
+                Condition = Identifier("Flag"),
+                FalseValue = LongLiteral(2L),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction sharedTemporary = result.Instructions[3].ShouldBeOfType<WelcomeInstruction>();
+        sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
+        WereInstruction were = result.Instructions[7].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2L);
+    }
+
+    /// <summary>
+    /// Tests that a ternary expression with identifier branches of different declared types widens
+    /// the shared temporary to the wider type, casting only the narrower branch.
+    /// </summary>
+    [Fact]
+    public void Transform_Ternary_WithIdentifierBranchesOfDifferentTypes_WidensToWiderType()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "A", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "B", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            Assign("Result", new TernaryExpressionNode()
+            {
+                TrueValue = Identifier("A"),
+                Condition = Identifier("Flag"),
+                FalseValue = Identifier("B"),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction sharedTemporary = result.Instructions[5].ShouldBeOfType<WelcomeInstruction>();
+        sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
+        WereInstruction were = result.Instructions[9].ShouldBeOfType<WereInstruction>();
+        were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("A");
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+    }
+
+    /// <summary>
+    /// Tests that a ternary branch built from <c>NOT</c> infers its type from its own argument.
+    /// </summary>
+    [Fact]
+    public void Transform_Ternary_WithInversionOfBranch_InfersOperandTypeFromArgument()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            Assign("Result", new TernaryExpressionNode()
+            {
+                TrueValue = Prefix(Operator.InversionOf, Identifier("Flag")),
+                Condition = Identifier("Flag"),
+                FalseValue = Identifier("Flag"),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        sharedTemporary.Type.ShouldBe(UtopIRType.Decree);
+        result.Instructions.OfType<WereInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that a ternary branch built from a comparison operator always infers <see cref="UtopIRType.Decree"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_Ternary_WithComparisonBranch_InfersDecreeType()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Result", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, Span = PlaceholderSpan },
+            Assign("Result", new TernaryExpressionNode()
+            {
+                TrueValue = Prefix(Operator.Alike, IntLiteral(1), IntLiteral(2)),
+                Condition = Identifier("Flag"),
+                FalseValue = Identifier("Flag"),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        sharedTemporary.Type.ShouldBe(UtopIRType.Decree);
+        result.Instructions.OfType<WereInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that a ternary branch built from an arithmetic expression infers its own widened
+    /// operand type, which the outer ternary then widens again against the other branch.
+    /// </summary>
+    [Fact]
+    public void Transform_Ternary_WithArithmeticBranch_InfersWidenedOperandType()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Flag", NameSpan = PlaceholderSpan, Type = LiteralType.Boolean, InitialValue = BoolLiteral(true), Span = PlaceholderSpan },
+            new DeclarationNode() { Name = "Result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            Assign("Result", new TernaryExpressionNode()
+            {
+                TrueValue = Prefix(Operator.Sum, IntLiteral(1), IntLiteral(2)),
+                Condition = Identifier("Flag"),
+                FalseValue = LongLiteral(3L),
+                Span = PlaceholderSpan
+            }));
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
+        result.Instructions.OfType<WereInstruction>().ShouldNotBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that a nested compound condition (a comparison wrapping an arithmetic sub-expression)
+    /// builds its label text recursively, embedding the sub-expression own mnemonic and operands.
+    /// </summary>
+    [Fact]
+    public void Transform_WhilstLoop_WithNestedCompoundCondition_BuildsRecursiveLabelText()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Prefix(Operator.Alike, Prefix(Operator.Remainder, Identifier("Counter"), IntLiteral(2)), IntLiteral(0)),
+                Body = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_ALIKE_REM_COUNTER_2_0");
+    }
+
+    /// <summary>
+    /// Tests that a unary operator used as a loop condition maps to its correct label mnemonic.
+    /// </summary>
+    /// <remarks>
+    /// An integer operand is used for every case, even though <see cref="Operator.InversionOf"/>
+    /// and <see cref="Operator.HardlyEver"/> are semantically boolean-only, since
+    /// <see cref="Operator.TranspositionUp"/>/<see cref="Operator.TranspositionDown"/>
+    /// default-shift path requires the shifted value declared type to be an integer type.
+    /// </remarks>
+    [Theory]
+    [InlineData(Operator.InversionOf, "INV")]
+    [InlineData(Operator.HardlyEver, "HARDLY")]
+    [InlineData(Operator.TranspositionUp, "TRANSUP")]
+    [InlineData(Operator.TranspositionDown, "TRANSDOWN")]
+    public void BuildConditionText_ForUnaryOperator_UsesCorrectMnemonic(Operator theOperator, string expectedMnemonic)
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Counter", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(1), Span = PlaceholderSpan },
+            new LoopNode()
+            {
+                Type = LoopType.Whilst,
+                Condition = Prefix(theOperator, Identifier("Counter")),
+                Body = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe($"L1W_{expectedMnemonic}_COUNTER");
+    }
+
+    /// <summary>
+    /// Tests that a switch case with a <c>null</c> literal value is treated as <c>0</c> in its
+    /// label text.
+    /// </summary>
+    [Fact]
+    public void Transform_SwitchWithNullLiteralCase_TreatsAsZero()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode()
+            {
+                Name = "Name",
+                NameSpan = PlaceholderSpan,
+                Type = LiteralType.String,
+                InitialValue = new LiteralNode() { Value = "x", Type = LiteralType.String, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            },
+            new SwitchNode()
+            {
+                Expression = Identifier("Name"),
+                Cases = [new SwitchCase(null, [])],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.OfType<SailAlikeInstruction>().Single().Label.Name.ShouldBe("C1AS_0");
+    }
+
+    /// <summary>
+    /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.
+    /// </summary>
+    /// <param name="statements">The statements to include.</param>
+    /// <returns>A <see cref="ProgramNode"/> containing those statements.</returns>
+    private static ProgramNode Programme(params Statement[] statements) =>
+        new()
+        {
+            Title = "Test",
+            Statements = statements,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
+    /// Builds an <see cref="IdentifierNode"/> referencing the given name.
+    /// </summary>
+    /// <param name="name">The name of the variable to reference.</param>
+    /// <returns>The constructed <see cref="IdentifierNode"/>.</returns>
+    private static IdentifierNode Identifier(string name) => new()
+    {
+        Name = name,
+        Span = PlaceholderSpan
+    };
+
+    /// <summary>
+    /// Builds an integer <see cref="LiteralNode"/>.
+    /// </summary>
+    /// <param name="value">The integer value to wrap.</param>
+    /// <returns>The constructed <see cref="LiteralNode"/>.</returns>
+    private static LiteralNode IntLiteral(int value) => new()
+    {
+        Value = value,
+        Type = LiteralType.Integer,
+        Span = PlaceholderSpan
+    };
+
+    /// <summary>
+    /// Builds a long <see cref="LiteralNode"/>.
+    /// </summary>
+    /// <param name="value">The long value to wrap.</param>
+    /// <returns>The constructed <see cref="LiteralNode"/>.</returns>
+    private static LiteralNode LongLiteral(long value) => new()
+    {
+        Value = value,
+        Type = LiteralType.Long,
+        Span = PlaceholderSpan
+    };
+
+    /// <summary>
+    /// Builds a boolean <see cref="LiteralNode"/>.
+    /// </summary>
+    /// <param name="value">The boolean value to wrap.</param>
+    /// <returns>The constructed <see cref="LiteralNode"/>.</returns>
+    private static LiteralNode BoolLiteral(bool value) => new()
+    {
+        Value = value,
+        Type = LiteralType.Boolean,
+        Span = PlaceholderSpan
+    };
+
+    /// <summary>
+    /// Builds a binary or unary <see cref="PrefixExpressionNode"/>.
+    /// </summary>
+    /// <param name="theOperator">The operator to apply.</param>
+    /// <param name="arguments">The operator arguments (one for a unary operator, two for a binary operator).</param>
+    /// <returns>The constructed <see cref="PrefixExpressionNode"/>.</returns>
+    private static PrefixExpressionNode Prefix(Operator theOperator, params Expression[] arguments) =>
+        new()
+        {
+            Operator = theOperator,
+            Arguments = arguments,
+            Span = PlaceholderSpan
+        };
+
+    /// <summary>
+    /// Builds an <see cref="AssignmentNode"/>.
+    /// </summary>
+    /// <param name="target">The name of the variable being assigned to.</param>
+    /// <param name="value">The expression to assign.</param>
+    /// <returns>The constructed <see cref="AssignmentNode"/>.</returns>
+    private static AssignmentNode Assign(string target, Expression value) =>
+        new()
+        {
+            Target = target,
+            Value = value,
+            Span = PlaceholderSpan
+        };
 }

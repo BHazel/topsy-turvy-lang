@@ -71,6 +71,25 @@ internal sealed class TypeCheckVisitor
     private readonly List<Diagnostic> diagnostics = [];
 
     /// <summary>
+    /// The dot-joined namespace paths opened via <c>PRAY RECOGNISE</c> statements encountered so far
+    /// in <see cref="CheckStatements"/>, used by <see cref="ResolveFunctionSignature"/> to resolve a
+    /// bare <c>SUMMON</c> name.
+    /// </summary>
+    private readonly HashSet<string> openNamespaces = [];
+
+    /// <summary>
+    /// The dot-joined namespace path declared by the entry programme, or <c>null</c>
+    /// if it declares none.
+    /// </summary>
+    /// <remarks>
+    /// Set once in <see cref="Visit"/> before either pass runs.  Only the entry programme own body is
+    /// ever checked by <see cref="CheckStatements"/>.  Imported files contribute signatures only, their
+    /// bodies are never themselves checked so this is a constant for the whole pass rather than a
+    /// per-call-frame value.
+    /// </remarks>
+    private string? entryNamespace;
+
+    /// <summary>
     /// A stack of scope frames, each mapping variable and parameter names to their declared <see cref="LiteralType"/>.
     /// </summary>
     /// <remarks>
@@ -92,6 +111,20 @@ internal sealed class TypeCheckVisitor
     /// and <see cref="PopScope"/>.
     /// </remarks>
     private readonly Stack<Dictionary<string, LiteralType>> arrayElementTypeStack = new();
+
+    /// <summary>
+    /// A parallel stack to <see cref="scopeStack"/>, tracking the declared pointee type of each pointer variable
+    /// in the current scope chain.
+    /// </summary>
+    /// <remarks>
+    /// Pointer variables are recorded as <see cref="LiteralType.Pointer"/> in <see cref="scopeStack"/>, which
+    /// carries no pointee-type information.  This companion stack stores the pointee type separately, following
+    /// the exact same pattern as <see cref="arrayElementTypeStack"/>, so that pointer assignment
+    /// (<see cref="CheckAssignment"/>), dereference (<see cref="InferDereference"/>) and dereference assignment
+    /// (<see cref="CheckDereferenceAssignment"/>) can verify type compatibility.  It is kept in sync with
+    /// <see cref="scopeStack"/> by <see cref="PushScope"/> and <see cref="PopScope"/>.
+    /// </remarks>
+    private readonly Stack<Dictionary<string, LiteralType>> pointerPointeeTypeStack = new();
 
     /// <summary>
     /// A stack of the declared return types of the functions currently being checked, innermost at the top.
@@ -124,14 +157,56 @@ internal sealed class TypeCheckVisitor
 
         this.scopeStack.Push(rootScope);
         this.arrayElementTypeStack.Push(rootArrayElementScope);
+        this.pointerPointeeTypeStack.Push(new(StringComparer.Ordinal));
 
-        this.CollectFunctionSignatures(program.Statements, sourceFileResolver, visitedImports: []);
+        this.entryNamespace = this.FindNamespaceDeclaration(program.Statements);
+        this.CollectFunctionSignatures(program.Statements, sourceFileResolver, visitedImports: [], namespacePrefix: this.entryNamespace);
         this.CheckStatements(program.Statements);
 
         this.scopeStack.Pop();
         this.arrayElementTypeStack.Pop();
+        this.pointerPointeeTypeStack.Pop();
         return new(this.model, this.diagnostics.AsReadOnly());
     }
+
+    /// <summary>
+    /// Finds the at-most-one namespace declaration in a top-level statement list, emitting an error
+    /// diagnostic for a second or subsequent one.
+    /// </summary>
+    /// <param name="statements">The statements to scan, typically an entire programme or imported file top-level body.</param>
+    /// <returns>The dot-joined namespace path, or <c>null</c> if the file declares no namespace.</returns>
+    private string? FindNamespaceDeclaration(IReadOnlyList<Statement> statements)
+    {
+        NamespaceDeclarationNode? declaration = null;
+        foreach (Statement statement in statements)
+        {
+            if (statement is NamespaceDeclarationNode namespaceDeclaration)
+            {
+                if (declaration is not null)
+                {
+                    this.Error("A file may declare at most one TOWN.", namespaceDeclaration.Span);
+                    continue;
+                }
+
+                declaration = namespaceDeclaration;
+            }
+        }
+
+        return declaration is not null
+            ? string.Join('.', declaration.Path)
+            : null;
+    }
+
+    /// <summary>
+    /// Prefixes a function name with its namespace path, if any.
+    /// </summary>
+    /// <param name="namespacePrefix">The dot-joined namespace path, or <c>null</c> for the global namespace.</param>
+    /// <param name="name">The bare function name.</param>
+    /// <returns><paramref name="name"/> unchanged when <paramref name="namespacePrefix"/> is <c>null</c>, otherwise <c>"{namespacePrefix}.{name}"</c>.</returns>
+    private static string QualifyName(string? namespacePrefix, string name) =>
+        namespacePrefix is null
+            ? name
+            : $"{namespacePrefix}.{name}";
 
     /// <summary>
     /// Walks the AST to collect all function signatures, including nested functions and those defined in
@@ -143,7 +218,13 @@ internal sealed class TypeCheckVisitor
     /// The filenames already imported in this pass, so a circular <c>PRAY ADMIT</c> chain terminates rather
     /// than recursing indefinitely.
     /// </param>
-    private void CollectFunctionSignatures(IReadOnlyList<Statement> statements, Func<string, string?>? sourceFileResolver, HashSet<string> visitedImports)
+    /// <param name="namespacePrefix">
+    /// The dot-joined namespace path every function signature collected from <paramref name="statements"/>
+    /// is qualified with, or <c>null</c> for the global namespace.  A nested function definition inherits
+    /// the same prefix as its enclosing statement list, since a namespace declaration cannot itself be
+    /// nested inside a function body.
+    /// </param>
+    private void CollectFunctionSignatures(IReadOnlyList<Statement> statements, Func<string, string?>? sourceFileResolver, HashSet<string> visitedImports, string? namespacePrefix)
     {
         foreach (Statement statement in statements)
         {
@@ -153,8 +234,8 @@ internal sealed class TypeCheckVisitor
                     [.. function.Parameters.Select(static parameter => parameter.Type)],
                     function.ReturnType);
 
-                this.model.SetFunctionSignature(function.Name, signature);
-                this.CollectFunctionSignatures(function.Body, sourceFileResolver, visitedImports);
+                this.model.SetFunctionSignature(QualifyName(namespacePrefix, function.Name), signature);
+                this.CollectFunctionSignatures(function.Body, sourceFileResolver, visitedImports, namespacePrefix);
             }
             else if (statement is ImportNode importNode && sourceFileResolver is not null && visitedImports.Add(importNode.FilePath))
             {
@@ -169,7 +250,9 @@ internal sealed class TypeCheckVisitor
     /// <remarks>
     /// An unresolvable or unparsable import is silently skipped here, since it will surface as
     /// a proper runtime diagnostic at execution time.  The first pass makes already-valid
-    /// imported functions known.
+    /// imported functions known.  The imported file own namespace, if it declares one via
+    /// <c>TOWN</c>, is discovered independently of the importing file namespace and used to
+    /// qualify only the functions collected from this call.
     /// </remarks>
     /// <param name="filePath">The imported file's path, as written in the <c>PRAY ADMIT</c> statement.</param>
     /// <param name="sourceFileResolver">Resolves an import's filename to its source text.</param>
@@ -185,7 +268,8 @@ internal sealed class TypeCheckVisitor
         ParseResult parseResult = new TopsyTurvyParser().TryParse(importedSource);
         if (parseResult.Success && parseResult.Program is not null)
         {
-            this.CollectFunctionSignatures(parseResult.Program.Statements, sourceFileResolver, visitedImports);
+            string? importedNamespace = this.FindNamespaceDeclaration(parseResult.Program.Statements);
+            this.CollectFunctionSignatures(parseResult.Program.Statements, sourceFileResolver, visitedImports, importedNamespace);
         }
     }
 
@@ -222,11 +306,17 @@ internal sealed class TypeCheckVisitor
             case ArrayDeclarationNode arrayDeclaration:
                 this.CheckArrayDeclaration(arrayDeclaration);
                 break;
+            case PointerDeclarationNode pointerDeclaration:
+                this.CheckPointerDeclaration(pointerDeclaration);
+                break;
             case AssignmentNode assignment:
                 this.CheckAssignment(assignment);
                 break;
             case ArrayElementAssignmentNode arrayAssignment:
                 this.CheckArrayElementAssignment(arrayAssignment);
+                break;
+            case DereferenceAssignmentNode dereferenceAssignment:
+                this.CheckDereferenceAssignment(dereferenceAssignment);
                 break;
             case InputNode input:
                 this.CheckInput(input);
@@ -260,6 +350,9 @@ internal sealed class TypeCheckVisitor
                 break;
             case FunctionDefinitionNode function:
                 this.CheckFunctionDefinition(function);
+                break;
+            case RecogniseNode recognise:
+                this.openNamespaces.Add(string.Join('.', recognise.Path));
                 break;
             case ExpressionStatement expressionStatement:
                 LiteralType? expressionType = this.EvaluateExpression(expressionStatement.Expression);
@@ -318,12 +411,162 @@ internal sealed class TypeCheckVisitor
     }
 
     /// <summary>
+    /// Checks a pointer declaration for type correctness.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="LiteralType.Null"/> check here rejects <c>NAUGHT</c> as the declared pointee <em>type</em>
+    /// (<c>GALLERY PICTURE OF NAUGHT</c>), the same way <see cref="CheckDeclaration"/> and
+    /// <see cref="CheckArrayDeclaration"/> reject it as a variable or element type: a pointee slot must name a
+    /// concrete type.  This is unrelated to a pointer runtime <em>value</em> being <c>NAUGHT</c>, meaning
+    /// unassigned, which remains valid and is permitted separately by <see cref="IsAssignableFrom"/>.
+    /// </remarks>
+    /// <param name="node">The pointer declaration node to check.</param>
+    private void CheckPointerDeclaration(PointerDeclarationNode node)
+    {
+        if (node.PointeeType == LiteralType.Null)
+        {
+            this.Error(
+                $"A {Keywords.TypeNames.GalleryPictureOf} {Keywords.TypeNames.Naught} is not a valid pointer type.  A concrete pointee type must be specified.",
+                node.Span);
+            return;
+        }
+
+        this.DeclareSymbol(node.Name, LiteralType.Pointer);
+        this.DeclarePointerPointeeType(node.Name, node.PointeeType);
+
+        if (node.InitialValue is not null)
+        {
+            this.CheckPointerAssignmentValue(node.PointeeType, node.InitialValue, node.Span);
+        }
+    }
+
+    /// <summary>
+    /// Checks the value assigned to a pointer variable, whether at declaration or by a later assignment.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An address-of expression is checked for an exact pointee-type match against <paramref name="expectedPointeeType"/>
+    /// via <see cref="CheckAddressOf"/>, and <c>NAUGHT</c> is always valid.  A literal value or a plain identifier
+    /// referring to another pointer is a type error: pointers are formed only by
+    /// <c>GALLERY PICTURE TO &lt;variable&gt;</c>, never copied, aliased, or assigned as a literal directly.
+    /// </para>
+    /// <para>
+    /// Any other expression, most notably pointer arithmetic (<c>SUM OF</c>/<c>DIFFERENCE OF</c> re-assigned back
+    /// onto the same pointer variable), is accepted as long as it evaluates to <see cref="LiteralType.Pointer"/>.
+    /// Its resolved pointee type is not checked against <paramref name="expectedPointeeType"/> here since the flat
+    /// <see cref="LiteralType"/> model carries no pointee-type payload for an arbitrary expression the way it does
+    /// for a literal address-of; this is safe in practice because the only expression forms that legitimately
+    /// produce a pointer, other than address-of itself, derive it from an existing pointer of the same declared
+    /// pointee type.
+    /// </para>
+    /// <para>
+    /// The value expression is always walked, even when the outer form itself is rejected, so that errors nested
+    /// inside it, such as an undeclared identifier, are still reported.
+    /// </para>
+    /// </remarks>
+    /// <param name="expectedPointeeType">The pointer declared pointee type.</param>
+    /// <param name="valueExpression">The expression being assigned.</param>
+    /// <param name="span">The source span used in error messages.</param>
+    private void CheckPointerAssignmentValue(LiteralType expectedPointeeType, Expression valueExpression, SourceSpan span)
+    {
+        if (valueExpression is LiteralNode { Type: LiteralType.Null })
+        {
+            return;
+        }
+
+        if (valueExpression is AddressOfExpressionNode addressOf)
+        {
+            this.CheckAddressOf(addressOf, expectedPointeeType);
+            return;
+        }
+
+        if (valueExpression is LiteralNode or IdentifierNode)
+        {
+            this.EvaluateExpression(valueExpression);
+            this.Error(
+                $"A pointer may only be assigned {Keywords.Pointers.GalleryPictureTo} <variable>, {Keywords.Literals.Naught}, or the result of pointer arithmetic.",
+                span);
+            return;
+        }
+
+        LiteralType? valueType = this.EvaluateExpression(valueExpression);
+        if (valueType is not null && valueType.Value != LiteralType.Pointer)
+        {
+            this.Error($"Cannot assign {TypeName(valueType.Value)} to a pointer variable.", span);
+        }
+    }
+
+    /// <summary>
+    /// Checks that an address-of expression resolved pointee type exactly matches an expected pointee type.
+    /// </summary>
+    /// <remarks>
+    /// Matching is exact: unlike ordinary assignment, no numeric widening is permitted, since a pointer aliases
+    /// real storage and a write through it must preserve that storage actual type.  When the target variable is
+    /// an array, its declared element type stands in for the pointee type; when it is a YARN, <c>STITCH</c>
+    /// stands in, since both decay to a pointer at their first element or character.
+    /// </remarks>
+    /// <param name="node">The address-of expression to check.</param>
+    /// <param name="expectedPointeeType">The pointee type the resulting pointer must exactly match.</param>
+    private void CheckAddressOf(AddressOfExpressionNode node, LiteralType expectedPointeeType)
+    {
+        LiteralType? targetType = this.LookupSymbol(node.VariableName);
+        if (targetType is null)
+        {
+            this.Error($"'{node.VariableName}' is not declared.", node.Span);
+            return;
+        }
+
+        LiteralType actualPointeeType;
+        if (targetType.Value == LiteralType.Array)
+        {
+            LiteralType? elementType = this.LookupArrayElementType(node.VariableName);
+            if (elementType is null)
+            {
+                return;
+            }
+
+            actualPointeeType = elementType.Value;
+        }
+        else if (targetType.Value == LiteralType.String)
+        {
+            actualPointeeType = LiteralType.Char;
+        }
+        else
+        {
+            actualPointeeType = targetType.Value;
+        }
+
+        if (actualPointeeType != expectedPointeeType)
+        {
+            this.Error(
+                $"Cannot point a {Keywords.TypeNames.GalleryPictureOf} {TypeName(expectedPointeeType)} at '{node.VariableName}' ({TypeName(actualPointeeType)}).",
+                node.Span);
+        }
+    }
+
+    /// <summary>
     /// Checks an assignment statement for type correctness.
     /// </summary>
     /// <param name="node">The assignment node to check.</param>
     private void CheckAssignment(AssignmentNode node)
     {
         LiteralType? declaredType = this.LookupSymbol(node.Target);
+
+        if (declaredType == LiteralType.Pointer)
+        {
+            LiteralType? pointeeType = this.LookupPointerPointeeType(node.Target);
+            if (pointeeType is not null)
+            {
+                this.CheckPointerAssignmentValue(pointeeType.Value, node.Value, node.Span);
+            }
+            else
+            {
+                this.EvaluateExpression(node.Value);
+            }
+
+            return;
+        }
+
         LiteralType? valueType = this.EvaluateExpression(node.Value);
 
         if (declaredType is null)
@@ -364,6 +607,41 @@ internal sealed class TypeCheckVisitor
         {
             this.Error(
                 $"Cannot assign {TypeName(valueType.Value)} to element of array '{node.ArrayName}' declared as {TypeName(elementType.Value)}.",
+                node.Span);
+        }
+    }
+
+    /// <summary>
+    /// Checks a pointer write-through assignment statement for type correctness.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="CheckPointerAssignmentValue"/>, which governs re-pointing a pointer variable itself,
+    /// this governs an ordinary write to the location the pointer already refers to, so it uses the same
+    /// widening rules as any other assignment via <see cref="IsAssignableFrom"/>.
+    /// </remarks>
+    /// <param name="node">The dereference assignment node to check.</param>
+    private void CheckDereferenceAssignment(DereferenceAssignmentNode node)
+    {
+        LiteralType? declaredType = this.LookupSymbol(node.PointerName);
+        LiteralType? valueType = this.EvaluateExpression(node.Value);
+
+        if (declaredType is null)
+        {
+            this.Error($"'{node.PointerName}' is not declared.", node.Span);
+            return;
+        }
+
+        if (declaredType.Value != LiteralType.Pointer)
+        {
+            this.Error($"'{node.PointerName}' is not a pointer.", node.Span);
+            return;
+        }
+
+        LiteralType? pointeeType = this.LookupPointerPointeeType(node.PointerName);
+        if (pointeeType is not null && valueType is not null && !this.IsAssignableFrom(pointeeType.Value, valueType.Value))
+        {
+            this.Error(
+                $"Cannot assign {TypeName(valueType.Value)} through pointer '{node.PointerName}' declared as {Keywords.TypeNames.GalleryPictureOf} {TypeName(pointeeType.Value)}.",
                 node.Span);
         }
     }
@@ -638,6 +916,8 @@ internal sealed class TypeCheckVisitor
             TernaryExpressionNode ternary => this.InferTernary(ternary),
             ExpressionCastNode cast => cast.NewType,
             ArrayIndexNode arrayIndex => this.InferArrayIndex(arrayIndex),
+            AddressOfExpressionNode addressOf => this.InferAddressOf(addressOf),
+            DereferenceExpressionNode dereference => this.InferDereference(dereference),
             _ => null
         };
 
@@ -737,13 +1017,21 @@ internal sealed class TypeCheckVisitor
     /// <returns>The inferred type of the arithmetic operator prefix expression node, or <c>null</c> if the type cannot be determined.</returns>
     private LiteralType? InferArithmeticOperator(PrefixExpressionNode node)
     {
+        bool isAdditive = node.Operator is Operator.Sum or Operator.Difference;
+
         LiteralType? widenedType = null;
-        foreach (Expression argument in node.Arguments)
+        for (int i = 0; i < node.Arguments.Count; i++)
         {
+            Expression argument = node.Arguments[i];
             LiteralType? argumentType = this.EvaluateExpression(argument);
             if (argumentType is null)
             {
                 continue;
+            }
+
+            if (isAdditive && i == 0 && argumentType.Value == LiteralType.Pointer)
+            {
+                return this.InferPointerArithmetic(node);
             }
 
             if (!NumericTypes.Contains(argumentType.Value))
@@ -751,7 +1039,7 @@ internal sealed class TypeCheckVisitor
                 this.Error(
                     $"{node.Operator} operand must be numeric, got {TypeName(argumentType.Value)}.",
                     argument.Span);
-                
+
                 return null;
             }
 
@@ -761,6 +1049,37 @@ internal sealed class TypeCheckVisitor
         }
 
         return widenedType;
+    }
+
+    /// <summary>
+    /// Infers the type of pointer arithmetic: a <c>SUM OF</c> or <c>DIFFERENCE OF</c> expression whose first
+    /// operand is a pointer.
+    /// </summary>
+    /// <remarks>
+    /// The first operand has already been evaluated as <see cref="LiteralType.Pointer"/> by the caller.  Whether
+    /// the pointer actually supports arithmetic, meaning it targets an array or YARN element rather than a single
+    /// variable, is a property of its runtime target rather than of its declared type, so it cannot be checked
+    /// here; it is enforced instead at the point of the arithmetic operation by the runtime pointer target.
+    /// </remarks>
+    /// <param name="node">The prefix expression node to infer the type of.</param>
+    /// <returns><see cref="LiteralType.Pointer"/>.</returns>
+    private LiteralType? InferPointerArithmetic(PrefixExpressionNode node)
+    {
+        if (node.Arguments.Count < 2)
+        {
+            this.Error($"{node.Operator} on a pointer requires an offset operand.", node.Span);
+            return LiteralType.Pointer;
+        }
+
+        LiteralType? offsetType = this.EvaluateExpression(node.Arguments[1]);
+        if (offsetType is not null && !IntegerTypes.Contains(offsetType.Value))
+        {
+            this.Error(
+                $"{node.Operator} on a pointer requires an integer offset, got {TypeName(offsetType.Value)}.",
+                node.Arguments[1].Span);
+        }
+
+        return LiteralType.Pointer;
     }
 
     /// <summary>
@@ -887,10 +1206,9 @@ internal sealed class TypeCheckVisitor
             return null;
         }
 
-        FunctionSignature? signature = this.model.GetFunctionSignature(functionIdentifier.Name);
+        FunctionSignature? signature = this.ResolveFunctionSignature(functionIdentifier.Name, node.Span);
         if (signature is null)
         {
-            this.Error($"Function '{functionIdentifier.Name}' is not defined.", node.Span);
             return null;
         }
 
@@ -918,6 +1236,88 @@ internal sealed class TypeCheckVisitor
         }
 
         return signature.ReturnType;
+    }
+
+    /// <summary>
+    /// Resolves a <c>SUMMON</c> call target, bare or namespace-qualified, to its function signature.
+    /// </summary>
+    /// <param name="functionName">The name to resolve.</param>
+    /// <param name="span">The source span of the call, used for diagnostics.</param>
+    /// <returns>The resolved <see cref="FunctionSignature"/>, or <c>null</c> if it could not be resolved.</returns>
+    /// <remarks>
+    /// <para>
+    /// A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target and is looked up
+    /// directly, since <c>.</c> never appears in a bare Topsy Turvy identifier.
+    /// </para>
+    /// <para>
+    /// A bare name is resolved in tiers, the first tier with exactly one match winning:
+    /// * The entry programme namespace (<see cref="entryNamespace"/>).
+    /// * Then each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
+    ///     * Two or more matches here is an ambiguous reference.
+    /// * Then finally the global (non-namespaced) signature.
+    /// </para>
+    /// <para>
+    /// An unresolved name emits an <c>Error</c> diagnostic itself, unlike most <c>Infer*</c> methods in
+    /// this class, since a missing <c>SemanticModel</c> function signature carries no other diagnostic
+    /// path back to the caller.
+    /// </para>
+    /// </remarks>
+    private FunctionSignature? ResolveFunctionSignature(string functionName, SourceSpan span)
+    {
+        if (functionName.Contains('.'))
+        {
+            FunctionSignature? qualifiedMatch = this.model.GetFunctionSignature(functionName);
+            if (qualifiedMatch is null)
+            {
+                this.Error($"Function '{functionName}' is not defined.", span);
+            }
+
+            return qualifiedMatch;
+        }
+
+        if (this.entryNamespace is not null)
+        {
+            FunctionSignature? sameNamespaceMatch = this.model.GetFunctionSignature(QualifyName(this.entryNamespace, functionName));
+            if (sameNamespaceMatch is not null)
+            {
+                return sameNamespaceMatch;
+            }
+        }
+
+        List<string> matchedNamespaces = [];
+        FunctionSignature? openNamespaceMatch = null;
+        foreach (string openNamespace in this.openNamespaces)
+        {
+            FunctionSignature? functionCandidate = this.model.GetFunctionSignature(QualifyName(openNamespace, functionName));
+            if (functionCandidate is not null)
+            {
+                matchedNamespaces.Add(openNamespace);
+                openNamespaceMatch = functionCandidate;
+            }
+        }
+
+        if (matchedNamespaces.Count > 1)
+        {
+            string namespaceList = string.Join("', '", matchedNamespaces.OrderBy(static name => name, StringComparer.Ordinal));
+            this.Error(
+                $"Function '{functionName}' is ambiguous between namespaces '{namespaceList}'; please use a fully-qualified name.",
+                span);
+
+            return null;
+        }
+
+        if (openNamespaceMatch is not null)
+        {
+            return openNamespaceMatch;
+        }
+
+        FunctionSignature? globalMatch = this.model.GetFunctionSignature(functionName);
+        if (globalMatch is null)
+        {
+            this.Error($"Function '{functionName}' is not defined.", span);
+        }
+
+        return globalMatch;
     }
 
     /// <summary>
@@ -977,6 +1377,54 @@ internal sealed class TypeCheckVisitor
     }
 
     /// <summary>
+    /// Infers the type of an address-of expression node.
+    /// </summary>
+    /// <remarks>
+    /// Performs only the basic check that the target variable is declared.  The exact pointee-type match against
+    /// a specific declared pointer type is enforced separately by <see cref="CheckAddressOf"/> wherever this
+    /// expression appears as a pointer declaration initial value or a pointer assignment value, the only two
+    /// positions documented as valid for it.  Reached from any other position, this still returns
+    /// <see cref="LiteralType.Pointer"/> so that an ordinary type mismatch in that position, for example passing
+    /// it where a <c>PEER</c> argument is expected, is reported naturally by the surrounding check rather than by
+    /// a dedicated wrong-context diagnostic.
+    /// </remarks>
+    /// <param name="node">The address-of expression node to infer the type of.</param>
+    /// <returns><see cref="LiteralType.Pointer"/>, or <c>null</c> if the target variable is not declared.</returns>
+    private LiteralType? InferAddressOf(AddressOfExpressionNode node)
+    {
+        if (this.LookupSymbol(node.VariableName) is null)
+        {
+            this.Error($"'{node.VariableName}' is not declared.", node.Span);
+            return null;
+        }
+
+        return LiteralType.Pointer;
+    }
+
+    /// <summary>
+    /// Infers the type of a pointer dereference expression node.
+    /// </summary>
+    /// <param name="node">The dereference expression node to infer the type of.</param>
+    /// <returns>The declared pointee type of the pointer, or <c>null</c> if the pointer variable is not declared or is not a pointer.</returns>
+    private LiteralType? InferDereference(DereferenceExpressionNode node)
+    {
+        LiteralType? declaredType = this.LookupSymbol(node.PointerName);
+        if (declaredType is null)
+        {
+            this.Error($"'{node.PointerName}' is not declared.", node.Span);
+            return null;
+        }
+
+        if (declaredType.Value != LiteralType.Pointer)
+        {
+            this.Error($"'{node.PointerName}' is not a pointer.", node.Span);
+            return null;
+        }
+
+        return this.LookupPointerPointeeType(node.PointerName);
+    }
+
+    /// <summary>
     /// Pushes a new scope frame onto the scope stack.
     /// </summary>
     /// <remarks>
@@ -986,6 +1434,7 @@ internal sealed class TypeCheckVisitor
     {
         this.scopeStack.Push(new(StringComparer.Ordinal));
         this.arrayElementTypeStack.Push(new(StringComparer.Ordinal));
+        this.pointerPointeeTypeStack.Push(new(StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -995,6 +1444,7 @@ internal sealed class TypeCheckVisitor
     {
         this.scopeStack.Pop();
         this.arrayElementTypeStack.Pop();
+        this.pointerPointeeTypeStack.Pop();
     }
 
     /// <summary>
@@ -1018,6 +1468,37 @@ internal sealed class TypeCheckVisitor
     private LiteralType? LookupArrayElementType(string name)
     {
         foreach (Dictionary<string, LiteralType> frame in this.arrayElementTypeStack)
+        {
+            if (frame.TryGetValue(name, out LiteralType type))
+            {
+                return type;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Declares the pointee type of a pointer variable in the current scope frame.
+    /// </summary>
+    /// <param name="name">The name of the pointer variable.</param>
+    /// <param name="pointeeType">The pointee type of the pointer.</param>
+    private void DeclarePointerPointeeType(string name, LiteralType pointeeType)
+    {
+        if (this.pointerPointeeTypeStack.Count > 0)
+        {
+            this.pointerPointeeTypeStack.Peek()[name] = pointeeType;
+        }
+    }
+
+    /// <summary>
+    /// Looks up the declared pointee type of a pointer variable in the current scope stack.
+    /// </summary>
+    /// <param name="name">The name of the pointer variable.</param>
+    /// <returns>The declared pointee type of the pointer variable, or <c>null</c> if not found.</returns>
+    private LiteralType? LookupPointerPointeeType(string name)
+    {
+        foreach (Dictionary<string, LiteralType> frame in this.pointerPointeeTypeStack)
         {
             if (frame.TryGetValue(name, out LiteralType type))
             {
@@ -1067,15 +1548,15 @@ internal sealed class TypeCheckVisitor
     /// <param name="declaredType">The declared type of the variable or slot.</param>
     /// <param name="valueType">The type of the value being assigned.</param>
     /// <remarks>
-    /// NAUGHT can only be assigned to YARN variables or arrays.  Numeric types are compatible if widening applies.
-    /// All other mismatches are type errors.
+    /// NAUGHT can only be assigned to YARN variables, arrays, or pointers.  Numeric types are compatible if
+    /// widening applies.  All other mismatches are type errors.
     /// </remarks>
     /// <returns><c>true</c> if the value can be assigned, otherwise, <c>false</c>.</returns>
     private bool IsAssignableFrom(LiteralType declaredType, LiteralType valueType)
     {
         if (valueType == LiteralType.Null)
         {
-            return declaredType == LiteralType.String || declaredType == LiteralType.Array;
+            return declaredType == LiteralType.String || declaredType == LiteralType.Array || declaredType == LiteralType.Pointer;
         }
 
         if (declaredType == valueType)
@@ -1094,9 +1575,19 @@ internal sealed class TypeCheckVisitor
     /// <summary>
     /// Determines if two types are compatible for comparison or assignment purposes.
     /// </summary>
+    /// <remarks>
+    /// A pointer is additionally considered compatible with <see cref="LiteralType.Null"/> so that an unassigned
+    /// pointer can be checked with <c>ALIKE NAUGHT</c> or <c>UNLIKE NAUGHT</c>; there is no dedicated is-null
+    /// construct in the language.
+    /// </remarks>
     private bool AreCompatible(LiteralType a, LiteralType b)
     {
         if (a == b)
+        {
+            return true;
+        }
+
+        if ((a == LiteralType.Pointer && b == LiteralType.Null) || (a == LiteralType.Null && b == LiteralType.Pointer))
         {
             return true;
         }
@@ -1185,6 +1676,7 @@ internal sealed class TypeCheckVisitor
         LiteralType.Boolean => Keywords.TypeNames.Decree,
         LiteralType.Null => Keywords.TypeNames.Naught,
         LiteralType.Array => Keywords.TypeNames.LittleListOf,
+        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => type.ToString()
     };
 

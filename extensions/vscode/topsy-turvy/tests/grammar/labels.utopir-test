@@ -1,0 +1,18 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Label declarations and references ────────────────────────────
+
+!LOGIC
+//^ entity.name.label.utopir
+
+sail !LOGIC
+//     ^ entity.name.label.utopir
+
+sailalike £Boolean, !IS_ALIKE
+//                    ^ entity.name.label.utopir
+
+sailunlike £Boolean, !IS_UNLIKE
+//                      ^ entity.name.label.utopir
+
+!_temp_label
+//^ entity.name.label.utopir

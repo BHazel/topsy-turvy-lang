@@ -175,6 +175,47 @@ public class NativeExportsTests
     }
 
     /// <summary>
+    /// Tests that <see cref="NativeExports.GetCompletions"/> filters keyword items to a multi-word namespace keyword when its own first words are typed as the whole phrase.
+    /// </summary>
+    [Fact]
+    public void GetCompletions_WithPartialRecogniseKeywordTyped_FiltersKeywordListToMatches()
+    {
+        nint session = CreateSession();
+
+        try
+        {
+            CompletionResult result = Complete(session, "HARK! \"Test\"\nTHE CURTAIN RISES.\nPRAY REC\nFINALE.\n", 2, 8);
+
+            result.Items.ShouldContain(item => item.Label == "PRAY RECOGNISE");
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
+    /// Tests that <see cref="NativeExports.GetCompletions"/> filters keyword items to <c>WITH DISTRICT</c> and not the shorter, pre-existing bare <c>WITH</c> keyword.
+    /// </summary>
+    [Fact]
+    public void GetCompletions_WithPartialWithDistrictKeywordTyped_FiltersKeywordListToMatches()
+    {
+        nint session = CreateSession();
+
+        try
+        {
+            CompletionResult result = Complete(session, "HARK! \"Test\"\nTHE CURTAIN RISES.\nWITH DI\nFINALE.\n", 2, 7);
+
+            result.Items.ShouldContain(item => item.Label == "WITH DISTRICT");
+            result.Items.ShouldNotContain(item => item.Label == "WITH");
+        }
+        finally
+        {
+            DestroySession(session);
+        }
+    }
+
+    /// <summary>
     /// Tests that <see cref="NativeExports.FormatSource"/> normalises keyword casing to the canonical uppercase form.
     /// </summary>
     [Fact]

@@ -26,12 +26,15 @@ public class VisualNodeFactoryTests
     [InlineData("ArrayDeclarationNode", "PRAY WELCOME", new string[0])]
     [InlineData("AssignmentNode", "IS APPOINTED", new[] { "Variable", "Value" })]
     [InlineData("ArrayElementAssignmentNode", "VICTIM IS APPOINTED", new[] { "Variable", "Victim", "Value" })]
+    [InlineData("DereferenceAssignmentNode", "VIEW FROM IS APPOINTED", new[] { "Pointer", "Value" })]
     [InlineData("PrintNode", "BEHOLD", new[] { "Expr" })]
     [InlineData("InputNode", "PRAY TELL", new[] { "Variable" })]
     [InlineData("ProgrammeReturnNode", "AND SO I FIND", new[] { "Value" })]
     [InlineData("ReturnNode", "AND SO I FIND", new[] { "Value" })]
     [InlineData("ThrowNode", "A HIDEOUS CURSE ON", new[] { "Value" })]
     [InlineData("ImportNode", "PRAY ADMIT", new string[0])]
+    [InlineData("NamespaceDeclarationNode", "TOWN", new string[0])]
+    [InlineData("RecogniseNode", "PRAY RECOGNISE", new string[0])]
     [InlineData("AssertNode", "THE LAW IS", new[] { "Cond", "Msg" })]
     [InlineData("ExpressionStatement", "EXPRESSION", new[] { "Expr" })]
     public void CreateStatement_SimpleTypes_CreatesSingleNodeWithCorrectTitleAndDataInPorts(
@@ -228,6 +231,8 @@ public class VisualNodeFactoryTests
     [InlineData("TernaryNode", "SHOULD IT TRANSPIRE THAT")]
     [InlineData("ArrayIndexNode", "VICTIM")]
     [InlineData("ArrayLengthNode", "RECKONING OF")]
+    [InlineData("AddressOfExpressionNode", "GALLERY PICTURE TO")]
+    [InlineData("DereferenceExpressionNode", "VIEW FROM")]
     [InlineData("FunctionReferenceNode", "function")]
     public void CreateExpression_SimpleTypes_AddsNodeToDiagramWithDataOutPort(string statementType, string expectedTitle)
     {

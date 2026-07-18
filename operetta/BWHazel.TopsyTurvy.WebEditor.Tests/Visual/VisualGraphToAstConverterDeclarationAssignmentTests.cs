@@ -21,6 +21,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         DeclarationNode declaration = new()
         {
             Name = "x",
+            NameSpan = PlaceholderSpan,
             Type = LiteralType.Integer,
             IsConstant = true,
             InitialValue = new LiteralNode() { Value = 42, Type = LiteralType.Integer, Span = PlaceholderSpan },
@@ -45,6 +46,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             InitialValues = [
                 new LiteralNode() { Value = 1, Type = LiteralType.Integer, Span = PlaceholderSpan },
@@ -71,6 +73,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
+            NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
             Size = 5,
             InitialValues = [],
@@ -129,7 +132,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_Declaration_ReconstructsFromVisualNodePropertiesNotAst()
     {
-        DeclarationNode declaration = new() { Name = "x", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode declaration = new() { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTripAsFactory(WrapInProgram(declaration), "DeclarationNode");
 
@@ -144,7 +147,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_ArrayDeclarationWithNoWiredPorts_UsesStaticFactoryPath()
     {
-        ArrayDeclarationNode declaration = new() { Name = "items", ElementType = LiteralType.Integer, InitialValues = [], Span = PlaceholderSpan };
+        ArrayDeclarationNode declaration = new() { Name = "items", NameSpan = PlaceholderSpan, ElementType = LiteralType.Integer, InitialValues = [], Span = PlaceholderSpan };
 
         ProgramNode reconstructed = RoundTripAsFactory(WrapInProgram(declaration), "ArrayDeclarationNode");
 
@@ -165,7 +168,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     [Fact]
     public void Factory_ArrayDeclarationTypeSwitchedFromScalar_UsesArrayDeclarationFromFactoryPath()
     {
-        DeclarationNode scalar = new() { Name = "items", Type = LiteralType.Integer, Span = PlaceholderSpan };
+        DeclarationNode scalar = new() { Name = "items", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
         BlazorDiagram diagram = Build(WrapInProgram(scalar));
 
         TopsyTurvyVisualNodeModel node = diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>().Single(n => n.StatementType == "DeclarationNode");
@@ -194,5 +197,74 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         result.ElementType.ShouldBe(LiteralType.Integer);
         result.InitialValues.Count.ShouldBe(1);
         ((LiteralNode)result.InitialValues[0]).Value.ShouldBe(5);
+    }
+
+    /// <summary>
+    /// Tests that a pointer declaration round-trips with its pointee type, constant flag and initial value preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_PointerDeclaration_PreservesPointeeTypeConstantFlagAndInitialValue()
+    {
+        PointerDeclarationNode declaration = new()
+        {
+            Name = "NumberPointer",
+            NameSpan = PlaceholderSpan,
+            PointeeType = LiteralType.Integer,
+            IsConstant = true,
+            InitialValue = new AddressOfExpressionNode { VariableName = "Number", Span = PlaceholderSpan },
+            Span = PlaceholderSpan,
+        };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(declaration));
+
+        PointerDeclarationNode result = reconstructed.Statements.OfType<PointerDeclarationNode>().Single();
+        result.Name.ShouldBe("NumberPointer");
+        result.PointeeType.ShouldBe(LiteralType.Integer);
+        result.IsConstant.ShouldBeTrue();
+        ((AddressOfExpressionNode)result.InitialValue!).VariableName.ShouldBe("Number");
+    }
+
+    /// <summary>
+    /// Tests that a dereference assignment round-trips with its pointer name and value preserved.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_DereferenceAssignment_PreservesPointerNameAndValue()
+    {
+        DereferenceAssignmentNode assignment = new()
+        {
+            PointerName = "NumberPointer",
+            Value = new LiteralNode { Value = 23, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            Span = PlaceholderSpan,
+        };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(assignment));
+
+        DereferenceAssignmentNode result = reconstructed.Statements.OfType<DereferenceAssignmentNode>().Single();
+        result.PointerName.ShouldBe("NumberPointer");
+        ((LiteralNode)result.Value).Value.ShouldBe(23);
+    }
+
+    /// <summary>
+    /// Tests that a node originally built as a scalar declaration (StatementType "DeclarationNode"), whose
+    /// literal type was later switched to Pointer in the editor, is reconstructed via
+    /// <c>ReconstructPointerDeclarationFactory</c>, matching the deliberate no-dedicated-menu-entry design where
+    /// pointers are created by promoting the generic PRAY WELCOME node Type dropdown.
+    /// </summary>
+    [Fact]
+    public void Factory_PointerDeclarationTypeSwitchedFromScalar_UsesPointerDeclarationFromFactoryPath()
+    {
+        DeclarationNode scalar = new() { Name = "NumberPointer", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan };
+        BlazorDiagram diagram = Build(WrapInProgram(scalar));
+
+        TopsyTurvyVisualNodeModel node = diagram.Nodes.OfType<TopsyTurvyVisualNodeModel>().Single(n => n.StatementType == "DeclarationNode");
+        node.AstNode = null;
+        node.NodeLiteralType = LiteralType.Pointer;
+        node.PointerPointeeLiteralType = LiteralType.Integer;
+
+        ProgramNode reconstructed = Convert(diagram);
+
+        PointerDeclarationNode result = reconstructed.Statements.OfType<PointerDeclarationNode>().Single();
+        result.Name.ShouldBe("NumberPointer");
+        result.PointeeType.ShouldBe(LiteralType.Integer);
     }
 }

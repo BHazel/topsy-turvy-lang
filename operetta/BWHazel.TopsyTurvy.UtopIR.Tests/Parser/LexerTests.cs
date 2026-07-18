@@ -47,6 +47,29 @@ public class LexerTests
     }
 
     /// <summary>
+    /// Tests that <see cref="Lexer.Label"/> strips the <c>!</c> character and returns the identifier text.
+    /// </summary>
+    [Fact]
+    public void Label_WithSimpleName_ReturnsNameWithoutSigil()
+    {
+        var result = Lexer.Label(new("!LOGIC"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBe("LOGIC");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Lexer.Label"/> fails without the leading <c>!</c> character.
+    /// </summary>
+    [Fact]
+    public void Label_WithoutSigil_Fails()
+    {
+        var result = Lexer.Label(new("LOGIC"));
+
+        result.HasValue.ShouldBeFalse();
+    }
+
+    /// <summary>
     /// Tests that <see cref="Lexer.StringLiteral"/> returns string content without surrounding quotes.
     /// </summary>
     [Fact]

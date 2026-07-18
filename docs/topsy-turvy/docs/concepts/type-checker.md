@@ -45,25 +45,34 @@ The first pass scans every `FunctionDefinitionNode` in the programme, including 
 
 This pass exists solely to support **forward references** where a call to a function that is declared later in the source must still resolve correctly during pass 2.  Without a dedicated first pass the order in which functions appear in the source would determine whether calls to them type-check.
 
+When the current file declares a namespace with `TOWN`, every signature collected from it is recorded under a namespace-qualified key rather than its bare name.  The same qualification applies when collecting signatures contributed by a `PRAY ADMIT`-imported file: its own namespace, if it declares one, is used, not the importing file.
+
 ### Pass 2: Statement and Expression Type Checking
 
-The second pass walks every node in the programme carrying three parallel scope stacks:
+The second pass walks every node in the programme carrying four parallel scope stacks:
 
 |Stack|Contents|Lifetime|
 |-|-|-|
 |Scope|Maps of variable and parameter name to the declared `LiteralType`, one frame per block.|Pushed on block entry and popped on block exit.|
 |Array Element Type|Maps of array variable name to element `LiteralType`, mirrors the Scope Stack frame structure.  The literal type for an array is `Array` with no type information, which this stack stores.|Same lifetime as Scope Stack.|
+|Pointer Pointee Type|Maps of pointer variable name to declared pointee `LiteralType`, mirrors the Array Element Type stack in the same way and for the same reason: the literal type for a pointer is `Pointer` with no type information of its own.|Same lifetime as Scope Stack.|
 |Function Return Type|The declared return type `LiteralType?` of the enclosing function or `null` for void.|Pushed on function entry and popped on exit.|
 
 Each expression node in the AST is visited to infer its type and the result is recorded in the `SemanticModel`.  Statement nodes are checked against the inferred types of their constituent expressions.  Examples include:
 
 * **Assignment:** The right-hand side type must be compatible with the variable declared type.
-* **Function call:** Argument count and types must match the callee `FunctionSignature`.
+* **Function call:** Argument count and types must match the callee `FunctionSignature`.  A bare function name is resolved to a signature by trying, in order:
+    * The caller namespace.
+    * Each namespace opened with `PRAY RECOGNISE`.
+    * Then the global, non-namespaced, table.
+    * Matching more than one open namespace is itself an error, requiring a fully-qualified name to disambiguate.
 * **`SHOULD IT TRANSPIRE THAT` / `WHILST` conditions:** The condition expression must be `DECREE`.
 * **`AND SO I FIND`:** The expression type must match the enclosing function return type.  Using it in a void function is an error.
 * **`A HIDEOUS CURSE ON`:** The payload must be `YARN`.
 * **`PRAY TELL`:** The target variable must be declared as `YARN`.
 * **Array Element Assignment:** The assigned value must match the array declared element type.
+* **`GALLERY PICTURE TO` (Address-Of):** The target must be an already-declared variable whose type, or whose element type for an array or `STITCH` for a `YARN`, exactly matches the pointer declared pointee type.  Unlike ordinary assignment, matching is exact: no numeric widening is permitted, since a pointer aliases real storage and a write through it must preserve that storage actual type.
+* **`VIEW FROM ... IS APPOINTED` (Dereference Assignment):** The assigned value must be compatible with the pointer declared pointee type, following the normal widening hierarchy, since this is an ordinary write to existing storage rather than a re-point.
 
 Type compatibility follows a **widening hierarchy** for numeric types.  Narrower integer and floating-point types are considered compatible with wider ones, e.g. `PEER` is compatible with `FATHOM`.  All other combinations are strict.
 

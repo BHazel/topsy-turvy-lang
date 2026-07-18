@@ -18,9 +18,12 @@
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ArrayDeclarationNode"))">PRAY WELCOME (LITTLE LIST)</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("AssignmentNode"))">IS APPOINTED</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ArrayElementAssignmentNode"))">IS APPOINTED (LITTLE LIST element)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("DereferenceAssignmentNode"))">IS APPOINTED (VIEW FROM pointer)</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("PrintNode"))">BEHOLD</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("InputNode"))">PRAY TELL</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ImportNode"))">PRAY ADMIT</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("NamespaceDeclarationNode"))">TOWN (namespace)</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("RecogniseNode"))">PRAY RECOGNISE</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("AssertNode"))">THE LAW IS</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ProgrammeReturnNode"))">AND SO I FIND (programme exit code)</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddNode("ExpressionStatement"))">EXPRESSION</div>
@@ -49,6 +52,8 @@
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("SummonNode"))">SUMMON</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ArrayIndexNode"))">LITTLE LIST index</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ArrayLengthNode"))">RECKONING OF</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("AddressOfExpressionNode"))">GALLERY PICTURE TO</div>
+            <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("DereferenceExpressionNode"))">VIEW FROM</div>
             <div class="visual-context-menu-item" @onclick="@(() => this.OnAddExpression("ExpressionCastNode"))">AS IT WERE (cast)</div>
 
             @if (this.Symbols.Count > 0)

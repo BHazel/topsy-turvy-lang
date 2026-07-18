@@ -48,6 +48,10 @@ This extension contributes the following settings:
 
 ## Release Notes
 
+### 0.7.0
+
+* Support for the latest language features.
+
 ### 0.6.0
 
 * Basic syntax highlighting and file icons for UtopIR.

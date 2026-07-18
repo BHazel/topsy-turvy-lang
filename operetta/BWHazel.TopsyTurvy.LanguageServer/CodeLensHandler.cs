@@ -22,10 +22,12 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// * <c>codeLens/resolve</c>: The client requests additional detail for a specific CodeLens item.
 /// </para>
 /// <para>
-/// Each annotation displays the number of references to the symbol across all open documents, excluding the
-/// declaration line itself, so <c>0 references</c> indicates an unused symbol.  Clicking the annotation opens the
-/// Find All References panel at the declaration position.  Parameters are excluded as their scope is local to the
-/// enclosing function.  Symbols with unknown definition positions are also excluded.
+/// Each annotation displays the number of references to the symbol in the current document plus any other open
+/// document connected to it by a <c>PRAY ADMIT</c> import (see <see cref="DocumentStateManager.GetImportConnectedDocuments"/>),
+/// excluding the declaration line itself, so <c>0 references</c> indicates an unused symbol.  Clicking the
+/// annotation opens the Find All References panel at the declaration position.  Parameters, namespace symbols, and
+/// symbols with unknown definition positions are excluded (the synthesised <c>*</c>-joined namespace name does not
+/// appear verbatim in source for long-form <c>WITH DISTRICT</c> usages, so scanning for it would under-count).
 /// </para>
 /// <para>
 /// The <see cref="CodeLensRegistrationOptions.ResolveProvider"/> property is set to <c>false</c> as all CodeLens data is
@@ -82,7 +84,7 @@ public class CodeLensHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>, an empty container is returned so no annotations are displayed.
     /// * Parameters and symbols with unknown definition positions are skipped.
-    /// * For each remaining symbol, <see cref="SourceAnalyser.CountOccurrences"/> is called to count references in the current document, excluding the definition line.  References in all other open documents are also counted and added to the total.
+    /// * For each remaining symbol, <see cref="SourceAnalyser.CountOccurrences"/> is called to count references in the current document, excluding the definition line.  References in other open documents connected by a <c>PRAY ADMIT</c> import are also counted and added to the total.
     /// * A <see cref="CodeLens"/> is built for each symbol with the reference count as the title and a command targeting <see cref="ShowReferencesCommandId"/> to open the Find All References panel.
     /// </remarks>
     /// <returns>
@@ -104,7 +106,9 @@ public class CodeLensHandler(DocumentStateManager documentStateManager)
             List<CodeLens> codeLenses = [];
             foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
             {
-                if (symbol.Kind == TopsyTurvySymbolKind.Parameter || symbol.DefinitionLine == 0)
+                if (symbol.Kind == TopsyTurvySymbolKind.Parameter
+                    || symbol.Kind == TopsyTurvySymbolKind.Namespace
+                    || symbol.DefinitionLine == 0)
                 {
                     continue;
                 }
@@ -114,13 +118,8 @@ public class CodeLensHandler(DocumentStateManager documentStateManager)
 
                 int referenceCount = SourceAnalyser.CountOccurrences(lines, symbol.Name, lspLine);
 
-                foreach ((_, DocumentState otherState) in this.documentStateManager.AllDocuments())
+                foreach ((_, DocumentState otherState) in this.documentStateManager.GetImportConnectedDocuments(request.TextDocument.Uri))
                 {
-                    if (object.ReferenceEquals(otherState, state))
-                    {
-                        continue;
-                    }
-
                     string otherSource = otherState.Source;
                     if (string.IsNullOrEmpty(otherSource))
                     {

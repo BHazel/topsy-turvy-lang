@@ -229,9 +229,12 @@
         ("PRAY WELCOME",        "DeclarationNode",            VisualNodeKind.Declaration),
         ("IS APPOINTED",        "AssignmentNode",             VisualNodeKind.Assignment),
         ("VICTIM IS APPOINTED", "ArrayElementAssignmentNode", VisualNodeKind.Assignment),
+        ("VIEW FROM IS APPOINTED", "DereferenceAssignmentNode", VisualNodeKind.Assignment),
         ("BEHOLD",              "PrintNode",                  VisualNodeKind.Print),
         ("PRAY TELL",           "InputNode",                  VisualNodeKind.Input),
         ("PRAY ADMIT",          "ImportNode",                 VisualNodeKind.Other),
+        ("TOWN",                "NamespaceDeclarationNode",   VisualNodeKind.Other),
+        ("PRAY RECOGNISE",      "RecogniseNode",              VisualNodeKind.Other),
         ("THE LAW IS",          "AssertNode",                 VisualNodeKind.ErrorHandling),
     ];
 
@@ -269,6 +272,8 @@
         ("SUMMON",             "SummonNode",        VisualNodeKind.Function),
         ("LITTLE LIST index",  "ArrayIndexNode",    VisualNodeKind.Identifier),
         ("RECKONING OF",       "ArrayLengthNode",   VisualNodeKind.Operator),
+        ("GALLERY PICTURE TO", "AddressOfExpressionNode", VisualNodeKind.Operator),
+        ("VIEW FROM",          "DereferenceExpressionNode", VisualNodeKind.Operator),
         ("AS IT WERE (cast)",  "ExpressionCastNode",VisualNodeKind.Operator),
     ];
 

@@ -8,6 +8,7 @@ namespace BWHazel.TopsyTurvy.Analysis;
 /// * <see cref="SymbolKind"/><c>.Variable</c>: A variable as used in a declaration, assignment or reference.
 /// * <see cref="SymbolKind"/><c>.Function</c>: A function as used in a definition or reference.
 /// * <see cref="SymbolKind"/><c>.Parameter</c>: A function parameter as used in a function definition or reference within the function.
+/// * <see cref="SymbolKind"/><c>.Namespace</c>: A namespace declaration.
 /// </remarks>
 public enum SymbolKind
 {
@@ -18,5 +19,8 @@ public enum SymbolKind
     Function,
 
     /// <summary>A function parameter.</summary>
-    Parameter
+    Parameter,
+
+    /// <summary>A namespace declaration.</summary>
+    Namespace
 }

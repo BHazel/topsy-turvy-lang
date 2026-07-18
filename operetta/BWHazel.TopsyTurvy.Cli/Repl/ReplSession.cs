@@ -404,7 +404,7 @@ public sealed class ReplSession
                 Console.WriteLine($"  {"IDENTIFIER",-24} PARAMETERS");
                 foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
                 {
-                    string parameters = string.Join(", ", function.Value.Parameters);
+                    string parameters = string.Join(", ", function.Value.Parameters.Select(FormatParameter));
                     Console.WriteLine($"  {function.Key,-24} {parameters}");
                 }
             }
@@ -456,14 +456,22 @@ public sealed class ReplSession
             {
                 string parameters = function.Value.Parameters.Count == 0
                     ? "[dim](none)[/]"
-                    : Markup.Escape(string.Join(", ", function.Value.Parameters));
-                
+                    : Markup.Escape(string.Join(", ", function.Value.Parameters.Select(FormatParameter)));
+
                 functionsTable.AddRow(Markup.Escape(function.Key), parameters);
             }
 
             AnsiConsole.Write(functionsTable);
         }
     }
+
+    /// <summary>
+    /// Formats a function parameter as its name and Topsy Turvy type keyword.
+    /// </summary>
+    /// <param name="parameter">The parameter to format.</param>
+    /// <returns>A string in the form <c>name: TYPE</c>.</returns>
+    private static string FormatParameter(TypedParameter parameter) =>
+        $"{parameter.Name}: {SymbolTable.LiteralTypeToDisplayName(parameter.Type)}";
 
     /// <summary>
     /// Writes the REPL command help table.

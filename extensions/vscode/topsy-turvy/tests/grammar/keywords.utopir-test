@@ -77,6 +77,45 @@
 £r = transdown £a, 1
 //   ^ keyword.operator.bitwise.utopir
 
+// ── Integer comparison ───────────────────────────────────────────
+
+£r = alike £a, £b
+//   ^ keyword.operator.comparison.utopir
+
+£r = unlike £a, £b
+//   ^ keyword.operator.comparison.utopir
+
+£r = preadam £a, £b
+//   ^ keyword.operator.comparison.utopir
+
+£r = lowerdeg £a, £b
+//   ^ keyword.operator.comparison.utopir
+
+// ── Floating-point comparison: the caret lands on the ".f" suffix itself, not the mnemonic prefix, so this fails if the plain integer group is ever accidentally reordered before this one ─
+
+£r = alike.f £a, £b
+//         ^ keyword.operator.comparison.float.utopir
+
+£r = unlike.f £a, £b
+//          ^ keyword.operator.comparison.float.utopir
+
+£r = preadam.f £a, £b
+//           ^ keyword.operator.comparison.float.utopir
+
+£r = lowerdeg.f £a, £b
+//            ^ keyword.operator.comparison.float.utopir
+
+// ── Logical ──────────────────────────────────────────────────────
+
+£r = both £a, £b
+//   ^ keyword.operator.logical.utopir
+
+£r = either £a, £b
+//   ^ keyword.operator.logical.utopir
+
+£r = hardly £a
+//   ^ keyword.operator.logical.utopir
+
 // ── Stack ────────────────────────────────────────────────────────
 
 prentice 42
@@ -91,4 +130,13 @@ find £r
 //^ keyword.control.utopir
 
 find
+//^ keyword.control.utopir
+
+sailalike £a, !LOGIC
+//^ keyword.control.utopir
+
+sailunlike £a, !LOGIC
+//^ keyword.control.utopir
+
+sail !LOGIC
 //^ keyword.control.utopir

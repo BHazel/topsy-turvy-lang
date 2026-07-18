@@ -225,6 +225,7 @@ public static class Lexer
                   && !name.Equals("FINALE", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("PRINCIPALS", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals("BEHOLD", System.StringComparison.OrdinalIgnoreCase)
+                  && !name.Equals("TOWN", System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals(Keywords.Literals.Naught, System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals(Keywords.Literals.Verity, System.StringComparison.OrdinalIgnoreCase)
                   && !name.Equals(Keywords.Literals.Nay, System.StringComparison.OrdinalIgnoreCase)

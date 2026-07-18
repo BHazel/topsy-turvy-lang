@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 
@@ -45,6 +48,12 @@ public class DocumentStateManager
             if (parseResult.Success && parseResult.Program is not null)
             {
                 documentState.SymbolTable = SymbolTable.Build(parseResult.Program, source);
+                documentState.ImportPaths = [.. parseResult.Program.Statements
+                    .OfType<ImportNode>()
+                    .Select(import => import.FilePath)];
+                documentState.NamespacePath = parseResult.Program.Statements
+                    .OfType<NamespaceDeclarationNode>()
+                    .FirstOrDefault()?.Path ?? [];
             }
         }
     }
@@ -112,6 +121,143 @@ public class DocumentStateManager
                 .Select(state => (DocumentUri.From(state.Key), state.Value))
                 .ToList();
         }
+    }
+
+    /// <summary>
+    /// Returns the other open documents connected to the given document by a <c>PRAY ADMIT</c> import, in either
+    /// direction, one hop.
+    /// </summary>
+    /// <param name="currentUri">The URI of the document to find import-connected documents for.</param>
+    /// <remarks>
+    /// Used by <see cref="ReferencesHandler"/> and <see cref="CodeLensHandler"/> so a same-named symbol in an
+    /// unrelated file is not reported as a reference.  Does not model <c>PRAY RECOGNISE</c>/FQN visibility.
+    /// </remarks>
+    /// <returns>Every other open document connected to <paramref name="currentUri"/> by an import, in either direction.</returns>
+    public IReadOnlyList<(DocumentUri Uri, DocumentState State)> GetImportConnectedDocuments(DocumentUri currentUri)
+    {
+        string currentUriKey = currentUri.ToString();
+        DocumentState? currentState = this.Get(currentUri);
+        if (currentState is null)
+        {
+            return [];
+        }
+
+        HashSet<string> currentImportUriKeys = [.. currentState.ImportPaths
+            .Select(importPath => ResolveImportUriKey(importPath, currentUri))];
+
+        List<(DocumentUri, DocumentState)> connected = [];
+        foreach ((DocumentUri otherUri, DocumentState otherState) in this.AllDocuments())
+        {
+            string otherUriKey = otherUri.ToString();
+            if (otherUriKey == currentUriKey)
+            {
+                continue;
+            }
+
+            bool currentImportsOther = currentImportUriKeys.Contains(otherUriKey);
+            bool otherImportsCurrent = otherState.ImportPaths
+                .Any(importPath => ResolveImportUriKey(importPath, otherUri) == currentUriKey);
+
+            if (currentImportsOther || otherImportsCurrent)
+            {
+                connected.Add((otherUri, otherState));
+            }
+        }
+
+        return connected;
+    }
+
+    /// <summary>
+    /// Resolves a <c>PRAY ADMIT</c> import path to the URI key of the document it refers to.
+    /// </summary>
+    /// <param name="importPath">The raw import path string, relative or absolute.</param>
+    /// <param name="importingUri">The URI of the document declaring the import; a relative path is resolved against its directory.</param>
+    /// <returns>The URI of the resolved document.</returns>
+    private static string ResolveImportUriKey(string importPath, DocumentUri importingUri)
+    {
+        string? importingDirectory = Path.GetDirectoryName(DocumentUri.GetFileSystemPath(importingUri));
+        string resolvedPath = importingDirectory is not null && !Path.IsPathRooted(importPath)
+            ? Path.GetFullPath(Path.Combine(importingDirectory, importPath))
+            : importPath;
+
+        return DocumentUri.FromFileSystemPath(resolvedPath).ToString();
+    }
+
+    /// <summary>
+    /// Returns the distinct namespace paths declared across all open documents.
+    /// </summary>
+    /// <remarks>
+    /// Used by <see cref="CompletionHandler"/> and <see cref="HoverHandler"/> for namespace completion and hover.
+    /// </remarks>
+    /// <returns>Every distinct, non-empty <see cref="DocumentState.NamespacePath"/> across all open documents.</returns>
+    public IReadOnlyList<IReadOnlyList<string>> GetKnownNamespacePaths()
+    {
+        Dictionary<string, IReadOnlyList<string>> distinctPaths = new(StringComparer.OrdinalIgnoreCase);
+        foreach ((_, DocumentState state) in this.AllDocuments())
+        {
+            if (state.NamespacePath.Count == 0)
+            {
+                continue;
+            }
+
+            string key = string.Join('.', state.NamespacePath);
+            distinctPaths.TryAdd(key, state.NamespacePath);
+        }
+
+        return [.. distinctPaths.Values];
+    }
+
+    /// <summary>
+    /// Returns the function symbols declared in every open document whose own namespace path exactly matches
+    /// <paramref name="namespacePath"/> (segment-by-segment, case-insensitive).
+    /// </summary>
+    /// <param name="namespacePath">The namespace path to match against.</param>
+    /// <remarks>
+    /// Used by <see cref="CompletionHandler"/> to scope function-name completion after the <c>WITH DUTY</c> segment
+    /// of a fully-qualified <c>SUMMON</c> target.
+    /// </remarks>
+    /// <returns>Function <see cref="SymbolInfo"/> records from every open document whose namespace path matches.</returns>
+    public IEnumerable<SymbolInfo> GetFunctionsInNamespace(IReadOnlyList<string> namespacePath)
+    {
+        foreach ((_, DocumentState state) in this.AllDocuments())
+        {
+            if (state.SymbolTable is null || !NamespacePathsEqual(state.NamespacePath, namespacePath))
+            {
+                continue;
+            }
+
+            foreach (SymbolInfo symbol in state.SymbolTable.AllSymbols())
+            {
+                if (symbol.Kind == SymbolKind.Function)
+                {
+                    yield return symbol;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Compares two namespace paths segment-by-segment, case-insensitively.
+    /// </summary>
+    /// <param name="first">The first namespace path.</param>
+    /// <param name="second">The second namespace path.</param>
+    /// <returns><c>true</c> if both paths have the same number of segments and each segment matches case-insensitively, otherwise <c>false</c>.</returns>
+    private static bool NamespacePathsEqual(IReadOnlyList<string> first, IReadOnlyList<string> second)
+    {
+        if (first.Count != second.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < first.Count; i++)
+        {
+            if (!string.Equals(first[i], second[i], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
