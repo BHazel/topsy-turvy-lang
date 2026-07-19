@@ -91,6 +91,11 @@ public sealed class UtopIRCodeGenerator
             case WereInstruction were:
                 builder.AppendLine($"£{were.Target.Name} = {UtopIRKeywords.Instructions.Were} {this.FormatOperand(were.Value)}, {this.TypeKeyword(were.Type)}");
                 break;
+            case VictimYarnInstruction victimYarn:
+                builder.AppendLine(
+                    $"£{victimYarn.Target.Name} = {UtopIRKeywords.Instructions.VictimYarn} " +
+                    $"{this.FormatOperand(victimYarn.YarnString)}, {this.FormatOperand(victimYarn.Index)}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {

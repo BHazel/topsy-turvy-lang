@@ -61,8 +61,9 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// All integer, floating-point and character types are supported as of v0.0.1-preview2.  As of
 /// v0.0.1-preview3, the <c>decree</c> (boolean) type is supported as the result of a comparison or
 /// logical instruction, and as the operand of a conditional branch but not yet as a <c>were</c>
-/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  String types
-/// are not currently supported.
+/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  The <c>yarn</c>
+/// (string) type is supported for declaration, assignment and <see cref="VictimYarnInstruction"/>
+/// character access (see <see cref="EmitVictimYarn"/>).
 /// </para>
 /// </remarks>
 public sealed class CilEmitter
@@ -328,6 +329,9 @@ public sealed class CilEmitter
                 break;
             case SailUnlikeInstruction sailUnlike:
                 this.EmitSailUnlike(sailUnlike, ilGenerator, locals, labels);
+                break;
+            case VictimYarnInstruction victimYarn:
+                this.EmitVictimYarn(victimYarn, ilGenerator, cilGenerator, locals, localTypes);
                 break;
         }
     }
@@ -785,6 +789,45 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits CIL for a <see cref="VictimYarnInstruction"/> by loading the <c>yarn</c> string value and the
+    /// 1-based index converted to 0-based, then calling <c>string.get_Chars(int)</c> via <c>callvirt</c>.
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared as <see cref="UtopIRType.Stitch"/>.
+    /// </remarks>
+    /// <param name="victimYarn">The victim.yarn instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <c>string.get_Chars(int)</c> cannot be resolved via reflection.</exception>
+    private void EmitVictimYarn(
+        VictimYarnInstruction victimYarn,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        if (!locals.TryGetValue(victimYarn.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(UtopIRType.Stitch));
+            cilGenerator.RegisterLocalName(declaredLocal, victimYarn.Target.Name);
+            locals[victimYarn.Target.Name] = declaredLocal;
+            localTypes[victimYarn.Target.Name] = UtopIRType.Stitch;
+        }
+
+        this.EmitStackLoadOperand(victimYarn.YarnString, ilGenerator, locals);
+        this.EmitStackLoadOperand(victimYarn.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+
+        MethodInfo getCharsMethod = typeof(string).GetMethod("get_Chars", [typeof(int)])
+            ?? throw new InvalidOperationException("'string.get_Chars(int)' could not be resolved.");
+        ilGenerator.Emit(OpCodes.Callvirt, getCharsMethod);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
     /// Retrieves the <see cref="Label"/> for the given name, lazily calling
     /// <see cref="ILGenerator.DefineLabel"/> the first time the name is seen.
     /// </summary>
@@ -996,6 +1039,9 @@ public sealed class CilEmitter
                 break;
             case bool boolean:
                 ilGenerator.Emit(OpCodes.Ldc_I4, boolean ? 1 : 0);
+                break;
+            case string stringValue:
+                ilGenerator.Emit(OpCodes.Ldstr, stringValue);
                 break;
             default:
                 throw new NotSupportedException(
@@ -1256,6 +1302,7 @@ public sealed class CilEmitter
         UtopIRType.Foot => typeof(float),
         UtopIRType.Stitch => typeof(char),
         UtopIRType.Decree => typeof(bool),
+        UtopIRType.Yarn => typeof(string),
         _ => throw new NotSupportedException(
             $"UtopIR type '{utopirType}' is not supported by the CIL emitter in this version.")
     };
@@ -1290,6 +1337,7 @@ public sealed class CilEmitter
             float => UtopIRType.Foot,
             char => UtopIRType.Stitch,
             bool => UtopIRType.Decree,
+            string => UtopIRType.Yarn,
             _ => throw new NotSupportedException(
                 $"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },

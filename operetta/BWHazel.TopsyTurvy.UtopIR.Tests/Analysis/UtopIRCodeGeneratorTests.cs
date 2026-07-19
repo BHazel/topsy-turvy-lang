@@ -418,6 +418,24 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that a <c>victim.yarn</c> instruction is emitted with its yarn and index operands.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimYarnInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new VictimYarnInstruction(
+                new UtopIRVariable("PoemSubjectLetter4"),
+                new VariableOperand(new UtopIRVariable("PoemSubject")),
+                new LiteralOperand(4))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£PoemSubjectLetter4 = victim.yarn £PoemSubject, 4");
+    }
+
+    /// <summary>
     /// Tests that a <c>sail</c> instruction is emitted with its label, prefixed with <c>!</c>.
     /// </summary>
     [Fact]
@@ -658,6 +676,25 @@ public class UtopIRCodeGeneratorTests
         HardlyInstruction original = new(
             new UtopIRVariable("result"),
             new VariableOperand(new UtopIRVariable("a")));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>victim.yarn</c> instruction re-parses to an equal <see cref="VictimYarnInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimYarnInstruction_RoundTripsThroughParser()
+    {
+        VictimYarnInstruction original = new(
+            new UtopIRVariable("PoemSubjectLetter4"),
+            new VariableOperand(new UtopIRVariable("PoemSubject")),
+            new LiteralOperand(4));
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();

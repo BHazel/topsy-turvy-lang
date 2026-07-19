@@ -33,6 +33,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>ComparisonRhs</c> matches an <see cref="OperandParser.ComparisonOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="ComparisonInstruction"/>.
 /// * <c>LogicalRhs</c> matches an <see cref="OperandParser.LogicalOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="LogicalInstruction"/>.
 /// * <c>HardlyRhs</c> matches the <c>hardly</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing a <see cref="HardlyInstruction"/>.
+/// * <c>VictimYarnRhs</c> matches the <c>victim.yarn</c> keyword, required whitespace, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="VictimYarnInstruction"/>.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -208,6 +209,20 @@ public static class InstructionParser
         select (UtopIRInstruction)new HardlyInstruction(new UtopIRVariable(target), operand);
 
     /// <summary>
+    /// Parses a <c>victim.yarn</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> VictimYarnRhs(string target) =>
+        from victimYarnKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.VictimYarn)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from yarn in OperandParser.Operand
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from index in OperandParser.Operand
+        select (UtopIRInstruction)new VictimYarnInstruction(new UtopIRVariable(target), yarn, index);
+
+    /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> AssignmentInstruction =
@@ -226,6 +241,7 @@ public static class InstructionParser
                 .Or(ComparisonRhs(target))
                 .Or(LogicalRhs(target))
                 .Or(HardlyRhs(target))
+                .Or(VictimYarnRhs(target))
         select instruction;
 
     /// <summary>

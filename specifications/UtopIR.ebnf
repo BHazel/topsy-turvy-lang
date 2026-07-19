@@ -64,7 +64,8 @@ AssignmentRhs         = WelcomeRhs
                       | LogicalRhs
                       | HardlyRhs
                       | WereRhs
-                      | LeaveRhs ;
+                      | LeaveRhs
+                      | VictimYarnRhs ;
 
 WelcomeRhs      = "welcome", Type ;
 AppointRhs      = "appoint", Operand ;
@@ -76,6 +77,9 @@ LogicalRhs      = LogicalOp, Operand, ",", Operand ;
 HardlyRhs       = "hardly", Operand ;
 WereRhs         = "were", Operand, ",", Type ;
 LeaveRhs        = "leave" ;
+VictimYarnRhs   = "victim.yarn", Operand, ",", Operand ;
+(* Selects the stitch character at the 1-based Operand index of a yarn value
+   (the first Operand).  The target register is of type stitch. *)
 
 (* Standalone form: no assignment target *)
 StandaloneInstruction = PrenticeInstruction

@@ -2051,6 +2051,48 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that a <c>VICTIM &lt;index&gt; ON &lt;yarn&gt;</c> expression, used as the initial value of
+    /// a <c>stitch</c> declaration, welcomes the declared variable as <see cref="UtopIRType.Stitch"/>
+    /// (from the declaration type, via <c>MapType</c>) and separately emits a
+    /// <see cref="VictimYarnInstruction"/> into a temporary register, appointed into that declared
+    /// variable afterwards.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayIndexOnYarnVariable_EmitsVictimYarnInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode()
+            {
+                Name = "PoemSubject",
+                NameSpan = PlaceholderSpan,
+                Type = LiteralType.String,
+                InitialValue = new LiteralNode() { Value = "Hollow", Type = LiteralType.String, Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            },
+            new DeclarationNode()
+            {
+                Name = "PoemSubjectLetter4",
+                NameSpan = PlaceholderSpan,
+                Type = LiteralType.Char,
+                InitialValue = new ArrayIndexNode() { Index = IntLiteral(4), ArrayName = "PoemSubject", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeInstruction welcomeLetter = result.Instructions.OfType<WelcomeInstruction>().Single(welcomeInstruction => welcomeInstruction.Target.Name == "PoemSubjectLetter4");
+        welcomeLetter.Type.ShouldBe(UtopIRType.Stitch);
+
+        VictimYarnInstruction victimYarn = result.Instructions.OfType<VictimYarnInstruction>().Single();
+        victimYarn.YarnString.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PoemSubject");
+        victimYarn.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(4);
+
+        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        appoint.Target.Name.ShouldBe("PoemSubjectLetter4");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(victimYarn.Target.Name);
+    }
+
+    /// <summary>
     /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.
     /// </summary>
     /// <param name="statements">The statements to include.</param>

@@ -231,6 +231,21 @@ public class InstructionParserTests
     }
 
     /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>victim.yarn</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithVictimYarn_ReturnsVictimYarnInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = victim.yarn £PoemSubject, 4"));
+
+        result.HasValue.ShouldBeTrue();
+        VictimYarnInstruction victimYarn = result.Value.ShouldBeOfType<VictimYarnInstruction>();
+        victimYarn.Target.Name.ShouldBe("r");
+        victimYarn.YarnString.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PoemSubject");
+        victimYarn.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(4);
+    }
+
+    /// <summary>
     /// Tests that <see cref="InstructionParser.Sail"/> parses an unconditional branch to a label.
     /// </summary>
     [Fact]

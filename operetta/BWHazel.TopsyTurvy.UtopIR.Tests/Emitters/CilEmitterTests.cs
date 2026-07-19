@@ -960,6 +960,23 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="VictimYarnInstruction"/> selects the 4th (1-based) character of
+    /// <c>"Hollow"</c>, <c>'l'</c>, returning its code point 108 as the exit code.
+    /// </summary>
+    [Fact]
+    public void Emit_VictimYarn_SelectsCorrectCharacter()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new VictimYarnInstruction(new("r"), new VariableOperand(new("PoemSubject")), new LiteralOperand(4)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(108);
+    }
+
+    /// <summary>
     /// Tests that an unconditional <see cref="SailInstruction"/> skips the instruction immediately following it.
     /// </summary>
     [Fact]
@@ -1173,9 +1190,16 @@ public class CilEmitterTests
     /// <summary>
     /// Tests that declaring a variable of an unsupported type throws <see cref="NotSupportedException"/>.
     /// </summary>
+    /// <remarks>
+    /// <see cref="UtopIRType.Array"/> and <see cref="UtopIRType.Pointer"/> are marker values only and are
+    /// never valid operands to the bare <c>welcome</c> instruction (arrays and pointers are declared via
+    /// the dedicated <c>welcome.list</c>/<c>welcome.gallerypic</c> instructions instead), so they remain
+    /// genuinely unsupported here even though <c>yarn</c> (formerly the only case) is now supported.
+    /// </remarks>
     /// <param name="type">The unsupported <see cref="UtopIRType"/> to declare.</param>
     [Theory]
-    [InlineData(UtopIRType.Yarn)]
+    [InlineData(UtopIRType.Array)]
+    [InlineData(UtopIRType.Pointer)]
     public void Emit_UnsupportedType_ThrowsNotSupportedException(UtopIRType type)
     {
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";

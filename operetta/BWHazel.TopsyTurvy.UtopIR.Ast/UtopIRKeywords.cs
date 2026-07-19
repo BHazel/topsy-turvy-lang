@@ -190,5 +190,8 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>sailunlike</c> instruction.</summary>
         public const string SailUnlike = "sailunlike";
+
+        /// <summary>The <c>victim.yarn</c> instruction.</summary>
+        public const string VictimYarn = "victim.yarn";
     }
 }
