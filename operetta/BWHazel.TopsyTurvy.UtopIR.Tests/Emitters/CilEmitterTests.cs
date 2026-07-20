@@ -977,6 +977,43 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> followed by <see cref="AppointVictimInstruction"/>s
+    /// and a <see cref="VictimListInstruction"/> allocates a real CLR array, writes each element via
+    /// <c>stelem</c> and reads one back via <c>ldelem</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListAppointVictimVictimList_StoresAndReadsElement()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(2)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(20);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> declared with a bare size and no
+    /// <see cref="AppointVictimInstruction"/>s produces a <c>newarr</c>-zero-initialised element when
+    /// read back, matching the Topsy Turvy "pre-allocated with default values" semantics.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListWithBareSizeAndNoAppointVictim_ReadsZeroInitialisedElement()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(1)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(0);
+    }
+
+    /// <summary>
     /// Tests that an unconditional <see cref="SailInstruction"/> skips the instruction immediately following it.
     /// </summary>
     [Fact]

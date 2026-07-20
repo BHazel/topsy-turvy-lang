@@ -246,6 +246,77 @@ public class InstructionParserTests
     }
 
     /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>welcome.list</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithWelcomeList_ReturnsWelcomeListInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
+
+        result.HasValue.ShouldBeTrue();
+        WelcomeListInstruction welcomeList = result.Value.ShouldBeOfType<WelcomeListInstruction>();
+        welcomeList.Target.Name.ShouldBe("Numbers");
+        welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
+        welcomeList.Size.ShouldBe(3);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses <c>welcome.list</c> in
+    /// full rather than stopping short at the shared <c>welcome</c> prefix.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithWelcomeList_DoesNotStopAtWelcomePrefix()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldNotBeOfType<WelcomeInstruction>();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>victim.list</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithVictimList_ReturnsVictimListInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = victim.list £Numbers, 2"));
+
+        result.HasValue.ShouldBeTrue();
+        VictimListInstruction victimList = result.Value.ShouldBeOfType<VictimListInstruction>();
+        victimList.Target.Name.ShouldBe("r");
+        victimList.Array.Name.ShouldBe("Numbers");
+        victimList.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AppointVictim"/> parses an <c>appoint.victim</c> instruction.
+    /// </summary>
+    [Fact]
+    public void AppointVictim_WithArrayIndexAndValue_ReturnsAppointVictimInstruction()
+    {
+        var result = InstructionParser.AppointVictim(new("appoint.victim £Numbers, 1, 10"));
+
+        result.HasValue.ShouldBeTrue();
+        AppointVictimInstruction appointVictim = result.Value.ShouldBeOfType<AppointVictimInstruction>();
+        appointVictim.Array.Name.ShouldBe("Numbers");
+        appointVictim.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        appointVictim.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.StandaloneInstruction"/> parses <c>appoint.victim</c> rather
+    /// than stopping short at the shared <c>appoint</c> prefix used by the assignment-form instruction.
+    /// </summary>
+    [Fact]
+    public void StandaloneInstruction_WithAppointVictim_ReturnsAppointVictimInstruction()
+    {
+        var result = InstructionParser.StandaloneInstruction(new("appoint.victim £Numbers, 1, 10"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeOfType<AppointVictimInstruction>();
+    }
+
+    /// <summary>
     /// Tests that <see cref="InstructionParser.Sail"/> parses an unconditional branch to a label.
     /// </summary>
     [Fact]

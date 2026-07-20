@@ -2093,6 +2093,141 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that an <see cref="ArrayDeclarationNode"/> with initial values emits a
+    /// <see cref="WelcomeListInstruction"/> sized to the initial value count, followed by one
+    /// 1-based <see cref="AppointVictimInstruction"/> per initial value, in source order.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayDeclarationWithInitialValues_EmitsWelcomeListThenAppointVictimPerElement()
+    {
+        ProgramNode program = Programme(
+            new ArrayDeclarationNode()
+            {
+                Name = "Numbers",
+                NameSpan = PlaceholderSpan,
+                ElementType = LiteralType.Integer,
+                IsConstant = false,
+                InitialValues = [IntLiteral(10), IntLiteral(20), IntLiteral(30)],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeListInstruction welcomeList = result.Instructions.OfType<WelcomeListInstruction>().Single();
+        welcomeList.Target.Name.ShouldBe("Numbers");
+        welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
+        welcomeList.Size.ShouldBe(3);
+
+        AppointVictimInstruction[] appointVictims = [.. result.Instructions.OfType<AppointVictimInstruction>()];
+        appointVictims.Length.ShouldBe(3);
+        for (int i = 0; i < appointVictims.Length; i++)
+        {
+            appointVictims[i].Array.Name.ShouldBe("Numbers");
+            appointVictims[i].Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(i + 1);
+            appointVictims[i].Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe((i + 1) * 10);
+        }
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ArrayDeclarationNode"/> with a bare <see cref="ArrayDeclarationNode.Size"/>
+    /// and no initial values emits only a <see cref="WelcomeListInstruction"/> sized accordingly, with no
+    /// <see cref="AppointVictimInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayDeclarationWithBareSize_EmitsWelcomeListOnly()
+    {
+        ProgramNode program = Programme(
+            new ArrayDeclarationNode()
+            {
+                Name = "Numbers",
+                NameSpan = PlaceholderSpan,
+                ElementType = LiteralType.Integer,
+                Size = 3,
+                IsConstant = false,
+                InitialValues = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(1);
+        WelcomeListInstruction welcomeList = result.Instructions[0].ShouldBeOfType<WelcomeListInstruction>();
+        welcomeList.Size.ShouldBe(3);
+        result.Instructions.OfType<AppointVictimInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ArrayElementAssignmentNode"/> emits an <see cref="AppointVictimInstruction"/>
+    /// with the transformed index and value operands.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayElementAssignment_EmitsAppointVictimInstruction()
+    {
+        ProgramNode program = Programme(
+            new ArrayDeclarationNode()
+            {
+                Name = "Numbers",
+                NameSpan = PlaceholderSpan,
+                ElementType = LiteralType.Integer,
+                Size = 3,
+                IsConstant = false,
+                InitialValues = [],
+                Span = PlaceholderSpan
+            },
+            new ArrayElementAssignmentNode()
+            {
+                Index = IntLiteral(2),
+                ArrayName = "Numbers",
+                Value = IntLiteral(20),
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        AppointVictimInstruction appointVictim = result.Instructions.OfType<AppointVictimInstruction>().Single();
+        appointVictim.Array.Name.ShouldBe("Numbers");
+        appointVictim.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+        appointVictim.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(20);
+    }
+
+    /// <summary>
+    /// Tests that a <c>VICTIM &lt;index&gt; ON &lt;array&gt;</c> expression on an array variable emits a
+    /// <see cref="VictimListInstruction"/> into a temporary register typed as the array element type.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayIndexOnArrayVariable_EmitsVictimListInstruction()
+    {
+        ProgramNode program = Programme(
+            new ArrayDeclarationNode()
+            {
+                Name = "Numbers",
+                NameSpan = PlaceholderSpan,
+                ElementType = LiteralType.Integer,
+                IsConstant = false,
+                InitialValues = [IntLiteral(10), IntLiteral(20), IntLiteral(30)],
+                Span = PlaceholderSpan
+            },
+            new DeclarationNode()
+            {
+                Name = "NumbersElement2",
+                NameSpan = PlaceholderSpan,
+                Type = LiteralType.Integer,
+                InitialValue = new ArrayIndexNode() { Index = IntLiteral(2), ArrayName = "Numbers", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        VictimListInstruction victimList = result.Instructions.OfType<VictimListInstruction>().Single();
+        victimList.Array.Name.ShouldBe("Numbers");
+        victimList.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+
+        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        appoint.Target.Name.ShouldBe("NumbersElement2");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(victimList.Target.Name);
+    }
+
+    /// <summary>
     /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.
     /// </summary>
     /// <param name="statements">The statements to include.</param>

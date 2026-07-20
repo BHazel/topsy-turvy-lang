@@ -23,6 +23,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// Each of the following is a private helper parser for the operands for instructions performing assignment
 /// (the "right-hand side").  They all take the already-parsed target variable name and are tried in turn by
 /// <see cref="AssignmentInstruction"/> below but differ only in which keyword and operand shape they match:
+/// * <c>WelcomeListRhs</c> matches the <c>welcome.list</c> keyword, required whitespace, an <see cref="OperandParser.Type"/>, a comma, then an integer literal size, producing a <see cref="WelcomeListInstruction"/>. Tried before <c>WelcomeRhs</c>.
 /// * <c>WelcomeRhs</c> matches the <c>welcome</c> keyword, required whitespace, then a <see cref="OperandParser.Type"/>, producing a <see cref="WelcomeInstruction"/>.
 /// * <c>AppointRhs</c> matches the <c>appoint</c> keyword, required whitespace, then an <see cref="OperandParser.Operand"/>, producing an <see cref="AppointInstruction"/>.
 /// * <c>WereRhs</c> matches the <c>were</c> keyword, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="OperandParser.Type"/>, producing a <see cref="WereInstruction"/>.
@@ -34,6 +35,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>LogicalRhs</c> matches an <see cref="OperandParser.LogicalOperation"/> mnemonic, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="LogicalInstruction"/>.
 /// * <c>HardlyRhs</c> matches the <c>hardly</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing a <see cref="HardlyInstruction"/>.
 /// * <c>VictimYarnRhs</c> matches the <c>victim.yarn</c> keyword, required whitespace, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="VictimYarnInstruction"/>.
+/// * <c>VictimListRhs</c> matches the <c>victim.list</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, then an <see cref="OperandParser.Operand"/> index, producing a <see cref="VictimListInstruction"/>.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -48,6 +50,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <see cref="Sail"/> matches the <c>sail</c> keyword, required whitespace, then a <see cref="Lexer.Label"/>, producing a <see cref="SailInstruction"/>.
 /// * <see cref="SailAlike"/> matches the <c>sailalike</c> keyword, required whitespace, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="Lexer.Label"/>, producing a <see cref="SailAlikeInstruction"/>.
 /// * <see cref="SailUnlike"/> matches the <c>sailunlike</c> keyword the same way as <see cref="SailAlike"/>, producing a <see cref="SailUnlikeInstruction"/>.
+/// * <see cref="AppointVictim"/> matches the <c>appoint.victim</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, an <see cref="OperandParser.Operand"/> index, a comma, then an <see cref="OperandParser.Operand"/> value, producing an <see cref="AppointVictimInstruction"/>.
 /// * <see cref="Label"/> matches a bare <see cref="Lexer.Label"/> on its own line, producing a <see cref="LabelInstruction"/>.
 /// * <see cref="StandaloneInstruction"/> tries all standalone instructions in turn:
 ///     * <see cref="Prentice"/>.
@@ -57,6 +60,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 ///     itself a textual prefix of either (<see cref="Lexer.Keyword(string)"/> matches raw text with
 ///     no trailing word-boundary check, so this ordering costs nothing and avoids relying on that
 ///     absence being permanent).
+///     * <see cref="AppointVictim"/>.
 ///     * <see cref="Label"/>.
 ///
 /// ### Instruction
@@ -89,6 +93,25 @@ public static class InstructionParser
             EqualTo('\r')
             .Optional()
             .IgnoreThen(Character.EqualTo('\n'));
+
+    /// <summary>
+    /// Parses a <c>welcome.list</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <remarks>
+    /// Tried before <see cref="WelcomeRhs(string)"/> so that <c>welcome.list</c> is matched in full
+    /// rather than <c>welcome</c> matching its own prefix and leaving <c>.list ...</c> behind to fail
+    /// the rest of the instruction parse.
+    /// </remarks>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> WelcomeListRhs(string target) =>
+        from welcomeListKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.WelcomeList)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from elementType in OperandParser.Type
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from size in Numerics.IntegerInt32
+        select (UtopIRInstruction)new WelcomeListInstruction(new UtopIRVariable(target), elementType, size);
 
     /// <summary>
     /// Parses a <c>welcome</c> assignment right-hand side for the given target variable.
@@ -223,6 +246,20 @@ public static class InstructionParser
         select (UtopIRInstruction)new VictimYarnInstruction(new UtopIRVariable(target), yarn, index);
 
     /// <summary>
+    /// Parses a <c>victim.list</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> VictimListRhs(string target) =>
+        from victimListKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.VictimList)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from array in Lexer.Variable
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from index in OperandParser.Operand
+        select (UtopIRInstruction)new VictimListInstruction(new UtopIRVariable(target), new UtopIRVariable(array), index);
+
+    /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> AssignmentInstruction =
@@ -231,7 +268,8 @@ public static class InstructionParser
         from equalsCharacter in Character.EqualTo('=')
         from whitespace2 in Lexer.Whitespace
         from instruction in
-            WelcomeRhs(target)
+            WelcomeListRhs(target)
+                .Or(WelcomeRhs(target))
                 .Or(AppointRhs(target))
                 .Or(WereRhs(target))
                 .Or(LeaveRhs(target))
@@ -242,6 +280,7 @@ public static class InstructionParser
                 .Or(LogicalRhs(target))
                 .Or(HardlyRhs(target))
                 .Or(VictimYarnRhs(target))
+                .Or(VictimListRhs(target))
         select instruction;
 
     /// <summary>
@@ -306,6 +345,23 @@ public static class InstructionParser
         select (UtopIRInstruction)new LabelInstruction(new UtopIRLabel(label));
 
     /// <summary>
+    /// Parses an <c>appoint.victim</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> AppointVictim =
+        from appointVictimKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.AppointVictim)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from array in Lexer.Variable
+        from whitespace2 in Lexer.Whitespace
+        from comma1 in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from index in OperandParser.Operand
+        from whitespace4 in Lexer.Whitespace
+        from comma2 in Character.EqualTo(',')
+        from whitespace5 in Lexer.Whitespace
+        from value in OperandParser.Operand
+        select (UtopIRInstruction)new AppointVictimInstruction(new UtopIRVariable(array), index, value);
+
+    /// <summary>
     /// Parses any of the standalone instruction forms with no assignment target.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> StandaloneInstruction =
@@ -314,6 +370,7 @@ public static class InstructionParser
             .Or(SailAlike)
             .Or(SailUnlike)
             .Or(Sail)
+            .Or(AppointVictim)
             .Or(Label);
 
     /// <summary>

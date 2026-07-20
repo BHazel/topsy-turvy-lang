@@ -9,6 +9,7 @@
     { "include": "#char-literals" },
     { "include": "#numbers" },
     { "include": "#boolean-literals" },
+    { "include": "#array" },
     { "include": "#declaration" },
     { "include": "#assignment" },
     { "include": "#cast" },
@@ -20,6 +21,7 @@
     { "include": "#logical" },
     { "include": "#stack" },
     { "include": "#control-flow" },
+    { "include": "#victim" },
     { "include": "#types" },
     { "include": "#variables" },
     { "include": "#labels" }
@@ -62,6 +64,18 @@
     "boolean-literals": {
       "name": "constant.language.boolean.utopir",
       "match": "(?i)\\b(verity|nay)\\b"
+    },
+    "array": {
+      "patterns": [
+        {
+          "name": "keyword.other.declaration.utopir",
+          "match": "(?i)\\bwelcome\\.list\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.utopir",
+          "match": "(?i)\\bappoint\\.victim\\b"
+        }
+      ]
     },
     "declaration": {
       "name": "keyword.other.declaration.utopir",
@@ -106,6 +120,10 @@
     "control-flow": {
       "name": "keyword.control.utopir",
       "match": "(?i)\\b(sailalike|sailunlike|sail|find)\\b"
+    },
+    "victim": {
+      "name": "keyword.other.access.utopir",
+      "match": "(?i)\\bvictim\\.(yarn|list)\\b"
     },
     "types": {
       "name": "storage.type.utopir",

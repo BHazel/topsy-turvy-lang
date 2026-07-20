@@ -101,6 +101,7 @@ public sealed class CilEmitter
 
         Dictionary<string, LocalBuilder> locals = [];
         Dictionary<string, UtopIRType> localTypes = [];
+        Dictionary<string, UtopIRType> arrayElementTypes = [];
         Dictionary<string, Label> labels = [];
 
         this.ValidateLabelReferences(program);
@@ -113,7 +114,7 @@ public sealed class CilEmitter
                 hasReturn = true;
             }
 
-            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, labels);
+            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes, labels);
         }
 
         if (!hasReturn)
@@ -271,6 +272,7 @@ public sealed class CilEmitter
     /// <param name="cilGenerator">The CIL generator to record UtopIR names for locals declared while emitting this instruction.</param>
     /// <param name="locals">The map from variable name (without <c>£</c>) to its <see cref="LocalBuilder"/> slot.</param>
     /// <param name="localTypes">The map from variable name to its <see cref="UtopIRType"/> for type-context lookups.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     /// <param name="labels">The map from label name (without <c>!</c>) to its <see cref="Label"/>, lazily populated via <see cref="GetOrDefineLabel"/>.</param>
     private void EmitInstruction(
         UtopIRInstruction instruction,
@@ -278,6 +280,7 @@ public sealed class CilEmitter
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
         Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes,
         Dictionary<string, Label> labels)
     {
         switch (instruction)
@@ -332,6 +335,15 @@ public sealed class CilEmitter
                 break;
             case VictimYarnInstruction victimYarn:
                 this.EmitVictimYarn(victimYarn, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case WelcomeListInstruction welcomeList:
+                this.EmitWelcomeList(welcomeList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
+                break;
+            case AppointVictimInstruction appointVictim:
+                this.EmitAppointVictim(appointVictim, ilGenerator, locals, arrayElementTypes);
+                break;
+            case VictimListInstruction victimList:
+                this.EmitVictimList(victimList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
                 break;
         }
     }
@@ -828,6 +840,101 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Declares a CIL local variable for a <see cref="WelcomeListInstruction"/> and allocates a CLR
+    /// array of the declared element type and size via <c>newarr</c>.
+    /// </summary>
+    /// <param name="welcomeList">The welcome.list instruction declaring the array variable.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitWelcomeList(
+        WelcomeListInstruction welcomeList,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        Type elementClrType = this.MapToClrType(welcomeList.ElementType);
+
+        ilGenerator.Emit(OpCodes.Ldc_I4, welcomeList.Size);
+        ilGenerator.Emit(OpCodes.Newarr, elementClrType);
+
+        LocalBuilder local = ilGenerator.DeclareLocal(elementClrType.MakeArrayType());
+        cilGenerator.RegisterLocalName(local, welcomeList.Target.Name);
+        ilGenerator.Emit(OpCodes.Stloc, local);
+
+        locals[welcomeList.Target.Name] = local;
+        localTypes[welcomeList.Target.Name] = UtopIRType.Array;
+        arrayElementTypes[welcomeList.Target.Name] = welcomeList.ElementType;
+    }
+
+    /// <summary>
+    /// Emits CIL for an <see cref="AppointVictimInstruction"/> by loading the array, the 1-based index
+    /// converted to 0-based, and the value, then storing via the element type <c>stelem.*</c> opcode.
+    /// </summary>
+    /// <param name="appointVictim">The appoint.victim instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitAppointVictim(
+        AppointVictimInstruction appointVictim,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        UtopIRType elementType = arrayElementTypes[appointVictim.Array.Name];
+
+        ilGenerator.Emit(OpCodes.Ldloc, locals[appointVictim.Array.Name]);
+        this.EmitStackLoadOperand(appointVictim.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+        this.EmitStackLoadOperand(appointVictim.Value, ilGenerator, locals);
+        this.EmitArrayElementStoreOpcode(elementType, ilGenerator);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="VictimListInstruction"/> by loading the array and the 1-based index
+    /// converted to 0-based, then loading via the element type <c>ldelem.*</c> opcode.
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared with the array element type.
+    /// </remarks>
+    /// <param name="victimList">The victim.list instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitVictimList(
+        VictimListInstruction victimList,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        UtopIRType elementType = arrayElementTypes[victimList.Array.Name];
+
+        if (!locals.TryGetValue(victimList.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(elementType));
+            cilGenerator.RegisterLocalName(declaredLocal, victimList.Target.Name);
+            locals[victimList.Target.Name] = declaredLocal;
+            localTypes[victimList.Target.Name] = elementType;
+        }
+
+        ilGenerator.Emit(OpCodes.Ldloc, locals[victimList.Array.Name]);
+        this.EmitStackLoadOperand(victimList.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+        this.EmitArrayElementLoadOpcode(elementType, ilGenerator);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
     /// Retrieves the <see cref="Label"/> for the given name, lazily calling
     /// <see cref="ILGenerator.DefineLabel"/> the first time the name is seen.
     /// </summary>
@@ -1171,6 +1278,72 @@ public sealed class CilEmitter
             default:
                 throw new InvalidOperationException($"Operation '{operation}' not supported.");
         }
+    }
+
+    /// <summary>
+    /// Emits the CIL <c>ldelem.*</c> opcode that loads an array element of the given
+    /// <see cref="UtopIRType"/> onto the evaluation stack.
+    /// </summary>
+    /// <remarks>
+    /// Unsigned narrow integer types (<see cref="UtopIRType.StandingPeer"/>,
+    /// <see cref="UtopIRType.StandingPirate"/>, <see cref="UtopIRType.StandingSausageRoll"/>) and
+    /// <see cref="UtopIRType.Stitch"/> (a 16-bit unsigned code unit) use the <c>u*</c>-suffixed opcode
+    /// so the loaded value is zero-extended rather than sign-extended.  <see cref="UtopIRType.Yarn"/>
+    /// is a CLR reference type and uses <c>ldelem.ref</c>.
+    /// </remarks>
+    /// <param name="elementType">The array declared element type.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="elementType"/> has no supported array element opcode in this version.</exception>
+    private void EmitArrayElementLoadOpcode(UtopIRType elementType, ILGenerator ilGenerator)
+    {
+        OpCode opcode = elementType switch
+        {
+            UtopIRType.Chancellor or UtopIRType.StandingChancellor => OpCodes.Ldelem_I8,
+            UtopIRType.Peer => OpCodes.Ldelem_I4,
+            UtopIRType.StandingPeer => OpCodes.Ldelem_U4,
+            UtopIRType.Pirate => OpCodes.Ldelem_I2,
+            UtopIRType.StandingPirate or UtopIRType.Stitch => OpCodes.Ldelem_U2,
+            UtopIRType.SausageRoll => OpCodes.Ldelem_I1,
+            UtopIRType.StandingSausageRoll or UtopIRType.Decree => OpCodes.Ldelem_U1,
+            UtopIRType.Fathom => OpCodes.Ldelem_R8,
+            UtopIRType.Foot => OpCodes.Ldelem_R4,
+            UtopIRType.Yarn => OpCodes.Ldelem_Ref,
+            _ => throw new NotSupportedException(
+                $"UtopIR type '{elementType}' is not supported as an array element type by the CIL emitter in this version.")
+        };
+
+        ilGenerator.Emit(opcode);
+    }
+
+    /// <summary>
+    /// Emits the CIL <c>stelem.*</c> opcode that stores a value from the evaluation stack into an
+    /// array element of the given <see cref="UtopIRType"/>.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="EmitArrayElementLoadOpcode"/>, storing has no signed/unsigned distinction:
+    /// a <c>stelem.*</c> opcode simply narrows and writes the bit pattern, so one opcode per width
+    /// covers both a type and its unsigned counterpart. <see cref="UtopIRType.Yarn"/> is a CLR
+    /// reference type and uses <c>stelem.ref</c>.
+    /// </remarks>
+    /// <param name="elementType">The array declared element type.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="elementType"/> has no supported array element opcode in this version.</exception>
+    private void EmitArrayElementStoreOpcode(UtopIRType elementType, ILGenerator ilGenerator)
+    {
+        OpCode opcode = elementType switch
+        {
+            UtopIRType.Chancellor or UtopIRType.StandingChancellor => OpCodes.Stelem_I8,
+            UtopIRType.Peer or UtopIRType.StandingPeer => OpCodes.Stelem_I4,
+            UtopIRType.Pirate or UtopIRType.StandingPirate or UtopIRType.Stitch => OpCodes.Stelem_I2,
+            UtopIRType.SausageRoll or UtopIRType.StandingSausageRoll or UtopIRType.Decree => OpCodes.Stelem_I1,
+            UtopIRType.Fathom => OpCodes.Stelem_R8,
+            UtopIRType.Foot => OpCodes.Stelem_R4,
+            UtopIRType.Yarn => OpCodes.Stelem_Ref,
+            _ => throw new NotSupportedException(
+                $"UtopIR type '{elementType}' is not supported as an array element type by the CIL emitter in this version.")
+        };
+
+        ilGenerator.Emit(opcode);
     }
 
     /// <summary>

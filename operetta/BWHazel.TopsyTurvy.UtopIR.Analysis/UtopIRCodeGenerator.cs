@@ -96,6 +96,19 @@ public sealed class UtopIRCodeGenerator
                     $"£{victimYarn.Target.Name} = {UtopIRKeywords.Instructions.VictimYarn} " +
                     $"{this.FormatOperand(victimYarn.YarnString)}, {this.FormatOperand(victimYarn.Index)}");
                 break;
+            case WelcomeListInstruction welcomeList:
+                builder.AppendLine($"£{welcomeList.Target.Name} = {UtopIRKeywords.Instructions.WelcomeList} {this.TypeKeyword(welcomeList.ElementType)}, {welcomeList.Size}");
+                break;
+            case AppointVictimInstruction appointVictim:
+                builder.AppendLine(
+                    $"{UtopIRKeywords.Instructions.AppointVictim} £{appointVictim.Array.Name}, " +
+                    $"{this.FormatOperand(appointVictim.Index)}, {this.FormatOperand(appointVictim.Value)}");
+                break;
+            case VictimListInstruction victimList:
+                builder.AppendLine(
+                    $"£{victimList.Target.Name} = {UtopIRKeywords.Instructions.VictimList} " +
+                    $"£{victimList.Array.Name}, {this.FormatOperand(victimList.Index)}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {

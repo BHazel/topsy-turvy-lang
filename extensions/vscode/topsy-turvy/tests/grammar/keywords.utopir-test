@@ -140,3 +140,19 @@ sailunlike £a, !LOGIC
 
 sail !LOGIC
 //^ keyword.control.utopir
+
+// ── Victim (string/array access) ─────────────────────────────────
+
+£r = victim.yarn £y, 4
+//   ^ keyword.other.access.utopir
+
+£r = victim.list £a, 2
+//   ^ keyword.other.access.utopir
+
+// ── Arrays: the caret lands on the ".list"/".victim" suffix itself, so this fails if the plain declaration/assignment groups are ever accidentally reordered before this one ─
+
+£a = welcome.list peer, 3
+//           ^ keyword.other.declaration.utopir
+
+appoint.victim £a, 1, 10
+//      ^ keyword.operator.assignment.utopir

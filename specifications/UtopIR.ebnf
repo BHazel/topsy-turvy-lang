@@ -55,7 +55,8 @@ Instruction     = AssignmentInstruction | StandaloneInstruction ;
 
 (* Assignment form: £<var> = <rhs> *)
 AssignmentInstruction = Variable, "=", AssignmentRhs ;
-AssignmentRhs         = WelcomeRhs
+AssignmentRhs         = WelcomeListRhs
+                      | WelcomeRhs
                       | AppointRhs
                       | ArithmeticRhs
                       | BitwiseRhs
@@ -65,8 +66,12 @@ AssignmentRhs         = WelcomeRhs
                       | HardlyRhs
                       | WereRhs
                       | LeaveRhs
-                      | VictimYarnRhs ;
+                      | VictimYarnRhs
+                      | VictimListRhs ;
 
+WelcomeListRhs  = "welcome.list", Type, ",", IntegerLiteral ;
+(* Declares an array variable of the given element Type and size.  Tried
+   before WelcomeRhs, since "welcome" is a prefix of "welcome.list". *)
 WelcomeRhs      = "welcome", Type ;
 AppointRhs      = "appoint", Operand ;
 ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
@@ -80,6 +85,9 @@ LeaveRhs        = "leave" ;
 VictimYarnRhs   = "victim.yarn", Operand, ",", Operand ;
 (* Selects the stitch character at the 1-based Operand index of a yarn value
    (the first Operand).  The target register is of type stitch. *)
+VictimListRhs   = "victim.list", Variable, ",", Operand ;
+(* Selects the element at the 1-based Operand index of the array named by
+   Variable.  The target register has the array's declared element type. *)
 
 (* Standalone form: no assignment target *)
 StandaloneInstruction = PrenticeInstruction
@@ -87,6 +95,7 @@ StandaloneInstruction = PrenticeInstruction
                       | SailAlikeInstruction
                       | SailUnlikeInstruction
                       | SailInstruction
+                      | AppointVictimInstruction
                       | LabelDeclaration ;
 PrenticeInstruction   = "prentice", Operand ;
 FindInstruction       = "find", [ Operand ] ;
@@ -100,6 +109,10 @@ SailAlikeInstruction  = "sailalike", Operand, ",", Label ;
 SailUnlikeInstruction = "sailunlike", Operand, ",", Label ;
 (* "sailalike" and "sailunlike" must be matched before the plain "sail" form,
    since "sail" is a prefix of both mnemonics. *)
+
+AppointVictimInstruction = "appoint.victim", Variable, ",", Operand, ",", Operand ;
+(* Assigns Value (the second Operand) to the element at the 1-based index
+   given by the first Operand, of the array named by Variable. *)
 
 LabelDeclaration      = Label ;
 (* A bare Label on its own line declares a branch target at that position in

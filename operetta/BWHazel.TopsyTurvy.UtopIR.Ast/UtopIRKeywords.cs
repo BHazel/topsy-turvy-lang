@@ -193,5 +193,14 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>victim.yarn</c> instruction.</summary>
         public const string VictimYarn = "victim.yarn";
+
+        /// <summary>The <c>welcome.list</c> instruction.</summary>
+        public const string WelcomeList = "welcome.list";
+
+        /// <summary>The <c>appoint.victim</c> instruction.</summary>
+        public const string AppointVictim = "appoint.victim";
+
+        /// <summary>The <c>victim.list</c> instruction.</summary>
+        public const string VictimList = "victim.list";
     }
 }

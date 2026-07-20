@@ -436,6 +436,51 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that a <c>welcome.list</c> instruction is emitted with its element type and size.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeListInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3)
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£Numbers = welcome.list peer, 3");
+    }
+
+    /// <summary>
+    /// Tests that an <c>appoint.victim</c> instruction is emitted with its array, index and value operands.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointVictimInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new AppointVictimInstruction(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("appoint.victim £Numbers, 1, 10");
+    }
+
+    /// <summary>
+    /// Tests that a <c>victim.list</c> instruction is emitted with its array and index operands.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimListInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new VictimListInstruction(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumbersElement2 = victim.list £Numbers, 2");
+    }
+
+    /// <summary>
     /// Tests that a <c>sail</c> instruction is emitted with its label, prefixed with <c>!</c>.
     /// </summary>
     [Fact]
@@ -695,6 +740,54 @@ public class UtopIRCodeGeneratorTests
             new UtopIRVariable("PoemSubjectLetter4"),
             new VariableOperand(new UtopIRVariable("PoemSubject")),
             new LiteralOperand(4));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>welcome.list</c> instruction re-parses to an equal <see cref="WelcomeListInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeListInstruction_RoundTripsThroughParser()
+    {
+        WelcomeListInstruction original = new(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3);
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>appoint.victim</c> instruction re-parses to an equal <see cref="AppointVictimInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointVictimInstruction_RoundTripsThroughParser()
+    {
+        AppointVictimInstruction original = new(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>victim.list</c> instruction re-parses to an equal <see cref="VictimListInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimListInstruction_RoundTripsThroughParser()
+    {
+        VictimListInstruction original = new(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2));
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
