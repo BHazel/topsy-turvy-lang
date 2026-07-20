@@ -19,6 +19,9 @@ public static class UtopIRKeywords
 
         /// <summary>Boolean <c>false</c> literal.</summary>
         public const string Nay = "nay";
+
+        /// <summary>Null literal, assignable to a pointer, array or <c>yarn</c> variable.</summary>
+        public const string Naught = "naught";
     }
 
     /// <summary>
@@ -190,5 +193,35 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>sailunlike</c> instruction.</summary>
         public const string SailUnlike = "sailunlike";
+
+        /// <summary>The <c>victim.yarn</c> instruction.</summary>
+        public const string VictimYarn = "victim.yarn";
+
+        /// <summary>The <c>welcome.list</c> instruction.</summary>
+        public const string WelcomeList = "welcome.list";
+
+        /// <summary>The <c>appoint.victim</c> instruction.</summary>
+        public const string AppointVictim = "appoint.victim";
+
+        /// <summary>The <c>victim.list</c> instruction.</summary>
+        public const string VictimList = "victim.list";
+
+        /// <summary>The <c>welcome.gallerypic</c> instruction.</summary>
+        public const string WelcomeGallerypic = "welcome.gallerypic";
+
+        /// <summary>The <c>pictureto</c> instruction.</summary>
+        public const string PictureTo = "pictureto";
+
+        /// <summary>The <c>viewfrom</c> instruction.</summary>
+        public const string ViewFrom = "viewfrom";
+
+        /// <summary>The <c>viewto</c> instruction.</summary>
+        public const string ViewTo = "viewto";
+
+        /// <summary>The <c>sum.g</c> instruction.</summary>
+        public const string SumPointer = "sum.g";
+
+        /// <summary>The <c>diff.g</c> instruction.</summary>
+        public const string DiffPointer = "diff.g";
     }
 }

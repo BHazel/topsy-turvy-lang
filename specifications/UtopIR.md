@@ -1,6 +1,6 @@
 # UtopIR
 ## An Intermediary Representation for Topsy Turvy
-### Language Specification: Version 0.0.1-preview3
+### Language Specification: Version 0.0.1-preview4
 
 ---
 
@@ -186,6 +186,248 @@ the following UtopIR is equivalent:
 
 ```utopir
 £LovesickMaidens = were £Lords, chancellor
+```
+
+#### 4.1.4. `welcome.list` Instruction
+
+The `welcome.list` instruction declares an array variable of a specified `type` and `size` and assigns it to a virtual register.
+
+**Operands**
+
+* **`<type>`:** The type of the array variable with options being any supported type; please see Appendix B for the complete type list.
+* **`<size>`:** The size of the array variable as an integer literal; any value of any other type is a complilation error.
+
+**Format**
+
+```utopir
+£<var-name> = welcome.list <type>, <size>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PRAY WELCOME Numbers AS A LITTLE LIST OF 3 PEER
+```
+
+or,
+
+```topsy
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Numbers = welcome.list peer, 3
+```
+
+#### 4.1.5. `appoint.victim` Instruction
+
+The `appoint.victim` instruction assigns a specified `value` to the element of an array variable at the specified `index`.  Assigning a value of a type that is incompatible with the variable declaration is a compilation error.
+
+**Operands**
+
+* **`<array>`:** The array variable to assign the value to an element; it must be an already declared variable.
+* **`<index>`:** The index of the array of the element to assign; it must be an integer value either literal or variable.
+* **`<value>`:** The value to assign to the array element; it must have a type compatible with the array variable type and can be either a literal or variable.
+
+**Format**
+
+```utopir
+appoint.victim <array>, <index>, <value>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+VICTIM 1 ON Numbers IS APPOINTED 10
+VICTIM 2 ON Numbers IS APPOINTED 20
+VICTIM 3 ON Numbers IS APPOINTED 30
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+```
+
+#### 4.1.6. `victim.yarn` Instruction
+
+The `victim.yarn` instruction selects the `stitch` at the 1-based index of a `yarn` value and assigns it to a virtual register.  The variable being selected from must be of `yarn` type and the target virtual register must be of `stitch` type; the index must be of an integer type.  Using any other types is a compilation error.
+
+**Operands**
+
+* **`<yarn>`:** The `yarn` variable being selected, either literal or variable.
+* **`<index>`:** The 1-based integer index of the `stitch` in the `yarn`, either a literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = victim.yarn <yarn>, <index>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PoemSubjectLetter4 IS APPOINTED VICTIM 4 ON PoemSubject
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£PoemSubjectLetter4 = victim.yarn £PoemSubject, 4
+```
+
+#### 4.1.7. `victim.list` Instruction
+
+The `victim.list` instruction selects the element at the 1-based index of an array variable and assigns it to a virtual register.  The array variable being selected from and the target virtual register must be of the same type; the index must be of an integer type.  Using any other types is a compilation error.
+
+**Operands**
+
+* **`<array>`:** The `array` variable being selected and must be an already declared and assigned variable.
+* **`<index>`:** The 1-based integer index of the element in the array, either a literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = victim.list <array>, <index>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersElement2 IS APPOINTED VICTIM 2 ON Numbers
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersElement2 = victim.list £Numbers, 2
+```
+
+#### 4.1.8. `welcome.gallerypic` Instruction
+
+The `welcome.gallerypic` instruction declares an pointer variable of a specified `type` and assigns it to a virtual register.
+
+**Operands**
+
+* **`<type>`:** The type of the pointer variable with options being any supported type (as outlined in Appendix B) or array; please see Appendix B for the complete type list.
+
+**Format**
+
+```utopir
+£<var-name> = welcome.gallerypic <type>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberPointer = welcome.gallerypic peer
+```
+
+#### 4.1.9. `pictureto` Instruction
+
+The `pictureto` instruction assigns a specified `variable` to a pointer variable.  The type of both the variable and its assigned pointer must be the same with the exceptions as outlined below; otherwise mismatched types is a compilation error.
+
+Pointers to string `yarn` and array variables point to an individual `stitch` character or array element respectively.  Therefore for `yarn` variables, pointers must be of type `stitch`.  For array variables, pointers must be of the type of the array.
+
+**Operands**
+
+* **`<variable>`:** The variable pointee as the target of the pointer; this must be an already declared variable and must have a compatible type as outlined above.
+
+**Format**
+
+```utopir
+£<pointer-name> = pictureto £<variable>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumberPointer IS APPOINTED GALLERY PICTURE TO Number
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberPointer = pictureto £Number
+```
+
+#### 4.1.10. `viewfrom` Instruction
+
+The `viewfrom` instruction dereferences a pointer and assigns the value to a virtual register.  The type of both the pointer being dereferenced and the target virtual register must be the same; using different types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer being dereferenced; this must be an already declared and assigned pointer.
+
+**Format**
+
+```utopir
+£<var-name> = viewfrom £<pointer>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumberValue IS APPOINTED VIEW FROM NumberPointer
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberValue = viewfrom £NumberPointer
+```
+
+#### 4.1.11. `viewto` Instruction
+
+The `viewto` instruction assigns a variable value through a pointer.  The type of both the pointer and the value to assign must be the same; using different types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer used to assign the value; this must be an already declared and assigned pointer.
+* **`<value>`:** The value to assign, either a literal or variable.
+
+**Format**
+
+```utopir
+viewto £<pointer>, <value>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+VIEW FROM NumberPointer IS APPOINTED 42
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+viewto £NumberPointer, 42
 ```
 
 ### 4.2. Arithmetic Operations
@@ -627,6 +869,66 @@ the following UtopIR is equivalent:
 
 ```utopir
 £FairiesOrLords = min.f 10.5, 5.25
+```
+
+#### 4.2.3. Pointer Arithmetic
+
+##### 4.2.3.1. `sum.g` Instruction
+
+The `sum.g` instruction performs additive pointer arithmetic on a specified `pointer` by an `offset` and assigns the result to a variable.  The `pointer` must be a pointer variable to an array or `yarn` string and the offset must be an integer; using any other types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer to an array or `yarn` string, which must be an already declared and assigned pointer.
+* **`<offset>`:** The offset to add to the pointer position; must be an integer value, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = sum.g <pointer>, <offset>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersPointerOffset1 IS APPOINTED SUM OF NumbersPointer AND 1
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersPointerOffset1 = sum.g £NumbersPointer, 1
+```
+
+##### 4.2.3.2. `diff.g` Instruction
+
+The `diif.g` instruction performs subtractive pointer arithmetic on a specified `pointer` by an `offset` and assigns the result to a variable.  The `pointer` must be a pointer variable to an array or `yarn` string and the offset must be an integer; using any other types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer to an array or `yarn` string, which must be an already declared and assigned pointer.
+* **`<offset>`:** The offset to subtract from the pointer position; must be an integer value, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = diff.g <pointer>, <offset>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersPointerOffset1 IS APPOINTED DIFFERENCE OF NumbersPointer AND 1
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersPointerOffset1 = diff.g £NumbersPointer, 1
 ```
 
 ### 4.3. Bitwise Operations
@@ -1895,11 +2197,91 @@ the following is the equivalent UtopIR code:
 find £Total
 ```
 
+### 5.5. String & Array Operations
+
+This example demonstrates declaration and assignment of strings and arrays and accessing their characters and elements respectively.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME PoemSubject AS A YARN BEING "Hollow"
+PRAY WELCOME PoemSubjectLetter4 AS A STITCH
+PoemSubjectLetter4 IS APPOINTED VICTIM 4 ON PoemSubject
+
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME NumbersElement3 AS A PEER BEING VICTIM 3 ON Numbers
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£PoemSubject = welcome yarn
+£PoemSubject = appoint "Hollow"
+£PoemSubjectLetter4 = welcome stitch
+£_victim_yarn_PoemSubject_4 = victim.yarn £PoemSubject, 4
+£PoemSubjectLetter4 = appoint £_victim_yarn_PoemSubject_4
+
+£Numbers = welcome.list peer, 3
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+£NumbersElement2 = welcome peer
+£_victim_list_Numbers_2 = victim.list £Numbers, 2
+£NumbersElement2 = appoint £_victim_list_Numbers_2
+```
+
+### 5.6 Pointer Operations
+
+This example demonstrates declaration and assignment of pointers, how to dereference and perform arithmetic on them.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Number AS A PEER BEING 42
+PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+
+PRAY WELCOME NumberValue AS A PEER BEING VIEW FROM NumberPointer
+VIEW FROM NumberPointer IS APPOINTED 23
+
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME NumbersPointer AS A GALLERY PICTURE OF PEER
+NumbersPointer IS APPOINTED GALLERY PICTURE TO Numbers
+NumbersPointer IS APPOINTED SUM OF NumbersPointer AND 2
+
+PRAY WELCOME NullPointer AS A GALLERY PICTURE OF PEER
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Number = welcome peer
+£Number = appoint 42
+£NumberPointer = welcome.gallerypic peer
+£NumberPointer = pictureto £Number
+
+£NumberValue = welcome peer
+£NumberValue = viewfrom £NumberPointer
+viewto £NumberPointer, 23
+
+£Numbers = welcome.list peer, 3
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+£NumbersPointer = welcome.gallerypic peer
+£NumbersPointer = pictureto £Numbers
+£_sumg_NumbersPointer_2 = sum.g £NumbersPointer, 2
+£NumbersPointer = appoint £_sumg_NumbersPointer_2
+
+£NullPointer = welcome.gallerypic peer
+£NullPointer = appoint naught
+```
+
 ## Appendix A. Instruction Reference
 
 |Instruction|Description|Example|
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
+|`welcome.list <type>`|Arrau Variable Declaration|`£Numbers = welcome.list peer, 3`|
 |`appoint <value>`|Variable Assignment|`£LovesickMaidens = appoint 20`|
 |`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
@@ -1918,6 +2300,8 @@ find £Total
 |`rem.f <op1>, <op2>`|Floating-Point Remainder|`£Lords = rem.f 10.0, 5.0`|
 |`max.f <op1>, <op2>`|Floating-Point Maximum Operand|`£Biggest = max.f 10.5, 5.25`|
 |`min.f <op1>, <op2>`|Floating-Point Minimum Operand|`£Smallest = min.f 10.5, 5.25`|
+|`sum.g <pointer>, <offset>`|Pointer Addition|`£LordsPointer = sum.g £LordsPointer, 2`|
+|`diff.g <pointer>, <offset>`|Pointer Subtraction|`£LordsPointer = diff.g £LordsPointer, 2`|
 |`find <value>`|Return a Value|`find £Lords`|
 |`chord <op1>, <op2>`|Bitwise AND|`£Result = chord 10, 20`|
 |`harmony <op1>, <op2>`|Bitwise OR|`£Result = harmony 10, 20`|
@@ -1956,3 +2340,4 @@ find £Total
 
 * For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
 * The Boolean `decree` type defines its _true_ and _false_ literals as `verity` and `nay`.
+* The Null `naught` literal can be assigned to a pointer without a pointee, an array or `yarn` string.

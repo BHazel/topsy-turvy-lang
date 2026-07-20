@@ -19,12 +19,17 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// The emitter wraps the UtopIR instruction sequence in the minimum required .NET assembly structure:
 /// * <c>AssemblyBuilder</c>: Sets the CLR assembly identity.
 /// * <c>ModuleBuilder</c>: Creates a single module inside the assembly.
-/// * <c>TypeBuilder</c>: Defines a public static class named "Opera" to hold the entry point.  A C#
-///   <c>static class</c> compiles to exactly <c>TypeAttributes.Abstract | TypeAttributes.Sealed</c>,
-///   the CLR way of forbidding instantiation, which is correct here since <c>Main</c> is static
-///   and never needs an instance.
+/// * Entry Point <c>TypeBuilder</c>: Defines a public static class named "Opera" to hold the entry
+///   point.  A C# <c>static class</c> compiles to exactly <c>TypeAttributes.Abstract |
+///   TypeAttributes.Sealed</c>, the CLR way of forbidding instantiation, which is correct here since
+///   <c>Main</c> is static and never needs an instance.
 /// * <c>MethodBuilder</c>: Defines the public static <c>int Main(string[] args)</c> method serving as
 ///   the programme entry point.
+/// * Pointer Handle <c>TypeBuilder</c>: Defines the <c>PointerHandle</c> value type (see
+///   <see cref="PointerHandleType"/>) used to represent every UtopIR pointer at runtime. It is a
+///   managed handle, not a real CLR pointer or byref, so no <c>unsafe</c> code is involved anywhere
+///   in this emitter. Defined unconditionally, even for programmes that declare no pointers, to keep
+///   the structure of this method simple.
 /// </para>
 /// <para>
 /// ### Local Variables
@@ -61,8 +66,9 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// All integer, floating-point and character types are supported as of v0.0.1-preview2.  As of
 /// v0.0.1-preview3, the <c>decree</c> (boolean) type is supported as the result of a comparison or
 /// logical instruction, and as the operand of a conditional branch but not yet as a <c>were</c>
-/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  String types
-/// are not currently supported.
+/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  The <c>yarn</c>
+/// (string) type is supported for declaration, assignment and <see cref="VictimYarnInstruction"/>
+/// character access (see <see cref="EmitVictimYarn"/>).
 /// </para>
 /// </remarks>
 public sealed class CilEmitter
@@ -84,6 +90,13 @@ public sealed class CilEmitter
             name: "Opera",
             attr: TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
+        TypeBuilder pointerHandleTypeBuilder = moduleBuilder.DefineType(
+            name: "PointerHandle",
+            attr: TypeAttributes.Public | TypeAttributes.SequentialLayout | TypeAttributes.Sealed,
+            parent: typeof(ValueType));
+        FieldBuilder pointerHandleContainerField = pointerHandleTypeBuilder.DefineField("Container", typeof(object), FieldAttributes.Public);
+        FieldBuilder pointerHandleIndexField = pointerHandleTypeBuilder.DefineField("Index", typeof(int), FieldAttributes.Public);
+
         MethodBuilder mainMethod = typeBuilder.DefineMethod(
             name: "Main",
             attributes: MethodAttributes.Public | MethodAttributes.Static,
@@ -100,7 +113,10 @@ public sealed class CilEmitter
 
         Dictionary<string, LocalBuilder> locals = [];
         Dictionary<string, UtopIRType> localTypes = [];
+        Dictionary<string, UtopIRType> arrayElementTypes = [];
+        Dictionary<string, UtopIRType> pointerPointeeTypes = [];
         Dictionary<string, Label> labels = [];
+        PointerHandleType pointerHandleType = new(pointerHandleTypeBuilder, pointerHandleContainerField, pointerHandleIndexField);
 
         this.ValidateLabelReferences(program);
 
@@ -112,7 +128,7 @@ public sealed class CilEmitter
                 hasReturn = true;
             }
 
-            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, labels);
+            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes, pointerPointeeTypes, pointerHandleType, labels);
         }
 
         if (!hasReturn)
@@ -121,6 +137,7 @@ public sealed class CilEmitter
             ilGenerator.Emit(OpCodes.Ret);
         }
 
+        pointerHandleTypeBuilder.CreateType();
         typeBuilder.CreateType();
 
         // PersistedAssemblyBuilder throws "Cannot populate assembly metadata multiple times" if its
@@ -270,6 +287,9 @@ public sealed class CilEmitter
     /// <param name="cilGenerator">The CIL generator to record UtopIR names for locals declared while emitting this instruction.</param>
     /// <param name="locals">The map from variable name (without <c>£</c>) to its <see cref="LocalBuilder"/> slot.</param>
     /// <param name="localTypes">The map from variable name to its <see cref="UtopIRType"/> for type-context lookups.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
     /// <param name="labels">The map from label name (without <c>!</c>) to its <see cref="Label"/>, lazily populated via <see cref="GetOrDefineLabel"/>.</param>
     private void EmitInstruction(
         UtopIRInstruction instruction,
@@ -277,6 +297,9 @@ public sealed class CilEmitter
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
         Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType,
         Dictionary<string, Label> labels)
     {
         switch (instruction)
@@ -285,7 +308,7 @@ public sealed class CilEmitter
                 this.EmitWelcome(welcome, ilGenerator, cilGenerator, locals, localTypes);
                 break;
             case AppointInstruction appoint:
-                this.EmitAppoint(appoint, ilGenerator, locals);
+                this.EmitAppoint(appoint, ilGenerator, locals, localTypes, pointerHandleType);
                 break;
             case ArithmeticInstruction arithmetic:
                 this.EmitArithmetic(arithmetic, ilGenerator, cilGenerator, locals, localTypes);
@@ -329,6 +352,33 @@ public sealed class CilEmitter
             case SailUnlikeInstruction sailUnlike:
                 this.EmitSailUnlike(sailUnlike, ilGenerator, locals, labels);
                 break;
+            case VictimYarnInstruction victimYarn:
+                this.EmitVictimYarn(victimYarn, ilGenerator, cilGenerator, locals, localTypes);
+                break;
+            case WelcomeListInstruction welcomeList:
+                this.EmitWelcomeList(welcomeList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
+                break;
+            case AppointVictimInstruction appointVictim:
+                this.EmitAppointVictim(appointVictim, ilGenerator, locals, arrayElementTypes);
+                break;
+            case VictimListInstruction victimList:
+                this.EmitVictimList(victimList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
+                break;
+            case WelcomeGallerypicInstruction welcomeGallerypic:
+                this.EmitWelcomeGallerypic(welcomeGallerypic, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                break;
+            case PicturetoInstruction pictureto:
+                this.EmitPictureto(pictureto, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes, pointerPointeeTypes, pointerHandleType);
+                break;
+            case ViewfromInstruction viewfrom:
+                this.EmitViewfrom(viewfrom, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                break;
+            case ViewtoInstruction viewto:
+                this.EmitViewto(viewto, ilGenerator, locals, pointerPointeeTypes, pointerHandleType);
+                break;
+            case PointerArithmeticInstruction pointerArithmetic:
+                this.EmitPointerArithmetic(pointerArithmetic, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                break;
         }
     }
 
@@ -358,15 +408,40 @@ public sealed class CilEmitter
     /// Emits CIL for an <see cref="AppointInstruction"/> by loading the value operand then storing it
     /// into the target local.
     /// </summary>
+    /// <remarks>
+    /// A <see cref="NaughtLiteral"/> value targeting a <see cref="UtopIRType.Pointer"/> variable is
+    /// handled as a separate case: the emitted <c>PointerHandle</c> is a CIL value type, so it cannot
+    /// be assigned a null reference via <c>ldnull</c>/<c>stloc</c> the way an array or <c>yarn</c> (both CLR
+    /// reference types) can through the generic path below. Instead, <c>initobj</c> zeroes it, setting
+    /// <c>Container</c> to <c>null</c>, matching the unassigned pointer representation that
+    /// <see cref="EmitWelcomeGallerypic"/> already leaves a fresh <c>PointerHandle</c> local in. This
+    /// branch is keyed on the target being declared as <see cref="UtopIRType.Pointer"/>, not on
+    /// <c>naught</c> itself having any such type: <c>naught</c> is a plain CLR-level sentinel value
+    /// usable against any of the pointer, array or <c>yarn</c> string target types.
+    /// </remarks>
     /// <param name="appoint">The appoint instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
     private void EmitAppoint(
         AppointInstruction appoint,
         ILGenerator ilGenerator,
-        Dictionary<string, LocalBuilder> locals)
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        PointerHandleType pointerHandleType)
     {
         LocalBuilder target = locals[appoint.Target.Name];
+
+        if (appoint.Value is LiteralOperand { Value: NaughtLiteral }
+            && localTypes.TryGetValue(appoint.Target.Name, out UtopIRType targetType)
+            && targetType == UtopIRType.Pointer)
+        {
+            ilGenerator.Emit(OpCodes.Ldloca, target);
+            ilGenerator.Emit(OpCodes.Initobj, pointerHandleType.Type);
+            return;
+        }
+
         this.EmitStackLoadOperand(appoint.Value, ilGenerator, locals);
         ilGenerator.Emit(OpCodes.Stloc, target);
     }
@@ -785,6 +860,413 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits CIL for a <see cref="VictimYarnInstruction"/> by loading the <c>yarn</c> string value and the
+    /// 1-based index converted to 0-based, then calling <c>string.get_Chars(int)</c> via <c>callvirt</c>.
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared as <see cref="UtopIRType.Stitch"/>.
+    /// </remarks>
+    /// <param name="victimYarn">The victim.yarn instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <c>string.get_Chars(int)</c> cannot be resolved via reflection.</exception>
+    private void EmitVictimYarn(
+        VictimYarnInstruction victimYarn,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes)
+    {
+        if (!locals.TryGetValue(victimYarn.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(UtopIRType.Stitch));
+            cilGenerator.RegisterLocalName(declaredLocal, victimYarn.Target.Name);
+            locals[victimYarn.Target.Name] = declaredLocal;
+            localTypes[victimYarn.Target.Name] = UtopIRType.Stitch;
+        }
+
+        this.EmitStackLoadOperand(victimYarn.YarnString, ilGenerator, locals);
+        this.EmitStackLoadOperand(victimYarn.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+
+        MethodInfo getCharsMethod = typeof(string).GetMethod("get_Chars", [typeof(int)])
+            ?? throw new InvalidOperationException("'string.get_Chars(int)' could not be resolved.");
+        ilGenerator.Emit(OpCodes.Callvirt, getCharsMethod);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
+    /// Declares a CIL local variable for a <see cref="WelcomeListInstruction"/> and allocates a CLR
+    /// array of the declared element type and size via <c>newarr</c>.
+    /// </summary>
+    /// <param name="welcomeList">The welcome.list instruction declaring the array variable.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitWelcomeList(
+        WelcomeListInstruction welcomeList,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        Type elementClrType = this.MapToClrType(welcomeList.ElementType);
+
+        ilGenerator.Emit(OpCodes.Ldc_I4, welcomeList.Size);
+        ilGenerator.Emit(OpCodes.Newarr, elementClrType);
+
+        LocalBuilder local = ilGenerator.DeclareLocal(elementClrType.MakeArrayType());
+        cilGenerator.RegisterLocalName(local, welcomeList.Target.Name);
+        ilGenerator.Emit(OpCodes.Stloc, local);
+
+        locals[welcomeList.Target.Name] = local;
+        localTypes[welcomeList.Target.Name] = UtopIRType.Array;
+        arrayElementTypes[welcomeList.Target.Name] = welcomeList.ElementType;
+    }
+
+    /// <summary>
+    /// Emits CIL for an <see cref="AppointVictimInstruction"/> by loading the array, the 1-based index
+    /// converted to 0-based, and the value, then storing via the element type <c>stelem.*</c> opcode.
+    /// </summary>
+    /// <param name="appointVictim">The appoint.victim instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitAppointVictim(
+        AppointVictimInstruction appointVictim,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        UtopIRType elementType = arrayElementTypes[appointVictim.Array.Name];
+
+        ilGenerator.Emit(OpCodes.Ldloc, locals[appointVictim.Array.Name]);
+        this.EmitStackLoadOperand(appointVictim.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+        this.EmitStackLoadOperand(appointVictim.Value, ilGenerator, locals);
+        this.EmitArrayElementStoreOpcode(elementType, ilGenerator);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="VictimListInstruction"/> by loading the array and the 1-based index
+    /// converted to 0-based, then loading via the element type <c>ldelem.*</c> opcode.
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared with the array element type.
+    /// </remarks>
+    /// <param name="victimList">The victim.list instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    private void EmitVictimList(
+        VictimListInstruction victimList,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes)
+    {
+        UtopIRType elementType = arrayElementTypes[victimList.Array.Name];
+
+        if (!locals.TryGetValue(victimList.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(elementType));
+            cilGenerator.RegisterLocalName(declaredLocal, victimList.Target.Name);
+            locals[victimList.Target.Name] = declaredLocal;
+            localTypes[victimList.Target.Name] = elementType;
+        }
+
+        ilGenerator.Emit(OpCodes.Ldloc, locals[victimList.Array.Name]);
+        this.EmitStackLoadOperand(victimList.Index, ilGenerator, locals);
+        ilGenerator.Emit(OpCodes.Ldc_I4_1);
+        ilGenerator.Emit(OpCodes.Sub);
+        this.EmitArrayElementLoadOpcode(elementType, ilGenerator);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
+    /// Declares a CIL local variable of the emitted <c>PointerHandle</c> type for a
+    /// <see cref="WelcomeGallerypicInstruction"/>.
+    /// </summary>
+    /// <remarks>
+    /// The local is left unset (a zero-initialised <c>PointerHandle</c>, <c>Container == null</c>)
+    /// until a <see cref="PicturetoInstruction"/> assigns it. This is the same representation a
+    /// <c>naught</c>-appointed pointer ends up with.  Dereferencing it before assignment is an
+    /// accepted, documented limitation: it does not produce a graceful runtime error.
+    /// </remarks>
+    /// <param name="welcomeGallerypic">The welcome.gallerypic instruction declaring the pointer variable.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
+    private void EmitWelcomeGallerypic(
+        WelcomeGallerypicInstruction welcomeGallerypic,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType)
+    {
+        LocalBuilder local = ilGenerator.DeclareLocal(pointerHandleType.Type);
+        cilGenerator.RegisterLocalName(local, welcomeGallerypic.Target.Name);
+        locals[welcomeGallerypic.Target.Name] = local;
+        localTypes[welcomeGallerypic.Target.Name] = UtopIRType.Pointer;
+        pointerPointeeTypes[welcomeGallerypic.Target.Name] = welcomeGallerypic.PointeeType;
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="PicturetoInstruction"/> by constructing a <c>PointerHandle</c>
+    /// whose <c>Container</c> is the addressed array or <c>yarn</c> and whose <c>Index</c> is <c>0</c>
+    /// (a pointer always initially refers to the first element or character).
+    /// </summary>
+    /// <remarks>
+    /// An undeclared target register is auto-declared as a <c>PointerHandle</c>, the same as
+    /// <see cref="EmitVictimYarn"/> auto-declares its target: this is the shape a
+    /// <see cref="PicturetoInstruction"/> targeting a fresh temporary register takes. Addressing a
+    /// plain scalar variable is not yet supported: a scalar CIL local has no stable, referenceable
+    /// storage a <c>PointerHandle</c> can point at without turning every scalar variable into a
+    /// heap-allocated box,
+    /// </remarks>
+    /// <param name="pictureto">The pictureto instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
+    /// <exception cref="NotSupportedException">Thrown when <see cref="PicturetoInstruction.Pointee"/> is a plain scalar variable.</exception>
+    private void EmitPictureto(
+        PicturetoInstruction pictureto,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> arrayElementTypes,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType)
+    {
+        UtopIRType pointeeVariableType = localTypes[pictureto.Pointee.Name];
+        UtopIRType pointeeType = pointeeVariableType switch
+        {
+            UtopIRType.Array => arrayElementTypes[pictureto.Pointee.Name],
+            UtopIRType.Yarn => UtopIRType.Stitch,
+            _ => throw new NotSupportedException(
+                $"'pictureto' targeting a plain scalar variable ('£{pictureto.Pointee.Name}') is not yet supported by the CIL emitter; only array and yarn pointees are supported.")
+        };
+
+        if (!locals.TryGetValue(pictureto.Target.Name, out LocalBuilder? handleLocal))
+        {
+            handleLocal = ilGenerator.DeclareLocal(pointerHandleType.Type);
+            cilGenerator.RegisterLocalName(handleLocal, pictureto.Target.Name);
+            locals[pictureto.Target.Name] = handleLocal;
+            localTypes[pictureto.Target.Name] = UtopIRType.Pointer;
+        }
+
+        pointerPointeeTypes[pictureto.Target.Name] = pointeeType;
+
+        LocalBuilder pointeeLocal = locals[pictureto.Pointee.Name];
+
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldloc, pointeeLocal);
+        ilGenerator.Emit(OpCodes.Stfld, pointerHandleType.Container);
+
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldc_I4_0);
+        ilGenerator.Emit(OpCodes.Stfld, pointerHandleType.Index);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="ViewfromInstruction"/> by reading the <c>PointerHandle</c> of the
+    /// pointer and, depending on whether <c>Container</c> is a <c>string</c> or an array, dereferencing
+    /// via <c>string.get_Chars(int)</c> or the <c>ldelem.*</c> opcode of the pointee type.
+    /// </summary>
+    /// <remarks>
+    /// The branch between the two forms is resolved at runtime via <c>isinst string</c> on the
+    /// <c>Container</c> field of the handle, since the pointee type of the pointer variable
+    /// (<c>stitch</c>) alone cannot distinguish a pointer into a <c>yarn</c> from a pointer into an
+    /// array of <c>stitch</c>: only the runtime value of <c>Container</c> can. An undeclared target
+    /// register is auto-declared with the pointee type of the pointer.
+    /// </remarks>
+    /// <param name="viewfrom">The viewfrom instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <c>string.get_Chars(int)</c> cannot be resolved via reflection.</exception>
+    private void EmitViewfrom(
+        ViewfromInstruction viewfrom,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType)
+    {
+        UtopIRType pointeeType = pointerPointeeTypes[viewfrom.Pointer.Name];
+
+        if (!locals.TryGetValue(viewfrom.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(this.MapToClrType(pointeeType));
+            cilGenerator.RegisterLocalName(declaredLocal, viewfrom.Target.Name);
+            locals[viewfrom.Target.Name] = declaredLocal;
+            localTypes[viewfrom.Target.Name] = pointeeType;
+        }
+
+        LocalBuilder handleLocal = locals[viewfrom.Pointer.Name];
+        Type elementClrType = this.MapToClrType(pointeeType);
+
+        Label yarnBranch = ilGenerator.DefineLabel();
+        Label end = ilGenerator.DefineLabel();
+
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Container);
+        ilGenerator.Emit(OpCodes.Isinst, typeof(string));
+        ilGenerator.Emit(OpCodes.Dup);
+        ilGenerator.Emit(OpCodes.Brtrue, yarnBranch);
+        ilGenerator.Emit(OpCodes.Pop);
+
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Container);
+        ilGenerator.Emit(OpCodes.Castclass, elementClrType.MakeArrayType());
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
+        this.EmitArrayElementLoadOpcode(pointeeType, ilGenerator);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+        ilGenerator.Emit(OpCodes.Br, end);
+
+        ilGenerator.MarkLabel(yarnBranch);
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
+        MethodInfo getCharsMethod = typeof(string).GetMethod("get_Chars", [typeof(int)])
+            ?? throw new InvalidOperationException("'string.get_Chars(int)' could not be resolved.");
+        ilGenerator.Emit(OpCodes.Callvirt, getCharsMethod);
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+
+        ilGenerator.MarkLabel(end);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="ViewtoInstruction"/> by writing through the <c>PointerHandle</c> of
+    /// the pointer into the array element it refers to, via the <c>stelem.*</c> opcode of the pointee
+    /// type.
+    /// </summary>
+    /// <remarks>
+    /// If the <c>Container</c> of the handle is a <c>string</c> instead of an array, an
+    /// <see cref="InvalidOperationException"/> is thrown at runtime: a <c>yarn</c> is immutable, so
+    /// writing through a pointer to one of its characters is a genuine runtime error, not an emitter
+    /// limitation.
+    /// </remarks>
+    /// <param name="viewto">The viewto instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the <c>string</c> constructor of <see cref="InvalidOperationException"/> cannot be resolved via reflection, or, at runtime, by the emitted IL, when the pointer refers into a <c>yarn</c>.</exception>
+    private void EmitViewto(
+        ViewtoInstruction viewto,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType)
+    {
+        UtopIRType pointeeType = pointerPointeeTypes[viewto.Pointer.Name];
+        LocalBuilder handleLocal = locals[viewto.Pointer.Name];
+
+        Label arrayBranch = ilGenerator.DefineLabel();
+
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Container);
+        ilGenerator.Emit(OpCodes.Isinst, typeof(string));
+        ilGenerator.Emit(OpCodes.Brfalse, arrayBranch);
+
+        ConstructorInfo exceptionConstructor = typeof(InvalidOperationException).GetConstructor([typeof(string)])
+            ?? throw new InvalidOperationException("'InvalidOperationException(string)' constructor could not be resolved.");
+        ilGenerator.Emit(OpCodes.Ldstr, "Cannot write through a pointer to a yarn character; strings are immutable.");
+        ilGenerator.Emit(OpCodes.Newobj, exceptionConstructor);
+        ilGenerator.Emit(OpCodes.Throw);
+
+        ilGenerator.MarkLabel(arrayBranch);
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Container);
+        ilGenerator.Emit(OpCodes.Castclass, this.MapToClrType(pointeeType).MakeArrayType());
+        ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
+        this.EmitStackLoadOperand(viewto.Value, ilGenerator, locals);
+        this.EmitArrayElementStoreOpcode(pointeeType, ilGenerator);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="PointerArithmeticInstruction"/> by constructing a new
+    /// <c>PointerHandle</c> with the same <c>Container</c> as the source pointer and an <c>Index</c>
+    /// adjusted by the offset.
+    /// </summary>
+    /// <remarks>
+    /// No unchecked address arithmetic is involved: only the <c>Index</c> field of the handle (a
+    /// plain <see cref="int"/>) is adjusted. An undeclared target register is auto-declared as a
+    /// <c>PointerHandle</c>.
+    /// </remarks>
+    /// <param name="pointerArithmetic">The pointer arithmetic instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
+    /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
+    private void EmitPointerArithmetic(
+        PointerArithmeticInstruction pointerArithmetic,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, UtopIRType> pointerPointeeTypes,
+        PointerHandleType pointerHandleType)
+    {
+        UtopIRType pointeeType = pointerPointeeTypes[pointerArithmetic.Pointer.Name];
+
+        if (!locals.TryGetValue(pointerArithmetic.Target.Name, out LocalBuilder? targetLocal))
+        {
+            targetLocal = ilGenerator.DeclareLocal(pointerHandleType.Type);
+            cilGenerator.RegisterLocalName(targetLocal, pointerArithmetic.Target.Name);
+            locals[pointerArithmetic.Target.Name] = targetLocal;
+            localTypes[pointerArithmetic.Target.Name] = UtopIRType.Pointer;
+        }
+
+        pointerPointeeTypes[pointerArithmetic.Target.Name] = pointeeType;
+
+        LocalBuilder sourceLocal = locals[pointerArithmetic.Pointer.Name];
+
+        ilGenerator.Emit(OpCodes.Ldloca, targetLocal);
+        ilGenerator.Emit(OpCodes.Ldloca, sourceLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Container);
+        ilGenerator.Emit(OpCodes.Stfld, pointerHandleType.Container);
+
+        ilGenerator.Emit(OpCodes.Ldloca, targetLocal);
+        ilGenerator.Emit(OpCodes.Ldloca, sourceLocal);
+        ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
+        this.EmitStackLoadOperand(pointerArithmetic.Offset, ilGenerator, locals);
+        ilGenerator.Emit(pointerArithmetic.Operation == UtopIRPointerArithmeticOperation.Sum
+            ? OpCodes.Add
+            : OpCodes.Sub);
+
+        ilGenerator.Emit(OpCodes.Stfld, pointerHandleType.Index);
+    }
+
+    /// <summary>
     /// Retrieves the <see cref="Label"/> for the given name, lazily calling
     /// <see cref="ILGenerator.DefineLabel"/> the first time the name is seen.
     /// </summary>
@@ -946,7 +1428,7 @@ public sealed class CilEmitter
     /// becomes the negative-looking <c>int</c> <c>-294967296</c>.  This looks alarming printed as a
     /// signed number, but the bit pattern is preserved exactly and is reinterpreted correctly once
     /// <c>stloc</c> stores it into a local declared with the true unsigned CLR type (see
-    /// <see cref="MapToClrType"/>).  This mirrors the same principle documented on
+    /// <see cref="MapToClrType"/>). The same bit-reinterpretation principle applies to
     /// <see cref="EmitArithmeticOpcode"/> for <c>div.un</c>/<c>rem.un</c>.
     /// </para>
     /// <para>
@@ -996,6 +1478,12 @@ public sealed class CilEmitter
                 break;
             case bool boolean:
                 ilGenerator.Emit(OpCodes.Ldc_I4, boolean ? 1 : 0);
+                break;
+            case string stringValue:
+                ilGenerator.Emit(OpCodes.Ldstr, stringValue);
+                break;
+            case NaughtLiteral:
+                ilGenerator.Emit(OpCodes.Ldnull);
                 break;
             default:
                 throw new NotSupportedException(
@@ -1128,6 +1616,72 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits the CIL <c>ldelem.*</c> opcode that loads an array element of the given
+    /// <see cref="UtopIRType"/> onto the evaluation stack.
+    /// </summary>
+    /// <remarks>
+    /// Unsigned narrow integer types (<see cref="UtopIRType.StandingPeer"/>,
+    /// <see cref="UtopIRType.StandingPirate"/>, <see cref="UtopIRType.StandingSausageRoll"/>) and
+    /// <see cref="UtopIRType.Stitch"/> (a 16-bit unsigned code unit) use the <c>u*</c>-suffixed opcode
+    /// so the loaded value is zero-extended rather than sign-extended.  <see cref="UtopIRType.Yarn"/>
+    /// is a CLR reference type and uses <c>ldelem.ref</c>.
+    /// </remarks>
+    /// <param name="elementType">The array declared element type.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="elementType"/> has no supported array element opcode in this version.</exception>
+    private void EmitArrayElementLoadOpcode(UtopIRType elementType, ILGenerator ilGenerator)
+    {
+        OpCode opcode = elementType switch
+        {
+            UtopIRType.Chancellor or UtopIRType.StandingChancellor => OpCodes.Ldelem_I8,
+            UtopIRType.Peer => OpCodes.Ldelem_I4,
+            UtopIRType.StandingPeer => OpCodes.Ldelem_U4,
+            UtopIRType.Pirate => OpCodes.Ldelem_I2,
+            UtopIRType.StandingPirate or UtopIRType.Stitch => OpCodes.Ldelem_U2,
+            UtopIRType.SausageRoll => OpCodes.Ldelem_I1,
+            UtopIRType.StandingSausageRoll or UtopIRType.Decree => OpCodes.Ldelem_U1,
+            UtopIRType.Fathom => OpCodes.Ldelem_R8,
+            UtopIRType.Foot => OpCodes.Ldelem_R4,
+            UtopIRType.Yarn => OpCodes.Ldelem_Ref,
+            _ => throw new NotSupportedException(
+                $"UtopIR type '{elementType}' is not supported as an array element type by the CIL emitter in this version.")
+        };
+
+        ilGenerator.Emit(opcode);
+    }
+
+    /// <summary>
+    /// Emits the CIL <c>stelem.*</c> opcode that stores a value from the evaluation stack into an
+    /// array element of the given <see cref="UtopIRType"/>.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="EmitArrayElementLoadOpcode"/>, storing has no signed/unsigned distinction:
+    /// a <c>stelem.*</c> opcode simply narrows and writes the bit pattern, so one opcode per width
+    /// covers both a type and its unsigned counterpart. <see cref="UtopIRType.Yarn"/> is a CLR
+    /// reference type and uses <c>stelem.ref</c>.
+    /// </remarks>
+    /// <param name="elementType">The array declared element type.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="elementType"/> has no supported array element opcode in this version.</exception>
+    private void EmitArrayElementStoreOpcode(UtopIRType elementType, ILGenerator ilGenerator)
+    {
+        OpCode opcode = elementType switch
+        {
+            UtopIRType.Chancellor or UtopIRType.StandingChancellor => OpCodes.Stelem_I8,
+            UtopIRType.Peer or UtopIRType.StandingPeer => OpCodes.Stelem_I4,
+            UtopIRType.Pirate or UtopIRType.StandingPirate or UtopIRType.Stitch => OpCodes.Stelem_I2,
+            UtopIRType.SausageRoll or UtopIRType.StandingSausageRoll or UtopIRType.Decree => OpCodes.Stelem_I1,
+            UtopIRType.Fathom => OpCodes.Stelem_R8,
+            UtopIRType.Foot => OpCodes.Stelem_R4,
+            UtopIRType.Yarn => OpCodes.Stelem_Ref,
+            _ => throw new NotSupportedException(
+                $"UtopIR type '{elementType}' is not supported as an array element type by the CIL emitter in this version.")
+        };
+
+        ilGenerator.Emit(opcode);
+    }
+
+    /// <summary>
     /// Emits the <c>conv.*</c> opcode that converts whatever is currently on the CIL evaluation stack
     /// to the given target type true CLR width and signedness.
     /// </summary>
@@ -1256,6 +1810,7 @@ public sealed class CilEmitter
         UtopIRType.Foot => typeof(float),
         UtopIRType.Stitch => typeof(char),
         UtopIRType.Decree => typeof(bool),
+        UtopIRType.Yarn => typeof(string),
         _ => throw new NotSupportedException(
             $"UtopIR type '{utopirType}' is not supported by the CIL emitter in this version.")
     };
@@ -1290,6 +1845,7 @@ public sealed class CilEmitter
             float => UtopIRType.Foot,
             char => UtopIRType.Stitch,
             bool => UtopIRType.Decree,
+            string => UtopIRType.Yarn,
             _ => throw new NotSupportedException(
                 $"Literal value of CLR type '{literalOperand.Value.GetType().Name}' has no corresponding UtopIR type in this version.")
         },

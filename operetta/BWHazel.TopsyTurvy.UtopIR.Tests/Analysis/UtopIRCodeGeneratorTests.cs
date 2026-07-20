@@ -92,6 +92,39 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="NaughtLiteral"/> singleton is emitted as the <c>naught</c> keyword.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointInstruction_WithNaughtLiteral_EmitsNaughtKeyword()
+    {
+        UtopIRProgram program = new([
+            new AppointInstruction(
+                new UtopIRVariable("NumberPointer"),
+                new LiteralOperand(NaughtLiteral.Instance))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumberPointer = appoint naught");
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>naught</c> appoint re-parses to an equal <see cref="AppointInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointInstruction_WithNaughtLiteral_RoundTripsThroughParser()
+    {
+        AppointInstruction original = new(new UtopIRVariable("NumberPointer"), new LiteralOperand(NaughtLiteral.Instance));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
     /// Tests that boolean <see cref="LiteralOperand"/> values are emitted as <c>verity</c> or <c>nay</c> tokens,
     /// matching the UtopIR <c>decree</c> literal convention.
     /// </summary>
@@ -418,6 +451,148 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that a <c>victim.yarn</c> instruction is emitted with its yarn and index operands.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimYarnInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new VictimYarnInstruction(
+                new UtopIRVariable("PoemSubjectLetter4"),
+                new VariableOperand(new UtopIRVariable("PoemSubject")),
+                new LiteralOperand(4))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£PoemSubjectLetter4 = victim.yarn £PoemSubject, 4");
+    }
+
+    /// <summary>
+    /// Tests that a <c>welcome.list</c> instruction is emitted with its element type and size.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeListInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3)
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£Numbers = welcome.list peer, 3");
+    }
+
+    /// <summary>
+    /// Tests that an <c>appoint.victim</c> instruction is emitted with its array, index and value operands.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointVictimInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new AppointVictimInstruction(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("appoint.victim £Numbers, 1, 10");
+    }
+
+    /// <summary>
+    /// Tests that a <c>victim.list</c> instruction is emitted with its array and index operands.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimListInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new VictimListInstruction(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumbersElement2 = victim.list £Numbers, 2");
+    }
+
+    /// <summary>
+    /// Tests that a <c>welcome.gallerypic</c> instruction is emitted with its pointee type.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeGallerypicInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new WelcomeGallerypicInstruction(new UtopIRVariable("NumberPointer"), UtopIRType.Peer)
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumberPointer = welcome.gallerypic peer");
+    }
+
+    /// <summary>
+    /// Tests that a <c>pictureto</c> instruction is emitted with its pointee variable.
+    /// </summary>
+    [Fact]
+    public void Generate_PicturetoInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new PicturetoInstruction(new UtopIRVariable("NumberPointer"), new UtopIRVariable("Number"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumberPointer = pictureto £Number");
+    }
+
+    /// <summary>
+    /// Tests that a <c>viewfrom</c> instruction is emitted with its pointer.
+    /// </summary>
+    [Fact]
+    public void Generate_ViewfromInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new ViewfromInstruction(new UtopIRVariable("NumberValue"), new UtopIRVariable("NumberPointer"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£NumberValue = viewfrom £NumberPointer");
+    }
+
+    /// <summary>
+    /// Tests that a <c>viewto</c> instruction is emitted with its pointer and value operand.
+    /// </summary>
+    [Fact]
+    public void Generate_ViewtoInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new ViewtoInstruction(new UtopIRVariable("NumberPointer"), new LiteralOperand(23))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("viewto £NumberPointer, 23");
+    }
+
+    /// <summary>
+    /// Tests that each pointer arithmetic mnemonic is emitted with its pointer and offset operands.
+    /// </summary>
+    /// <param name="operation">The pointer arithmetic operation.</param>
+    /// <param name="expectedMnemonic">The expected UtopIR mnemonic.</param>
+    [Theory]
+    [InlineData(UtopIRPointerArithmeticOperation.Sum, "sum.g")]
+    [InlineData(UtopIRPointerArithmeticOperation.Diff, "diff.g")]
+    public void Generate_PointerArithmeticInstruction_EmitsCorrectLine(UtopIRPointerArithmeticOperation operation, string expectedMnemonic)
+    {
+        UtopIRProgram program = new([
+            new PointerArithmeticInstruction(operation, new UtopIRVariable("result"), new UtopIRVariable("NumbersPointer"), new LiteralOperand(2))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe($"£result = {expectedMnemonic} £NumbersPointer, 2");
+    }
+
+    /// <summary>
     /// Tests that a <c>sail</c> instruction is emitted with its label, prefixed with <c>!</c>.
     /// </summary>
     [Fact]
@@ -658,6 +833,153 @@ public class UtopIRCodeGeneratorTests
         HardlyInstruction original = new(
             new UtopIRVariable("result"),
             new VariableOperand(new UtopIRVariable("a")));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>victim.yarn</c> instruction re-parses to an equal <see cref="VictimYarnInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimYarnInstruction_RoundTripsThroughParser()
+    {
+        VictimYarnInstruction original = new(
+            new UtopIRVariable("PoemSubjectLetter4"),
+            new VariableOperand(new UtopIRVariable("PoemSubject")),
+            new LiteralOperand(4));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>welcome.list</c> instruction re-parses to an equal <see cref="WelcomeListInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeListInstruction_RoundTripsThroughParser()
+    {
+        WelcomeListInstruction original = new(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3);
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>appoint.victim</c> instruction re-parses to an equal <see cref="AppointVictimInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_AppointVictimInstruction_RoundTripsThroughParser()
+    {
+        AppointVictimInstruction original = new(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>victim.list</c> instruction re-parses to an equal <see cref="VictimListInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_VictimListInstruction_RoundTripsThroughParser()
+    {
+        VictimListInstruction original = new(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>welcome.gallerypic</c> instruction re-parses to an equal <see cref="WelcomeGallerypicInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_WelcomeGallerypicInstruction_RoundTripsThroughParser()
+    {
+        WelcomeGallerypicInstruction original = new(new UtopIRVariable("NumberPointer"), UtopIRType.Peer);
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>pictureto</c> instruction re-parses to an equal <see cref="PicturetoInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_PicturetoInstruction_RoundTripsThroughParser()
+    {
+        PicturetoInstruction original = new(new UtopIRVariable("NumberPointer"), new UtopIRVariable("Number"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>viewfrom</c> instruction re-parses to an equal <see cref="ViewfromInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_ViewfromInstruction_RoundTripsThroughParser()
+    {
+        ViewfromInstruction original = new(new UtopIRVariable("NumberValue"), new UtopIRVariable("NumberPointer"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>viewto</c> instruction re-parses to an equal <see cref="ViewtoInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_ViewtoInstruction_RoundTripsThroughParser()
+    {
+        ViewtoInstruction original = new(new UtopIRVariable("NumberPointer"), new LiteralOperand(23));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        var parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated pointer arithmetic instruction re-parses to an equal <see cref="PointerArithmeticInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_PointerArithmeticInstruction_RoundTripsThroughParser()
+    {
+        PointerArithmeticInstruction original = new(UtopIRPointerArithmeticOperation.Sum, new UtopIRVariable("result"), new UtopIRVariable("NumbersPointer"), new LiteralOperand(2));
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();

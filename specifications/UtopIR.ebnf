@@ -35,6 +35,9 @@ BooleanLiteral  = "verity" | "nay" ;
 (* Boolean literals in UtopIR mirror Topsy Turvy's VERITY and NAY, lowercased:
    "verity" for true, "nay" for false. *)
 
+NaughtLiteral   = "naught" ;
+(* The null literal, assignable to a pointer, array or yarn variable. *)
+
 Comment         = "@", { AnyCharExceptNewline } ;
 (* A comment spans from @ to the end of the current line and is discarded by
    the parser. *)
@@ -55,8 +58,13 @@ Instruction     = AssignmentInstruction | StandaloneInstruction ;
 
 (* Assignment form: £<var> = <rhs> *)
 AssignmentInstruction = Variable, "=", AssignmentRhs ;
-AssignmentRhs         = WelcomeRhs
+AssignmentRhs         = WelcomeListRhs
+                      | WelcomeGallerypicRhs
+                      | WelcomeRhs
                       | AppointRhs
+                      | PicturetoRhs
+                      | ViewfromRhs
+                      | PointerArithmeticRhs
                       | ArithmeticRhs
                       | BitwiseRhs
                       | InvRhs
@@ -64,10 +72,28 @@ AssignmentRhs         = WelcomeRhs
                       | LogicalRhs
                       | HardlyRhs
                       | WereRhs
-                      | LeaveRhs ;
+                      | LeaveRhs
+                      | VictimYarnRhs
+                      | VictimListRhs ;
 
+WelcomeListRhs  = "welcome.list", Type, ",", IntegerLiteral ;
+(* Declares an array variable of the given element Type and size.  Tried
+   before WelcomeRhs, since "welcome" is a prefix of "welcome.list". *)
+WelcomeGallerypicRhs = "welcome.gallerypic", Type ;
+(* Declares a pointer variable of the given pointee Type.  Tried before
+   WelcomeRhs, since "welcome" is a prefix of "welcome.gallerypic". *)
 WelcomeRhs      = "welcome", Type ;
 AppointRhs      = "appoint", Operand ;
+PicturetoRhs    = "pictureto", Variable ;
+(* Assigns the pointer to refer to the already-declared variable named by
+   Variable. *)
+ViewfromRhs     = "viewfrom", Variable ;
+(* Dereferences the pointer named by Variable and assigns the value it
+   refers to. *)
+PointerArithmeticRhs = PointerArithmeticOp, Variable, ",", Operand ;
+(* Adjusts the pointer named by Variable by the given integer offset.  Tried
+   before ArithmeticRhs, defensively, for consistency with the
+   longest/most-specific-mnemonic-first discipline used elsewhere. *)
 ArithmeticRhs   = ArithmeticOp, Operand, ",", Operand ;
 BitwiseRhs      = BitwiseOp, Operand, ",", Operand ;
 InvRhs          = "inv", Operand ;
@@ -76,6 +102,12 @@ LogicalRhs      = LogicalOp, Operand, ",", Operand ;
 HardlyRhs       = "hardly", Operand ;
 WereRhs         = "were", Operand, ",", Type ;
 LeaveRhs        = "leave" ;
+VictimYarnRhs   = "victim.yarn", Operand, ",", Operand ;
+(* Selects the stitch character at the 1-based Operand index of a yarn value
+   (the first Operand).  The target register is of type stitch. *)
+VictimListRhs   = "victim.list", Variable, ",", Operand ;
+(* Selects the element at the 1-based Operand index of the array named by
+   Variable.  The target register has the array's declared element type. *)
 
 (* Standalone form: no assignment target *)
 StandaloneInstruction = PrenticeInstruction
@@ -83,6 +115,8 @@ StandaloneInstruction = PrenticeInstruction
                       | SailAlikeInstruction
                       | SailUnlikeInstruction
                       | SailInstruction
+                      | AppointVictimInstruction
+                      | ViewToInstruction
                       | LabelDeclaration ;
 PrenticeInstruction   = "prentice", Operand ;
 FindInstruction       = "find", [ Operand ] ;
@@ -97,6 +131,14 @@ SailUnlikeInstruction = "sailunlike", Operand, ",", Label ;
 (* "sailalike" and "sailunlike" must be matched before the plain "sail" form,
    since "sail" is a prefix of both mnemonics. *)
 
+AppointVictimInstruction = "appoint.victim", Variable, ",", Operand, ",", Operand ;
+(* Assigns Value (the second Operand) to the element at the 1-based index
+   given by the first Operand, of the array named by Variable. *)
+
+ViewToInstruction = "viewto", Variable, ",", Operand ;
+(* Assigns Value (the Operand) through the pointer named by Variable,
+   replacing the value it refers to. *)
+
 LabelDeclaration      = Label ;
 (* A bare Label on its own line declares a branch target at that position in
    the instruction sequence. *)
@@ -109,7 +151,8 @@ Literal         = IntegerLiteral
                 | FloatLiteral
                 | StringLiteral
                 | CharLiteral
-                | BooleanLiteral ;
+                | BooleanLiteral
+                | NaughtLiteral ;
 
 (*----------------------------------------------------------------------------*)
 (* Arithmetic Operations                                                      *)
@@ -123,6 +166,11 @@ FloatArithmeticOp   = "sum.f" | "diff.f" | "prod.f" | "quot.f" | "rem.f"
 (* Floating-point arithmetic instructions carry the same names as their integer
    counterparts with a .f suffix.  A parser must match the .f form before the
    plain form, since the plain mnemonic is a prefix of its .f counterpart. *)
+
+PointerArithmeticOp = "sum.g" | "diff.g" ;
+(* Pointer arithmetic operands are (pointer, integer offset), a different
+   shape to ArithmeticOp's same-type operand pair, so this is kept as its own
+   production rather than folded into ArithmeticOp. *)
 
 (*----------------------------------------------------------------------------*)
 (* Bitwise Operations                                                         *)

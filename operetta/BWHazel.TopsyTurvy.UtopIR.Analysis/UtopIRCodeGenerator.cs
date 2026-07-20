@@ -91,6 +91,41 @@ public sealed class UtopIRCodeGenerator
             case WereInstruction were:
                 builder.AppendLine($"£{were.Target.Name} = {UtopIRKeywords.Instructions.Were} {this.FormatOperand(were.Value)}, {this.TypeKeyword(were.Type)}");
                 break;
+            case VictimYarnInstruction victimYarn:
+                builder.AppendLine(
+                    $"£{victimYarn.Target.Name} = {UtopIRKeywords.Instructions.VictimYarn} " +
+                    $"{this.FormatOperand(victimYarn.YarnString)}, {this.FormatOperand(victimYarn.Index)}");
+                break;
+            case WelcomeListInstruction welcomeList:
+                builder.AppendLine($"£{welcomeList.Target.Name} = {UtopIRKeywords.Instructions.WelcomeList} {this.TypeKeyword(welcomeList.ElementType)}, {welcomeList.Size}");
+                break;
+            case AppointVictimInstruction appointVictim:
+                builder.AppendLine(
+                    $"{UtopIRKeywords.Instructions.AppointVictim} £{appointVictim.Array.Name}, " +
+                    $"{this.FormatOperand(appointVictim.Index)}, {this.FormatOperand(appointVictim.Value)}");
+                break;
+            case VictimListInstruction victimList:
+                builder.AppendLine(
+                    $"£{victimList.Target.Name} = {UtopIRKeywords.Instructions.VictimList} " +
+                    $"£{victimList.Array.Name}, {this.FormatOperand(victimList.Index)}");
+                break;
+            case WelcomeGallerypicInstruction welcomeGallerypic:
+                builder.AppendLine($"£{welcomeGallerypic.Target.Name} = {UtopIRKeywords.Instructions.WelcomeGallerypic} {this.TypeKeyword(welcomeGallerypic.PointeeType)}");
+                break;
+            case PicturetoInstruction pictureto:
+                builder.AppendLine($"£{pictureto.Target.Name} = {UtopIRKeywords.Instructions.PictureTo} £{pictureto.Pointee.Name}");
+                break;
+            case ViewfromInstruction viewfrom:
+                builder.AppendLine($"£{viewfrom.Target.Name} = {UtopIRKeywords.Instructions.ViewFrom} £{viewfrom.Pointer.Name}");
+                break;
+            case ViewtoInstruction viewto:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.ViewTo} £{viewto.Pointer.Name}, {this.FormatOperand(viewto.Value)}");
+                break;
+            case PointerArithmeticInstruction pointerArithmetic:
+                builder.AppendLine(
+                    $"£{pointerArithmetic.Target.Name} = {this.PointerArithmeticOperationMnemonic(pointerArithmetic.Operation)} " +
+                    $"£{pointerArithmetic.Pointer.Name}, {this.FormatOperand(pointerArithmetic.Offset)}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {
@@ -132,6 +167,7 @@ public sealed class UtopIRCodeGenerator
             bool boolValue => boolValue
                 ? UtopIRKeywords.Literals.Verity
                 : UtopIRKeywords.Literals.Nay,
+            NaughtLiteral => UtopIRKeywords.Literals.Naught,
             string stringValue => $"\"{this.EscapeString(stringValue)}\"",
             char charValue => $"'{this.EscapeChar(charValue)}'",
             float floatValue => this.FormatFloat(
@@ -275,5 +311,17 @@ public sealed class UtopIRCodeGenerator
         UtopIRLogicalOperation.Both => UtopIRKeywords.Instructions.Both,
         UtopIRLogicalOperation.Either => UtopIRKeywords.Instructions.Either,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown logical operation.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic for the given <see cref="UtopIRPointerArithmeticOperation"/>.
+    /// </summary>
+    /// <param name="operation">The pointer arithmetic operation to convert.</param>
+    /// <returns>The UtopIR operation mnemonic.</returns>
+    private string PointerArithmeticOperationMnemonic(UtopIRPointerArithmeticOperation operation) => operation switch
+    {
+        UtopIRPointerArithmeticOperation.Sum => UtopIRKeywords.Instructions.SumPointer,
+        UtopIRPointerArithmeticOperation.Diff => UtopIRKeywords.Instructions.DiffPointer,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown pointer arithmetic operation.")
     };
 }

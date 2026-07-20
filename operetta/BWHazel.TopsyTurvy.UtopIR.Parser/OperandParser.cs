@@ -19,10 +19,11 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// returning the corresponding <see cref="UtopIRComparisonOperation"/>.
 /// * <see cref="LogicalOperation"/> matches one of the supported binary logical instructions,
 /// returning the corresponding <see cref="UtopIRLogicalOperation"/>.
-/// * <see cref="Literal"/> matches a compile-time constant, trying boolean, character, float,
-/// integer then string in that order.  This is the same disambiguation order as the Topsy Turvy expression
-/// parser in its own literal parsing, minus the null literal, which UtopIR has no equivalent of.  The
-/// matched value is boxed as its natural CLR type; integer literals are passed through
+/// * <see cref="PointerArithmeticOperation"/> matches one of the supported pointer arithmetic
+/// instructions, returning the corresponding <see cref="UtopIRPointerArithmeticOperation"/>.
+/// * <see cref="Literal"/> matches a compile-time constant, trying boolean, <c>naught</c> (the null
+/// literal, returned as the <see cref="NaughtLiteral"/> singleton), character, float, integer then
+/// string in that order.  The matched value is boxed as its natural CLR type; integer literals are passed through
 /// <see cref="Lexer.BoxIntegerLiteralValue(long)"/>, so a literal is only ever boxed as
 /// <see cref="int"/> or <see cref="long"/> so narrower or unsigned CLR types on a
 /// <see cref="LiteralOperand"/> only ever arise from an explicit <c>were</c> cast, never directly
@@ -80,6 +81,15 @@ public static class OperandParser
             .Named("arithmetic operator");
 
     /// <summary>
+    /// Parses a pointer arithmetic operation mnemonic returning the corresponding
+    /// <see cref="UtopIRPointerArithmeticOperation"/>.
+    /// </summary>
+    public static readonly TextParser<UtopIRPointerArithmeticOperation> PointerArithmeticOperation =
+        Lexer.Keyword(UtopIRKeywords.Instructions.SumPointer).Value(UtopIRPointerArithmeticOperation.Sum)
+            .Or(Lexer.Keyword(UtopIRKeywords.Instructions.DiffPointer).Value(UtopIRPointerArithmeticOperation.Diff))
+            .Named("pointer arithmetic operator");
+
+    /// <summary>
     /// Parses a binary bitwise operation mnemonic returning the corresponding <see cref="UtopIRBitwiseOperation"/>.
     /// </summary>
     /// <remarks>
@@ -127,8 +137,13 @@ public static class OperandParser
     /// <summary>
     /// Parses a compile-time constant literal value returning it boxed as its natural CLR type.
     /// </summary>
+    /// <remarks>
+    /// The <c>naught</c> null literal is returned as the <see cref="NaughtLiteral"/> singleton, not a
+    /// bare CLR <c>null</c>, so downstream switches over the value can pattern-match it by type.
+    /// </remarks>
     public static readonly TextParser<object> Literal =
         Lexer.BooleanLiteral.Select(value => (object)value)
+            .Or(Lexer.Keyword(UtopIRKeywords.Literals.Naught).Select(_ => (object)NaughtLiteral.Instance))
             .Or(Lexer.CharacterLiteral.Select(value => (object)value))
             .Or(Lexer.FloatLiteral.Select(value => (object)value))
             .Or(Lexer.IntegerLiteral.Select(Lexer.BoxIntegerLiteralValue))
