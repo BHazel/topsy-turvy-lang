@@ -262,7 +262,7 @@ public class SymbolTable
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
-            TypeDisplayName = LiteralTypeToDisplayName(declaration.Type),
+            TypeDisplayName = LiteralTypeNames.ToDisplayName(declaration.Type),
             DeclaredType = declaration.Type,
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,
@@ -293,7 +293,7 @@ public class SymbolTable
             IsConstant = declaration.IsConstant,
             TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
                 ? $"{declaration.Size.Value} "
-                : "")}{LiteralTypeToDisplayName(declaration.ElementType)}",
+                : "")}{LiteralTypeNames.ToDisplayName(declaration.ElementType)}",
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,
             Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
@@ -321,7 +321,7 @@ public class SymbolTable
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
-            TypeDisplayName = $"{Keywords.TypeNames.GalleryPictureOf} {LiteralTypeToDisplayName(declaration.PointeeType)}",
+            TypeDisplayName = $"{Keywords.TypeNames.GalleryPictureOf} {LiteralTypeNames.ToDisplayName(declaration.PointeeType)}",
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,
             Documentation = FindDocumentationComment(sourceLines, declaration.NameSpan.Start.Line)
@@ -359,7 +359,7 @@ public class SymbolTable
                     Name = parameter.Name,
                     Kind = SymbolKind.Parameter,
                     DeclaredType = parameter.Type,
-                    TypeDisplayName = LiteralTypeToDisplayName(parameter.Type),
+                    TypeDisplayName = LiteralTypeNames.ToDisplayName(parameter.Type),
                     DefinitionLine = parameter.Span.Start.Line,
                     DefinitionColumn = parameter.Span.Start.Column
                 };
@@ -462,30 +462,4 @@ public class SymbolTable
 
         return DocumentationCommentParser.Parse(content.ToString());
     }
-
-    /// <summary>
-    /// Converts a <see cref="LiteralType"/> to a user-friendly display name.
-    /// </summary>
-    /// <param name="type">The type.</param>
-    /// <returns>The user-friendly display name.</returns>
-    public static string LiteralTypeToDisplayName(LiteralType type) => type switch
-    {
-        LiteralType.Integer => Keywords.TypeNames.Peer,
-        LiteralType.Long => Keywords.TypeNames.Chancellor,
-        LiteralType.Short => Keywords.TypeNames.Pirate,
-        LiteralType.SignedByte => Keywords.TypeNames.SausageRoll,
-        LiteralType.UnsignedInteger => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Peer}",
-        LiteralType.UnsignedLong => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Chancellor}",
-        LiteralType.UnsignedShort => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.Pirate}",
-        LiteralType.Byte => $"{Keywords.TypeNames.Standing} {Keywords.TypeNames.SausageRoll}",
-        LiteralType.Double => Keywords.TypeNames.Fathom,
-        LiteralType.Single => Keywords.TypeNames.Foot,
-        LiteralType.String => Keywords.TypeNames.Yarn,
-        LiteralType.Char => Keywords.TypeNames.Stitch,
-        LiteralType.Boolean => Keywords.TypeNames.Decree,
-        LiteralType.Null => Keywords.TypeNames.Naught,
-        LiteralType.Array => Keywords.TypeNames.LittleListOf,
-        LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
-        _ => "unknown"
-    };
 }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace BWHazel.TopsyTurvy.Analysis;
+namespace BWHazel.TopsyTurvy.Ast;
 
 /// <summary>
 /// Holds the parsed content of a Topsy Turvy documentation comment.
@@ -43,7 +43,7 @@ public record DocumentationComment
     /// </summary>
     /// <remarks>
     /// Each entry maps the parameter name to a tuple of the declared type and a description.
-    /// Only populated for <see cref="SymbolKind.Function"/> symbols.
+    /// Only populated for function symbols.
     /// </remarks>
     public IReadOnlyDictionary<string, (string Type, string Description)>? Parameters { get; init; }
 
@@ -51,7 +51,7 @@ public record DocumentationComment
     /// Gets or initialises the return value description.
     /// </summary>
     /// <remarks>
-    /// Only populated for <see cref="SymbolKind.Function"/> symbols.
+    /// Only populated for function symbols.
     /// </remarks>
     public (string Type, string Description)? ReturnValue { get; init; }
 

@@ -1,4 +1,5 @@
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 
 namespace BWHazel.TopsyTurvy.Tests.Analysis;

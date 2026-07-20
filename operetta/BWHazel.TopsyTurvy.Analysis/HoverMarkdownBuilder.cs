@@ -169,5 +169,5 @@ public static class HoverMarkdownBuilder
     /// <param name="type">The literal type.</param>
     /// <returns>The keyword string for the literal type.</returns>
     private static string LiteralTypeToKeyword(LiteralType type) =>
-        SymbolTable.LiteralTypeToDisplayName(type);
+        LiteralTypeNames.ToDisplayName(type);
 }
