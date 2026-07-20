@@ -67,6 +67,11 @@
 £b = appoint nay
 //           ^ constant.language.boolean.utopir
 
+// ── Naught (null) literal ─────────────────────────────────────────
+
+£p = appoint naught
+//           ^ constant.language.null.utopir
+
 // ── Type names ───────────────────────────────────────────────────
 
 £x = welcome chancellor

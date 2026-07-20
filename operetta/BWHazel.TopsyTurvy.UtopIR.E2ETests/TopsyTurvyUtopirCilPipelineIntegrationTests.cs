@@ -213,6 +213,191 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
     }
 
     /// <summary>
+    /// Runs a Topsy Turvy programme that declares a pointer into an array, writes through it, adjusts
+    /// it via pointer arithmetic, and reads the result, through the complete pipeline, verifying the
+    /// UtopIR source text and the final OS exit code.
+    /// </summary>
+    [Fact]
+    public void Pipeline_PointerIntoArrayWriteThroughAndArithmeticProgramme_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "A Pointer Into The Three Numbers"
+
+            PRINCIPALS
+              PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+              PRAY WELCOME NumbersPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Numbers
+              PRAY WELCOME NumbersPointerOffset AS A GALLERY PICTURE OF PEER
+              PRAY WELCOME NumberValue AS A PEER
+            THE CURTAIN RISES.
+
+            VIEW FROM NumbersPointer IS APPOINTED 99
+            NumbersPointerOffset IS APPOINTED SUM OF NumbersPointer AND 2
+            NumberValue IS APPOINTED VIEW FROM NumbersPointerOffset
+            AND SO I FIND NumberValue
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("£NumbersPointer = welcome.gallerypic peer");
+        utopIrSource.ShouldContain("£NumbersPointer = pictureto £Numbers");
+        utopIrSource.ShouldContain("viewto £NumbersPointer, 99");
+        utopIrSource.ShouldContain("sum.g £NumbersPointer, 2");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(30);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme that declares a pointer with no initial value (an implicit
+    /// <c>NAUGHT</c>), through the complete pipeline, verifying the UtopIR source text emits an
+    /// explicit <c>appoint naught</c> and that the programme still runs to completion.
+    /// </summary>
+    [Fact]
+    public void Pipeline_NullPointerDeclarationProgramme_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "A Null Pointer"
+
+            PRINCIPALS
+              PRAY WELCOME NullPointer AS A GALLERY PICTURE OF PEER
+            THE CURTAIN RISES.
+
+            AND SO I FIND 1
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("£NullPointer = welcome.gallerypic peer");
+        utopIrSource.ShouldContain("£NullPointer = appoint naught");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(1);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme that declares a pointer into a <c>yarn</c> string, adjusts it via
+    /// pointer arithmetic, and dereferences the result, through the complete pipeline, verifying the
+    /// UtopIR source text and the final OS exit code.
+    /// </summary>
+    [Fact]
+    public void Pipeline_PointerIntoYarnArithmeticProgramme_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "A Pointer Into A Word"
+
+            PRINCIPALS
+              PRAY WELCOME PoemSubject AS A YARN BEING "Hollow"
+              PRAY WELCOME PoemSubjectPointer AS A GALLERY PICTURE OF STITCH BEING GALLERY PICTURE TO PoemSubject
+              PRAY WELCOME PoemSubjectPointerOffset AS A GALLERY PICTURE OF STITCH
+              PRAY WELCOME Letter AS A STITCH
+            THE CURTAIN RISES.
+
+            PoemSubjectPointerOffset IS APPOINTED SUM OF PoemSubjectPointer AND 2
+            Letter IS APPOINTED VIEW FROM PoemSubjectPointerOffset
+            AND SO I FIND Letter
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("£PoemSubjectPointer = welcome.gallerypic stitch");
+        utopIrSource.ShouldContain("£PoemSubjectPointer = pictureto £PoemSubject");
+        utopIrSource.ShouldContain("sum.g £PoemSubjectPointer, 2");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(108);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Runs a Topsy Turvy programme with floating-point arithmetic through the complete pipeline,
     /// verifying the <c>.f</c>-suffixed UtopIR instruction, the floating-point IL opcodes and the
     /// truncated final OS exit code.

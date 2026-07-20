@@ -36,6 +36,10 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>HardlyRhs</c> matches the <c>hardly</c> keyword, required whitespace, then a single <see cref="OperandParser.Operand"/>, producing a <see cref="HardlyInstruction"/>.
 /// * <c>VictimYarnRhs</c> matches the <c>victim.yarn</c> keyword, required whitespace, then two comma-separated <see cref="OperandParser.Operand"/>s, producing a <see cref="VictimYarnInstruction"/>.
 /// * <c>VictimListRhs</c> matches the <c>victim.list</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, then an <see cref="OperandParser.Operand"/> index, producing a <see cref="VictimListInstruction"/>.
+/// * <c>WelcomeGallerypicRhs</c> matches the <c>welcome.gallerypic</c> keyword, required whitespace, then a <see cref="OperandParser.Type"/>, producing a <see cref="WelcomeGallerypicInstruction"/>. Tried before <c>WelcomeRhs</c>.
+/// * <c>PicturetoRhs</c> matches the <c>pictureto</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointee, producing a <see cref="PicturetoInstruction"/>.
+/// * <c>ViewfromRhs</c> matches the <c>viewfrom</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointer, producing a <see cref="ViewfromInstruction"/>.
+/// * <c>PointerArithmeticRhs</c> matches an <see cref="OperandParser.PointerArithmeticOperation"/> mnemonic, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> offset, producing a <see cref="PointerArithmeticInstruction"/>. Tried before <c>ArithmeticRhs</c>.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -51,6 +55,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <see cref="SailAlike"/> matches the <c>sailalike</c> keyword, required whitespace, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="Lexer.Label"/>, producing a <see cref="SailAlikeInstruction"/>.
 /// * <see cref="SailUnlike"/> matches the <c>sailunlike</c> keyword the same way as <see cref="SailAlike"/>, producing a <see cref="SailUnlikeInstruction"/>.
 /// * <see cref="AppointVictim"/> matches the <c>appoint.victim</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, an <see cref="OperandParser.Operand"/> index, a comma, then an <see cref="OperandParser.Operand"/> value, producing an <see cref="AppointVictimInstruction"/>.
+/// * <see cref="ViewTo"/> matches the <c>viewto</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> value, producing a <see cref="ViewtoInstruction"/>.
 /// * <see cref="Label"/> matches a bare <see cref="Lexer.Label"/> on its own line, producing a <see cref="LabelInstruction"/>.
 /// * <see cref="StandaloneInstruction"/> tries all standalone instructions in turn:
 ///     * <see cref="Prentice"/>.
@@ -61,6 +66,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 ///     no trailing word-boundary check, so this ordering costs nothing and avoids relying on that
 ///     absence being permanent).
 ///     * <see cref="AppointVictim"/>.
+///     * <see cref="ViewTo"/>.
 ///     * <see cref="Label"/>.
 ///
 /// ### Instruction
@@ -114,6 +120,20 @@ public static class InstructionParser
         select (UtopIRInstruction)new WelcomeListInstruction(new UtopIRVariable(target), elementType, size);
 
     /// <summary>
+    /// Parses a <c>welcome.gallerypic</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <remarks>
+    /// Tried before <see cref="WelcomeRhs(string)"/> so that <c>welcome.gallerypic</c> is matched in
+    /// full rather than <c>welcome</c> matching its own prefix.
+    /// </remarks>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> WelcomeGallerypicRhs(string target) =>
+        from welcomeGallerypicKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.WelcomeGallerypic)
+        from whitespace in Lexer.WhitespaceRequired
+        from pointeeType in OperandParser.Type
+        select (UtopIRInstruction)new WelcomeGallerypicInstruction(new UtopIRVariable(target), pointeeType);
+
+    /// <summary>
     /// Parses a <c>welcome</c> assignment right-hand side for the given target variable.
     /// </summary>
     /// <param name="target">The already-parsed assignment target variable name.</param>
@@ -154,6 +174,45 @@ public static class InstructionParser
     private static TextParser<UtopIRInstruction> LeaveRhs(string target) =>
         Lexer.Keyword(UtopIRKeywords.Instructions.Leave)
             .Select(_ => (UtopIRInstruction)new LeaveInstruction(new UtopIRVariable(target)));
+
+    /// <summary>
+    /// Parses a <c>pictureto</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> PicturetoRhs(string target) =>
+        from picturetoKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.PictureTo)
+        from whitespace in Lexer.WhitespaceRequired
+        from pointee in Lexer.Variable
+        select (UtopIRInstruction)new PicturetoInstruction(new UtopIRVariable(target), new UtopIRVariable(pointee));
+
+    /// <summary>
+    /// Parses a <c>viewfrom</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> ViewfromRhs(string target) =>
+        from viewfromKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.ViewFrom)
+        from whitespace in Lexer.WhitespaceRequired
+        from pointer in Lexer.Variable
+        select (UtopIRInstruction)new ViewfromInstruction(new UtopIRVariable(target), new UtopIRVariable(pointer));
+
+    /// <summary>
+    /// Parses a pointer arithmetic assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <remarks>
+    /// Tried before <see cref="ArithmeticRhs(string)"/> so that, for example, <c>sum.g</c> is matched
+    /// in full rather than being read as the plain <c>sum</c> keyword followed by unexpected text.
+    /// This is the same ordering already used for mnemonic pairs like <c>sum</c>/<c>sum.f</c>.
+    /// </remarks>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> PointerArithmeticRhs(string target) =>
+        from operation in OperandParser.PointerArithmeticOperation
+        from whitespace1 in Lexer.WhitespaceRequired
+        from pointer in Lexer.Variable
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from offset in OperandParser.Operand
+        select (UtopIRInstruction)new PointerArithmeticInstruction(operation, new UtopIRVariable(target), new UtopIRVariable(pointer), offset);
 
     /// <summary>
     /// Parses an arithmetic assignment right-hand side for the given target variable.
@@ -269,10 +328,14 @@ public static class InstructionParser
         from whitespace2 in Lexer.Whitespace
         from instruction in
             WelcomeListRhs(target)
+                .Or(WelcomeGallerypicRhs(target))
                 .Or(WelcomeRhs(target))
                 .Or(AppointRhs(target))
                 .Or(WereRhs(target))
                 .Or(LeaveRhs(target))
+                .Or(PicturetoRhs(target))
+                .Or(ViewfromRhs(target))
+                .Or(PointerArithmeticRhs(target))
                 .Or(ArithmeticRhs(target))
                 .Or(BitwiseRhs(target))
                 .Or(InvRhs(target))
@@ -362,6 +425,19 @@ public static class InstructionParser
         select (UtopIRInstruction)new AppointVictimInstruction(new UtopIRVariable(array), index, value);
 
     /// <summary>
+    /// Parses a <c>viewto</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> ViewTo =
+        from viewToKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.ViewTo)
+        from whitespace1 in Lexer.WhitespaceRequired
+        from pointer in Lexer.Variable
+        from whitespace2 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace3 in Lexer.Whitespace
+        from value in OperandParser.Operand
+        select (UtopIRInstruction)new ViewtoInstruction(new UtopIRVariable(pointer), value);
+
+    /// <summary>
     /// Parses any of the standalone instruction forms with no assignment target.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> StandaloneInstruction =
@@ -371,6 +447,7 @@ public static class InstructionParser
             .Or(SailUnlike)
             .Or(Sail)
             .Or(AppointVictim)
+            .Or(ViewTo)
             .Or(Label);
 
     /// <summary>

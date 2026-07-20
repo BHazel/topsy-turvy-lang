@@ -22,14 +22,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// * <see cref="UtopIRType"/>.<c>Yarn</c>: <c>yarn</c> (string of characters)
 /// </para>
 /// <para>
-/// <see cref="Array"/> and <see cref="Pointer"/> are marker values only: an array or pointer
-/// variable true element or pointee type is recorded separately, in a side table keyed on
+/// <see cref="Array"/> and <see cref="Pointer"/> are marker values only: the true element or pointee
+/// type of an array or pointer variable is recorded separately, in a side table keyed on
 /// variable name (<c>arrayElementTypes</c>/<c>pointerPointeeTypes</c> in
-/// <c>TopsyTurvyToUtopIRTransformer</c> and <c>CilEmitter</c>), in a similar fashion to
-/// the <c>TypeCheckVisitor</c> existing <c>arrayElementTypeStack</c>/<c>pointerPointeeTypeStack</c>
-/// pattern for Topsy Turvy own array and pointer types. Neither value is a valid operand to the bare
+/// <c>TopsyTurvyToUtopIRTransformer</c> and <c>CilEmitter</c>). Neither value is a valid operand to the bare
 /// <c>welcome</c> instruction: arrays and pointers are declared with the dedicated
-/// <c>welcome.list</c>/<c>welcome.gallerypic</c> instructions instead, which carry the element/pointee
+/// <c>welcome.list</c>/<c>welcome.gallerypic</c> instructions instead, which carry the element or pointee
 /// type directly rather than this marker.
 /// </para>
 /// </remarks>

@@ -50,6 +50,20 @@ public class InstructionParserTests
     }
 
     /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses the <c>naught</c> null
+    /// literal, returning the <see cref="NaughtLiteral"/> singleton.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithAppointNaught_ReturnsNaughtLiteral()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£x = appoint naught"));
+
+        result.HasValue.ShouldBeTrue();
+        AppointInstruction appoint = result.Value.ShouldBeOfType<AppointInstruction>();
+        appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBeSameAs(NaughtLiteral.Instance);
+    }
+
+    /// <summary>
     /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a negative integer literal.
     /// </summary>
     [Fact]
@@ -314,6 +328,120 @@ public class InstructionParserTests
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldBeOfType<AppointVictimInstruction>();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>welcome.gallerypic</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithWelcomeGallerypic_ReturnsWelcomeGallerypicInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
+
+        result.HasValue.ShouldBeTrue();
+        WelcomeGallerypicInstruction welcomeGallerypic = result.Value.ShouldBeOfType<WelcomeGallerypicInstruction>();
+        welcomeGallerypic.Target.Name.ShouldBe("NumberPointer");
+        welcomeGallerypic.PointeeType.ShouldBe(UtopIRType.Peer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses <c>welcome.gallerypic</c> in
+    /// full rather than stopping short at the shared <c>welcome</c> prefix.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithWelcomeGallerypic_DoesNotStopAtWelcomePrefix()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldNotBeOfType<WelcomeInstruction>();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>pictureto</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithPictureto_ReturnsPicturetoInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = pictureto £Number"));
+
+        result.HasValue.ShouldBeTrue();
+        PicturetoInstruction pictureto = result.Value.ShouldBeOfType<PicturetoInstruction>();
+        pictureto.Target.Name.ShouldBe("NumberPointer");
+        pictureto.Pointee.Name.ShouldBe("Number");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>viewfrom</c> assignment.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithViewfrom_ReturnsViewfromInstruction()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£NumberValue = viewfrom £NumberPointer"));
+
+        result.HasValue.ShouldBeTrue();
+        ViewfromInstruction viewfrom = result.Value.ShouldBeOfType<ViewfromInstruction>();
+        viewfrom.Target.Name.ShouldBe("NumberValue");
+        viewfrom.Pointer.Name.ShouldBe("NumberPointer");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.ViewTo"/> parses a <c>viewto</c> instruction.
+    /// </summary>
+    [Fact]
+    public void ViewTo_WithPointerAndValue_ReturnsViewtoInstruction()
+    {
+        var result = InstructionParser.ViewTo(new("viewto £NumberPointer, 23"));
+
+        result.HasValue.ShouldBeTrue();
+        ViewtoInstruction viewto = result.Value.ShouldBeOfType<ViewtoInstruction>();
+        viewto.Pointer.Name.ShouldBe("NumberPointer");
+        viewto.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(23);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.StandaloneInstruction"/> parses <c>viewto</c>.
+    /// </summary>
+    [Fact]
+    public void StandaloneInstruction_WithViewTo_ReturnsViewtoInstruction()
+    {
+        var result = InstructionParser.StandaloneInstruction(new("viewto £NumberPointer, 23"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeOfType<ViewtoInstruction>();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses each pointer arithmetic
+    /// mnemonic to the correct operation.
+    /// </summary>
+    /// <param name="mnemonic">The UtopIR pointer arithmetic mnemonic.</param>
+    /// <param name="expectedOperation">The expected <see cref="UtopIRPointerArithmeticOperation"/>.</param>
+    [Theory]
+    [InlineData("sum.g", UtopIRPointerArithmeticOperation.Sum)]
+    [InlineData("diff.g", UtopIRPointerArithmeticOperation.Diff)]
+    public void AssignmentInstruction_WithPointerArithmeticMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRPointerArithmeticOperation expectedOperation)
+    {
+        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £NumbersPointer, 2"));
+
+        result.HasValue.ShouldBeTrue();
+        PointerArithmeticInstruction pointerArithmetic = result.Value.ShouldBeOfType<PointerArithmeticInstruction>();
+        pointerArithmetic.Operation.ShouldBe(expectedOperation);
+        pointerArithmetic.Pointer.Name.ShouldBe("NumbersPointer");
+        pointerArithmetic.Offset.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses pointer arithmetic rather
+    /// than stopping short at the shared <c>sum</c>/<c>diff</c> prefix used by ordinary arithmetic.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithPointerArithmetic_DoesNotStopAtArithmeticPrefix()
+    {
+        var result = InstructionParser.AssignmentInstruction(new("£r = sum.g £NumbersPointer, 2"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldNotBeOfType<ArithmeticInstruction>();
     }
 
     /// <summary>

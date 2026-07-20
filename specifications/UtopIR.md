@@ -2245,8 +2245,10 @@ VIEW FROM NumberPointer IS APPOINTED 23
 
 PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
 PRAY WELCOME NumbersPointer AS A GALLERY PICTURE OF PEER
-NumbersPointer IS APPOINTED GALLERY PICTURE TO NumbersPointer
+NumbersPointer IS APPOINTED GALLERY PICTURE TO Numbers
 NumbersPointer IS APPOINTED SUM OF NumbersPointer AND 2
+
+PRAY WELCOME NullPointer AS A GALLERY PICTURE OF PEER
 ```
 
 the following is the equivalent UtopIR code:
@@ -2265,7 +2267,13 @@ viewto £NumberPointer, 23
 appoint.victim £Numbers, 1, 10
 appoint.victim £Numbers, 2, 20
 appoint.victim £Numbers, 3, 30
+£NumbersPointer = welcome.gallerypic peer
+£NumbersPointer = pictureto £Numbers
 £_sumg_NumbersPointer_2 = sum.g £NumbersPointer, 2
+£NumbersPointer = appoint £_sumg_NumbersPointer_2
+
+£NullPointer = welcome.gallerypic peer
+£NullPointer = appoint naught
 ```
 
 ## Appendix A. Instruction Reference
@@ -2332,3 +2340,4 @@ appoint.victim £Numbers, 3, 30
 
 * For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
 * The Boolean `decree` type defines its _true_ and _false_ literals as `verity` and `nay`.
+* The Null `naught` literal can be assigned to a pointer without a pointee, an array or `yarn` string.

@@ -2228,6 +2228,174 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="PointerDeclarationNode"/> with an <see cref="AddressOfExpressionNode"/>
+    /// initial value emits a <see cref="WelcomeGallerypicInstruction"/> followed directly by a
+    /// <see cref="PicturetoInstruction"/> targeting the declared pointer, with no intervening
+    /// <see cref="AppointInstruction"/> or temporary register.
+    /// </summary>
+    [Fact]
+    public void Transform_PointerDeclarationWithAddressOf_EmitsWelcomeGallerypicThenPictureto()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Number", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointer",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                InitialValue = new AddressOfExpressionNode() { VariableName = "Number", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeGallerypicInstruction welcomeGallerypic = result.Instructions.OfType<WelcomeGallerypicInstruction>().Single();
+        welcomeGallerypic.Target.Name.ShouldBe("NumberPointer");
+        welcomeGallerypic.PointeeType.ShouldBe(UtopIRType.Peer);
+
+        PicturetoInstruction pictureto = result.Instructions.OfType<PicturetoInstruction>().Single();
+        pictureto.Target.Name.ShouldBe("NumberPointer");
+        pictureto.Pointee.Name.ShouldBe("Number");
+
+        result.Instructions.OfType<AppointInstruction>().ShouldAllBe(appoint => appoint.Target.Name == "Number");
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PointerDeclarationNode"/> with no initial value (<c>NAUGHT</c>) emits a
+    /// <see cref="WelcomeGallerypicInstruction"/> followed by an <see cref="AppointInstruction"/> of
+    /// the <see cref="NaughtLiteral"/> singleton, with no <see cref="PicturetoInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_PointerDeclarationWithNoInitialValue_EmitsWelcomeGallerypicThenAppointNaught()
+    {
+        ProgramNode program = Programme(
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointer",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        result.Instructions.Count.ShouldBe(2);
+        result.Instructions[0].ShouldBeOfType<WelcomeGallerypicInstruction>();
+        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        appoint.Target.Name.ShouldBe("NumberPointer");
+        appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBeOfType<NaughtLiteral>();
+        result.Instructions.OfType<PicturetoInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="DereferenceExpressionNode"/> emits a <see cref="ViewfromInstruction"/>
+    /// into a temporary register, appointed into the declared variable.
+    /// </summary>
+    [Fact]
+    public void Transform_DereferenceExpression_EmitsViewfromInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Number", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointer",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                InitialValue = new AddressOfExpressionNode() { VariableName = "Number", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            },
+            new DeclarationNode()
+            {
+                Name = "NumberValue",
+                NameSpan = PlaceholderSpan,
+                Type = LiteralType.Integer,
+                InitialValue = new DereferenceExpressionNode() { PointerName = "NumberPointer", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ViewfromInstruction viewfrom = result.Instructions.OfType<ViewfromInstruction>().Single();
+        viewfrom.Pointer.Name.ShouldBe("NumberPointer");
+
+        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        appoint.Target.Name.ShouldBe("NumberValue");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(viewfrom.Target.Name);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="DereferenceAssignmentNode"/> emits a <see cref="ViewtoInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Transform_DereferenceAssignment_EmitsViewtoInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Number", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointer",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                InitialValue = new AddressOfExpressionNode() { VariableName = "Number", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            },
+            new DereferenceAssignmentNode()
+            {
+                PointerName = "NumberPointer",
+                Value = IntLiteral(23),
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        ViewtoInstruction viewto = result.Instructions.OfType<ViewtoInstruction>().Single();
+        viewto.Pointer.Name.ShouldBe("NumberPointer");
+        viewto.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(23);
+    }
+
+    /// <summary>
+    /// Tests that <c>SUM OF pointer AND offset</c> (sharing the same <see cref="Operator.Sum"/> and
+    /// <see cref="PrefixExpressionNode"/> shape as ordinary arithmetic) emits a
+    /// <see cref="PointerArithmeticInstruction"/> rather than an <see cref="ArithmeticInstruction"/>,
+    /// distinguished purely by the first operand being a recorded pointer variable.
+    /// </summary>
+    [Fact]
+    public void Transform_SumOfPointerAndOffset_EmitsPointerArithmeticInstructionNotArithmeticInstruction()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Number", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, InitialValue = IntLiteral(42), Span = PlaceholderSpan },
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointer",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                InitialValue = new AddressOfExpressionNode() { VariableName = "Number", Span = PlaceholderSpan },
+                Span = PlaceholderSpan
+            },
+            new PointerDeclarationNode()
+            {
+                Name = "NumberPointerOffset",
+                NameSpan = PlaceholderSpan,
+                PointeeType = LiteralType.Integer,
+                Span = PlaceholderSpan
+            },
+            new AssignmentNode()
+            {
+                Target = "NumberPointerOffset",
+                Value = Prefix(Operator.Sum, Identifier("NumberPointer"), IntLiteral(1)),
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        PointerArithmeticInstruction pointerArithmetic = result.Instructions.OfType<PointerArithmeticInstruction>().Single();
+        pointerArithmetic.Operation.ShouldBe(UtopIRPointerArithmeticOperation.Sum);
+        pointerArithmetic.Pointer.Name.ShouldBe("NumberPointer");
+        pointerArithmetic.Offset.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Instructions.OfType<ArithmeticInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.
     /// </summary>
     /// <param name="statements">The statements to include.</param>

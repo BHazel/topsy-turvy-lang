@@ -8,7 +8,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// Corresponds to the UtopIR <c>appoint.victim</c> instruction with the format
 /// <c>appoint.victim &lt;array&gt;, &lt;index&gt;, &lt;value&gt;</c>. <see cref="Array"/> must already be
 /// declared, <see cref="Index"/> must be of an integer type and <see cref="Value"/> must have a type
-/// compatible with the array declared element type; using any other types is a compilation error.
+/// compatible with the declared element type of the array; using any other types is a compilation error.
 /// </para>
 /// <para>
 /// For example, the Topsy Turvy statement:

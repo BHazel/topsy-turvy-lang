@@ -1014,6 +1014,197 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that <see cref="PicturetoInstruction"/> and <see cref="ViewfromInstruction"/> allocate a
+    /// real <c>PointerHandle</c> referring to an array first element and read it back.
+    /// </summary>
+    [Fact]
+    public void Emit_PicturetoAndViewfromOnArray_ReadsFirstElement()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new ViewfromInstruction(new("r"), new("NumbersPointer")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ViewtoInstruction"/> genuinely writes through the pointer into the
+    /// referenced array. Verified by reading the element back directly via
+    /// <see cref="VictimListInstruction"/> afterward, not just through the pointer again.
+    /// </summary>
+    [Fact]
+    public void Emit_Viewto_WritesThroughIntoArrayElement()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new ViewtoInstruction(new("NumbersPointer"), new LiteralOperand(99)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(1)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(99);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PointerArithmeticInstruction"/> (<c>sum.g</c>) advances the index of a
+    /// <c>PointerHandle</c> without touching its <c>Container</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_PointerArithmeticSum_AdvancesToCorrectElement()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new PointerArithmeticInstruction(UtopIRPointerArithmeticOperation.Sum, new("NumbersPointerOffset"), new("NumbersPointer"), new LiteralOperand(2)),
+            new ViewfromInstruction(new("r"), new("NumbersPointerOffset")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(30);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PointerArithmeticInstruction"/> on a pointer into a
+    /// <c>yarn</c> advances the index of a <c>PointerHandle</c> the same way it does for an array,
+    /// since <c>sum.g</c>/<c>diff.g</c> only ever adjust the index field, regardless of the runtime
+    /// type of the container.
+    /// </summary>
+    [Fact]
+    public void Emit_PointerArithmeticSumOnYarnPointer_AdvancesToCorrectCharacter()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new WelcomeGallerypicInstruction(new("PoemSubjectPointer"), UtopIRType.Stitch),
+            new PicturetoInstruction(new("PoemSubjectPointer"), new("PoemSubject")),
+            new PointerArithmeticInstruction(UtopIRPointerArithmeticOperation.Sum, new("PoemSubjectPointerOffset"), new("PoemSubjectPointer"), new LiteralOperand(2)),
+            new ViewfromInstruction(new("r"), new("PoemSubjectPointerOffset")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(108);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ViewtoInstruction"/> writing through a pointer into a <c>yarn</c>
+    /// character throws <see cref="InvalidOperationException"/> at runtime, since strings are immutable.
+    /// </summary>
+    [Fact]
+    public void Emit_ViewtoOnYarnPointer_ThrowsInvalidOperationExceptionAtRuntime()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new WelcomeGallerypicInstruction(new("PoemSubjectPointer"), UtopIRType.Stitch),
+            new PicturetoInstruction(new("PoemSubjectPointer"), new("PoemSubject")),
+            new ViewtoInstruction(new("PoemSubjectPointer"), new LiteralOperand('X')),
+            new FindInstruction(new LiteralOperand(0))
+        ]);
+
+        TargetInvocationException exception = Should.Throw<TargetInvocationException>(() => RunProgram(program));
+        exception.InnerException.ShouldBeOfType<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PicturetoInstruction"/> targeting a plain scalar variable (not an
+    /// array or <c>yarn</c>) throws <see cref="NotSupportedException"/> at emit time.
+    /// </summary>
+    [Fact]
+    public void Emit_PicturetoOnScalarVariable_ThrowsNotSupportedException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Number"), UtopIRType.Peer),
+            new AppointInstruction(new("Number"), new LiteralOperand(42)),
+            new WelcomeGallerypicInstruction(new("NumberPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumberPointer"), new("Number"))
+        ]);
+
+        try
+        {
+            Should.Throw<NotSupportedException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to a pointer previously assigned via <see cref="PicturetoInstruction"/>
+    /// re-zeroes the <c>PointerHandle</c> via <c>initobj</c> without throwing, even though the local
+    /// already held a real <c>Container</c> reference.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToPointer_ReZeroesHandleWithoutThrowing()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 1),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new AppointInstruction(new("NumbersPointer"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to an array variable emits <c>ldnull</c>/<c>stloc</c> via
+    /// the generic <see cref="LiteralOperand"/> path, since a CLR array is a reference type.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToArray_SetsArrayReferenceToNullWithoutThrowing()
+    {
+        UtopIRProgram program = new([
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 1),
+            new AppointInstruction(new("Numbers"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to a <c>yarn</c> variable emits <c>ldnull</c>/<c>stloc</c>
+    /// via the generic <see cref="LiteralOperand"/> path, since a CLR <see cref="string"/> is a
+    /// reference type.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToYarn_SetsStringReferenceToNullWithoutThrowing()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
     /// Tests that an unconditional <see cref="SailInstruction"/> skips the instruction immediately following it.
     /// </summary>
     [Fact]

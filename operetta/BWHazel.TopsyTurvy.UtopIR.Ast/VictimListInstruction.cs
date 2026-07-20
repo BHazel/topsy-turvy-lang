@@ -7,7 +7,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// <para>
 /// Corresponds to the UtopIR <c>victim.list</c> instruction with the format
 /// <c>£&lt;name&gt; = victim.list &lt;array&gt;, &lt;index&gt;</c>. <see cref="Array"/> must already be
-/// declared, <see cref="Target"/> must have the same type as the array declared element type and
+/// declared, <see cref="Target"/> must have the same type as the declared element type of the array and
 /// <see cref="Index"/> must be of an integer type; using any other types is a compilation error.
 /// </para>
 /// <para>

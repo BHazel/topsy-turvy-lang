@@ -9,7 +9,9 @@
     { "include": "#char-literals" },
     { "include": "#numbers" },
     { "include": "#boolean-literals" },
+    { "include": "#naught-literal" },
     { "include": "#array" },
+    { "include": "#pointer" },
     { "include": "#declaration" },
     { "include": "#assignment" },
     { "include": "#cast" },
@@ -65,6 +67,10 @@
       "name": "constant.language.boolean.utopir",
       "match": "(?i)\\b(verity|nay)\\b"
     },
+    "naught-literal": {
+      "name": "constant.language.null.utopir",
+      "match": "(?i)\\bnaught\\b"
+    },
     "array": {
       "patterns": [
         {
@@ -74,6 +80,22 @@
         {
           "name": "keyword.operator.assignment.utopir",
           "match": "(?i)\\bappoint\\.victim\\b"
+        }
+      ]
+    },
+    "pointer": {
+      "patterns": [
+        {
+          "name": "keyword.other.declaration.utopir",
+          "match": "(?i)\\bwelcome\\.gallerypic\\b"
+        },
+        {
+          "name": "keyword.other.access.utopir",
+          "match": "(?i)\\b(pictureto|viewfrom|viewto)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.pointer.utopir",
+          "match": "(?i)\\b(sum|diff)\\.g\\b"
         }
       ]
     },
