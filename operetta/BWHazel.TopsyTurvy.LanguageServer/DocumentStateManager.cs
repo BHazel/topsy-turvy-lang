@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.Parser;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 
@@ -27,13 +28,14 @@ public class DocumentStateManager
     /// <param name="uri">The document URI.</param>
     /// <param name="source">The current raw source text.</param>
     /// <param name="parseResult">The parse result from the most recent attempt.</param>
+    /// <param name="externalFunctions">The catalogue of external functions to seed the symbol table with, or <c>null</c> to fall back to <see cref="BindingCatalogue.Default"/> via <see cref="ExternalFunctionRegistrar.Register"/>.</param>
     /// <remarks>
     /// At present this is only called by the <see cref="TextDocumentSyncHandler"/> handler whenever the document content changes:
     /// open, keystroke and save.  While the source is always updated, the symbol table is only rebuilt on a successful parse,
     /// preserving the last good table while the document contains syntax errors.  This ensures language server features, such as
     /// Hover and Go-to-Definition, continue to work even when the document is temporarily in an invalid state.
     /// </remarks>
-    public void Update(DocumentUri uri, string source, ParseResult parseResult)
+    public void Update(DocumentUri uri, string source, ParseResult parseResult, BindingCatalogue? externalFunctions = null)
     {
         lock (this.lockObject)
         {
@@ -47,7 +49,9 @@ public class DocumentStateManager
             documentState.Source = source;
             if (parseResult.Success && parseResult.Program is not null)
             {
-                documentState.SymbolTable = SymbolTable.Build(parseResult.Program, source);
+                SymbolTable symbolTable = SymbolTable.Build(parseResult.Program, source);
+                documentState.ShadowedExternalFunctionNames = ExternalFunctionRegistrar.Register(symbolTable, externalFunctions);
+                documentState.SymbolTable = symbolTable;
                 documentState.ImportPaths = [.. parseResult.Program.Statements
                     .OfType<ImportNode>()
                     .Select(import => import.FilePath)];

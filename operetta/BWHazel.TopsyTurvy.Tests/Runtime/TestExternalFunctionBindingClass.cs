@@ -49,4 +49,13 @@ public static class TestExternalFunctionBindingClass
     /// <returns>The line read.</returns>
     [TopsyTurvyFunction(Name = "TestRead")]
     public static string TestRead(ITopsyTurvyIO io) => io.ReadLine();
+
+    /// <summary>
+    /// A function flagged as preview with a keyword analogue, used to test that both fold into hover documentation
+    /// correctly without depending on any particular Standard Library function.
+    /// </summary>
+    /// <param name="text">The text to write.</param>
+    /// <param name="io">The host-injected input/output implementation.</param>
+    [TopsyTurvyFunction(Name = "TestPreviewWrite", IsPreview = true, KeywordAnalogue = "BEHOLD")]
+    public static void TestPreviewWrite([TopsyTurvyParameter("Text")] string text, ITopsyTurvyIO io) => io.WriteLine(text);
 }

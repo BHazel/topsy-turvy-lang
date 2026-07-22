@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Analysis\BWHazel.TopsyTurvy.Analysis.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Bindings\BWHazel.TopsyTurvy.Bindings.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.TypeChecker\BWHazel.TopsyTurvy.TypeChecker.csproj" />
   </ItemGroup>

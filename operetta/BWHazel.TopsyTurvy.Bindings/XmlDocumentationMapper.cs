@@ -99,7 +99,7 @@ public static class XmlDocumentationMapper
         return new()
         {
             Summary = TrimOrNull(member.Element("summary")?.Value),
-            Remarks = TrimOrNull(member.Element("remarks")?.Value),
+            Remarks = FoldPreviewAndKeywordAnalogue(TrimOrNull(member.Element("remarks")?.Value), descriptor),
             Parameters = parameters.Count > 0 ? parameters : null,
             ReturnValue = returnValue,
             Exceptions = exceptions.Count > 0 ? exceptions : null,
@@ -108,6 +108,36 @@ public static class XmlDocumentationMapper
             IsDeprecated = obsolete is not null,
             DeprecationMessage = obsolete?.Message
         };
+    }
+
+    /// <summary>
+    /// Folds the preview and keyword-analogue markers of a bound function into its remarks text, since
+    /// <see cref="DocumentationComment"/> has no dedicated fields for either.
+    /// </summary>
+    /// <param name="remarks">The remarks text mapped from the XML documentation, or <c>null</c> if there was none.</param>
+    /// <param name="descriptor">The bound function to fold markers from.</param>
+    /// <returns>The combined remarks text, or <c>null</c> if there is nothing to show.</returns>
+    private static string? FoldPreviewAndKeywordAnalogue(string? remarks, BoundFunctionDescriptor descriptor)
+    {
+        List<string> parts = [];
+        if (remarks is not null)
+        {
+            parts.Add(remarks);
+        }
+
+        if (descriptor.IsPreview)
+        {
+            parts.Add("> **Preview**<br />\n> This is a preview function and may change without warning.");
+        }
+
+        if (descriptor.KeywordAnalogue is not null)
+        {
+            parts.Add($"Library counterpart of `{descriptor.KeywordAnalogue}`.");
+        }
+
+        return parts.Count > 0
+            ? string.Join("\n\n", parts)
+            : null;
     }
 
     /// <summary>

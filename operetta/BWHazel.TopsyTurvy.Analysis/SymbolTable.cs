@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using BWHazel.TopsyTurvy.Ast;
 
@@ -77,6 +78,43 @@ public class SymbolTable
     /// <returns><c>true</c> if the symbol was found, otherwise <c>false</c>.</returns>
     public bool TryGetSymbol(string name, out SymbolInfo? info) =>
         this.symbols.TryGetValue(name, out info);
+
+    /// <summary>
+    /// Adds an external function (Standard Library or an external library) to the symbol table so it participates
+    /// in hover, completion and the other analysis features exactly as a Topsy Turvy-defined function would.
+    /// </summary>
+    /// <param name="name">The function name, as visible to Topsy Turvy source.</param>
+    /// <param name="parameters">The function parameters, in declaration order.</param>
+    /// <param name="returnType">The declared return type, or <c>null</c> for a void function.</param>
+    /// <param name="documentation">The mapped documentation comment for the function.</param>
+    /// <returns><c>true</c> if the function was added, or <c>false</c> if a symbol already exists under this name and was left untouched.</returns>
+    /// <remarks>
+    /// An external function has no source position of its own, so <see cref="SymbolInfo.DefinitionLine"/> and
+    /// <see cref="SymbolInfo.DefinitionColumn"/> are left at their default of zero, the convention this class already
+    /// uses to mean the position could not be determined.  A symbol already present under this name, whether a
+    /// Topsy Turvy function, a variable, or another external function, is left alone: a Topsy Turvy function must
+    /// always be able to shadow an external one of the same name, matching the rule the interpreter and type
+    /// checker already follow.
+    /// </remarks>
+    public bool AddExternalFunction(string name, IReadOnlyList<(string Name, LiteralType Type)> parameters, LiteralType? returnType, DocumentationComment documentation)
+    {
+        if (this.symbols.ContainsKey(name))
+        {
+            return false;
+        }
+
+        this.symbols[name] = new SymbolInfo()
+        {
+            Name = name,
+            Kind = SymbolKind.Function,
+            DeclaredType = returnType,
+            TypedParameters = [.. parameters.Select(static parameter =>
+                new TypedParameter(parameter.Name, parameter.Type, new SourceSpan(new(0, 0), new(0, 0))))],
+            Documentation = documentation
+        };
+
+        return true;
+    }
 
     /// <summary>
     /// Returns all symbols in the table.

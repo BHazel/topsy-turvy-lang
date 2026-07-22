@@ -57,7 +57,7 @@ public class RenameHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c> then <c>null</c> is returned so the editor takes no action.
     /// * The word at the cursor position is extracted using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
-    /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, or the symbol name contains a space (indicating a multi-word built-in that cannot be renamed), <c>null</c> is returned.
+    /// * The word is looked up in the current document symbol table.  If not found, other open documents are searched via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, the symbol name contains a space (a multi-word built-in), or the symbol has no source position (an external function), <c>null</c> is returned.
     /// * All open documents are scanned and <see cref="TextEdit"/> items are collected for each occurrence using <see cref="CollectEdits"/>.
     /// * A <see cref="WorkspaceEdit"/> grouping the edits by document URI is returned to the client.
     /// </remarks>
@@ -94,7 +94,7 @@ public class RenameHandler(DocumentStateManager documentStateManager)
                 }
             }
 
-            if (symbolInfo.Name.Contains(' '))
+            if (symbolInfo.Name.Contains(' ') || symbolInfo.DefinitionLine == 0)
             {
                 return Task.FromResult<WorkspaceEdit?>(null);
             }

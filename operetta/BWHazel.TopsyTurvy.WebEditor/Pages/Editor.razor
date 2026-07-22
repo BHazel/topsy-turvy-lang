@@ -558,10 +558,12 @@
         TopsyTurvyParser parser = new();
         ParseResult result = parser.TryParse(source);
         IEnumerable<object> deprecatedWarningMarkers = [];
+        IEnumerable<object> shadowedFunctionWarningMarkers = [];
 
         if (result.Program is not null)
         {
             SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            IReadOnlyList<string> shadowedExternalFunctionNames = ExternalFunctionRegistrar.Register(symbolTable);
             this.symbolTables[this.activeFileName] = symbolTable;
             this.parsedSources[this.activeFileName] = source;
 
@@ -585,6 +587,22 @@
                             : $"'{symbol.Name}' is deprecated: {symbol.Documentation.DeprecationMessage}",
                         severity = 4,
                     });
+
+            shadowedFunctionWarningMarkers = shadowedExternalFunctionNames
+                .Where(name => symbolTable.TryGetSymbol(name, out SymbolInfo? shadowingSymbol) && shadowingSymbol is not null)
+                .Select(name =>
+                {
+                    symbolTable.TryGetSymbol(name, out SymbolInfo? shadowingSymbol);
+                    return (object)new
+                    {
+                        startLineNumber = shadowingSymbol!.DefinitionLine,
+                        startColumn = shadowingSymbol.DefinitionColumn,
+                        endLineNumber = shadowingSymbol.DefinitionLine,
+                        endColumn = shadowingSymbol.DefinitionColumn + name.Length,
+                        message = $"'{name}' shadows an external function of the same name from the Standard Library.",
+                        severity = 4,
+                    };
+                });
         }
 
         IEnumerable<object> parseMarkers = result.Diagnostics
@@ -618,7 +636,7 @@
             });
         }
 
-        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers);
+        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers).Concat(shadowedFunctionWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }
@@ -1284,7 +1302,9 @@
         ParseResult result = parser.TryParse(source);
         if (result.Program is not null)
         {
-            this.symbolTables[fileName] = SymbolTable.Build(result.Program, source);
+            SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            ExternalFunctionRegistrar.Register(symbolTable);
+            this.symbolTables[fileName] = symbolTable;
             this.parsedSources[fileName] = source;
         }
     }
