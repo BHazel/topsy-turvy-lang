@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Bindings\BWHazel.TopsyTurvy.Bindings.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
   </ItemGroup>
 

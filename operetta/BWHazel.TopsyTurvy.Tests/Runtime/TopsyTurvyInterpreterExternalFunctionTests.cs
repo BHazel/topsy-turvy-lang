@@ -70,18 +70,7 @@ public class TopsyTurvyInterpreterExternalFunctionTests : TopsyTurvyInterpreterT
     [Fact]
     public void Execute_WithUserFunctionShadowingExternalFunction_UserFunctionWins()
     {
-        string source = """
-            HARK! "Shadowing"
-            PRINCIPALS
-            THE CURTAIN RISES.
-            IT IS MY DUTY TO PERFORM TestWrite UNDER THE TERMS OF text AS A YARN
-              BEHOLD "shadowed"
-            MY DUTY IS DISCHARGED.
-            SUMMON TestWrite WITH "Hello" IF YOU PLEASE.
-            FINALE.
-            """;
-
-        ProgramNode program = this.parser.Parse(source);
+        ProgramNode program = this.parser.Parse(ExternalFunctionTestSources.Shadowing);
         (Interpreter interpreter, List<string> output) = this.CreateInterpreter(this.catalogue);
 
         DiagnosticCollection diagnostics = interpreter.Execute(program);
