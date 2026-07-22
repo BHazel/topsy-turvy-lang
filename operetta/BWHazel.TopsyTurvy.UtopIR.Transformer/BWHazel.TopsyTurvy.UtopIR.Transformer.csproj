@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Bindings\BWHazel.TopsyTurvy.Bindings.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Ast\BWHazel.TopsyTurvy.UtopIR.Ast.csproj" />
   </ItemGroup>
 

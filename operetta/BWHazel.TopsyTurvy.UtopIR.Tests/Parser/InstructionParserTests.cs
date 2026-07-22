@@ -1,5 +1,6 @@
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Parser;
+using Superpower.Model;
 
 namespace BWHazel.TopsyTurvy.UtopIR.Tests.Parser;
 
@@ -14,7 +15,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWelcome_ReturnsWelcomeInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£LovesickMaidens = welcome peer"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£LovesickMaidens = welcome peer"));
 
         result.HasValue.ShouldBeTrue();
         WelcomeInstruction welcome = result.Value.ShouldBeOfType<WelcomeInstruction>();
@@ -28,7 +29,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithAppointVariable_ReturnsAppointInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£x = appoint £y"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£x = appoint £y"));
 
         result.HasValue.ShouldBeTrue();
         AppointInstruction appoint = result.Value.ShouldBeOfType<AppointInstruction>();
@@ -42,7 +43,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithAppointLiteral_ReturnsAppointInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£x = appoint 42"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£x = appoint 42"));
 
         result.HasValue.ShouldBeTrue();
         AppointInstruction appoint = result.Value.ShouldBeOfType<AppointInstruction>();
@@ -56,7 +57,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithAppointNaught_ReturnsNaughtLiteral()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£x = appoint naught"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£x = appoint naught"));
 
         result.HasValue.ShouldBeTrue();
         AppointInstruction appoint = result.Value.ShouldBeOfType<AppointInstruction>();
@@ -69,7 +70,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithNegativeLiteral_ReturnsNegativeValue()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£x = appoint -7"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£x = appoint -7"));
 
         result.HasValue.ShouldBeTrue();
         AppointInstruction appoint = result.Value.ShouldBeOfType<AppointInstruction>();
@@ -82,7 +83,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWere_ReturnsWereInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£Lords = were £LovesickMaidens, chancellor"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£Lords = were £LovesickMaidens, chancellor"));
 
         result.HasValue.ShouldBeTrue();
         WereInstruction were = result.Value.ShouldBeOfType<WereInstruction>();
@@ -97,7 +98,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithLeave_ReturnsLeaveInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£result = leave"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£result = leave"));
 
         result.HasValue.ShouldBeTrue();
         LeaveInstruction leave = result.Value.ShouldBeOfType<LeaveInstruction>();
@@ -126,7 +127,7 @@ public class InstructionParserTests
     [InlineData("min.f", UtopIRArithmeticOperation.MinFloat)]
     public void AssignmentInstruction_WithArithmeticMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRArithmeticOperation expectedOperation)
     {
-        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
 
         result.HasValue.ShouldBeTrue();
         ArithmeticInstruction arithmetic = result.Value.ShouldBeOfType<ArithmeticInstruction>();
@@ -141,7 +142,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithFloatMnemonicAndFloatLiterals_ReturnsFloatOperands()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = sum.f 1.5, 2.5"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = sum.f 1.5, 2.5"));
 
         result.HasValue.ShouldBeTrue();
         ArithmeticInstruction arithmetic = result.Value.ShouldBeOfType<ArithmeticInstruction>();
@@ -163,7 +164,7 @@ public class InstructionParserTests
     [InlineData("transdown", UtopIRBitwiseOperation.TransDown)]
     public void AssignmentInstruction_WithBitwiseMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRBitwiseOperation expectedOperation)
     {
-        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
 
         result.HasValue.ShouldBeTrue();
         BitwiseInstruction bitwise = result.Value.ShouldBeOfType<BitwiseInstruction>();
@@ -178,7 +179,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithInv_ReturnsInvInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = inv £a"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = inv £a"));
 
         result.HasValue.ShouldBeTrue();
         InvInstruction inv = result.Value.ShouldBeOfType<InvInstruction>();
@@ -202,7 +203,7 @@ public class InstructionParserTests
     [InlineData("lowerdeg.f", UtopIRComparisonOperation.LowerDegFloat)]
     public void AssignmentInstruction_WithComparisonMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRComparisonOperation expectedOperation)
     {
-        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £a, £b"));
 
         result.HasValue.ShouldBeTrue();
         ComparisonInstruction comparison = result.Value.ShouldBeOfType<ComparisonInstruction>();
@@ -221,7 +222,7 @@ public class InstructionParserTests
     [InlineData("either", UtopIRLogicalOperation.Either)]
     public void AssignmentInstruction_WithLogicalMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRLogicalOperation expectedOperation)
     {
-        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} verity, nay"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} verity, nay"));
 
         result.HasValue.ShouldBeTrue();
         LogicalInstruction logical = result.Value.ShouldBeOfType<LogicalInstruction>();
@@ -236,7 +237,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithHardly_ReturnsHardlyInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = hardly £a"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = hardly £a"));
 
         result.HasValue.ShouldBeTrue();
         HardlyInstruction hardly = result.Value.ShouldBeOfType<HardlyInstruction>();
@@ -250,7 +251,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithVictimYarn_ReturnsVictimYarnInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = victim.yarn £PoemSubject, 4"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = victim.yarn £PoemSubject, 4"));
 
         result.HasValue.ShouldBeTrue();
         VictimYarnInstruction victimYarn = result.Value.ShouldBeOfType<VictimYarnInstruction>();
@@ -265,7 +266,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWelcomeList_ReturnsWelcomeListInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
 
         result.HasValue.ShouldBeTrue();
         WelcomeListInstruction welcomeList = result.Value.ShouldBeOfType<WelcomeListInstruction>();
@@ -281,7 +282,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWelcomeList_DoesNotStopAtWelcomePrefix()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, 3"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldNotBeOfType<WelcomeInstruction>();
@@ -293,7 +294,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithVictimList_ReturnsVictimListInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = victim.list £Numbers, 2"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = victim.list £Numbers, 2"));
 
         result.HasValue.ShouldBeTrue();
         VictimListInstruction victimList = result.Value.ShouldBeOfType<VictimListInstruction>();
@@ -308,7 +309,7 @@ public class InstructionParserTests
     [Fact]
     public void AppointVictim_WithArrayIndexAndValue_ReturnsAppointVictimInstruction()
     {
-        var result = InstructionParser.AppointVictim(new("appoint.victim £Numbers, 1, 10"));
+        Result<UtopIRInstruction> result = InstructionParser.AppointVictim(new("appoint.victim £Numbers, 1, 10"));
 
         result.HasValue.ShouldBeTrue();
         AppointVictimInstruction appointVictim = result.Value.ShouldBeOfType<AppointVictimInstruction>();
@@ -324,7 +325,7 @@ public class InstructionParserTests
     [Fact]
     public void StandaloneInstruction_WithAppointVictim_ReturnsAppointVictimInstruction()
     {
-        var result = InstructionParser.StandaloneInstruction(new("appoint.victim £Numbers, 1, 10"));
+        Result<UtopIRInstruction> result = InstructionParser.StandaloneInstruction(new("appoint.victim £Numbers, 1, 10"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldBeOfType<AppointVictimInstruction>();
@@ -336,7 +337,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWelcomeGallerypic_ReturnsWelcomeGallerypicInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
 
         result.HasValue.ShouldBeTrue();
         WelcomeGallerypicInstruction welcomeGallerypic = result.Value.ShouldBeOfType<WelcomeGallerypicInstruction>();
@@ -351,7 +352,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithWelcomeGallerypic_DoesNotStopAtWelcomePrefix()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£NumberPointer = welcome.gallerypic peer"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldNotBeOfType<WelcomeInstruction>();
@@ -363,7 +364,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithPictureto_ReturnsPicturetoInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£NumberPointer = pictureto £Number"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£NumberPointer = pictureto £Number"));
 
         result.HasValue.ShouldBeTrue();
         PicturetoInstruction pictureto = result.Value.ShouldBeOfType<PicturetoInstruction>();
@@ -377,7 +378,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithViewfrom_ReturnsViewfromInstruction()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£NumberValue = viewfrom £NumberPointer"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£NumberValue = viewfrom £NumberPointer"));
 
         result.HasValue.ShouldBeTrue();
         ViewfromInstruction viewfrom = result.Value.ShouldBeOfType<ViewfromInstruction>();
@@ -391,7 +392,7 @@ public class InstructionParserTests
     [Fact]
     public void ViewTo_WithPointerAndValue_ReturnsViewtoInstruction()
     {
-        var result = InstructionParser.ViewTo(new("viewto £NumberPointer, 23"));
+        Result<UtopIRInstruction> result = InstructionParser.ViewTo(new("viewto £NumberPointer, 23"));
 
         result.HasValue.ShouldBeTrue();
         ViewtoInstruction viewto = result.Value.ShouldBeOfType<ViewtoInstruction>();
@@ -405,7 +406,7 @@ public class InstructionParserTests
     [Fact]
     public void StandaloneInstruction_WithViewTo_ReturnsViewtoInstruction()
     {
-        var result = InstructionParser.StandaloneInstruction(new("viewto £NumberPointer, 23"));
+        Result<UtopIRInstruction> result = InstructionParser.StandaloneInstruction(new("viewto £NumberPointer, 23"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldBeOfType<ViewtoInstruction>();
@@ -422,7 +423,7 @@ public class InstructionParserTests
     [InlineData("diff.g", UtopIRPointerArithmeticOperation.Diff)]
     public void AssignmentInstruction_WithPointerArithmeticMnemonic_ReturnsCorrectOperation(string mnemonic, UtopIRPointerArithmeticOperation expectedOperation)
     {
-        var result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £NumbersPointer, 2"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new($"£r = {mnemonic} £NumbersPointer, 2"));
 
         result.HasValue.ShouldBeTrue();
         PointerArithmeticInstruction pointerArithmetic = result.Value.ShouldBeOfType<PointerArithmeticInstruction>();
@@ -438,7 +439,7 @@ public class InstructionParserTests
     [Fact]
     public void AssignmentInstruction_WithPointerArithmetic_DoesNotStopAtArithmeticPrefix()
     {
-        var result = InstructionParser.AssignmentInstruction(new("£r = sum.g £NumbersPointer, 2"));
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = sum.g £NumbersPointer, 2"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldNotBeOfType<ArithmeticInstruction>();
@@ -450,7 +451,7 @@ public class InstructionParserTests
     [Fact]
     public void Sail_WithLabel_ReturnsSailInstruction()
     {
-        var result = InstructionParser.Sail(new("sail !LOGIC"));
+        Result<UtopIRInstruction> result = InstructionParser.Sail(new("sail !LOGIC"));
 
         result.HasValue.ShouldBeTrue();
         SailInstruction sail = result.Value.ShouldBeOfType<SailInstruction>();
@@ -463,7 +464,7 @@ public class InstructionParserTests
     [Fact]
     public void SailAlike_WithValueAndLabel_ReturnsSailAlikeInstruction()
     {
-        var result = InstructionParser.SailAlike(new("sailalike £Boolean, !IS_ALIKE"));
+        Result<UtopIRInstruction> result = InstructionParser.SailAlike(new("sailalike £Boolean, !IS_ALIKE"));
 
         result.HasValue.ShouldBeTrue();
         SailAlikeInstruction sailAlike = result.Value.ShouldBeOfType<SailAlikeInstruction>();
@@ -477,7 +478,7 @@ public class InstructionParserTests
     [Fact]
     public void SailUnlike_WithValueAndLabel_ReturnsSailUnlikeInstruction()
     {
-        var result = InstructionParser.SailUnlike(new("sailunlike £Boolean, !IS_UNLIKE"));
+        Result<UtopIRInstruction> result = InstructionParser.SailUnlike(new("sailunlike £Boolean, !IS_UNLIKE"));
 
         result.HasValue.ShouldBeTrue();
         SailUnlikeInstruction sailUnlike = result.Value.ShouldBeOfType<SailUnlikeInstruction>();
@@ -491,7 +492,7 @@ public class InstructionParserTests
     [Fact]
     public void Label_WithBareName_ReturnsLabelInstruction()
     {
-        var result = InstructionParser.Label(new("!LOGIC"));
+        Result<UtopIRInstruction> result = InstructionParser.Label(new("!LOGIC"));
 
         result.HasValue.ShouldBeTrue();
         LabelInstruction label = result.Value.ShouldBeOfType<LabelInstruction>();
@@ -505,7 +506,7 @@ public class InstructionParserTests
     [Fact]
     public void StandaloneInstruction_WithSailAlike_ReturnsSailAlikeInstructionNotSail()
     {
-        var result = InstructionParser.StandaloneInstruction(new("sailalike £Boolean, !IS_ALIKE"));
+        Result<UtopIRInstruction> result = InstructionParser.StandaloneInstruction(new("sailalike £Boolean, !IS_ALIKE"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.ShouldBeOfType<SailAlikeInstruction>();
@@ -517,7 +518,7 @@ public class InstructionParserTests
     [Fact]
     public void Prentice_WithLiteral_ReturnsPrenticeInstruction()
     {
-        var result = InstructionParser.Prentice(new("prentice 99"));
+        Result<UtopIRInstruction> result = InstructionParser.Prentice(new("prentice 99"));
 
         result.HasValue.ShouldBeTrue();
         PrenticeInstruction prentice = result.Value.ShouldBeOfType<PrenticeInstruction>();
@@ -530,7 +531,7 @@ public class InstructionParserTests
     [Fact]
     public void Find_WithOperand_ReturnsFindInstructionWithValue()
     {
-        var result = InstructionParser.Find(new("find £exitCode"));
+        Result<UtopIRInstruction> result = InstructionParser.Find(new("find £exitCode"));
 
         result.HasValue.ShouldBeTrue();
         FindInstruction find = result.Value.ShouldBeOfType<FindInstruction>();
@@ -543,11 +544,51 @@ public class InstructionParserTests
     [Fact]
     public void Find_WithNoOperand_ReturnsFindInstructionWithNullValue()
     {
-        var result = InstructionParser.Find(new("find"));
+        Result<UtopIRInstruction> result = InstructionParser.Find(new("find"));
 
         result.HasValue.ShouldBeTrue();
         FindInstruction find = result.Value.ShouldBeOfType<FindInstruction>();
         find.Value.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.Summon"/> parses a standalone <c>summon</c> instruction.
+    /// </summary>
+    [Fact]
+    public void Summon_WithFunctionReference_ReturnsSummonInstruction()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.Summon(new("summon &PreviewBehold"));
+
+        result.HasValue.ShouldBeTrue();
+        SummonInstruction summon = result.Value.ShouldBeOfType<SummonInstruction>();
+        summon.Function.Name.ShouldBe("PreviewBehold");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>summon.find</c> right-hand side.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithSummonFindRhs_ReturnsSummonFindInstruction()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = summon.find &PreviewPrayTell"));
+
+        result.HasValue.ShouldBeTrue();
+        SummonFindInstruction summonFind = result.Value.ShouldBeOfType<SummonFindInstruction>();
+        summonFind.Target.Name.ShouldBe("r");
+        summonFind.Function.Name.ShouldBe("PreviewPrayTell");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.StandaloneInstruction"/> parses <c>summon</c> without stopping
+    /// short of the function reference operand.
+    /// </summary>
+    [Fact]
+    public void StandaloneInstruction_WithSummon_ReturnsSummonInstruction()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.StandaloneInstruction(new("summon &PreviewBehold"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.ShouldBeOfType<SummonInstruction>();
     }
 
     /// <summary>
@@ -556,7 +597,7 @@ public class InstructionParserTests
     [Fact]
     public void Instruction_WithUnknownRhsKeyword_Fails()
     {
-        var result = InstructionParser.Instruction(new("£x = bogus 5"));
+        Result<UtopIRInstruction> result = InstructionParser.Instruction(new("£x = bogus 5"));
 
         result.HasValue.ShouldBeFalse();
     }
@@ -567,7 +608,7 @@ public class InstructionParserTests
     [Fact]
     public void InstructionSequence_WithMultipleLines_ReturnsInstructionsInOrder()
     {
-        var result = InstructionParser.InstructionSequence()(new("£a = welcome peer\n£a = appoint 10\nfind £a"));
+        Result<UtopIRInstruction[]> result = InstructionParser.InstructionSequence()(new("£a = welcome peer\n£a = appoint 10\nfind £a"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.Length.ShouldBe(3);
@@ -582,7 +623,7 @@ public class InstructionParserTests
     [Fact]
     public void InstructionSequence_WithCommentsAndBlankLines_SkipsThem()
     {
-        var result = InstructionParser.InstructionSequence()(new("@ a comment\n\n£a = welcome peer\n@ another comment\n"));
+        Result<UtopIRInstruction[]> result = InstructionParser.InstructionSequence()(new("@ a comment\n\n£a = welcome peer\n@ another comment\n"));
 
         result.HasValue.ShouldBeTrue();
         result.Value.Length.ShouldBe(1);
@@ -597,7 +638,7 @@ public class InstructionParserTests
     [Fact]
     public void InstructionSequence_WithMalformedLine_PropagatesError()
     {
-        var result = InstructionParser.InstructionSequence()(new("£a = welcome peer\n£b = bogus 5\nfind £a"));
+        Result<UtopIRInstruction[]> result = InstructionParser.InstructionSequence()(new("£a = welcome peer\n£b = bogus 5\nfind £a"));
 
         result.HasValue.ShouldBeFalse();
     }

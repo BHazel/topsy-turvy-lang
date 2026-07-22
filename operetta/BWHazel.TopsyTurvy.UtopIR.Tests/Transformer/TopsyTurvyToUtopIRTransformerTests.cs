@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
 using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
@@ -2394,6 +2395,332 @@ public class TopsyTurvyToUtopIRTransformerTests
         pointerArithmetic.Offset.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
         result.Instructions.OfType<ArithmeticInstruction>().ShouldBeEmpty();
     }
+
+    /// <summary>
+    /// Tests that a standalone <c>SUMMON</c> of a void function emits a <c>prentice</c> per argument
+    /// followed by a <c>summon</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonStatement_WithVoidFunction_EmitsPrenticeThenSummon()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new ExpressionStatement
+            {
+                Expression = Prefix(Operator.Summon, Identifier("TestVoid"), IntLiteral(5)),
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        result.Instructions.Count.ShouldBe(2);
+        PrenticeInstruction prentice = result.Instructions[0].ShouldBeOfType<PrenticeInstruction>();
+        prentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(5);
+        SummonInstruction summon = result.Instructions[1].ShouldBeOfType<SummonInstruction>();
+        summon.Function.Name.ShouldBe("TestVoid");
+    }
+
+    /// <summary>
+    /// Tests that a <c>SUMMON</c> of a value-returning function used in expression position emits a
+    /// <c>prentice</c>, a <c>summon.find</c> into a temporary register, then an <c>appoint</c> of the
+    /// assignment target from that register.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonFindExpression_WithValueFunction_EmitsPrenticeSummonFindThenAppoint()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            Assign("result", Prefix(Operator.Summon, Identifier("TestValue"), IntLiteral(7))));
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        result.Instructions.Count.ShouldBe(4);
+        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>();
+        PrenticeInstruction prentice = result.Instructions[1].ShouldBeOfType<PrenticeInstruction>();
+        prentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(7);
+        SummonFindInstruction summonFind = result.Instructions[2].ShouldBeOfType<SummonFindInstruction>();
+        summonFind.Function.Name.ShouldBe("TestValue");
+        AppointInstruction appoint = result.Instructions[3].ShouldBeOfType<AppointInstruction>();
+        appoint.Target.Name.ShouldBe("result");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(summonFind.Target.Name);
+    }
+
+    /// <summary>
+    /// Tests that a narrower literal argument is widened with a <see cref="WereInstruction"/> before
+    /// being pushed with <c>prentice</c>, when the resolved function parameter type is wider.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonFindExpression_WithNarrowerLiteralArgument_InsertsWereInstructionBeforePrentice()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Long, Span = PlaceholderSpan },
+            Assign("result", Prefix(Operator.Summon, Identifier("TestWiden"), IntLiteral(5))));
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        WereInstruction were = result.Instructions.OfType<WereInstruction>().Single();
+        were.Type.ShouldBe(UtopIRType.Chancellor);
+        were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(5);
+        PrenticeInstruction prentice = result.Instructions.OfType<PrenticeInstruction>().Single();
+        prentice.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+    }
+
+    /// <summary>
+    /// Tests that a <c>SUMMON</c> of a name that is also a user-defined function in the programme
+    /// throws, even though a catalogue function of the same name exists: a user-defined function must
+    /// always shadow an external one of the same name.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonStatement_WithUserDefinedFunctionName_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new FunctionDefinitionNode()
+            {
+                Name = "TestVoid",
+                NameSpan = PlaceholderSpan,
+                Parameters = [],
+                Body = [],
+                Span = PlaceholderSpan
+            },
+            new ExpressionStatement
+            {
+                Expression = Prefix(Operator.Summon, Identifier("TestVoid")),
+                Span = PlaceholderSpan
+            });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that a <c>SUMMON</c> of a name found in neither the programme own functions nor the
+    /// external catalogue throws.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonStatement_WithUnknownFunctionName_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new ExpressionStatement
+            {
+                Expression = Prefix(Operator.Summon, Identifier("DoesNotExist")),
+                Span = PlaceholderSpan
+            });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that summoning a void function in expression position (<c>summon.find</c>) throws, since
+    /// there is no return value to store.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonFindExpression_WithVoidFunction_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            Assign("result", Prefix(Operator.Summon, Identifier("TestVoid"), IntLiteral(5))));
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that a <c>SUMMON</c> whose first argument is not a function name identifier throws.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonStatement_WithNonIdentifierFirstArgument_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new ExpressionStatement
+            {
+                Expression = Prefix(Operator.Summon, IntLiteral(5)),
+                Span = PlaceholderSpan
+            });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> of a plain string literal lowers to a <c>prentice</c> of the text, a
+    /// <c>prentice</c> of <c>withCeremony</c>, then a <c>summon</c> of <c>PreviewBehold</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithStringLiteral_EmitsPrenticeTextPrenticeCeremonyThenSummon()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new PrintNode
+            {
+                Expression = new LiteralNode { Value = "hello", Type = LiteralType.String, Span = PlaceholderSpan },
+                SuppressNewline = false,
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        result.Instructions.Count.ShouldBe(3);
+        PrenticeInstruction textPrentice = result.Instructions[0].ShouldBeOfType<PrenticeInstruction>();
+        textPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe("hello");
+        PrenticeInstruction ceremonyPrentice = result.Instructions[1].ShouldBeOfType<PrenticeInstruction>();
+        ceremonyPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(true);
+        SummonInstruction summon = result.Instructions[2].ShouldBeOfType<SummonInstruction>();
+        summon.Function.Name.ShouldBe("PreviewBehold");
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD ... WITHOUT CEREMONY</c> pushes <c>false</c> for <c>withCeremony</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithSuppressNewline_PushesFalseForWithCeremony()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new PrintNode
+            {
+                Expression = new LiteralNode { Value = "hello", Type = LiteralType.String, Span = PlaceholderSpan },
+                SuppressNewline = true,
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        PrenticeInstruction ceremonyPrentice = result.Instructions.OfType<PrenticeInstruction>().ElementAt(1);
+        ceremonyPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(false);
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> of a string literal containing a <c>{...}</c> interpolation placeholder
+    /// throws, since interpolation is expected to be resolved before a programme reaches UtopIR.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithInterpolationPlaceholder_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new PrintNode
+            {
+                Expression = new LiteralNode { Value = "hello {Name}", Type = LiteralType.String, Span = PlaceholderSpan },
+                SuppressNewline = false,
+                Span = PlaceholderSpan
+            });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> of a <c>yarn</c>-typed variable pushes a <see cref="VariableOperand"/>
+    /// for the text argument, since a <c>yarn</c> is already the CLR <see cref="string"/> the Standard
+    /// Library function expects.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithYarnTypedVariable_PushesVariableOperand()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Greeting", NameSpan = PlaceholderSpan, Type = LiteralType.String, Span = PlaceholderSpan },
+            new PrintNode { Expression = Identifier("Greeting"), SuppressNewline = false, Span = PlaceholderSpan });
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        PrenticeInstruction textPrentice = result.Instructions.OfType<PrenticeInstruction>().First();
+        textPrentice.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Greeting");
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> of a non-<c>yarn</c>-typed variable throws, since converting it to
+    /// <c>yarn</c> has no UtopIR lowering yet.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithNonYarnTypedVariable_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Number", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new PrintNode { Expression = Identifier("Number"), SuppressNewline = false, Span = PlaceholderSpan });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> of an expression that is neither a plain string literal nor a variable
+    /// reference throws.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithArithmeticExpression_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new PrintNode { Expression = Prefix(Operator.Sum, IntLiteral(1), IntLiteral(2)), SuppressNewline = false, Span = PlaceholderSpan });
+
+        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>BEHOLD</c> throws a clear error when the supplied catalogue has no expected function.
+    /// </summary>
+    [Fact]
+    public void Transform_Print_WithNoPreviewBeholdInCatalogue_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithEmptyCatalogue = new(new InstructionDetailVariableFormatter(), externalFunctions: BindingCatalogue.Empty);
+        ProgramNode program = Programme(
+            new PrintNode
+            {
+                Expression = new LiteralNode { Value = "hello", Type = LiteralType.String, Span = PlaceholderSpan },
+                SuppressNewline = false,
+                Span = PlaceholderSpan
+            });
+
+        Should.Throw<NotSupportedException>(() => transformerWithEmptyCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <c>PRAY TELL</c> lowers to a <c>summon.find</c> with the expected function appointed
+    /// into the target variable.
+    /// </summary>
+    [Fact]
+    public void Transform_Input_EmitsSummonFindThenAppointToTarget()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Greeting", NameSpan = PlaceholderSpan, Type = LiteralType.String, Span = PlaceholderSpan },
+            new InputNode { Target = "Greeting", Span = PlaceholderSpan });
+
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        SummonFindInstruction summonFind = result.Instructions.OfType<SummonFindInstruction>().Single();
+        summonFind.Function.Name.ShouldBe("PreviewPrayTell");
+        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Single();
+        appoint.Target.Name.ShouldBe("Greeting");
+        appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(summonFind.Target.Name);
+    }
+
+    /// <summary>
+    /// Tests that <c>PRAY TELL</c> throws a clear error when the supplied catalogue has no
+    /// expected function.
+    /// </summary>
+    [Fact]
+    public void Transform_Input_WithNoPreviewPrayTellInCatalogue_ThrowsNotSupportedException()
+    {
+        TopsyTurvyToUtopIRTransformer transformerWithEmptyCatalogue = new(new InstructionDetailVariableFormatter(), externalFunctions: BindingCatalogue.Empty);
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Greeting", NameSpan = PlaceholderSpan, Type = LiteralType.String, Span = PlaceholderSpan },
+            new InputNode { Target = "Greeting", Span = PlaceholderSpan });
+
+        Should.Throw<NotSupportedException>(() => transformerWithEmptyCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Builds a <see cref="TopsyTurvyToUtopIRTransformer"/> using <see cref="TestExternalFunctionBindingClass"/>
+    /// as its catalogue, so <c>summon</c>/<c>summon.find</c>/<c>BEHOLD</c>/<c>PRAY TELL</c> tests do not
+    /// depend on the real Standard Library.
+    /// </summary>
+    /// <returns>The constructed transformer.</returns>
+    private static TopsyTurvyToUtopIRTransformer TransformerWithTestCatalogue() =>
+        new(new InstructionDetailVariableFormatter(), externalFunctions: BindingCatalogue.Create(typeof(TestExternalFunctionBindingClass)));
 
     /// <summary>
     /// Wraps a list of statements in a minimal <see cref="ProgramNode"/> for transformation.

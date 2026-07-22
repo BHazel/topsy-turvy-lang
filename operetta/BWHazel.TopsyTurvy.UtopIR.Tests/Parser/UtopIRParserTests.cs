@@ -102,6 +102,8 @@ public class UtopIRParserTests
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new PrenticeInstruction(new LiteralOperand(99)),
             new LeaveInstruction(new("r")),
+            new SummonInstruction(new FunctionReference("PreviewBehold")),
+            new SummonFindInstruction(new("input"), new FunctionReference("PreviewPrayTell")),
             new FindInstruction(new VariableOperand(new("r")))
         ]);
 

@@ -126,6 +126,12 @@ public sealed class UtopIRCodeGenerator
                     $"£{pointerArithmetic.Target.Name} = {this.PointerArithmeticOperationMnemonic(pointerArithmetic.Operation)} " +
                     $"£{pointerArithmetic.Pointer.Name}, {this.FormatOperand(pointerArithmetic.Offset)}");
                 break;
+            case SummonInstruction summon:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.Summon} &{summon.Function.Name}");
+                break;
+            case SummonFindInstruction summonFind:
+                builder.AppendLine($"£{summonFind.Target.Name} = {UtopIRKeywords.Instructions.SummonFind} &{summonFind.Function.Name}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {

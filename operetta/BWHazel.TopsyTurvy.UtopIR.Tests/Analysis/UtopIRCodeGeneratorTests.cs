@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using BWHazel.TopsyTurvy.UtopIR.Analysis;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Parser;
+using Superpower.Model;
 
 namespace BWHazel.TopsyTurvy.UtopIR.Tests.Analysis;
 
@@ -118,7 +119,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -716,6 +717,37 @@ public class UtopIRCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that a standalone <c>summon</c> instruction is emitted with the <c>&amp;</c>-prefixed function name.
+    /// </summary>
+    [Fact]
+    public void Generate_SummonInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new SummonInstruction(new FunctionReference("PreviewBehold"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("summon &PreviewBehold");
+    }
+
+    /// <summary>
+    /// Tests that a <c>summon.find</c> instruction is emitted with the assignment target and the
+    /// <c>&amp;</c>-prefixed function name.
+    /// </summary>
+    [Fact]
+    public void Generate_SummonFindInstruction_EmitsCorrectLine()
+    {
+        UtopIRProgram program = new([
+            new SummonFindInstruction(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"))
+        ]);
+
+        string result = this.generator.Generate(program);
+
+        result.Trim().ShouldBe("£input = summon.find &PreviewPrayTell");
+    }
+
+    /// <summary>
     /// Tests that a <c>leave</c> instruction is emitted with the correct assignment target.
     /// </summary>
     [Fact]
@@ -818,7 +850,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -836,7 +868,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -855,7 +887,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -871,7 +903,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -887,7 +919,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -903,7 +935,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -919,7 +951,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -935,7 +967,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -951,7 +983,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -967,7 +999,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -983,7 +1015,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -999,7 +1031,7 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
@@ -1015,7 +1047,39 @@ public class UtopIRCodeGeneratorTests
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();
-        var parsed = InstructionParser.Instruction(new(generated));
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated standalone <c>summon</c> instruction re-parses to an equal <see cref="SummonInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_SummonInstruction_RoundTripsThroughParser()
+    {
+        SummonInstruction original = new(new FunctionReference("PreviewBehold"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
+
+        parsed.HasValue.ShouldBeTrue();
+        parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that a generated <c>summon.find</c> instruction re-parses to an equal <see cref="SummonFindInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_SummonFindInstruction_RoundTripsThroughParser()
+    {
+        SummonFindInstruction original = new(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"));
+        UtopIRProgram program = new([original]);
+
+        string generated = this.generator.Generate(program).Trim();
+        Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);

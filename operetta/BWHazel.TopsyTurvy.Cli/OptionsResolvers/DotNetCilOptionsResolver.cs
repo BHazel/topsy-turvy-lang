@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
@@ -21,7 +22,13 @@ namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 /// Ignored for <c>.utopir</c> input, which has no transformation step.
 ///
 /// ### Additional Configuration
-/// A <see cref="CilEmitOptions"/> instance is populated directly from the dedicated <c>--output</c> flag.
+/// A <see cref="CilEmitOptions"/> instance is populated directly from the dedicated <c>--output</c> flag,
+/// plus the Standard Library projected into <see cref="CilEmitOptions.ExternalFunctions"/>/
+/// <see cref="CilEmitOptions.HostInjectedServices"/> via <see cref="ExternalFunctionCilProjection"/>, so
+/// <c>summon</c>/<c>summon.find</c> calls resolve the same way regardless of input format. When the
+/// emitted executable made at least one such call, every path in
+/// <see cref="ExternalFunctionCilProjection.DeploymentAssemblyPaths"/> is copied alongside the output
+/// so it can run standalone.
 /// </remarks>
 public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTargetOptions>
 {
@@ -58,6 +65,16 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
                 Console.WriteLine(emitResult.IlSource);
                 break;
             case CilOutputKind.Executable:
+                if (emitResult.HasExternalCalls)
+                {
+                    string outputDirectory = Path.GetDirectoryName(emitOptions.OutputPath) ?? string.Empty;
+                    foreach (string dependencyPath in ExternalFunctionCilProjection.DeploymentAssemblyPaths)
+                    {
+                        string deploymentPath = Path.Combine(outputDirectory, Path.GetFileName(dependencyPath));
+                        File.Copy(dependencyPath, deploymentPath, overwrite: true);
+                    }
+                }
+
                 if (!tiptoe)
                 {
                     PanelHelper.WriteSuccess(
@@ -81,7 +98,12 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
     public static CilTargetOptions BuildEmitOptions(string filename)
     {
         string assemblyName = Path.GetFileNameWithoutExtension(filename);
-        return new CilTargetOptions(new CilEmitOptions(assemblyName, string.Empty, CilOutputKind.IlSourceOnly));
+        return new CilTargetOptions(new CilEmitOptions(
+            assemblyName,
+            string.Empty,
+            CilOutputKind.IlSourceOnly,
+            ExternalFunctionCilProjection.ProjectExternalFunctions(BindingCatalogue.Default),
+            ExternalFunctionCilProjection.HostInjectedServices));
     }
 
     /// <summary>
@@ -94,6 +116,11 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
     {
         string outputPath = output ?? Path.ChangeExtension(filename, ".dll");
         string assemblyName = Path.GetFileNameWithoutExtension(outputPath);
-        return new CilTargetOptions(new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable));
+        return new CilTargetOptions(new CilEmitOptions(
+            assemblyName,
+            outputPath,
+            CilOutputKind.Executable,
+            ExternalFunctionCilProjection.ProjectExternalFunctions(BindingCatalogue.Default),
+            ExternalFunctionCilProjection.HostInjectedServices));
     }
 }

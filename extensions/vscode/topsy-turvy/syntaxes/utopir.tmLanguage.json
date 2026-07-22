@@ -22,11 +22,14 @@
     { "include": "#comparison-integer" },
     { "include": "#logical" },
     { "include": "#stack" },
+    { "include": "#summon-find" },
+    { "include": "#summon" },
     { "include": "#control-flow" },
     { "include": "#victim" },
     { "include": "#types" },
     { "include": "#variables" },
-    { "include": "#labels" }
+    { "include": "#labels" },
+    { "include": "#function-references" }
   ],
   "repository": {
     "comments": {
@@ -139,6 +142,14 @@
       "name": "keyword.other.stack.utopir",
       "match": "(?i)\\b(prentice|leave)\\b"
     },
+    "summon-find": {
+      "name": "keyword.control.utopir",
+      "match": "(?i)\\bsummon\\.find\\b"
+    },
+    "summon": {
+      "name": "keyword.control.utopir",
+      "match": "(?i)\\bsummon\\b"
+    },
     "control-flow": {
       "name": "keyword.control.utopir",
       "match": "(?i)\\b(sailalike|sailunlike|sail|find)\\b"
@@ -158,6 +169,10 @@
     "labels": {
       "name": "entity.name.label.utopir",
       "match": "![A-Za-z_][A-Za-z0-9_-]*"
+    },
+    "function-references": {
+      "name": "entity.name.function.utopir",
+      "match": "&[A-Za-z_][A-Za-z0-9_-]*"
     }
   }
 }

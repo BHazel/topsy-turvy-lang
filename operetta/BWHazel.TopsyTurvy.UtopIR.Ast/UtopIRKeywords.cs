@@ -223,5 +223,11 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>diff.g</c> instruction.</summary>
         public const string DiffPointer = "diff.g";
+
+        /// <summary>The <c>summon</c> instruction.</summary>
+        public const string Summon = "summon";
+
+        /// <summary>The <c>summon.find</c> instruction.</summary>
+        public const string SummonFind = "summon.find";
     }
 }
