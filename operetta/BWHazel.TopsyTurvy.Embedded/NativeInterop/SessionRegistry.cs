@@ -9,7 +9,7 @@ namespace BWHazel.TopsyTurvy.Embedded.NativeInterop;
 /// </summary>
 /// <remarks>
 /// Calling <see cref="System.Runtime.InteropServices.GCHandle.FromIntPtr"/>, <c>.Free()</c>, or <c>.Target</c>
-/// on a handle value that was never allocated by <see cref="NativeExports.CreateSession"/> (or was already
+/// on a handle value that was never allocated by <see cref="NativeExports.ToolchainExports.CreateSession"/> (or was already
 /// freed) is undefined behaviour at the runtime level: it is not guaranteed to surface as a catchable managed
 /// exception and can crash the host process. This registry is consulted first so those APIs are
 /// only ever invoked on a value this class itself has vouched for.

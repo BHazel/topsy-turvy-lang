@@ -11,7 +11,7 @@ actor TopsyTurvySession {
     /// This will be `nil` before `open()` and after `close()`.
     ///
     /// It is marked `nonisolated(unsafe)` so `cancel()` can read it without actor isolation.  This is safe because the
-    /// native contract guarantees `topsyturvy_cancel` may be called concurrently with any other export.
+    /// native contract guarantees `topsyturvy_tc_cancel` may be called concurrently with any other export.
     private nonisolated(unsafe) var session: UnsafeMutableRawPointer?
 
     /// The callback targets registered with the native session.
@@ -54,13 +54,15 @@ actor TopsyTurvySession {
             return
         }
         
-        self.session = topsyturvy_session_create(sessionOutputLineCallback, sessionResolveImportCallback, contextPointer)
+        // `input_line` is left unregistered (`nil`): the app pre-supplies `PRAY TELL` input via
+        // `stdin_utf8` on `topsyturvy_tc_execute` instead, and that behaviour is unaffected either way.
+        self.session = topsyturvy_tc_session_create(sessionOutputLineCallback, sessionResolveImportCallback, nil, contextPointer)
     }
 
     /// Destroys the native session and releases any outstanding import buffer.
     func close() {
         if let session {
-            topsyturvy_session_destroy(session)
+            topsyturvy_tc_session_destroy(session)
         }
         
         self.session = nil
@@ -70,7 +72,7 @@ actor TopsyTurvySession {
     /// Deinitialises the session and frees the underlying native resources.
     deinit {
         if let session {
-            topsyturvy_session_destroy(session)
+            topsyturvy_tc_session_destroy(session)
         }
     }
 
@@ -79,7 +81,7 @@ actor TopsyTurvySession {
     /// This is safe to call from any thread while `execute` is in flight on the actor.
     nonisolated func cancel() {
         if let session {
-            topsyturvy_cancel(session)
+            topsyturvy_tc_cancel(session)
         }
     }
 
@@ -114,7 +116,7 @@ actor TopsyTurvySession {
         }
         
         return withUTF8CString(source) { sourcePointer in
-            decodeJSON(AnalysisResult.self, from: topsyturvy_analyse(session, sourcePointer))
+            decodeJSON(AnalysisResult.self, from: topsyturvy_tc_analyse(session, sourcePointer))
                 ?? AnalysisResult(Success: true, Diagnostics: [])
         }
     }
@@ -133,7 +135,7 @@ actor TopsyTurvySession {
         }
         
         return withUTF8CString(source) { sourcePointer in
-            decodeJSON(HoverResult.self, from: topsyturvy_hover(session, sourcePointer, line, column))
+            decodeJSON(HoverResult.self, from: topsyturvy_tc_hover(session, sourcePointer, line, column))
                 ?? HoverResult(Found: false, MarkdownContent: nil)
         }
     }
@@ -151,7 +153,7 @@ actor TopsyTurvySession {
     func completions(source: String, line: Int32, column: Int32) -> CompletionResult {
         guard let session else { return CompletionResult(Items: []) }
         return withUTF8CString(source) { sourcePointer in
-            decodeJSON(CompletionResult.self, from: topsyturvy_complete(session, sourcePointer, line, column))
+            decodeJSON(CompletionResult.self, from: topsyturvy_tc_complete(session, sourcePointer, line, column))
                 ?? CompletionResult(Items: [])
         }
     }
@@ -168,12 +170,12 @@ actor TopsyTurvySession {
         }
         
         return withUTF8CString(source) { sourcePointer in
-            guard let pointer = topsyturvy_format(session, sourcePointer) else {
+            guard let pointer = topsyturvy_tc_format(session, sourcePointer) else {
                 return nil
             }
             
             defer {
-                topsyturvy_free(pointer)
+                topsyturvy_tc_free(pointer)
             }
             
             return String(cString: pointer)
@@ -203,7 +205,7 @@ actor TopsyTurvySession {
         return withUTF8CString(source) { sourcePointer in
             withOptionalUTF8CString(argumentsJSON) { argumentsPointer in
                 withOptionalUTF8CString(stdin) { stdinPointer in
-                    topsyturvy_execute(session, sourcePointer, argumentsPointer, stdinPointer)
+                    topsyturvy_tc_execute(session, sourcePointer, argumentsPointer, stdinPointer)
                 }
             }
         }
@@ -213,12 +215,12 @@ actor TopsyTurvySession {
     ///
     /// - Returns: The message of the most recently caught exception.
     func lastError() -> String? {
-        guard let session, let pointer = topsyturvy_last_error(session) else {
+        guard let session, let pointer = topsyturvy_tc_last_error(session) else {
             return nil
         }
         
         defer {
-            topsyturvy_free(pointer)
+            topsyturvy_tc_free(pointer)
         }
         
         return String(cString: pointer)
@@ -238,7 +240,7 @@ private func decodeJSON<T: Decodable>(_ type: T.Type, from pointer: UnsafeMutabl
     }
     
     defer {
-        topsyturvy_free(pointer)
+        topsyturvy_tc_free(pointer)
     }
 
     guard let data = String(cString: pointer).data(using: .utf8) else {
