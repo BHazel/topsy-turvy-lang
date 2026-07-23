@@ -121,6 +121,31 @@ public class TypeCheckerExternalFunctionTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="TopsyTurvyTypeChecker"/> constructed with no explicit catalogue resolves
+    /// a call to a real Standard Library function, falling back to <see cref="BindingCatalogue.Default"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is the exact path every real host (CLI, LanguageServer, WebEditor, Embedded) exercises: none
+    /// of them pass an explicit catalogue to <see cref="TopsyTurvyTypeChecker.Check"/>.
+    /// </remarks>
+    [Fact]
+    public void Check_WithNoExplicitCatalogue_ResolvesAgainstBindingCatalogueDefault()
+    {
+        ProgramNode program = this.parser.Parse("""
+            HARK! "Default Catalogue"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            SUMMON PreviewBehold WITH "Hello" AND VERITY IF YOU PLEASE.
+            FINALE.
+            """);
+        TopsyTurvyTypeChecker typeChecker = new();
+
+        TypeCheckResult result = typeChecker.Check(program);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source against the test catalogue and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

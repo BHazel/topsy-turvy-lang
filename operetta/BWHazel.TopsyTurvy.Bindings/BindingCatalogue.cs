@@ -34,10 +34,28 @@ public sealed class BindingCatalogue
     /// Gets the default catalogue containing the Standard Library binding classes.
     /// </summary>
     /// <remarks>
-    /// This is built once and cached.  The canonical binding class list lives here; adding a binding class to the library
-    /// means adding one <c>typeof</c> entry to this list.
+    /// This is built once and cached.  Adding a binding class to the library means adding one more
+    /// <see cref="BindingScanner.Scan(Type)"/> call to the <see cref="Merge"/> call below.
+    /// <c>typeof</c> literals are scanned this way, rather than via <see cref="Create(Type[])"/>, because a
+    /// Native AOT publish trims away every Standard Library function reachable via
+    /// <c>SUMMON</c>: routing a <c>typeof</c> literal through the <see cref="Create(Type[])"/> <c>params
+    /// Type[]</c> parameter breaks the trimmer ability to verify <see cref="BindingScanner.Scan(Type)"/>
+    /// single-<see cref="Type"/> parameter is safe to reflect over, so it silently scanned nothing.  Calling
+    /// <see cref="BindingScanner.Scan(Type)"/> directly here keeps that guarantee intact.
     /// </remarks>
-    public static BindingCatalogue Default { get; } = Create(typeof(Global));
+    public static BindingCatalogue Default { get; } = Merge(FromScan(BindingScanner.Scan(typeof(Global))));
+
+    /// <summary>
+    /// Builds a catalogue directly from an already-scanned descriptor list.
+    /// </summary>
+    /// <param name="functions">The descriptors to build the catalogue from.</param>
+    /// <returns>The resulting catalogue.</returns>
+    /// <exception cref="BindingCatalogueException">Thrown when two descriptors share a key.</exception>
+    /// <remarks>
+    /// Lets <see cref="Default"/> build from one or more direct, trim-safe <see cref="BindingScanner.Scan(Type)"/>
+    /// calls and combine them with <see cref="Merge"/>, instead of going through <see cref="Create(Type[])"/>.
+    /// </remarks>
+    private static BindingCatalogue FromScan(IReadOnlyList<BoundFunctionDescriptor> functions) => new(functions, IndexByKey(functions));
 
     /// <summary>
     /// Gets an empty catalogue.

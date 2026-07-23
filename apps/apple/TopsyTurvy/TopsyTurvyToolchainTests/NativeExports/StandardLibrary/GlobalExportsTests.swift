@@ -51,4 +51,24 @@ final class GlobalExportsTests: XCTestCase {
 
         XCTAssertEqual(String(cString: resultPointer), "a line typed by the user")
     }
+
+    /// Tests that a programme `SUMMON PreviewBehold` call type-checks and executes successfully
+    /// against the shipped `TopsyTurvyToolchain` binary, with no explicit catalogue wired in anywhere.
+    func testExecuteProgrammeWithSummonPreviewBehold_InvokesOutputCallback() {
+        let session = topsyturvy_tc_session_create(captureOutputLine, resolveImportStub, provideInputLine, nil)
+        XCTAssertNotNil(session)
+        defer {
+            topsyturvy_tc_session_destroy(session)
+        }
+
+        let source = "HARK! \"Summon Preview\"\nPRINCIPALS\nTHE CURTAIN RISES.\nSUMMON PreviewBehold WITH \"Hello\" AND VERITY IF YOU PLEASE.\nFINALE.\n"
+        let status = source.withCString { sourcePointer -> Int32 in
+            sourcePointer.withMemoryRebound(to: UInt8.self, capacity: source.utf8.count + 1) { utf8Pointer in
+                topsyturvy_tc_execute(session, utf8Pointer, nil, nil)
+            }
+        }
+
+        XCTAssertEqual(status, 0)
+        XCTAssertTrue(TestCallbackCapture.outputLines.contains("Hello"))
+    }
 }
