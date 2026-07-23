@@ -1,9 +1,8 @@
 /**
- * @brief Topsy Turvy Toolchain Native AOT Exports v2.
+ * @brief Topsy Turvy Toolchain core native AOT exports (`topsyturvy_tc_*`).
  *
- * Matches the C# export surface of operetta/BWHazel.TopsyTurvy.Embedded/NativeExports/ToolchainExports.cs
- * (`topsyturvy_tc_*`) and operetta/BWHazel.TopsyTurvy.Embedded/NativeExports/StandardLibrary/GlobalExports.cs
- * (`topsyturvy_std_*`).
+ * Matches the C# export surface of operetta/BWHazel.TopsyTurvy.Embedded/NativeExports/ToolchainExports.cs:
+ * session lifecycle, analysis, hover, completion, formatting, tokenisation and execution.
  *
  * @remark JSON diagnostic spans (`topsyturvy_tc_analyse` `DiagnosticInfo`) and token spans (`topsyturvy_tc_tokens`
  * `TokenInfo`) use 1-indexed, half-open line/column pairs, matching the toolchain `SourceSpan` and
@@ -14,8 +13,8 @@
  * describe a cursor position, not a span.
  */
 
-#ifndef TOPSYTURVYTOOLCHAIN_H
-#define TOPSYTURVYTOOLCHAIN_H
+#ifndef TOPSYTURVY_TOOLCHAIN_H
+#define TOPSYTURVY_TOOLCHAIN_H
 
 #include <stdint.h>
 
@@ -158,26 +157,6 @@ int32_t topsyturvy_tc_execute(topsyturvy_session session, const uint8_t *source_
 void topsyturvy_tc_cancel(topsyturvy_session session);
 
 /**
- * @brief Prints text through the session output callback via the Standard Library `PreviewBehold` function,
- * without a running programme.  Routes through the same code path as a `SUMMON PreviewBehold` reached
- * mid-programme via `topsyturvy_tc_execute`.
- * @param session The session handle.
- * @param text_utf8 The null-terminated, UTF-8 encoded text to print.
- * @param with_ceremony Non-zero to apply a trailing newline; zero to suppress it.
- * @return int32_t Returns 0 on success, or 1 if the session handle is invalid or the call failed.
- */
-int32_t topsyturvy_std_preview_behold(topsyturvy_session session, const uint8_t *text_utf8, uint8_t with_ceremony);
-
-/**
- * @brief Reads a line through the session input callback via the Standard Library `PreviewPrayTell` function,
- * without a running programme.  Routes through the same code path as a `SUMMON PreviewPrayTell` reached
- * mid-programme via `topsyturvy_tc_execute`.
- * @param session The session handle.
- * @return uint8_t* A null-terminated, UTF-8 encoded buffer that must be released via `topsyturvy_tc_free`, or `NULL` if the session handle is invalid or the call failed.
- */
-uint8_t *topsyturvy_std_preview_pray_tell(topsyturvy_session session);
-
-/**
  * @brief Returns the message of the most recently caught exception for the given session as a UTF-8 buffer
  * that must be released via `topsyturvy_tc_free`. Returns `NULL` if the handle is invalid or no error has
  * occurred.
@@ -187,7 +166,8 @@ uint8_t *topsyturvy_std_preview_pray_tell(topsyturvy_session session);
 uint8_t *topsyturvy_tc_last_error(topsyturvy_session session);
 
 /**
- * @brief Releases a buffer previously returned.
+ * @brief Releases a buffer previously returned by any export in this toolchain, or by a Standard Library
+ * export declared in `topsyturvy/std/*.h`.
  * @param pointer The buffer to release.
  */
 void topsyturvy_tc_free(uint8_t *pointer);

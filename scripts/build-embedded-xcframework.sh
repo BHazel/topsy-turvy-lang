@@ -9,6 +9,7 @@ set -euo pipefail
 REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EMBEDDED_PROJECT="${REPOSITORY_ROOT}/operetta/BWHazel.TopsyTurvy.Embedded/BWHazel.TopsyTurvy.Embedded.csproj"
 PUBLISH_ROOT="${REPOSITORY_ROOT}/operetta/BWHazel.TopsyTurvy.Embedded/bin/Release/net10.0"
+SOURCE_HEADERS_DIR="${REPOSITORY_ROOT}/operetta/BWHazel.TopsyTurvy.Embedded/include"
 HEADERS_DIR="${REPOSITORY_ROOT}/apps/apple/TopsyTurvy/Frameworks/include"
 OUTPUT_DIR="${REPOSITORY_ROOT}/apps/apple/TopsyTurvy/Frameworks"
 OUTPUT_XCFRAMEWORK="${OUTPUT_DIR}/TopsyTurvyToolchain.xcframework"
@@ -36,7 +37,13 @@ if [[ -z "${IOS_ARM64_DYLIB}" || -z "${IOSSIMULATOR_ARM64_DYLIB}" ]]; then
     exit 1
 fi
 
+# Stages a fresh copy of the canonical, portable C headers (owned by the Embedded project, not this app)
+# into the location xcodebuild reads from.  Only the copied header tree is refreshed here: module.modulemap
+# lives directly in HEADERS_DIR and is hand-maintained, since it is Clang/Xcode packaging metadata for this
+# one Apple consumer, not a portable C artefact the Embedded project should own.
 mkdir -p "${HEADERS_DIR}"
+rm -rf "${HEADERS_DIR}/topsyturvy.h" "${HEADERS_DIR}/topsyturvy"
+cp -R "${SOURCE_HEADERS_DIR}/topsyturvy.h" "${SOURCE_HEADERS_DIR}/topsyturvy" "${HEADERS_DIR}/"
 
 rm -rf "${OUTPUT_XCFRAMEWORK}"
 
