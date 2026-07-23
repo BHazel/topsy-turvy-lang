@@ -124,6 +124,14 @@ prentice 42
 £r = leave
 //   ^ keyword.other.stack.utopir
 
+// ── Function call: the caret for "summon.find" lands on the ".find" suffix itself, so this fails if the plain "summon" group is ever accidentally reordered before this one ─
+
+summon &DoNothing
+//^ keyword.control.utopir
+
+£r = summon.find &Sample
+//          ^ keyword.control.utopir
+
 // ── Control flow, valued and void ────────────────────────────────
 
 find £r

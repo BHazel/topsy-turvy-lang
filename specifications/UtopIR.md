@@ -87,6 +87,12 @@ find 1
   find 0
 ```
 
+## 3.4. Functions
+
+### 3.4.1. Function Identifiers
+
+Function identifiers all start with the `&` character, followed by the function name which can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.
+
 ## 4. Instructions
 
 ### 4.1. Declaration & Assignment
@@ -1663,6 +1669,77 @@ find 0
   find 1
 ```
 
+### 4.8. Function Call Instructions
+
+The following instructions are used to call functions:
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`summon <function>`|Calls a void function or ignores the result.|Stack|`summon &Function`|
+|`summon.find <function>`|Calls a returning function and collects the result.|Stack/Virtual Register|`£Result = summon.find &Function`|
+
+The function call instructions use a combination of virtual registers and the stack to perform a function call:
+* Each parameter is pushed onto the stack using the `prentice` instruction in the order as defined in the function definition in Topsy Turvy.  If there are no parameters no values are pushed onto the stack.
+* A return value is stored in a virtual register.
+
+#### 4.8.1. `summon` Instruction
+
+The `summon` instruction calls a `function`, which must be accessible; calling an inaccessible function is a compilation error.  Both void and returning functions can be called using `summon`, however, a return value will always be ignored.
+
+**Operands**
+
+* **`<function>`:** The function to call.
+
+**Format**
+
+```utopir
+summon <function>
+```
+
+**Example**
+
+The following example in Topsy Turvy calls a void `&ReadPoem` function with a single `yarn` string parameter:
+
+```topsy
+SUMMON ReadPoem WITH Name IF YOU PLEASE.
+```
+
+with the following equivalent in UtopIR:
+
+```utopir
+prentice £Name
+summon &ReadPoem
+```
+
+#### 4.8.2. `summon.find` Instruction
+
+The `summon.find` instruction calls a `function`, which must be accessible; calling an inaccessible function is a compilation error.  Only returning functions can be called using `summon.find` and the return value is assigned to a virtual register.
+
+**Operands**
+
+* **`<function>`:** The function to call.
+
+**Format**
+
+```utopir
+£<var-name> = summon.find <function>
+```
+
+**Example**
+
+The following example in Topsy Turvy calls a `&GetPoem` function with a single `yarn` string parameter and a returned `yarn` value:
+
+```topsy
+Poem IS APPOINTED SUMMON GetPoem WITH Name IF YOU PLEASE.
+```
+
+with the following equivalent in UtopIR:
+
+```utopir
+prentice £Name
+£Poem = summon.find &GetPoem
+```
+
 ## 5. Examples
 
 This section includes brief examples demonstrating how UtopIR instructions are used with Topsy Turvy equivalents.  Not all instructions are covered but sufficient are included in these examples for a working knowledge of UtopIR.
@@ -2276,12 +2353,49 @@ appoint.victim £Numbers, 3, 30
 £NullPointer = appoint naught
 ```
 
+### 5.7 Calling Functions
+
+This example demonstrates how to call functions, both void and returning.
+
+**Please note that functions themselves are not yet implemented in UtopIR.**
+
+```topsy
+IT IS MY DUTY TO PERFORM DoNothing UNDER NO OBLIGATION
+  SUM OF 0 AND 0
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+  AND SO I FIND SUM OF Num1 AND Num2
+MY DUTY IS DISCHARGED.
+
+PRAY WELCOME AddResult AS A PEER
+
+SUMMON DoNothing WITH NOTHING IF YOU PLEASE.
+AddResult IS APPOINTED SUMMON Add WITH 4 AND 5 IF YOU PLEASE.
+
+AND SO I FIND AddResult
+```
+
+```utopir
+£AddResult = welcome peer
+£AddResult = appoint 0
+
+summon &DoNothing
+
+prentice 4
+prentice 5
+£_summonfind_Add_4_5 = summon.find &Add
+£AddResult = appoint £_summon_Add_4_5
+
+find £AddResult
+```
+
 ## Appendix A. Instruction Reference
 
 |Instruction|Description|Example|
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
-|`welcome.list <type>`|Arrau Variable Declaration|`£Numbers = welcome.list peer, 3`|
+|`welcome.list <type>`|Array Variable Declaration|`£Numbers = welcome.list peer, 3`|
 |`appoint <value>`|Variable Assignment|`£LovesickMaidens = appoint 20`|
 |`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
@@ -2323,6 +2437,8 @@ appoint.victim £Numbers, 3, 30
 |`sail <label>`|Branches to the specified label.|`sail LABEL`|
 |`sailalike <value>, <label>`|Branches to the specified label if the `decree` value indicates equality.|`sailalike £IsLord, !LABEL`|
 |`sailunlike <value>, <label>`|Branches to the specified label if the `decree` value indicates inequality.|`sailunlike £IsLord, !LABEL`|
+|`summon <function>`|Calls a void function or ignores the result.|`summon &Function`|
+|`summon.find <function>`|Calls a returning function and collects the result.|`£Result = summon.find &Function`|
 
 ## Appendix B. Type Reference
 

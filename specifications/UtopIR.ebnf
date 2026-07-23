@@ -12,9 +12,9 @@ Identifier      = ( "_" | [a-zA-Z] ), { [a-zA-Z0-9_-] } ;
 
 Variable        = "£", Identifier ;
 (* The £ sigil is a dedicated prefix and is not considered part of Identifier.
-   By convention (not a grammar requirement), temporary registers produced by
-   the transformer begin with £_ (e.g. £_sum_Peer1_Peer2) to visually
-   distinguish them from user-declared variables. *)
+   By convention (not a grammar requirement), a temporary register introduced
+   to hold an intermediate value begins with £_ (e.g. £_sum_Peer1_Peer2) to
+   visually distinguish it from a user-declared variable. *)
 
 Label           = "!", Identifier ;
 (* The ! sigil is a dedicated prefix and is not considered part of Identifier,
@@ -23,6 +23,11 @@ Label           = "!", Identifier ;
    is a documentation convention only, with no grammar significance: a label
    is a flat marker in the instruction sequence, introducing no block or
    scope of its own. *)
+
+FunctionReference = "&", Identifier ;
+(* The & sigil is a dedicated prefix and is not considered part of Identifier,
+   mirroring Label exactly.  A FunctionReference names a function to call via
+   summon/summon.find, not a virtual register or a branch target. *)
 
 IntegerLiteral  = [ "-" ], Digit, { Digit } ;
 FloatLiteral    = [ "-" ], Digit, { Digit }, ".", Digit, { Digit } ;
@@ -39,8 +44,8 @@ NaughtLiteral   = "naught" ;
 (* The null literal, assignable to a pointer, array or yarn variable. *)
 
 Comment         = "@", { AnyCharExceptNewline } ;
-(* A comment spans from @ to the end of the current line and is discarded by
-   the parser. *)
+(* A comment spans from @ to the end of the current line and carries no
+   semantic meaning. *)
 
 Digit           = [0-9] ;
 
@@ -74,7 +79,8 @@ AssignmentRhs         = WelcomeListRhs
                       | WereRhs
                       | LeaveRhs
                       | VictimYarnRhs
-                      | VictimListRhs ;
+                      | VictimListRhs
+                      | SummonFindRhs ;
 
 WelcomeListRhs  = "welcome.list", Type, ",", IntegerLiteral ;
 (* Declares an array variable of the given element Type and size.  Tried
@@ -109,27 +115,41 @@ VictimListRhs   = "victim.list", Variable, ",", Operand ;
 (* Selects the element at the 1-based Operand index of the array named by
    Variable.  The target register has the array's declared element type. *)
 
+SummonFindRhs   = "summon.find", FunctionReference ;
+(* Calls the named function and assigns its return value to the target
+   register.  "summon" is a prefix of "summon.find", but the two do not
+   share an alternative list in this grammar: SummonFindRhs is reachable
+   only through AssignmentRhs, which requires a leading Variable "="
+   already matched, while SummonInstruction (below) is reachable only
+   through StandaloneInstruction, where no such prefix is present. *)
+
 (* Standalone form: no assignment target *)
 StandaloneInstruction = PrenticeInstruction
                       | FindInstruction
                       | SailAlikeInstruction
                       | SailUnlikeInstruction
                       | SailInstruction
+                      | SummonInstruction
                       | AppointVictimInstruction
                       | ViewToInstruction
                       | LabelDeclaration ;
 PrenticeInstruction   = "prentice", Operand ;
 FindInstruction       = "find", [ Operand ] ;
 (* When no token follows "find" before the next newline or EOF the instruction
-   is a void return; when an Operand follows it is a valued return.  The parser
-   commits to "no operand" on encountering a newline or EOF immediately after
-   the "find" keyword. *)
+   is a void return; when an Operand follows it is a valued return.  A newline
+   or end of input immediately following the "find" keyword resolves to the
+   void form. *)
 
 SailInstruction       = "sail", Label ;
 SailAlikeInstruction  = "sailalike", Operand, ",", Label ;
 SailUnlikeInstruction = "sailunlike", Operand, ",", Label ;
 (* "sailalike" and "sailunlike" must be matched before the plain "sail" form,
    since "sail" is a prefix of both mnemonics. *)
+
+SummonInstruction     = "summon", FunctionReference ;
+(* Calls the named function, ignoring any return value.  See SummonFindRhs
+   above for why "summon" and "summon.find" sharing a prefix does not
+   require an ordering rule between them in this grammar. *)
 
 AppointVictimInstruction = "appoint.victim", Variable, ",", Operand, ",", Operand ;
 (* Assigns Value (the second Operand) to the element at the 1-based index
@@ -164,8 +184,8 @@ IntegerArithmeticOp = "sum" | "diff" | "prod" | "quot" | "rem" | "max" | "min" ;
 FloatArithmeticOp   = "sum.f" | "diff.f" | "prod.f" | "quot.f" | "rem.f"
                     | "max.f" | "min.f" ;
 (* Floating-point arithmetic instructions carry the same names as their integer
-   counterparts with a .f suffix.  A parser must match the .f form before the
-   plain form, since the plain mnemonic is a prefix of its .f counterpart. *)
+   counterparts with a .f suffix.  The .f-suffixed form takes precedence over
+   the plain form, since the plain mnemonic is a prefix of its .f counterpart. *)
 
 PointerArithmeticOp = "sum.g" | "diff.g" ;
 (* Pointer arithmetic operands are (pointer, integer offset), a different
@@ -192,10 +212,10 @@ IntegerComparisonOp = "alike" | "unlike" | "preadam" | "lowerdeg" ;
 
 FloatComparisonOp   = "alike.f" | "unlike.f" | "preadam.f" | "lowerdeg.f" ;
 (* Floating-point comparison instructions carry the same names as their
-   integer counterparts with a .f suffix, mirroring ArithmeticOp.  A parser
-   must match the .f form before the plain form, since the plain mnemonic is
-   a prefix of its .f counterpart.  A comparison result is always of type
-   decree, regardless of the operand type. *)
+   integer counterparts with a .f suffix, mirroring ArithmeticOp.  The
+   .f-suffixed form takes precedence over the plain form, since the plain
+   mnemonic is a prefix of its .f counterpart.  A comparison result is always
+   of type decree, regardless of the operand type. *)
 
 (*----------------------------------------------------------------------------*)
 (* Logical Operations                                                         *)

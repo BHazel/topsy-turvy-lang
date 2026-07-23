@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
@@ -70,6 +71,21 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// (string) type is supported for declaration, assignment and <see cref="VictimYarnInstruction"/>
 /// character access (see <see cref="EmitVictimYarn"/>).
 /// </para>
+/// <para>
+/// ### External Function Calls
+/// As of v0.0.1-preview4, <c>summon</c>/<c>summon.find</c> call functions listed in
+/// <see cref="CilEmitOptions.ExternalFunctions"/>:
+/// * Each entry is plain reflection data: a real <see cref="MethodInfo"/> plus CLR parameter/return
+///   types.
+/// * A function with a trailing host-injected parameter (see
+///   <see cref="CilExternalFunction.HostInjectedParameterTypes"/>) is passed an instance from
+///   <see cref="CilEmitOptions.HostInjectedServices"/>. The first call needing a given service type
+///   constructs one and stores it in an emitter-owned local; every later call needing that same type
+///   reuses it.
+/// * <see cref="ValidateExternalFunctionReferences"/> runs as a pre-pass before emission begins,
+///   mirroring <see cref="ValidateLabelReferences"/>: a <c>summon</c> naming a function absent from
+///   <see cref="CilEmitOptions.ExternalFunctions"/> is rejected there, with a clear error.
+/// </para>
 /// </remarks>
 public sealed class CilEmitter
 {
@@ -103,9 +119,9 @@ public sealed class CilEmitter
             returnType: typeof(int),
             parameterTypes: [typeof(string[])]);
 
-        // .NET metadata does not retain parameter names by default (mirroring the same gap for locals
-        // — see CilGenerator.RegisterLocalName) — DefineParameter records it so CilGenerator.ToIlText
-        // can recover "args" instead of falling back to a generic name when disassembling.
+        // .NET metadata does not retain parameter names by default (mirroring the same gap for locals.
+        // DefineParameter records it so <c>CilGenerator.ToIlText</c> can recover "args" instead of
+        // falling back to a generic name when disassembling.
         mainMethod.DefineParameter(1, ParameterAttributes.None, "args");
 
         ILGenerator ilGenerator = mainMethod.GetILGenerator();
@@ -118,9 +134,19 @@ public sealed class CilEmitter
         Dictionary<string, Label> labels = [];
         PointerHandleType pointerHandleType = new(pointerHandleTypeBuilder, pointerHandleContainerField, pointerHandleIndexField);
 
+        Dictionary<string, CilExternalFunction> externalFunctions = (options.ExternalFunctions ?? [])
+            .ToDictionary(function => function.Name);
+
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices = (options.HostInjectedServices ?? [])
+            .ToDictionary(service => service.ServiceType);
+
+        Dictionary<Type, LocalBuilder> hostInjectedLocals = [];
+
         this.ValidateLabelReferences(program);
+        this.ValidateExternalFunctionReferences(program, externalFunctions);
 
         bool hasReturn = false;
+        bool hasExternalCalls = false;
         foreach (UtopIRInstruction instruction in program.Instructions)
         {
             if (instruction is FindInstruction)
@@ -128,7 +154,24 @@ public sealed class CilEmitter
                 hasReturn = true;
             }
 
-            this.EmitInstruction(instruction, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes, pointerPointeeTypes, pointerHandleType, labels);
+            if (instruction is SummonInstruction or SummonFindInstruction)
+            {
+                hasExternalCalls = true;
+            }
+
+            this.EmitInstruction(
+                instruction,
+                ilGenerator,
+                cilGenerator,
+                locals,
+                localTypes,
+                arrayElementTypes,
+                pointerPointeeTypes,
+                pointerHandleType,
+                labels,
+                externalFunctions,
+                hostInjectedServices,
+                hostInjectedLocals);
         }
 
         if (!hasReturn)
@@ -158,7 +201,7 @@ public sealed class CilEmitter
             File.WriteAllBytes(options.OutputPath, assemblyBytes);
         }
 
-        return new(cilGenerator.ToIlText(assemblyBytes));
+        return new(cilGenerator.ToIlText(assemblyBytes), hasExternalCalls);
     }
 
     /// <summary>
@@ -198,6 +241,38 @@ public sealed class CilEmitter
             {
                 throw new InvalidOperationException(
                     $"Branch instruction references undeclared label '!{referencedLabel}'.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that every function referenced by a <see cref="SummonInstruction"/> or
+    /// <see cref="SummonFindInstruction"/> has a matching <see cref="CilExternalFunction"/> in
+    /// <paramref name="externalFunctions"/>.
+    /// </summary>
+    /// <remarks>
+    /// Without this check an unresolvable function name would surface only as a <see cref="KeyNotFoundException"/> from deep
+    /// inside <see cref="EmitSummon"/> or <see cref="EmitSummonFind"/>, rather than a clear, up-front UtopIR-level error
+    /// naming the offending function.
+    /// </remarks>
+    /// <param name="program">The UtopIR programme to validate.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <exception cref="InvalidOperationException">Thrown when a <c>summon</c> or <c>summon.find</c> instruction references a function with no matching descriptor.</exception>
+    private void ValidateExternalFunctionReferences(UtopIRProgram program, Dictionary<string, CilExternalFunction> externalFunctions)
+    {
+        foreach (UtopIRInstruction instruction in program.Instructions)
+        {
+            string? referencedFunction = instruction switch
+            {
+                SummonInstruction summon => summon.Function.Name,
+                SummonFindInstruction summonFind => summonFind.Function.Name,
+                _ => null
+            };
+
+            if (referencedFunction is not null && !externalFunctions.ContainsKey(referencedFunction))
+            {
+                throw new InvalidOperationException(
+                    $"'summon'/'summon.find' instruction references unknown function '&{referencedFunction}'.");
             }
         }
     }
@@ -291,6 +366,9 @@ public sealed class CilEmitter
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
     /// <param name="labels">The map from label name (without <c>!</c>) to its <see cref="Label"/>, lazily populated via <see cref="GetOrDefineLabel"/>.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it, lazily populated on first use.</param>
     private void EmitInstruction(
         UtopIRInstruction instruction,
         ILGenerator ilGenerator,
@@ -300,7 +378,10 @@ public sealed class CilEmitter
         Dictionary<string, UtopIRType> arrayElementTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
         PointerHandleType pointerHandleType,
-        Dictionary<string, Label> labels)
+        Dictionary<string, Label> labels,
+        Dictionary<string, CilExternalFunction> externalFunctions,
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices,
+        Dictionary<Type, LocalBuilder> hostInjectedLocals)
     {
         switch (instruction)
         {
@@ -330,6 +411,12 @@ public sealed class CilEmitter
                 break;
             case PrenticeInstruction prentice:
                 this.EmitPrentice(prentice, ilGenerator, locals);
+                break;
+            case SummonInstruction summon:
+                this.EmitSummon(summon, ilGenerator, cilGenerator, externalFunctions, hostInjectedServices, hostInjectedLocals);
+                break;
+            case SummonFindInstruction summonFind:
+                this.EmitSummonFind(summonFind, ilGenerator, cilGenerator, locals, localTypes, externalFunctions, hostInjectedServices, hostInjectedLocals);
                 break;
             case LeaveInstruction leave:
                 this.EmitLeave(leave, ilGenerator, locals);
@@ -812,6 +899,123 @@ public sealed class CilEmitter
         Dictionary<string, LocalBuilder> locals)
     {
         this.EmitStackLoadOperand(prentice.Value, ilGenerator, locals);
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="SummonInstruction"/> calling a void external function.
+    /// </summary>
+    /// <remarks>
+    /// The preceding <see cref="PrenticeInstruction"/>s have already left the language-level arguments
+    /// on the evaluation stack in declaration order, so this only needs to push any trailing
+    /// host-injected arguments and emit the <c>call</c>. A <c>SUMMON</c> used as a bare statement in
+    /// Topsy Turvy discards the result of a value-returning function with only a checker warning, never
+    /// an error, so a non-<c>void</c> <see cref="CilExternalFunction.ReturnType"/> is a real, reachable
+    /// case here, not a defensive one: its value is popped to keep the evaluation stack balanced.
+    /// </remarks>
+    /// <param name="summon">The summon instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for any newly declared host-injected local.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it, lazily populated on first use.</param>
+    private void EmitSummon(
+        SummonInstruction summon,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, CilExternalFunction> externalFunctions,
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices,
+        Dictionary<Type, LocalBuilder> hostInjectedLocals)
+    {
+        CilExternalFunction function = externalFunctions[summon.Function.Name];
+        this.EmitHostInjectedArguments(function, ilGenerator, cilGenerator, hostInjectedServices, hostInjectedLocals);
+        ilGenerator.Emit(OpCodes.Call, function.Method);
+
+        if (function.ReturnType is not null)
+        {
+            ilGenerator.Emit(OpCodes.Pop);
+        }
+    }
+
+    /// <summary>
+    /// Emits CIL for a <see cref="SummonFindInstruction"/> calling a value-returning external function
+    /// and storing its result into the target local.
+    /// </summary>
+    /// <remarks>
+    /// The target local is auto-declared from <see cref="CilExternalFunction.ReturnType"/> if not
+    /// already <c>welcome</c>d.
+    /// </remarks>
+    /// <param name="summonFind">The summon.find instruction.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for any newly declared local.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it, lazily populated on first use.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the resolved function is void.</exception>
+    private void EmitSummonFind(
+        SummonFindInstruction summonFind,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, UtopIRType> localTypes,
+        Dictionary<string, CilExternalFunction> externalFunctions,
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices,
+        Dictionary<Type, LocalBuilder> hostInjectedLocals)
+    {
+        CilExternalFunction function = externalFunctions[summonFind.Function.Name];
+        if (function.ReturnType is null)
+        {
+            throw new InvalidOperationException(
+                $"Function '{summonFind.Function.Name}' is void and cannot be used with 'summon.find'.");
+        }
+
+        this.EmitHostInjectedArguments(function, ilGenerator, cilGenerator, hostInjectedServices, hostInjectedLocals);
+        ilGenerator.Emit(OpCodes.Call, function.Method);
+
+        if (!locals.TryGetValue(summonFind.Target.Name, out LocalBuilder? declaredLocal))
+        {
+            declaredLocal = ilGenerator.DeclareLocal(function.ReturnType);
+            cilGenerator.RegisterLocalName(declaredLocal, summonFind.Target.Name);
+            locals[summonFind.Target.Name] = declaredLocal;
+            localTypes[summonFind.Target.Name] = this.MapClrTypeToUtopIRType(function.ReturnType);
+        }
+
+        ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
+    }
+
+    /// <summary>
+    /// Loads one instance of each of a <see cref="CilExternalFunction"/> trailing host-injected
+    /// parameters onto the evaluation stack, in order, creating each service instance the first time
+    /// it is needed and reusing it for every subsequent call.
+    /// </summary>
+    /// <param name="function">The external function about to be called.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for any newly declared local.</param>
+    /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it, lazily populated on first use.</param>
+    /// <exception cref="KeyNotFoundException">Thrown when <paramref name="function"/> needs a host-injected service with no matching descriptor in <paramref name="hostInjectedServices"/>.</exception>
+    private void EmitHostInjectedArguments(
+        CilExternalFunction function,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices,
+        Dictionary<Type, LocalBuilder> hostInjectedLocals)
+    {
+        foreach (Type serviceType in function.HostInjectedParameterTypes)
+        {
+            if (!hostInjectedLocals.TryGetValue(serviceType, out LocalBuilder? serviceLocal))
+            {
+                CilHostInjectedService service = hostInjectedServices[serviceType];
+                serviceLocal = ilGenerator.DeclareLocal(serviceType);
+                cilGenerator.RegisterLocalName(serviceLocal, $"_host_{serviceType.Name}");
+                ilGenerator.Emit(OpCodes.Newobj, service.ServiceConstructor);
+                ilGenerator.Emit(OpCodes.Stloc, serviceLocal);
+                hostInjectedLocals[serviceType] = serviceLocal;
+            }
+
+            ilGenerator.Emit(OpCodes.Ldloc, serviceLocal);
+        }
     }
 
     /// <summary>
@@ -1814,6 +2018,39 @@ public sealed class CilEmitter
         _ => throw new NotSupportedException(
             $"UtopIR type '{utopirType}' is not supported by the CIL emitter in this version.")
     };
+
+    /// <summary>
+    /// Maps a CLR <see cref="Type"/> to the corresponding <see cref="UtopIRType"/>, the reverse of
+    /// <see cref="MapToClrType"/>.
+    /// </summary>
+    /// <remarks>
+    /// Used to record a <see cref="CilExternalFunction.ReturnType"/> in <c>localTypes</c> when
+    /// auto-declaring a <c>summon.find</c> result register: the descriptor only
+    /// carries a CLR <see cref="Type"/>, but every other target register in this
+    /// emitter is tracked by its <see cref="UtopIRType"/>.
+    /// </remarks>
+    /// <param name="clrType">The CLR type to map.</param>
+    /// <returns>The corresponding <see cref="UtopIRType"/>.</returns>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="clrType"/> has no corresponding <see cref="UtopIRType"/> in this version.</exception>
+    private UtopIRType MapClrTypeToUtopIRType(Type clrType)
+    {
+        if (clrType == typeof(long)) return UtopIRType.Chancellor;
+        if (clrType == typeof(int)) return UtopIRType.Peer;
+        if (clrType == typeof(short)) return UtopIRType.Pirate;
+        if (clrType == typeof(sbyte)) return UtopIRType.SausageRoll;
+        if (clrType == typeof(ulong)) return UtopIRType.StandingChancellor;
+        if (clrType == typeof(uint)) return UtopIRType.StandingPeer;
+        if (clrType == typeof(ushort)) return UtopIRType.StandingPirate;
+        if (clrType == typeof(byte)) return UtopIRType.StandingSausageRoll;
+        if (clrType == typeof(double)) return UtopIRType.Fathom;
+        if (clrType == typeof(float)) return UtopIRType.Foot;
+        if (clrType == typeof(char)) return UtopIRType.Stitch;
+        if (clrType == typeof(bool)) return UtopIRType.Decree;
+        if (clrType == typeof(string)) return UtopIRType.Yarn;
+
+        throw new NotSupportedException(
+            $"External function CLR return type '{clrType.Name}' has no corresponding UtopIR type in this version.");
+    }
 
     /// <summary>
     /// Infers the <see cref="UtopIRType"/> of a <see cref="UtopIROperand"/> used to declare a CIL

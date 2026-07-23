@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using BWHazel.TopsyTurvy.Runtime;
+using BWHazel.TopsyTurvy.Sdk.Interop.IO;
 
 namespace BWHazel.TopsyTurvy.Tests.Runtime;
 
@@ -22,9 +22,18 @@ internal sealed class TestIO : ITopsyTurvyIO
         this.input = input;
     }
 
+    /// <summary>
+    /// Gets the writes recorded by <see cref="WriteLine"/>, in order, including the <c>suppressNewline</c> flag of each one.
+    /// </summary>
+    internal List<(string Message, bool SuppressNewline)> Writes { get; } = [];
+
     /// <inheritdoc/>
     public string ReadLine() => this.input.Dequeue();
 
     /// <inheritdoc/>
-    public void WriteLine(string message, bool suppressNewline = false) => this.output.Add(message);
+    public void WriteLine(string message, bool suppressNewline = false)
+    {
+        this.output.Add(message);
+        this.Writes.Add((message, suppressNewline));
+    }
 }

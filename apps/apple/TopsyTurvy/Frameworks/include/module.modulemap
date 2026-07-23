@@ -1,4 +1,4 @@
 module TopsyTurvyToolchain {
-    header "topsyturvytoolchain.h"
+    header "topsyturvy.h"
     export *
 }

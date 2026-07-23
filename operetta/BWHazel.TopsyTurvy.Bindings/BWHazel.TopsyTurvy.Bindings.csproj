@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Ast\BWHazel.TopsyTurvy.Ast.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Sdk.Interop\BWHazel.TopsyTurvy.Sdk.Interop.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.StandardLibrary\BWHazel.TopsyTurvy.StandardLibrary.csproj" />
+  </ItemGroup>
+
+</Project>

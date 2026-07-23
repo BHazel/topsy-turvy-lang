@@ -1,6 +1,7 @@
 using System;
+using BWHazel.TopsyTurvy.Sdk.Interop.IO;
 
-namespace BWHazel.TopsyTurvy.Runtime;
+namespace BWHazel.TopsyTurvy.StandardLibrary.IO;
 
 /// <summary>
 /// Provides console-based input and output for Topsy Turvy programmes.

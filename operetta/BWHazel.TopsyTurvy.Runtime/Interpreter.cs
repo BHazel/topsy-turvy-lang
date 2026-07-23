@@ -6,7 +6,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.Parser;
+using BWHazel.TopsyTurvy.Sdk.Interop.IO;
 
 namespace BWHazel.TopsyTurvy.Runtime;
 
@@ -14,6 +16,7 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// Recursive AST tree-walking interpreter for the Topsy Turvy language.
 /// </summary>
 /// <param name="io">The I/O handler used for all input and output operations.</param>
+/// <param name="externalFunctions">The catalogue of external functions (Standard Library and any external library) available to <c>SUMMON</c>.</param>
 /// <remarks>
 /// <para>
 /// The interpreter is a tree-walking interpreter that executes the AST of a parsed programme directly.  It works by recursively
@@ -46,10 +49,19 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// <para>
 /// A function declared in a file with a <c>TOWN</c> namespace is registered under its dot-joined fully-qualified
 /// name, e.g. <c>Accounts.Payroll.CalculateTax</c>, rather than its bare name, and is not reachable by bare name
-/// from outside that namespace.  <c>SUMMON</c> resolves a bare call name in tiers: the namespace of the caller,
-/// then each namespace opened via <c>PRAY RECOGNISE</c>, then the global (non-namespaced) function table via
-/// <see cref="ResolveFunction"/>; a fully-qualified call name is looked up directly.  Please see <see cref="ResolveFunction"/>
-/// for the precise resolution order.
+/// from outside that namespace.  <c>SUMMON</c> resolves a call name in four tiers, via <see cref="ResolveFunction"/>:
+/// * A fully-qualified call name looked up directly,
+/// * Then the namespace of the caller.
+/// * Then each namespace opened via <c>PRAY RECOGNISE</c>.
+/// * Then the global (non-namespaced) function table.
+/// Please see <see cref="ResolveFunction"/> for the precise resolution order.
+/// </para>
+/// <para>
+/// At each of those four tiers, a name with no matching Topsy Turvy function falls back to the <paramref name="externalFunctions"/>
+/// catalogue, so global namespace functions work with no source-level declaration at all.  A Topsy Turvy function always
+/// wins over an external one of the same name at the same tier, so adding a function to the Standard Library can never change
+/// the behaviour of an existing programme.  <see cref="ExternalFunctionInvoker"/> is the sole owner of the marshalling between
+/// <see cref="TopsyTurvyValue"/> and the CLR values a bound method actually takes and returns.
 /// </para>
 /// <para>
 /// During execution, the interpreter can work with the 6 literal types that the lexer can produce:
@@ -86,9 +98,10 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// DiagnosticCollection diagnostics = interpreter.Execute(program, options: options);
 /// </code>
 /// </remarks>
-public sealed class Interpreter(ITopsyTurvyIO io)
+public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunctions = null)
 {
     private readonly ITopsyTurvyIO io = io;
+    private readonly ExternalFunctionInvoker externalFunctions = new(externalFunctions ?? BindingCatalogue.Default);
     private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
     private readonly Dictionary<FunctionDefinitionNode, string?> functionNamespaces = [];
     private readonly HashSet<string> openNamespaces = [];
@@ -1596,8 +1609,20 @@ public sealed class Interpreter(ITopsyTurvyIO io)
         TopsyTurvyEnvironment callingEnvironment,
         SourceSpan span)
     {
-        FunctionDefinitionNode function = this.ResolveFunction(functionName, span);
+        FunctionResolution resolution = this.ResolveFunction(functionName, span);
+        if (resolution.ExternalFunction is BoundFunctionDescriptor externalFunction)
+        {
+            if (arguments.Count != externalFunction.Parameters.Count)
+            {
+                throw new TopsyTurvyRuntimeException(
+                    $"Function '{functionName}' expects {externalFunction.Parameters.Count} argument(s), got {arguments.Count}.",
+                    span);
+            }
 
+            return this.externalFunctions.Invoke(externalFunction, arguments, this.io) ?? TopsyTurvyValue.Null();
+        }
+
+        FunctionDefinitionNode function = resolution.UserFunction!;
         if (arguments.Count != function.Parameters.Count)
         {
             throw new TopsyTurvyRuntimeException(
@@ -1632,48 +1657,72 @@ public sealed class Interpreter(ITopsyTurvyIO io)
     }
 
     /// <summary>
-    /// Resolves a function name, bare or namespace-qualified, to its definition.
+    /// Resolves a function name, bare or namespace-qualified, to a Topsy Turvy function or an external function.
     /// </summary>
     /// <param name="functionName">The name to resolve.</param>
     /// <param name="span">The source span of the call, used for diagnostics.</param>
-    /// <returns>The resolved <see cref="FunctionDefinitionNode"/>.</returns>
+    /// <returns>The resolved <see cref="FunctionResolution"/>.</returns>
     /// <remarks>
     /// <para>
-    /// A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target and is looked
-    /// up directly, since <c>.</c> never appears in a bare Topsy Turvy identifier.
+    /// A name is resolved in four tiers, the first tier with exactly one match winning:
+    /// * Tier 1: A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target, since <c>.</c>
+    ///   never appears in a bare Topsy Turvy identifier, and is looked up directly.
+    /// * Tier 2: The namespace of the caller (<see cref="currentExecutionNamespace"/>).
+    /// * Tier 3: Each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
+    ///     * Two or more matches here is an ambiguous reference.
+    /// * Tier 4: The global (non-namespaced) dictionary entry.
     /// </para>
     /// <para>
-    /// A bare name is resolved in tiers, the first tier with exactly one match winning:
-    /// * The namespace of the caller (<see cref="currentExecutionNamespace"/>).
-    /// * Then each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
-    ///     * Two or more matches here is an ambiguous reference.
-    /// * Then finally the global (non-namespaced) dictionary entry.
+    /// At each of the four tiers above, a Topsy Turvy function is tried first; the <see cref="externalFunctions"/>
+    /// catalogue is consulted only when that same tier has no Topsy Turvy function under that name. This is why a
+    /// Topsy Turvy function always shadows an external one of the same name at every tier, rather than only at
+    /// tier 4: the fallback happens tier by tier, not after all four tiers have already been tried against Topsy
+    /// Turvy functions alone.
     /// </para>
     /// </remarks>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when no function matches or when a bare name matches more than one open namespace.</exception>
-    private FunctionDefinitionNode ResolveFunction(string functionName, SourceSpan span)
+    private FunctionResolution ResolveFunction(string functionName, SourceSpan span)
     {
         if (functionName.Contains('.'))
         {
-            return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? qualifiedMatch)
-                ? qualifiedMatch
+            if (this.functions.TryGetValue(functionName, out FunctionDefinitionNode? qualifiedMatch))
+            {
+                return new(qualifiedMatch, null);
+            }
+
+            return this.externalFunctions.Find(functionName) is BoundFunctionDescriptor qualifiedExternalMatch
+                ? new(null, qualifiedExternalMatch)
                 : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
         }
 
-        if (this.currentExecutionNamespace is not null &&
-            this.functions.TryGetValue(QualifyName(this.currentExecutionNamespace, functionName), out FunctionDefinitionNode? sameNamespaceMatch))
+        if (this.currentExecutionNamespace is not null)
         {
-            return sameNamespaceMatch;
+            string sameNamespaceQualified = QualifyName(this.currentExecutionNamespace, functionName);
+            if (this.functions.TryGetValue(sameNamespaceQualified, out FunctionDefinitionNode? sameNamespaceMatch))
+            {
+                return new(sameNamespaceMatch, null);
+            }
+
+            if (this.externalFunctions.Find(sameNamespaceQualified) is BoundFunctionDescriptor sameNamespaceExternalMatch)
+            {
+                return new(null, sameNamespaceExternalMatch);
+            }
         }
 
         List<string> matchedNamespaces = [];
-        FunctionDefinitionNode? openNamespaceMatch = null;
+        FunctionResolution? openNamespaceMatch = null;
         foreach (string openNamespace in this.openNamespaces)
         {
-            if (this.functions.TryGetValue(QualifyName(openNamespace, functionName), out FunctionDefinitionNode? candidate))
+            string qualified = QualifyName(openNamespace, functionName);
+            if (this.functions.TryGetValue(qualified, out FunctionDefinitionNode? candidate))
             {
                 matchedNamespaces.Add(openNamespace);
-                openNamespaceMatch = candidate;
+                openNamespaceMatch = new(candidate, null);
+            }
+            else if (this.externalFunctions.Find(qualified) is BoundFunctionDescriptor externalCandidate)
+            {
+                matchedNamespaces.Add(openNamespace);
+                openNamespaceMatch = new(null, externalCandidate);
             }
         }
 
@@ -1687,11 +1736,16 @@ public sealed class Interpreter(ITopsyTurvyIO io)
 
         if (openNamespaceMatch is not null)
         {
-            return openNamespaceMatch;
+            return openNamespaceMatch.Value;
         }
 
-        return this.functions.TryGetValue(functionName, out FunctionDefinitionNode? globalMatch)
-            ? globalMatch
+        if (this.functions.TryGetValue(functionName, out FunctionDefinitionNode? globalMatch))
+        {
+            return new(globalMatch, null);
+        }
+
+        return this.externalFunctions.Find(functionName) is BoundFunctionDescriptor globalExternalMatch
+            ? new(null, globalExternalMatch)
             : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
     }
 

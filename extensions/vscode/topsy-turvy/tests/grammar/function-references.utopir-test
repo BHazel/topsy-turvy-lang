@@ -1,0 +1,12 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Function references ──────────────────────────────────────────
+
+&DoNothing
+//^ entity.name.function.utopir
+
+summon &DoNothing
+//     ^ entity.name.function.utopir
+
+£r = summon.find &GetValue
+//               ^ entity.name.function.utopir

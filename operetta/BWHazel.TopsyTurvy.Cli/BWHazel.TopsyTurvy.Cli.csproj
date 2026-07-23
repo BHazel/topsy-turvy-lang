@@ -18,6 +18,7 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.LanguageServer\BWHazel.TopsyTurvy.LanguageServer.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.StandardLibrary\BWHazel.TopsyTurvy.StandardLibrary.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.TypeChecker\BWHazel.TopsyTurvy.TypeChecker.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Ast\BWHazel.TopsyTurvy.UtopIR.Ast.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.UtopIR.Analysis\BWHazel.TopsyTurvy.UtopIR.Analysis.csproj" />

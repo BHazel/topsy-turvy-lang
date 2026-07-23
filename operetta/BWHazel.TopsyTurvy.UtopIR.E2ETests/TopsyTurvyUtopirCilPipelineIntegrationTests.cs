@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BWHazel.TopsyTurvy.Parser;
+using BWHazel.TopsyTurvy.Sdk.Interop.IO;
+using BWHazel.TopsyTurvy.StandardLibrary;
+using BWHazel.TopsyTurvy.StandardLibrary.IO;
 using BWHazel.TopsyTurvy.UtopIR.Analysis;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
@@ -769,4 +773,175 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
             }
         }
     }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme that explicitly <c>SUMMON</c>s the real Standard Library
+    /// <c>PreviewBehold</c>/<c>PreviewPrayTell</c> through the complete pipeline, verifying the lowered
+    /// instructions and the compiled assembly exit code.
+    /// </summary>
+    [Fact]
+    public void Pipeline_SummonStandardLibraryFunctionsProgramme_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "Summoning The Standard Library"
+
+            PRINCIPALS
+              PRAY WELCOME Echo AS A YARN
+            THE CURTAIN RISES.
+
+            SUMMON PreviewBehold WITH "Hello from summon!" AND verity IF YOU PLEASE.
+            Echo IS APPOINTED SUMMON PreviewPrayTell WITH NOTHING IF YOU PLEASE.
+            AND SO I FIND 0
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("prentice \"Hello from summon!\"");
+        utopIrSource.ShouldContain("prentice verity");
+        utopIrSource.ShouldContain("summon &PreviewBehold");
+        utopIrSource.ShouldContain("summon.find &PreviewPrayTell");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        TextWriter originalOut = Console.Out;
+        TextReader originalIn = Console.In;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        Console.SetIn(new StringReader("hello back"));
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library, StandardLibraryExternalFunctions, StandardLibraryHostInjectedServices));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(0);
+            capturedOut.ToString().ShouldContain("Hello from summon!");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetIn(originalIn);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme using the native <c>BEHOLD</c> and <c>PRAY TELL</c> statements
+    /// (rather than an explicit <c>SUMMON</c>) through the complete pipeline, verifying both a string
+    /// literal and a <c>yarn</c>-typed variable print correctly via the same Standard Library functions.
+    /// </summary>
+    [Fact]
+    public void Pipeline_BeholdAndPrayTellProgramme_ProducesCorrectOutput()
+    {
+        const string source = """
+            HARK! "Native Print And Input"
+
+            PRINCIPALS
+              PRAY WELCOME Greeting AS A YARN
+            THE CURTAIN RISES.
+
+            BEHOLD "before"
+            PRAY TELL Greeting
+            BEHOLD Greeting
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("prentice \"before\"");
+        utopIrSource.ShouldContain("summon &PreviewBehold");
+        utopIrSource.ShouldContain("summon.find &PreviewPrayTell");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        TextWriter originalOut = Console.Out;
+        TextReader originalIn = Console.In;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        Console.SetIn(new StringReader("hello back"));
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library, StandardLibraryExternalFunctions, StandardLibraryHostInjectedServices));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(0);
+            string output = capturedOut.ToString();
+            output.ShouldContain("before");
+            output.ShouldContain("hello back");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetIn(originalIn);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The Standard Library <c>PreviewBehold</c>/<c>PreviewPrayTell</c>, projected into
+    /// <see cref="CilExternalFunction"/>, so the CIL emitter can resolve a real <c>summon</c>/<c>summon.find</c>.
+    /// </summary>
+    private static readonly IReadOnlyList<CilExternalFunction> StandardLibraryExternalFunctions =
+    [
+        new(
+            "PreviewBehold",
+            typeof(Global).GetMethod(nameof(Global.PreviewBehold))!,
+            [typeof(string), typeof(bool)],
+            null,
+            [typeof(ITopsyTurvyIO)]),
+        new(
+            "PreviewPrayTell",
+            typeof(Global).GetMethod(nameof(Global.PreviewPrayTell))!,
+            [],
+            typeof(string),
+            [typeof(ITopsyTurvyIO)])
+    ];
+
+    /// <summary>
+    /// The <see cref="ConsoleIO"/> implementation of <see cref="ITopsyTurvyIO"/>, so a real,
+    /// standalone compiled programme <c>summon</c>/<c>summon.find</c> calls actually read from and
+    /// write to <see cref="Console"/>.
+    /// </summary>
+    private static readonly IReadOnlyList<CilHostInjectedService> StandardLibraryHostInjectedServices =
+    [
+        new(typeof(ITopsyTurvyIO), typeof(ConsoleIO).GetConstructor(Type.EmptyTypes)!)
+    ];
 }

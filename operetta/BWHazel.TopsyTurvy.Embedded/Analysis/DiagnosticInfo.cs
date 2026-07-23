@@ -7,7 +7,7 @@ namespace BWHazel.TopsyTurvy.Embedded.Analysis;
 /// The four location fields (<see cref="StartLine"/>, <see cref="StartColumn"/>, <see cref="EndLine"/>, <see cref="EndColumn"/>)
 /// are 1-indexed, matching <see cref="BWHazel.TopsyTurvy.Ast.SourceSpan"/>/<see cref="BWHazel.TopsyTurvy.Ast.SourceLocation"/>
 /// therefore no conversion is applied. The span is half-open: the end location is one column past the final character of the span.
-/// This differs from <see cref="NativeExports.GetHover"/>/<see cref="NativeExports.GetCompletions"/>, whose <c>line</c>
+/// This differs from <see cref="NativeExports.ToolchainExports.GetHover"/>/<see cref="NativeExports.ToolchainExports.GetCompletions"/>, whose <c>line</c>
 /// and <c>column</c> parameters are 0-indexed to match the LSP convention already used elsewhere in the toolchain, therefore,
 /// callers must not combine the two.
 /// </remarks>

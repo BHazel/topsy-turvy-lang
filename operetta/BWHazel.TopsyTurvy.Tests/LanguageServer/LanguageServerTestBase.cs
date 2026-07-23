@@ -1,3 +1,4 @@
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.LanguageServer;
 using BWHazel.TopsyTurvy.Parser;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -23,11 +24,12 @@ public abstract class LanguageServerTestBase
     /// Creates a <see cref="DocumentStateManager"/> with a single document containing the provided source code.
     /// </summary>
     /// <param name="source">The source code to include in the document.</param>
+    /// <param name="externalFunctions">The catalogue of external functions to seed the symbol table with, or <c>null</c> to fall back to <see cref="BindingCatalogue.Default"/> via <c>ExternalFunctionRegistrar.Register</c>.</param>
     /// <returns>A <see cref="DocumentStateManager"/> containing the document with the provided source code.</returns>
-    protected DocumentStateManager CreateManagerWithSource(string source)
+    protected DocumentStateManager CreateManagerWithSource(string source, BindingCatalogue? externalFunctions = null)
     {
         DocumentStateManager manager = new();
-        manager.Update(this.testUri, source, this.parser.TryParse(source));
+        manager.Update(this.testUri, source, this.parser.TryParse(source), externalFunctions);
         return manager;
     }
 }

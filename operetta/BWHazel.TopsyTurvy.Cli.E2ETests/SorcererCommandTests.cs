@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -406,5 +408,84 @@ public sealed class SorcererCommandTests(CliFixture fixture)
 
         exitCode.ShouldBe(0);
         stderr.ShouldContain("ignored for .utopir input");
+    }
+
+    /// <summary>
+    /// Tests that a compiled programme calling Standard Library functions can run in a fresh directory
+    /// containing only the emitted assembly, its <c>runtimeconfig.json</c>, and its two dependencies.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_TargetDotNetWithExternalCalls_RunsInIsolatedDirectoryWithOnlyItsDependencies()
+    {
+        const string source = """
+            HARK! "Isolated Execution"
+
+            PRINCIPALS
+              PRAY WELCOME Greeting AS A YARN
+            THE CURTAIN RISES.
+
+            BEHOLD "before"
+            PRAY TELL Greeting
+            BEHOLD Greeting
+
+            FINALE.
+            """;
+
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), source);
+
+        (int compileExitCode, string _, string _) = await this.RunAsync("sorcerer prog.topsy --target dotnet --tiptoe");
+
+        compileExitCode.ShouldBe(0);
+
+        string[] requiredFiles =
+        [
+            "prog.dll",
+            "prog.runtimeconfig.json",
+            "BWHazel.TopsyTurvy.StandardLibrary.dll",
+            "BWHazel.TopsyTurvy.Sdk.Interop.dll"
+        ];
+
+        foreach (string requiredFile in requiredFiles)
+        {
+            File.Exists(Path.Combine(this.WorkingDirectory, requiredFile))
+                .ShouldBeTrue($"'{requiredFile}' should have been copied alongside the compiled assembly.");
+        }
+
+        string isolatedDirectory = Path.Combine(this.WorkingDirectory, "isolated");
+        Directory.CreateDirectory(isolatedDirectory);
+        foreach (string requiredFile in requiredFiles)
+        {
+            File.Copy(Path.Combine(this.WorkingDirectory, requiredFile), Path.Combine(isolatedDirectory, requiredFile));
+        }
+
+        ProcessStartInfo startInfo = new("dotnet", "prog.dll")
+        {
+            WorkingDirectory = isolatedDirectory,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
+        using Process process = new() { StartInfo = startInfo };
+        process.Start();
+        await process.StandardInput.WriteLineAsync("hello back");
+        process.StandardInput.Close();
+
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        bool exited = process.WaitForExit(TimeSpan.FromSeconds(10));
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+        }
+
+        string stdout = await stdoutTask;
+        string stderr = await stderrTask;
+
+        stderr.ShouldBeEmpty();
+        process.ExitCode.ShouldBe(0);
+        stdout.ShouldContain("before");
+        stdout.ShouldContain("hello back");
     }
 }

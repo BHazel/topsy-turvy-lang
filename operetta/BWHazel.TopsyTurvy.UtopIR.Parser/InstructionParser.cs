@@ -40,6 +40,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>PicturetoRhs</c> matches the <c>pictureto</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointee, producing a <see cref="PicturetoInstruction"/>.
 /// * <c>ViewfromRhs</c> matches the <c>viewfrom</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointer, producing a <see cref="ViewfromInstruction"/>.
 /// * <c>PointerArithmeticRhs</c> matches an <see cref="OperandParser.PointerArithmeticOperation"/> mnemonic, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> offset, producing a <see cref="PointerArithmeticInstruction"/>. Tried before <c>ArithmeticRhs</c>.
+/// * <c>SummonFindRhs</c> matches the <c>summon.find</c> keyword, required whitespace, then a <see cref="Lexer.FunctionReference"/>, producing a <see cref="SummonFindInstruction"/>. Tried before <c>ArithmeticRhs</c>: <c>summon.find</c> shares the <c>sum</c> prefix with the <c>Sum</c> arithmetic mnemonic, and <see cref="Lexer.Keyword(string)"/> has no trailing word-boundary check.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -54,6 +55,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <see cref="Sail"/> matches the <c>sail</c> keyword, required whitespace, then a <see cref="Lexer.Label"/>, producing a <see cref="SailInstruction"/>.
 /// * <see cref="SailAlike"/> matches the <c>sailalike</c> keyword, required whitespace, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="Lexer.Label"/>, producing a <see cref="SailAlikeInstruction"/>.
 /// * <see cref="SailUnlike"/> matches the <c>sailunlike</c> keyword the same way as <see cref="SailAlike"/>, producing a <see cref="SailUnlikeInstruction"/>.
+/// * <see cref="Summon"/> matches the <c>summon</c> keyword, required whitespace, then a <see cref="Lexer.FunctionReference"/>, producing a <see cref="SummonInstruction"/>.
 /// * <see cref="AppointVictim"/> matches the <c>appoint.victim</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, an <see cref="OperandParser.Operand"/> index, a comma, then an <see cref="OperandParser.Operand"/> value, producing an <see cref="AppointVictimInstruction"/>.
 /// * <see cref="ViewTo"/> matches the <c>viewto</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> value, producing a <see cref="ViewtoInstruction"/>.
 /// * <see cref="Label"/> matches a bare <see cref="Lexer.Label"/> on its own line, producing a <see cref="LabelInstruction"/>.
@@ -65,6 +67,11 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 ///     itself a textual prefix of either (<see cref="Lexer.Keyword(string)"/> matches raw text with
 ///     no trailing word-boundary check, so this ordering costs nothing and avoids relying on that
 ///     absence being permanent).
+///     * <see cref="Summon"/>. Unlike <c>sail</c>/<c>sailalike</c>, this needs no such defensive ordering
+///     against <see cref="SummonFindRhs"/>: the two are reached through different top-level
+///     alternatives of <see cref="Instruction"/> (this one only when no <c>£&lt;var&gt; =</c> prefix
+///     was already consumed), so "summon" being a textual prefix of "summon.find" never puts them in
+///     the same choice at parse time.
 ///     * <see cref="AppointVictim"/>.
 ///     * <see cref="ViewTo"/>.
 ///     * <see cref="Label"/>.
@@ -319,6 +326,16 @@ public static class InstructionParser
         select (UtopIRInstruction)new VictimListInstruction(new UtopIRVariable(target), new UtopIRVariable(array), index);
 
     /// <summary>
+    /// Parses a <c>summon.find</c> assignment right-hand side for the given target variable.
+    /// </summary>
+    /// <param name="target">The already-parsed assignment target variable name.</param>
+    private static TextParser<UtopIRInstruction> SummonFindRhs(string target) =>
+        from summonFindKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.SummonFind)
+        from whitespace in Lexer.WhitespaceRequired
+        from function in Lexer.FunctionReference
+        select (UtopIRInstruction)new SummonFindInstruction(new UtopIRVariable(target), new FunctionReference(function));
+
+    /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> AssignmentInstruction =
@@ -336,6 +353,7 @@ public static class InstructionParser
                 .Or(PicturetoRhs(target))
                 .Or(ViewfromRhs(target))
                 .Or(PointerArithmeticRhs(target))
+                .Or(SummonFindRhs(target))
                 .Or(ArithmeticRhs(target))
                 .Or(BitwiseRhs(target))
                 .Or(InvRhs(target))
@@ -401,6 +419,15 @@ public static class InstructionParser
         select (UtopIRInstruction)new SailInstruction(new UtopIRLabel(label));
 
     /// <summary>
+    /// Parses a <c>summon</c> instruction.
+    /// </summary>
+    public static readonly TextParser<UtopIRInstruction> Summon =
+        from summonKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Summon)
+        from whitespace in Lexer.WhitespaceRequired
+        from function in Lexer.FunctionReference
+        select (UtopIRInstruction)new SummonInstruction(new FunctionReference(function));
+
+    /// <summary>
     /// Parses a bare label declaration.
     /// </summary>
     public static readonly TextParser<UtopIRInstruction> Label =
@@ -446,6 +473,7 @@ public static class InstructionParser
             .Or(SailAlike)
             .Or(SailUnlike)
             .Or(Sail)
+            .Or(Summon)
             .Or(AppointVictim)
             .Or(ViewTo)
             .Or(Label);

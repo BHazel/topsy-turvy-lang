@@ -4,6 +4,7 @@ using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
+using BWHazel.TopsyTurvy.Sdk.Interop.IO;
 using BWHazel.TopsyTurvy.TypeChecker;
 
 namespace BWHazel.TopsyTurvy.Cli;

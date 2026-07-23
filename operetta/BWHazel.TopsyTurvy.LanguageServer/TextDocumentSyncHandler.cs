@@ -222,6 +222,24 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
                         });
                     }
                 }
+
+                foreach (string shadowedName in documentState.ShadowedExternalFunctionNames)
+                {
+                    if (!documentState.SymbolTable.TryGetSymbol(shadowedName, out SymbolInfo? shadowingSymbol) || shadowingSymbol is null)
+                    {
+                        continue;
+                    }
+
+                    lspDiagnostics.Add(new()
+                    {
+                        Range = new(
+                            new(shadowingSymbol.DefinitionLine - 1, shadowingSymbol.DefinitionColumn - 1),
+                            new(shadowingSymbol.DefinitionLine - 1, shadowingSymbol.DefinitionColumn - 1 + shadowedName.Length)),
+                        Severity = DiagnosticSeverity.Warning,
+                        Message = $"'{shadowedName}' shadows an external function of the same name from the Standard Library.",
+                        Source = LanguageServerConstants.LanguageId
+                    });
+                }
             }
 
             this.languageServer.TextDocument.PublishDiagnostics(new()

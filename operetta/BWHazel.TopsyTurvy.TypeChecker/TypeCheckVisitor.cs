@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.Parser;
 
 namespace BWHazel.TopsyTurvy.TypeChecker;
@@ -142,8 +143,9 @@ internal sealed class TypeCheckVisitor
     /// </summary>
     /// <param name="program">The programme to check.</param>
     /// <param name="sourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to leave imported functions unresolved.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, defaulting to <see cref="BindingCatalogue.Default"/>.</param>
     /// <returns>The populated <see cref="TypeCheckResult"/>.</returns>
-    internal TypeCheckResult Visit(ProgramNode program, Func<string, string?>? sourceFileResolver = null)
+    internal TypeCheckResult Visit(ProgramNode program, Func<string, string?>? sourceFileResolver = null, BindingCatalogue? externalFunctions = null)
     {
         Dictionary<string, LiteralType> rootScope = new(StringComparer.Ordinal)
         {
@@ -161,12 +163,43 @@ internal sealed class TypeCheckVisitor
 
         this.entryNamespace = this.FindNamespaceDeclaration(program.Statements);
         this.CollectFunctionSignatures(program.Statements, sourceFileResolver, visitedImports: [], namespacePrefix: this.entryNamespace);
+        this.SeedExternalFunctionSignatures(externalFunctions ?? BindingCatalogue.Default);
         this.CheckStatements(program.Statements);
 
         this.scopeStack.Pop();
         this.arrayElementTypeStack.Pop();
         this.pointerPointeeTypeStack.Pop();
         return new(this.model, this.diagnostics.AsReadOnly());
+    }
+
+    /// <summary>
+    /// Seeds a <see cref="FunctionSignature"/> for each external function into the <see cref="SemanticModel"/>, under
+    /// the same qualified-name key <see cref="CollectFunctionSignatures"/> already uses for a Topsy Turvy function.
+    /// </summary>
+    /// <param name="externalFunctions">The catalogue of external functions to seed.</param>
+    /// <remarks>
+    /// A signature already present at a key, from a Topsy Turvy function collected earlier, is left alone: a
+    /// Topsy Turvy function shadows an external one of the same name, so growing the Standard Library can never change
+    /// the behaviour of an existing programme.  <see cref="ResolveFunctionSignature"/> needs no changes at all to see
+    /// a seeded signature: it already resolves purely against the model, with no idea whether a given signature came
+    /// from a Topsy Turvy function or an external one.
+    /// </remarks>
+    private void SeedExternalFunctionSignatures(BindingCatalogue externalFunctions)
+    {
+        foreach (BoundFunctionDescriptor functionDescriptor in externalFunctions.Functions)
+        {
+            string functionKey = QualifyName(functionDescriptor.Namespace, functionDescriptor.Name);
+            if (this.model.GetFunctionSignature(functionKey) is not null)
+            {
+                continue;
+            }
+
+            FunctionSignature signature = new(
+                [.. functionDescriptor.Parameters.Select(static parameter => parameter.Type)],
+                functionDescriptor.ReturnType);
+
+            this.model.SetFunctionSignature(functionKey, signature);
+        }
     }
 
     /// <summary>

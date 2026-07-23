@@ -387,7 +387,7 @@ public sealed class ReplSession
                 Console.WriteLine($"  {"IDENTIFIER",-24} {"TYPE",-24} {"CONSTANT",-10} VALUE");
                 foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
                 {
-                    string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                    string typeName = LiteralTypeNames.ToDisplayName(variable.Value.LiteralType);
                     string constant = environment.IsConstant(variable.Key) ? "✓" : "✗";
                     Console.WriteLine($"  {variable.Key,-24} {typeName,-24} {constant,-10} {variable.Value}");
                 }
@@ -428,7 +428,7 @@ public sealed class ReplSession
 
             foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
             {
-                string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                string typeName = LiteralTypeNames.ToDisplayName(variable.Value.LiteralType);
                 bool isConstant = environment.IsConstant(variable.Key);
                 variablesTable.AddRow(
                     Markup.Escape(variable.Key),
@@ -471,7 +471,7 @@ public sealed class ReplSession
     /// <param name="parameter">The parameter to format.</param>
     /// <returns>A string in the form <c>name: TYPE</c>.</returns>
     private static string FormatParameter(TypedParameter parameter) =>
-        $"{parameter.Name}: {SymbolTable.LiteralTypeToDisplayName(parameter.Type)}";
+        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type)}";
 
     /// <summary>
     /// Writes the REPL command help table.

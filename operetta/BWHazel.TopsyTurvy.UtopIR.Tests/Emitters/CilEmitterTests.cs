@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
@@ -1566,6 +1567,158 @@ public class CilEmitterTests
             result.IlSource.ShouldContain("ret");
 
             File.Exists(ilSourcePath).ShouldBeFalse();
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that a standalone <c>summon</c> calls the injected external function with the
+    /// <c>prentice</c>-pushed argument.
+    /// </summary>
+    [Fact]
+    public void Emit_Summon_CallsExternalVoidFunction()
+    {
+        TestHostService.ClearLog();
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.WriteText))!;
+        CilExternalFunction function = new("WriteText", method, [typeof(string)], null, [typeof(TestHostService)]);
+        CilHostInjectedService service = new(typeof(TestHostService), typeof(TestHostService).GetConstructor(Type.EmptyTypes)!);
+
+        UtopIRProgram program = new([
+            new PrenticeInstruction(new LiteralOperand("hello")),
+            new SummonInstruction(new FunctionReference("WriteText")),
+            new FindInstruction(null)
+        ]);
+
+        int exitCode = RunProgramWithExternalFunctions(program, [function], [service]);
+
+        exitCode.ShouldBe(0);
+        TestHostService.Log.ShouldBe(["hello"]);
+    }
+
+    /// <summary>
+    /// Tests that <c>summon.find</c> stores the external function return value into the target
+    /// register, usable by a subsequent <see cref="FindInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonFind_StoresReturnValueUsableByFind()
+    {
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.Double))!;
+        CilExternalFunction function = new("Double", method, [typeof(int)], typeof(int), []);
+
+        UtopIRProgram program = new([
+            new PrenticeInstruction(new LiteralOperand(21)),
+            new SummonFindInstruction(new("result"), new FunctionReference("Double")),
+            new FindInstruction(new VariableOperand(new("result")))
+        ]);
+
+        RunProgramWithExternalFunctions(program, [function], []).ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that a bare <c>summon</c> of a value-returning function pops the unused result rather than
+    /// leaving it on the evaluation stack.
+    /// </summary>
+    [Fact]
+    public void Emit_Summon_OfValueReturningFunctionAsVoidStatement_PopsResultAndDoesNotCrash()
+    {
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.Double))!;
+        CilExternalFunction function = new("Double", method, [typeof(int)], typeof(int), []);
+
+        UtopIRProgram program = new([
+            new PrenticeInstruction(new LiteralOperand(21)),
+            new SummonInstruction(new FunctionReference("Double")),
+            new FindInstruction(new LiteralOperand(7))
+        ]);
+
+        RunProgramWithExternalFunctions(program, [function], []).ShouldBe(7);
+    }
+
+    /// <summary>
+    /// Tests that a host-injected service is constructed once and reused across every subsequent
+    /// <c>summon</c> in the same programme that needs it.
+    /// </summary>
+    [Fact]
+    public void Emit_MultipleSummonCallsNeedingHostInjectedService_ConstructsServiceOnlyOnce()
+    {
+        TestHostService.ClearLog();
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.WriteText))!;
+        CilExternalFunction function = new("WriteText", method, [typeof(string)], null, [typeof(TestHostService)]);
+        CilHostInjectedService service = new(typeof(TestHostService), typeof(TestHostService).GetConstructor(Type.EmptyTypes)!);
+
+        UtopIRProgram program = new([
+            new PrenticeInstruction(new LiteralOperand("first")),
+            new SummonInstruction(new FunctionReference("WriteText")),
+            new PrenticeInstruction(new LiteralOperand("second")),
+            new SummonInstruction(new FunctionReference("WriteText")),
+            new FindInstruction(null)
+        ]);
+
+        RunProgramWithExternalFunctions(program, [function], [service]);
+
+        TestHostService.Log.ShouldBe(["first", "second"]);
+        TestHostService.ConstructionCount.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <c>summon</c> of a function absent from the injected external function set throws a
+    /// clear <see cref="InvalidOperationException"/> naming the offending function, rather than an
+    /// opaque failure deep inside emission.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonUnknownFunction_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([
+            new SummonInstruction(new FunctionReference("DoesNotExist")),
+            new FindInstruction(null)
+        ]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Emits and runs a programme with the given external functions and host-injected services,
+    /// returning the exit code.
+    /// </summary>
+    /// <param name="program">The UtopIR programme to emit.</param>
+    /// <param name="externalFunctions">The external functions callable via <c>summon</c>/<c>summon.find</c>.</param>
+    /// <param name="hostInjectedServices">The host-injected services available to those functions.</param>
+    /// <returns>The exit code returned by the programme.</returns>
+    private static int RunProgramWithExternalFunctions(
+        UtopIRProgram program,
+        IReadOnlyList<CilExternalFunction> externalFunctions,
+        IReadOnlyList<CilHostInjectedService> hostInjectedServices)
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            CilEmitter emitter = new();
+            emitter.Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library, externalFunctions, hostInjectedServices));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            return (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
         }
         finally
         {

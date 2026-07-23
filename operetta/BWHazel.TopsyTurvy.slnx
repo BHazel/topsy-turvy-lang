@@ -1,12 +1,15 @@
 <Solution>
   <Project Path="BWHazel.TopsyTurvy.Ast/BWHazel.TopsyTurvy.Ast.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Analysis/BWHazel.TopsyTurvy.Analysis.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Bindings/BWHazel.TopsyTurvy.Bindings.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Cli/BWHazel.TopsyTurvy.Cli.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Cli.E2ETests/BWHazel.TopsyTurvy.Cli.E2ETests.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Embedded/BWHazel.TopsyTurvy.Embedded.csproj" />
   <Project Path="BWHazel.TopsyTurvy.LanguageServer/BWHazel.TopsyTurvy.LanguageServer.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Runtime/BWHazel.TopsyTurvy.Runtime.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Sdk.Interop/BWHazel.TopsyTurvy.Sdk.Interop.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.StandardLibrary/BWHazel.TopsyTurvy.StandardLibrary.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Tests/BWHazel.TopsyTurvy.Tests.csproj" />
   <Project Path="BWHazel.TopsyTurvy.TypeChecker/BWHazel.TopsyTurvy.TypeChecker.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor/BWHazel.TopsyTurvy.WebEditor.csproj" />
