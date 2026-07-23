@@ -1727,7 +1727,7 @@ The `summon.find` instruction calls a `function`, which must be accessible; call
 
 **Example**
 
-The following example in Topsy Turvy calls a void `&GetPoem` function with a single `yarn` string parameter and a returned `yarn` value:
+The following example in Topsy Turvy calls a `&GetPoem` function with a single `yarn` string parameter and a returned `yarn` value:
 
 ```topsy
 Poem IS APPOINTED SUMMON GetPoem WITH Name IF YOU PLEASE.
