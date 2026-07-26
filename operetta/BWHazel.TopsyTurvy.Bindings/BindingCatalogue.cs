@@ -43,7 +43,7 @@ public sealed class BindingCatalogue
     /// single-<see cref="Type"/> parameter is safe to reflect over, so it silently scanned nothing.  Calling
     /// <see cref="BindingScanner.Scan(Type)"/> directly here keeps that guarantee intact.
     /// </remarks>
-    public static BindingCatalogue Default { get; } = Merge(FromScan(BindingScanner.Scan(typeof(Global))));
+    public static BindingCatalogue Default { get; } = Merge(FromDescriptors(BindingScanner.Scan(typeof(Global))));
 
     /// <summary>
     /// Builds a catalogue directly from an already-scanned descriptor list.
@@ -54,8 +54,10 @@ public sealed class BindingCatalogue
     /// <remarks>
     /// Lets <see cref="Default"/> build from one or more direct, trim-safe <see cref="BindingScanner.Scan(Type)"/>
     /// calls and combine them with <see cref="Merge"/>, instead of going through <see cref="Create(Type[])"/>.
+    /// Also used by <c>ExternalLibraryLoader</c> to build a catalogue from a third-party assembly
+    /// <see cref="BindingScanner.ScanAssembly(System.Reflection.Assembly)"/> result.
     /// </remarks>
-    private static BindingCatalogue FromScan(IReadOnlyList<BoundFunctionDescriptor> functions) => new(functions, IndexByKey(functions));
+    public static BindingCatalogue FromDescriptors(IReadOnlyList<BoundFunctionDescriptor> functions) => new(functions, IndexByKey(functions));
 
     /// <summary>
     /// Gets an empty catalogue.

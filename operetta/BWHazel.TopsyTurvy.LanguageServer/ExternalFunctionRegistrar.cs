@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -77,17 +78,17 @@ internal static class ExternalFunctionRegistrar
     /// <remarks>
     /// The language server is a normal desktop process, so any assembly it references has a real path on disk, and
     /// the compiler-generated XML documentation file sits right beside it under the same name with a <c>.xml</c>
-    /// extension.
+    /// extension. When the language server itself is published as a single file, an assembly bundled inside it
+    /// reports an empty <see cref="Assembly.Location"/>, so the path is instead built from
+    /// <see cref="AppContext.BaseDirectory"/> plus the assembly simple name, matching where the documentation file
+    /// is copied alongside the published executable.
     /// </remarks>
     private static XmlDocumentationIndex? LoadDocumentationIndex(Assembly assembly)
     {
-        string assemblyLocation = assembly.Location;
-        if (string.IsNullOrEmpty(assemblyLocation))
-        {
-            return null;
-        }
+        string documentationPath = string.IsNullOrEmpty(assembly.Location)
+            ? Path.Combine(AppContext.BaseDirectory, $"{assembly.GetName().Name}.xml")
+            : Path.ChangeExtension(assembly.Location, ".xml");
 
-        string documentationPath = Path.ChangeExtension(assemblyLocation, ".xml");
         if (!File.Exists(documentationPath))
         {
             return null;

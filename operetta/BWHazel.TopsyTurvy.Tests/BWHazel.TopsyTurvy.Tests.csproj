@@ -33,6 +33,7 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Sdk.Interop\BWHazel.TopsyTurvy.Sdk.Interop.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.StandardLibrary\BWHazel.TopsyTurvy.StandardLibrary.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture\BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.TypeChecker\BWHazel.TopsyTurvy.TypeChecker.csproj" />
   </ItemGroup>
 

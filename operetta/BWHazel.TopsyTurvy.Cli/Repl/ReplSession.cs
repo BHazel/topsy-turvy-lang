@@ -44,11 +44,24 @@ public sealed class ReplSession
     /// Runs the REPL loop until the user exits.
     /// </summary>
     /// <param name="tiptoe">When <c>true</c>, uses plain-text I/O without styling; when <c>false</c>, renders styled output.</param>
-    public void Run(bool tiptoe)
+    /// <param name="externalLibraryAssemblyPaths">The paths to external library assemblies to admit, or <c>null</c> for none.</param>
+    /// <returns>An integer exit code with 0 for a normal session exit or 1 if an admitted external library failed to load at startup.</returns>
+    /// <remarks>
+    /// External libraries are loaded once here, at startup: there is no REPL command to admit external libraries, so
+    /// <see cref="Interpreter"/> stays fully immutable for the lifetime of the session.
+    /// </remarks>
+    public int Run(bool tiptoe, IReadOnlyList<string>? externalLibraryAssemblyPaths = null)
     {
         bool isInteractive = !Console.IsInputRedirected;
         this.io = new ReplIO(isTiptoe: tiptoe, isInteractive: isInteractive);
-        Interpreter interpreter = new(this.io);
+
+        ExternalLibraryLoadResult loadResult = ExternalLibraryLoader.Load(externalLibraryAssemblyPaths ?? []);
+        if (loadResult.ErrorMessage is not null)
+        {
+            return PanelHelper.ReportUserError(tiptoe, loadResult.ErrorMessage);
+        }
+
+        Interpreter interpreter = new(this.io, loadResult.Catalogue);
 
         // Set up THE PROPS as an empty array: no command-line arguments in the REPL.
         this.sessionEnvironment.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array([]), isConstant: true);
@@ -167,6 +180,8 @@ public sealed class ReplSession
 
             this.EvaluateInput(userInput, interpreter, tiptoe, isInteractive);
         }
+
+        return 0;
     }
 
     /// <summary>

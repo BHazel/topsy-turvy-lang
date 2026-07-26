@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Server;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.LanguageServer;
 
 using OmniSharpServer = OmniSharp.Extensions.LanguageServer.Server.LanguageServer;
@@ -35,8 +36,16 @@ public static class IncantationCommandBuilder
             Hidden = true,
         };
 
+        Option<string[]> admitOption = new("--admit")
+        {
+            Description = "Loads an external .NET assembly (.dll) so its functions become callable via SUMMON.  Can be specified multiple times."
+        };
+
+        admitOption.Aliases.Add("--include");
+
         incantationCommand.Options.Add(stdioOption);
-        incantationCommand.SetAction(_ => HandleIncantationAsync());
+        incantationCommand.Options.Add(admitOption);
+        incantationCommand.SetAction(parseResult => HandleIncantationAsync(parseResult.GetValue(admitOption) ?? []));
 
         return incantationCommand;
     }
@@ -44,14 +53,32 @@ public static class IncantationCommandBuilder
     /// <summary>
     /// Handles execution of the <c>incantation</c> subcommand by starting the LSP server.
     /// </summary>
-    /// <returns>A <see cref="Task"/> that completes when the language server exits.</returns>
-    private static async Task HandleIncantationAsync()
+    /// <param name="externalLibraryAssemblyPaths">The paths to external library assemblies to admit, or empty for none.</param>
+    /// <returns>An integer exit code with 0 for a normal server exit or 1 if an admitted external library failed to load.</returns>
+    /// <remarks>
+    /// A load failure is written as a single line to <see cref="System.Console.Error"/> rather than through
+    /// <see cref="PanelHelper"/>, since this command binds JSON-RPC to standard output and a styled panel would
+    /// corrupt that stream. The failure is also reported before the language server starts, so no partial server
+    /// state is left behind.
+    /// </remarks>
+    private static async Task<int> HandleIncantationAsync(string[] externalLibraryAssemblyPaths)
     {
+        ExternalLibraryLoadResult loadResult = ExternalLibraryLoader.Load(externalLibraryAssemblyPaths);
+        if (loadResult.ErrorMessage is not null)
+        {
+            await System.Console.Error.WriteLineAsync(loadResult.ErrorMessage);
+            return 1;
+        }
+
+        BindingCatalogue externalFunctions = loadResult.Catalogue!;
+
         ILanguageServer server = await OmniSharpServer.From(options =>
             options
                 .WithInput(System.Console.OpenStandardInput())
                 .WithOutput(System.Console.OpenStandardOutput())
-                .WithServices(services => services.AddSingleton<DocumentStateManager>())
+                .WithServices(services => services
+                    .AddSingleton<DocumentStateManager>()
+                    .AddSingleton(externalFunctions))
                 .WithHandler<TextDocumentSyncHandler>()
                 .WithHandler<HoverHandler>()
                 .WithHandler<DefinitionHandler>()
@@ -73,5 +100,6 @@ public static class IncantationCommandBuilder
                         .SetMinimumLevel(LogLevel.Warning)));
 
         await server.WaitForExit;
+        return 0;
     }
 }

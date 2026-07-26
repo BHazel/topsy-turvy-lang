@@ -25,6 +25,15 @@ public sealed class RehearseCommandTests(CliFixture fixture)
 
     private const string InvalidSource = "FINALE.";
 
+    private const string ExternalLibraryCallSource =
+        """
+        HARK! "Test"
+        PRINCIPALS
+        THE CURTAIN RISES.
+        BEHOLD SUMMON Greet WITH "Ko-Ko" IF YOU PLEASE.
+        FINALE.
+        """;
+
     /// <summary>
     /// Tests that the rehearse command returns exit code 1 when the specified file does not exist.
     /// </summary>
@@ -97,5 +106,59 @@ public sealed class RehearseCommandTests(CliFixture fixture)
         (int exitCode, string _, string _) = await this.RunAsync("check prog.topsy --tiptoe");
 
         exitCode.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that the rehearse command returns exit code 0 when a call to an admitted external library function type-checks.
+    /// </summary>
+    [Fact]
+    public async Task Rehearse_WithAdmittedExternalLibrary_ReturnsExitCode0()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ExternalLibraryCallSource);
+
+        (int exitCode, string _, string _) = await this.RunAsync($"rehearse prog.topsy --tiptoe --admit \"{FixtureLibraryPath}\"");
+
+        exitCode.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that the rehearse command returns exit code 1 when a call to an external library function is not admitted.
+    /// </summary>
+    [Fact]
+    public async Task Rehearse_WithoutAdmittingExternalLibrary_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ExternalLibraryCallSource);
+
+        (int exitCode, string _, string _) = await this.RunAsync("rehearse prog.topsy --tiptoe");
+
+        exitCode.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that the rehearse command returns exit code 1 when the admitted external library path does not exist.
+    /// </summary>
+    [Fact]
+    public async Task Rehearse_WithMissingExternalLibrary_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string _, string stderr) = await this.RunAsync("rehearse prog.topsy --tiptoe --admit nonexistent.dll");
+
+        exitCode.ShouldBe(1);
+        stderr.ShouldContain("not found");
+    }
+
+    /// <summary>
+    /// Tests that the rehearse command returns exit code 1 when the same external library is admitted twice.
+    /// </summary>
+    [Fact]
+    public async Task Rehearse_WithSameExternalLibraryAdmittedTwice_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string _, string _) = await this.RunAsync(
+            $"rehearse prog.topsy --tiptoe --admit \"{FixtureLibraryPath}\" --admit \"{FixtureLibraryPath}\"");
+
+        exitCode.ShouldBe(1);
     }
 }
