@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace BWHazel.TopsyTurvy.WebEditor;
 /// IReadOnlyList&lt;string&gt; shadowedFunctions = ExternalFunctionRegistrar.Register(symbolTable);
 /// </code>
 /// </remarks>
-internal static class ExternalFunctionRegistrar
+public static class ExternalFunctionRegistrar
 {
     private const string DocumentationResourceName = "BWHazel.TopsyTurvy.StandardLibrary.xml";
 
@@ -37,8 +38,14 @@ internal static class ExternalFunctionRegistrar
     /// <param name="symbolTable">The symbol table to seed.</param>
     /// <param name="externalFunctions">The catalogue of external functions to add, defaulting to <see cref="BindingCatalogue.Default"/>.</param>
     /// <returns>The names of any external functions shadowed by an existing symbol of the same name.</returns>
-    internal static IReadOnlyList<string> Register(SymbolTable symbolTable, BindingCatalogue? externalFunctions = null)
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="externalFunctions"/> is a non-empty catalogue, since loading a third-party assembly into the browser sandbox is refused for security.</exception>
+    public static IReadOnlyList<string> Register(SymbolTable symbolTable, BindingCatalogue? externalFunctions = null)
     {
+        if (externalFunctions is not null && externalFunctions.Functions.Count > 0)
+        {
+            throw new InvalidOperationException("Operetta Web Theatre does not support external library catalogues.  Third-party assembly loading is refused due to security.");
+        }
+
         if (DocumentationIndex is null)
         {
             return [];
