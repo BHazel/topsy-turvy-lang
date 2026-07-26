@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BWHazel.TopsyTurvy.Analysis;
 using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.LanguageServer;
+using BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture;
 using BWHazel.TopsyTurvy.Tests.Runtime;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
@@ -277,5 +278,42 @@ public class ExternalFunctionTests : LanguageServerTestBase
             CancellationToken.None);
 
         result.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that hovering over a call to a function from an admitted external library returns Markdown containing
+    /// its XML documentation summary, not just its bare name, confirming the per-assembly documentation cache
+    /// resolves a genuinely external assembly the same way it already resolves the Standard Library.
+    /// </summary>
+    [Fact]
+    public async Task Hover_OverAdmittedExternalLibraryFunctionCall_ReturnsRealXmlDocSummary()
+    {
+        BindingCatalogue externalLibraryCatalogue = BindingCatalogue.FromDescriptors(
+            BindingScanner.ScanAssembly(typeof(FixtureLibrary).Assembly));
+        BindingCatalogue mergedCatalogue = BindingCatalogue.Merge(BindingCatalogue.Default, externalLibraryCatalogue);
+
+        string source = """
+            HARK! "Admitted External Library"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            SUMMON Greet WITH "Ko-Ko" IF YOU PLEASE.
+            FINALE.
+            """;
+
+        DocumentStateManager manager = this.CreateManagerWithSource(source, mergedCatalogue);
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(
+            new()
+            {
+                TextDocument = new() { Uri = this.testUri },
+                Position = new(3, 8)
+            },
+            CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        string markdown = result.Contents.MarkupContent!.Value;
+        markdown.ShouldContain("Greets the given name");
     }
 }
