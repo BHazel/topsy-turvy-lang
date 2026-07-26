@@ -35,6 +35,17 @@ public sealed class SorcererCommandTests(CliFixture fixture)
         find £result
         """;
 
+    private const string ExternalLibraryCallSource =
+        """
+        HARK! "Test"
+        PRINCIPALS
+          PRAY WELCOME greeting AS A YARN
+        THE CURTAIN RISES.
+        greeting IS APPOINTED SUMMON Greet WITH "Ko-Ko" IF YOU PLEASE.
+        BEHOLD greeting
+        FINALE.
+        """;
+
     /// <summary>
     /// Tests that <c>sorcerer</c> returns exit code 1 when the specified file does not exist.
     /// </summary>
@@ -487,5 +498,140 @@ public sealed class SorcererCommandTests(CliFixture fixture)
         process.ExitCode.ShouldBe(0);
         stdout.ShouldContain("before");
         stdout.ShouldContain("hello back");
+    }
+
+    /// <summary>
+    /// Tests that <c>--emit dotnet-cil</c> without <c>--admit</c> fails type-checking when the source calls a
+    /// function only available in an external library.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_EmitDotNetCilCallingExternalFunctionWithoutAdmitting_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ExternalLibraryCallSource);
+
+        (int exitCode, string _, string _) = await this.RunAsync("sorcerer prog.topsy --emit dotnet-cil --tiptoe");
+
+        exitCode.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <c>--emit dotnet-cil --admit</c> type-checks and emits CIL for a call into an admitted external library.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_EmitDotNetCilWithAdmittedExternalLibrary_WritesIlTextToStdout()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ExternalLibraryCallSource);
+
+        (int exitCode, string stdout, string _) = await this.RunAsync($"sorcerer prog.topsy --emit dotnet-cil --admit \"{FixtureLibraryPath}\" --tiptoe");
+
+        exitCode.ShouldBe(0);
+        stdout.ShouldContain("call");
+    }
+
+    /// <summary>
+    /// Tests that <c>--target dotnet --admit</c> reports a clean error when the admitted external library path does not exist.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_TargetDotNetWithMissingExternalLibrary_ReturnsExitCode1()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ValidSource);
+
+        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.topsy --target dotnet --admit nonexistent.dll --tiptoe");
+
+        exitCode.ShouldBe(1);
+        stderr.ShouldContain("not found");
+    }
+
+    /// <summary>
+    /// Tests that a compiled programme calling an admitted external library function can run in a fresh directory
+    /// containing only the emitted assembly, its <c>runtimeconfig.json</c>, its Standard Library dependencies,
+    /// and the admitted external library.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_TargetDotNetWithAdmittedExternalLibrary_RunsInIsolatedDirectoryWithOnlyItsDependencies()
+    {
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), ExternalLibraryCallSource);
+
+        (int compileExitCode, string _, string _) = await this.RunAsync($"sorcerer prog.topsy --target dotnet --admit \"{FixtureLibraryPath}\" --tiptoe");
+
+        compileExitCode.ShouldBe(0);
+
+        string fixtureLibraryFileName = Path.GetFileName(FixtureLibraryPath);
+        string[] requiredFiles =
+        [
+            "prog.dll",
+            "prog.runtimeconfig.json",
+            "BWHazel.TopsyTurvy.StandardLibrary.dll",
+            "BWHazel.TopsyTurvy.Sdk.Interop.dll",
+            fixtureLibraryFileName
+        ];
+
+        foreach (string requiredFile in requiredFiles)
+        {
+            File.Exists(Path.Combine(this.WorkingDirectory, requiredFile))
+                .ShouldBeTrue($"'{requiredFile}' should have been copied alongside the compiled assembly.");
+        }
+
+        string isolatedDirectory = Path.Combine(this.WorkingDirectory, "isolated");
+        Directory.CreateDirectory(isolatedDirectory);
+        foreach (string requiredFile in requiredFiles)
+        {
+            File.Copy(Path.Combine(this.WorkingDirectory, requiredFile), Path.Combine(isolatedDirectory, requiredFile));
+        }
+
+        ProcessStartInfo startInfo = new("dotnet", "prog.dll")
+        {
+            WorkingDirectory = isolatedDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
+        using Process process = new()
+        {
+            StartInfo = startInfo
+        };
+        
+        process.Start();
+
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        bool exited = process.WaitForExit(TimeSpan.FromSeconds(10));
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+        }
+
+        string stdout = await stdoutTask;
+        string stderr = await stderrTask;
+
+        stderr.ShouldBeEmpty();
+        process.ExitCode.ShouldBe(0);
+        stdout.ShouldContain("Hello, Ko-Ko!");
+    }
+
+    /// <summary>
+    /// Tests that a Topsy Turvy construct the UtopIR transformer does not support reports a clean error message
+    /// rather than an unhandled exception stack trace.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_EmitUtopIrWithTransformerUnsupportedConstruct_ReturnsCleanErrorMessage()
+    {
+        const string source =
+            """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            BEHOLD SUMMON PreviewBehold WITH "Ko-Ko" AND VERITY IF YOU PLEASE.
+            FINALE.
+            """;
+
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), source);
+
+        (int exitCode, string _, string stderr) = await this.RunAsync("sorcerer prog.topsy --emit utopir --tiptoe");
+
+        exitCode.ShouldBe(1);
+        stderr.ShouldContain("BEHOLD is only supported");
+        stderr.ShouldNotContain("at BWHazel.TopsyTurvy");
     }
 }

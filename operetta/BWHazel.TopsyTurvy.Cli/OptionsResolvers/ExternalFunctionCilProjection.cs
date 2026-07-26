@@ -48,6 +48,17 @@ public static class ExternalFunctionCilProjection
     ];
 
     /// <summary>
+    /// Gets the on-disk paths of every assembly a compiled programme needs alongside it to run standalone, including
+    /// any admitted external library assemblies.
+    /// </summary>
+    /// <param name="externalLibraryAssemblyPaths">The resolved paths of admitted external library assemblies, or <c>null</c> for none.</param>
+    /// <returns><see cref="DeploymentAssemblyPaths"/> with <paramref name="externalLibraryAssemblyPaths"/> appended.</returns>
+    public static IReadOnlyList<string> GetDeploymentAssemblyPaths(IReadOnlyList<string>? externalLibraryAssemblyPaths) =>
+        externalLibraryAssemblyPaths is null || externalLibraryAssemblyPaths.Count == 0
+            ? DeploymentAssemblyPaths
+            : [.. DeploymentAssemblyPaths, .. externalLibraryAssemblyPaths];
+
+    /// <summary>
     /// Projects every function in <paramref name="catalogue"/> into a <see cref="CilExternalFunction"/>.
     /// </summary>
     /// <param name="catalogue">The catalogue to project.</param>
