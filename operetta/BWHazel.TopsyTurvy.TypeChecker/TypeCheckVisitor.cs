@@ -417,8 +417,14 @@ internal sealed class TypeCheckVisitor
         this.DeclareSymbol(node.Name, node.Type);
         if (node.InitialValue is not null)
         {
-            LiteralType? valueType = this.EvaluateExpression(node.InitialValue);
-            if (valueType is not null && !this.IsAssignableFrom(node.Type, valueType.Value))
+            LiteralType? valueType = this.EvaluateExpression(node.InitialValue, out bool isVoid);
+            if (isVoid)
+            {
+                this.Error(
+                    $"Cannot assign void to variable '{node.Name}' declared as {TypeName(node.Type)}.",
+                    node.Span);
+            }
+            else if (valueType is not null && !this.IsAssignableFrom(node.Type, valueType.Value))
             {
                 this.Error(
                     $"Cannot assign {TypeName(valueType.Value)} to variable '{node.Name}' declared as {TypeName(node.Type)}.",
@@ -522,8 +528,12 @@ internal sealed class TypeCheckVisitor
             return;
         }
 
-        LiteralType? valueType = this.EvaluateExpression(valueExpression);
-        if (valueType is not null && valueType.Value != LiteralType.Pointer)
+        LiteralType? valueType = this.EvaluateExpression(valueExpression, out bool isVoid);
+        if (isVoid)
+        {
+            this.Error("Cannot assign void to a pointer variable.", span);
+        }
+        else if (valueType is not null && valueType.Value != LiteralType.Pointer)
         {
             this.Error($"Cannot assign {TypeName(valueType.Value)} to a pointer variable.", span);
         }
@@ -600,11 +610,17 @@ internal sealed class TypeCheckVisitor
             return;
         }
 
-        LiteralType? valueType = this.EvaluateExpression(node.Value);
+        LiteralType? valueType = this.EvaluateExpression(node.Value, out bool isVoid);
 
         if (declaredType is null)
         {
             this.Error($"'{node.Target}' is not declared.", node.Span);
+            return;
+        }
+
+        if (isVoid)
+        {
+            this.Error($"Cannot assign void to '{node.Target}' (declared as {TypeName(declaredType.Value)}).", node.Span);
             return;
         }
 
@@ -627,16 +643,26 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The array element assignment node to check.</param>
     private void CheckArrayElementAssignment(ArrayElementAssignmentNode node)
     {
-        LiteralType? indexType = this.EvaluateExpression(node.Index);
-        LiteralType? valueType = this.EvaluateExpression(node.Value);
+        LiteralType? indexType = this.EvaluateExpression(node.Index, out bool indexIsVoid);
+        LiteralType? valueType = this.EvaluateExpression(node.Value, out bool valueIsVoid);
 
-        if (indexType is not null && !IntegerTypes.Contains(indexType.Value))
+        if (indexIsVoid)
+        {
+            this.Error("Array index must be an integer type, got void.", node.Span);
+        }
+        else if (indexType is not null && !IntegerTypes.Contains(indexType.Value))
         {
             this.Error($"Array index must be an integer type, got {TypeName(indexType.Value)}.", node.Span);
         }
 
         LiteralType? elementType = this.LookupArrayElementType(node.ArrayName);
-        if (elementType is not null && valueType is not null && !this.IsAssignableFrom(elementType.Value, valueType.Value))
+        if (elementType is not null && valueIsVoid)
+        {
+            this.Error(
+                $"Cannot assign void to element of array '{node.ArrayName}' declared as {TypeName(elementType.Value)}.",
+                node.Span);
+        }
+        else if (elementType is not null && valueType is not null && !this.IsAssignableFrom(elementType.Value, valueType.Value))
         {
             this.Error(
                 $"Cannot assign {TypeName(valueType.Value)} to element of array '{node.ArrayName}' declared as {TypeName(elementType.Value)}.",
@@ -656,7 +682,7 @@ internal sealed class TypeCheckVisitor
     private void CheckDereferenceAssignment(DereferenceAssignmentNode node)
     {
         LiteralType? declaredType = this.LookupSymbol(node.PointerName);
-        LiteralType? valueType = this.EvaluateExpression(node.Value);
+        LiteralType? valueType = this.EvaluateExpression(node.Value, out bool isVoid);
 
         if (declaredType is null)
         {
@@ -671,7 +697,13 @@ internal sealed class TypeCheckVisitor
         }
 
         LiteralType? pointeeType = this.LookupPointerPointeeType(node.PointerName);
-        if (pointeeType is not null && valueType is not null && !this.IsAssignableFrom(pointeeType.Value, valueType.Value))
+        if (pointeeType is not null && isVoid)
+        {
+            this.Error(
+                $"Cannot assign void through pointer '{node.PointerName}' declared as {Keywords.TypeNames.GalleryPictureOf} {TypeName(pointeeType.Value)}.",
+                node.Span);
+        }
+        else if (pointeeType is not null && valueType is not null && !this.IsAssignableFrom(pointeeType.Value, valueType.Value))
         {
             this.Error(
                 $"Cannot assign {TypeName(valueType.Value)} through pointer '{node.PointerName}' declared as {Keywords.TypeNames.GalleryPictureOf} {TypeName(pointeeType.Value)}.",
@@ -706,8 +738,12 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The throw node to check.</param>
     private void CheckThrow(ThrowNode node)
     {
-        LiteralType? valueType = this.EvaluateExpression(node.Value);
-        if (valueType is not null && valueType.Value != LiteralType.String)
+        LiteralType? valueType = this.EvaluateExpression(node.Value, out bool isVoid);
+        if (isVoid)
+        {
+            this.Error("A HIDEOUS CURSE ON requires a YARN value, got void.", node.Span);
+        }
+        else if (valueType is not null && valueType.Value != LiteralType.String)
         {
             this.Error(
                 $"A HIDEOUS CURSE ON requires a YARN value, got {TypeName(valueType.Value)}.",
@@ -737,7 +773,7 @@ internal sealed class TypeCheckVisitor
             return;
         }
 
-        LiteralType? valueType = this.EvaluateExpression(node.Value);
+        LiteralType? valueType = this.EvaluateExpression(node.Value, out bool isVoid);
         if (this.functionReturnTypeStack.Count == 0)
         {
             this.Error("AND SO I FIND cannot appear outside a function.", node.Span);
@@ -750,7 +786,13 @@ internal sealed class TypeCheckVisitor
             return;
         }
 
-        if (valueType is not null && !this.IsAssignableFrom(currentReturnType.Value, valueType.Value))
+        if (isVoid)
+        {
+            this.Error(
+                $"Cannot return void from a function declared TO FIND {TypeName(currentReturnType.Value)}.",
+                node.Span);
+        }
+        else if (valueType is not null && !this.IsAssignableFrom(currentReturnType.Value, valueType.Value))
         {
             this.Error(
                 $"Cannot return {TypeName(valueType.Value)} from a function declared TO FIND {TypeName(currentReturnType.Value)}.",
@@ -764,8 +806,12 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The conditional node to check.</param>
     private void CheckConditional(ConditionalNode node)
     {
-        LiteralType? conditionType = this.EvaluateExpression(node.Condition);
-        if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
+        LiteralType? conditionType = this.EvaluateExpression(node.Condition, out bool conditionIsVoid);
+        if (conditionIsVoid)
+        {
+            this.Error("SHOULD IT TRANSPIRE THAT condition must be DECREE, got void.", node.Condition.Span);
+        }
+        else if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
         {
             this.Error(
                 $"SHOULD IT TRANSPIRE THAT condition must be DECREE, got {TypeName(conditionType.Value)}.",
@@ -778,8 +824,12 @@ internal sealed class TypeCheckVisitor
 
         foreach (ElseIfBranch elseIf in node.ElseIfs)
         {
-            LiteralType? elseIfConditionType = this.EvaluateExpression(elseIf.Condition);
-            if (elseIfConditionType is not null && elseIfConditionType.Value != LiteralType.Boolean)
+            LiteralType? elseIfConditionType = this.EvaluateExpression(elseIf.Condition, out bool elseIfConditionIsVoid);
+            if (elseIfConditionIsVoid)
+            {
+                this.Error("OR, IF NOT, condition must be DECREE, got void.", elseIf.Condition.Span);
+            }
+            else if (elseIfConditionType is not null && elseIfConditionType.Value != LiteralType.Boolean)
             {
                 this.Error(
                     $"OR, IF NOT, condition must be DECREE, got {TypeName(elseIfConditionType.Value)}.",
@@ -805,7 +855,12 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The switch node to check.</param>
     private void CheckSwitch(SwitchNode node)
     {
-        LiteralType? switchType = this.EvaluateExpression(node.Expression);
+        LiteralType? switchType = this.EvaluateExpression(node.Expression, out bool switchIsVoid);
+        if (switchIsVoid)
+        {
+            this.Error("IN WHICH CAPACITY? expression cannot be void.", node.Span);
+        }
+
         foreach (SwitchCase switchCase in node.Cases)
         {
             if (switchType is not null && switchCase.Literal is not null)
@@ -840,8 +895,12 @@ internal sealed class TypeCheckVisitor
     {
         if (node.Condition is not null)
         {
-            LiteralType? conditionType = this.EvaluateExpression(node.Condition);
-            if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
+            LiteralType? conditionType = this.EvaluateExpression(node.Condition, out bool conditionIsVoid);
+            if (conditionIsVoid)
+            {
+                this.Error("Loop condition must be DECREE, got void.", node.Condition.Span);
+            }
+            else if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
             {
                 this.Error(
                     $"Loop condition must be DECREE, got {TypeName(conditionType.Value)}.",
@@ -865,8 +924,12 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The guard node to check.</param>
     private void CheckGuard(GuardNode node)
     {
-        LiteralType? conditionType = this.EvaluateExpression(node.Condition);
-        if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
+        LiteralType? conditionType = this.EvaluateExpression(node.Condition, out bool conditionIsVoid);
+        if (conditionIsVoid)
+        {
+            this.Error("YEOMAN condition must be DECREE, got void.", node.Condition.Span);
+        }
+        else if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
         {
             this.Error(
                 $"YEOMAN condition must be DECREE, got {TypeName(conditionType.Value)}.",
@@ -880,16 +943,24 @@ internal sealed class TypeCheckVisitor
     /// <param name="node">The assert node to check.</param>
     private void CheckAssert(AssertNode node)
     {
-        LiteralType? conditionType = this.EvaluateExpression(node.Condition);
-        if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
+        LiteralType? conditionType = this.EvaluateExpression(node.Condition, out bool conditionIsVoid);
+        if (conditionIsVoid)
+        {
+            this.Error("THE LAW IS condition must be DECREE, got void.", node.Condition.Span);
+        }
+        else if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
         {
             this.Error(
                 $"THE LAW IS condition must be DECREE, got {TypeName(conditionType.Value)}.",
                 node.Condition.Span);
         }
 
-        LiteralType? messageType = this.EvaluateExpression(node.ErrorMessage);
-        if (messageType is not null && messageType.Value != LiteralType.String)
+        LiteralType? messageType = this.EvaluateExpression(node.ErrorMessage, out bool messageIsVoid);
+        if (messageIsVoid)
+        {
+            this.Error("THE LAW IS error message must be YARN, got void.", node.ErrorMessage.Span);
+        }
+        else if (messageType is not null && messageType.Value != LiteralType.String)
         {
             this.Error(
                 $"THE LAW IS error message must be YARN, got {TypeName(messageType.Value)}.",
@@ -939,20 +1010,43 @@ internal sealed class TypeCheckVisitor
     /// </summary>
     /// <param name="expression">The expression to evaluate.</param>
     /// <returns>The inferred type of the expression, or <c>null</c> if the type cannot be determined.</returns>
-    private LiteralType? EvaluateExpression(Expression expression)
+    private LiteralType? EvaluateExpression(Expression expression) => this.EvaluateExpression(expression, out _);
+
+    /// <summary>
+    /// Evaluates an expression and returns its inferred <see cref="LiteralType"/>, additionally reporting whether
+    /// the expression is a call to a void function.
+    /// </summary>
+    /// <param name="expression">The expression to evaluate.</param>
+    /// <param name="isVoid">Set to <c>true</c> when the expression is a <c>SUMMON</c> call to a void function.</param>
+    /// <returns>The inferred type of the expression, or <c>null</c> if the type cannot be determined or the expression is void.</returns>
+    /// <remarks>
+    /// A void function call is the only expression shape that can itself be void: every other kind either
+    /// resolves to a concrete type or fails to infer for an unrelated reason, such as an undeclared identifier or an
+    /// already-reported operand error. <paramref name="isVoid"/> lets a caller distinguish "could not infer a
+    /// type" from "this is genuinely void," which a bare <c>null</c> result cannot do on its own.
+    /// </remarks>
+    private LiteralType? EvaluateExpression(Expression expression, out bool isVoid)
     {
-        LiteralType? result = expression switch
+        isVoid = false;
+        LiteralType? result;
+        if (expression is PrefixExpressionNode prefix)
         {
-            LiteralNode literal => InferLiteralNode(literal),
-            IdentifierNode identifier => this.InferIdentifier(identifier),
-            PrefixExpressionNode prefix => this.InferPrefixExpression(prefix),
-            TernaryExpressionNode ternary => this.InferTernary(ternary),
-            ExpressionCastNode cast => cast.NewType,
-            ArrayIndexNode arrayIndex => this.InferArrayIndex(arrayIndex),
-            AddressOfExpressionNode addressOf => this.InferAddressOf(addressOf),
-            DereferenceExpressionNode dereference => this.InferDereference(dereference),
-            _ => null
-        };
+            result = this.InferPrefixExpression(prefix, out isVoid);
+        }
+        else
+        {
+            result = expression switch
+            {
+                LiteralNode literal => InferLiteralNode(literal),
+                IdentifierNode identifier => this.InferIdentifier(identifier),
+                TernaryExpressionNode ternary => this.InferTernary(ternary),
+                ExpressionCastNode cast => cast.NewType,
+                ArrayIndexNode arrayIndex => this.InferArrayIndex(arrayIndex),
+                AddressOfExpressionNode addressOf => this.InferAddressOf(addressOf),
+                DereferenceExpressionNode dereference => this.InferDereference(dereference),
+                _ => null
+            };
+        }
 
         if (result is not null)
         {
@@ -989,9 +1083,21 @@ internal sealed class TypeCheckVisitor
     /// Infers the type of a prefix expression node based on its operator and argument types.
     /// </summary>
     /// <param name="node">The prefix expression node to infer the type of.</param>
+    /// <param name="isVoid">Set to <c>true</c> when the node is a <c>SUMMON</c> call to a void function.</param>
     /// <returns>The inferred type of the prefix expression node, or <c>null</c> if the type cannot be determined.</returns>
-    private LiteralType? InferPrefixExpression(PrefixExpressionNode node)
+    /// <remarks>
+    /// <see cref="Operator.Summon"/> is the only operator whose own result can be void; every other operator
+    /// always produces a concrete type (or fails independently), so <paramref name="isVoid"/> is only ever set by
+    /// <see cref="InferSummon"/>.
+    /// </remarks>
+    private LiteralType? InferPrefixExpression(PrefixExpressionNode node, out bool isVoid)
     {
+        if (node.Operator == Operator.Summon)
+        {
+            return this.InferSummon(node, out isVoid);
+        }
+
+        isVoid = false;
         return node.Operator switch
         {
             Operator.Both => this.InferBooleanOperator(node),
@@ -1017,7 +1123,6 @@ internal sealed class TypeCheckVisitor
             Operator.TranspositionUp => this.InferTranspositionOperator(node),
             Operator.TranspositionDown => this.InferTranspositionOperator(node),
             Operator.WovenOf => LiteralType.String,
-            Operator.Summon => this.InferSummon(node),
             _ => null
         };
     }
@@ -1031,8 +1136,12 @@ internal sealed class TypeCheckVisitor
     {
         foreach (Expression argument in node.Arguments)
         {
-            LiteralType? argumentType = this.EvaluateExpression(argument);
-            if (argumentType is not null && argumentType.Value != LiteralType.Boolean)
+            LiteralType? argumentType = this.EvaluateExpression(argument, out bool isVoid);
+            if (isVoid)
+            {
+                this.Error($"{node.Operator} operand must be DECREE, got void.", argument.Span);
+            }
+            else if (argumentType is not null && argumentType.Value != LiteralType.Boolean)
             {
                 this.Error(
                     $"{node.Operator} operand must be DECREE, got {TypeName(argumentType.Value)}.",
@@ -1056,7 +1165,13 @@ internal sealed class TypeCheckVisitor
         for (int i = 0; i < node.Arguments.Count; i++)
         {
             Expression argument = node.Arguments[i];
-            LiteralType? argumentType = this.EvaluateExpression(argument);
+            LiteralType? argumentType = this.EvaluateExpression(argument, out bool isVoid);
+            if (isVoid)
+            {
+                this.Error($"{node.Operator} operand must be numeric, got void.", argument.Span);
+                return null;
+            }
+
             if (argumentType is null)
             {
                 continue;
@@ -1104,8 +1219,12 @@ internal sealed class TypeCheckVisitor
             return LiteralType.Pointer;
         }
 
-        LiteralType? offsetType = this.EvaluateExpression(node.Arguments[1]);
-        if (offsetType is not null && !IntegerTypes.Contains(offsetType.Value))
+        LiteralType? offsetType = this.EvaluateExpression(node.Arguments[1], out bool offsetIsVoid);
+        if (offsetIsVoid)
+        {
+            this.Error($"{node.Operator} on a pointer requires an integer offset, got void.", node.Arguments[1].Span);
+        }
+        else if (offsetType is not null && !IntegerTypes.Contains(offsetType.Value))
         {
             this.Error(
                 $"{node.Operator} on a pointer requires an integer offset, got {TypeName(offsetType.Value)}.",
@@ -1127,9 +1246,13 @@ internal sealed class TypeCheckVisitor
             return LiteralType.Boolean;
         }
 
-        LiteralType? leftType = this.EvaluateExpression(node.Arguments[0]);
-        LiteralType? rightType = this.EvaluateExpression(node.Arguments[1]);
-        if (leftType is not null && rightType is not null)
+        LiteralType? leftType = this.EvaluateExpression(node.Arguments[0], out bool leftIsVoid);
+        LiteralType? rightType = this.EvaluateExpression(node.Arguments[1], out bool rightIsVoid);
+        if (leftIsVoid || rightIsVoid)
+        {
+            this.Error($"{node.Operator} cannot compare a void value.", node.Span);
+        }
+        else if (leftType is not null && rightType is not null)
         {
             if (!this.AreCompatible(leftType.Value, rightType.Value))
             {
@@ -1151,8 +1274,12 @@ internal sealed class TypeCheckVisitor
     {
         foreach (Expression argument in node.Arguments)
         {
-            LiteralType? argumentType = this.EvaluateExpression(argument);
-            if (argumentType is not null && !NumericTypes.Contains(argumentType.Value))
+            LiteralType? argumentType = this.EvaluateExpression(argument, out bool isVoid);
+            if (isVoid)
+            {
+                this.Error($"{node.Operator} operand must be numeric, got void.", argument.Span);
+            }
+            else if (argumentType is not null && !NumericTypes.Contains(argumentType.Value))
             {
                 this.Error(
                     $"{node.Operator} operand must be numeric, got {TypeName(argumentType.Value)}.",
@@ -1173,7 +1300,13 @@ internal sealed class TypeCheckVisitor
         LiteralType? widenedType = null;
         foreach (Expression argument in node.Arguments)
         {
-            LiteralType? argumentType = this.EvaluateExpression(argument);
+            LiteralType? argumentType = this.EvaluateExpression(argument, out bool isVoid);
+            if (isVoid)
+            {
+                this.Error($"{node.Operator} requires integer operands, got void.", argument.Span);
+                return null;
+            }
+
             if (argumentType is null)
             {
                 continue;
@@ -1203,7 +1336,13 @@ internal sealed class TypeCheckVisitor
     /// <returns>The inferred type of the shifted value (<c>Arguments[0]</c>), or <c>null</c> if it cannot be determined.</returns>
     private LiteralType? InferTranspositionOperator(PrefixExpressionNode node)
     {
-        LiteralType? valueType = this.EvaluateExpression(node.Arguments[0]);
+        LiteralType? valueType = this.EvaluateExpression(node.Arguments[0], out bool valueIsVoid);
+        if (valueIsVoid)
+        {
+            this.Error($"{node.Operator} requires integer operands, got void.", node.Arguments[0].Span);
+            return null;
+        }
+
         if (valueType is not null && !IntegerTypes.Contains(valueType.Value))
         {
             this.Error(
@@ -1215,8 +1354,12 @@ internal sealed class TypeCheckVisitor
 
         if (node.Arguments.Count > 1)
         {
-            LiteralType? shiftType = this.EvaluateExpression(node.Arguments[1]);
-            if (shiftType is not null && !IntegerTypes.Contains(shiftType.Value))
+            LiteralType? shiftType = this.EvaluateExpression(node.Arguments[1], out bool shiftIsVoid);
+            if (shiftIsVoid)
+            {
+                this.Error($"{node.Operator} BY clause requires an integer operand, got void.", node.Arguments[1].Span);
+            }
+            else if (shiftType is not null && !IntegerTypes.Contains(shiftType.Value))
             {
                 this.Error(
                     $"{node.Operator} BY clause requires an integer operand, got {TypeName(shiftType.Value)}.",
@@ -1231,9 +1374,11 @@ internal sealed class TypeCheckVisitor
     /// Infers the type of a summon operator prefix expression node.
     /// </summary>
     /// <param name="node">The prefix expression node to infer the type of.</param>
-    /// <returns>The inferred type of the summon operator prefix expression node, or <c>null</c> if the type cannot be determined.</returns>
-    private LiteralType? InferSummon(PrefixExpressionNode node)
+    /// <param name="isVoid">Set to <c>true</c> when the resolved function is void.</param>
+    /// <returns>The inferred type of the summon operator prefix expression node, or <c>null</c> if the type cannot be determined or the function is void.</returns>
+    private LiteralType? InferSummon(PrefixExpressionNode node, out bool isVoid)
     {
+        isVoid = false;
         if (node.Arguments.Count == 0 || node.Arguments[0] is not IdentifierNode functionIdentifier)
         {
             return null;
@@ -1251,16 +1396,23 @@ internal sealed class TypeCheckVisitor
             this.Error(
                 $"Function '{functionIdentifier.Name}' expects {signature.ParameterTypes.Count} argument(s), got {callArguments.Count}.",
                 node.Span);
-            
+
+            isVoid = signature.ReturnType is null;
             return signature.ReturnType;
         }
 
         for (int i = 0; i < callArguments.Count; i++)
         {
-            LiteralType? argumentType = this.EvaluateExpression(callArguments[i]);
+            LiteralType? argumentType = this.EvaluateExpression(callArguments[i], out bool argumentIsVoid);
             LiteralType parameterType = signature.ParameterTypes[i];
 
-            if (argumentType is not null && !this.IsAssignableFrom(parameterType, argumentType.Value))
+            if (argumentIsVoid)
+            {
+                this.Error(
+                    $"Argument {i + 1} of '{functionIdentifier.Name}' expects {TypeName(parameterType)}, got void.",
+                    callArguments[i].Span);
+            }
+            else if (argumentType is not null && !this.IsAssignableFrom(parameterType, argumentType.Value))
             {
                 this.Error(
                     $"Argument {i + 1} of '{functionIdentifier.Name}' expects {TypeName(parameterType)}, got {TypeName(argumentType.Value)}.",
@@ -1268,6 +1420,7 @@ internal sealed class TypeCheckVisitor
             }
         }
 
+        isVoid = signature.ReturnType is null;
         return signature.ReturnType;
     }
 
@@ -1360,16 +1513,26 @@ internal sealed class TypeCheckVisitor
     /// <returns>The inferred type of the ternary expression node, or <c>null</c> if the type cannot be determined.</returns>
     private LiteralType? InferTernary(TernaryExpressionNode node)
     {
-        LiteralType? conditionType = this.EvaluateExpression(node.Condition);
-        if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
+        LiteralType? conditionType = this.EvaluateExpression(node.Condition, out bool conditionIsVoid);
+        if (conditionIsVoid)
+        {
+            this.Error("Ternary condition must be DECREE, got void.", node.Condition.Span);
+        }
+        else if (conditionType is not null && conditionType.Value != LiteralType.Boolean)
         {
             this.Error(
                 $"Ternary condition must be DECREE, got {TypeName(conditionType.Value)}.",
                 node.Condition.Span);
         }
 
-        LiteralType? trueType = this.EvaluateExpression(node.TrueValue);
-        LiteralType? falseType = this.EvaluateExpression(node.FalseValue);
+        LiteralType? trueType = this.EvaluateExpression(node.TrueValue, out bool trueIsVoid);
+        LiteralType? falseType = this.EvaluateExpression(node.FalseValue, out bool falseIsVoid);
+        if (trueIsVoid || falseIsVoid)
+        {
+            this.Error("Ternary arm cannot be void.", node.Span);
+            return null;
+        }
+
         if (trueType is null || falseType is null)
         {
             return trueType ?? falseType;
@@ -1380,7 +1543,7 @@ internal sealed class TypeCheckVisitor
             this.Error(
                 $"Ternary arms have incompatible types: {TypeName(trueType.Value)} and {TypeName(falseType.Value)}.",
                 node.Span);
-            
+
             return null;
         }
 
@@ -1394,8 +1557,12 @@ internal sealed class TypeCheckVisitor
     /// <returns>The inferred type of the array index expression node, or <c>null</c> if the type cannot be determined.</returns>
     private LiteralType? InferArrayIndex(ArrayIndexNode node)
     {
-        LiteralType? indexType = this.EvaluateExpression(node.Index);
-        if (indexType is not null && !IntegerTypes.Contains(indexType.Value))
+        LiteralType? indexType = this.EvaluateExpression(node.Index, out bool indexIsVoid);
+        if (indexIsVoid)
+        {
+            this.Error("Array index must be an integer type, got void.", node.Index.Span);
+        }
+        else if (indexType is not null && !IntegerTypes.Contains(indexType.Value))
         {
             this.Error($"Array index must be an integer type, got {TypeName(indexType.Value)}.", node.Index.Span);
         }
