@@ -58,4 +58,38 @@ public static class TestExternalFunctionBindingClass
     /// <param name="io">The host-injected input/output implementation.</param>
     [TopsyTurvyFunction(Name = "TestPreviewWrite", IsPreview = true, KeywordAnalogue = "BEHOLD")]
     public static void TestPreviewWrite([TopsyTurvyParameter("Text")] string text, ITopsyTurvyIO io) => io.WriteLine(text);
+
+    /// <summary>
+    /// A function taking an array parameter, used to test array argument marshalling.
+    /// </summary>
+    /// <param name="values">The array of values.</param>
+    /// <returns>The sum of every element in <paramref name="values"/>.</returns>
+    [TopsyTurvyFunction(Name = "TestArraySum")]
+    public static int TestArraySum([TopsyTurvyParameter("Values")] int[] values)
+    {
+        int sum = 0;
+        foreach (int value in values)
+        {
+            sum += value;
+        }
+
+        return sum;
+    }
+
+    /// <summary>
+    /// A function returning an array, used to test array return value marshalling.
+    /// </summary>
+    /// <param name="count">The number of elements to return.</param>
+    /// <returns>An array of <paramref name="count"/> ascending integers, starting at 1.</returns>
+    [TopsyTurvyFunction(Name = "TestArrayRange")]
+    public static int[] TestArrayRange([TopsyTurvyParameter("Count")] int count)
+    {
+        int[] result = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = i + 1;
+        }
+
+        return result;
+    }
 }

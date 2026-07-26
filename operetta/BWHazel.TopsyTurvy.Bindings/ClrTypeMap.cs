@@ -55,4 +55,23 @@ public static class ClrTypeMap
     /// <returns><c>true</c> if the type is mapped, otherwise <c>false</c>.</returns>
     public static bool TryGetClrType(LiteralType literalType, out Type? clrType) =>
         LiteralToClr.TryGetValue(literalType, out clrType);
+
+    /// <summary>
+    /// Attempts to map a CLR array type to the Topsy Turvy <see cref="LiteralType"/> of its element.
+    /// </summary>
+    /// <param name="clrType">The CLR type to map.</param>
+    /// <param name="elementType">The mapped element <see cref="LiteralType"/> when this method returns <c>true</c>.</param>
+    /// <returns><c>true</c> if <paramref name="clrType"/> is a one-dimensional array whose element type is itself mapped, otherwise <c>false</c>.</returns>
+    /// <remarks>
+    /// An array of arrays is not supported: <paramref name="clrType"/>.GetElementType() is mapped through the same
+    /// scalar table <see cref="TryGetLiteralType"/> uses, so a nested array element type returns <c>false</c> here
+    /// the same way any other unmapped type would.
+    /// </remarks>
+    public static bool TryGetArrayElementLiteralType(Type clrType, out LiteralType elementType)
+    {
+        elementType = default;
+        return clrType.IsArray
+            && clrType.GetElementType() is Type elementClrType
+            && TryGetLiteralType(elementClrType, out elementType);
+    }
 }

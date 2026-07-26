@@ -2034,6 +2034,7 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
         LiteralType.Boolean => UtopIRType.Decree,
         LiteralType.Char => UtopIRType.Stitch,
         LiteralType.String => UtopIRType.Yarn,
+        LiteralType.Array => UtopIRType.Array,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"LiteralType '{type}' has no UtopIR equivalent.")
     };
 

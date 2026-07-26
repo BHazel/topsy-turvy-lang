@@ -145,7 +145,18 @@ public static class BindingScanner
                     $"Bound method '{method.DeclaringType?.FullName}.{method.Name}' has a bound parameter '{clrParameter.Name}' after a host-injected parameter; host-injected parameters must trail.");
             }
 
-            if (!ClrTypeMap.TryGetLiteralType(clrParameter.ParameterType, out LiteralType parameterType))
+            LiteralType parameterType;
+            LiteralType? parameterElementType = null;
+            if (ClrTypeMap.TryGetArrayElementLiteralType(clrParameter.ParameterType, out LiteralType arrayElementType))
+            {
+                parameterType = LiteralType.Array;
+                parameterElementType = arrayElementType;
+            }
+            else if (ClrTypeMap.TryGetLiteralType(clrParameter.ParameterType, out LiteralType mappedParameterType))
+            {
+                parameterType = mappedParameterType;
+            }
+            else
             {
                 throw new BindingCatalogueException(
                     $"Bound method '{method.DeclaringType?.FullName}.{method.Name}' has a parameter '{clrParameter.Name}' of unmapped type '{clrParameter.ParameterType}'.");
@@ -158,19 +169,27 @@ public static class BindingScanner
                     $"Bound method '{method.DeclaringType?.FullName}.{method.Name}' has an invalid parameter name '{parameterName}'.");
             }
 
-            parameters.Add(new(parameterName, parameterType, clrParameter.ParameterType));
+            parameters.Add(new(parameterName, parameterType, clrParameter.ParameterType, parameterElementType));
         }
 
         LiteralType? returnType = null;
+        LiteralType? returnElementType = null;
         if (method.ReturnType != typeof(void))
         {
-            if (!ClrTypeMap.TryGetLiteralType(method.ReturnType, out LiteralType mappedReturnType))
+            if (ClrTypeMap.TryGetArrayElementLiteralType(method.ReturnType, out LiteralType arrayReturnElementType))
+            {
+                returnType = LiteralType.Array;
+                returnElementType = arrayReturnElementType;
+            }
+            else if (ClrTypeMap.TryGetLiteralType(method.ReturnType, out LiteralType mappedReturnType))
+            {
+                returnType = mappedReturnType;
+            }
+            else
             {
                 throw new BindingCatalogueException(
                     $"Bound method '{method.DeclaringType?.FullName}.{method.Name}' has an unmapped return type '{method.ReturnType}'.");
             }
-
-            returnType = mappedReturnType;
         }
 
         string? qualifiedNamespace = JoinNamespace(method, binding.Namespace);
@@ -183,7 +202,8 @@ public static class BindingScanner
             binding.KeywordAnalogue,
             hostInjectedParameterCount,
             parameters,
-            returnType);
+            returnType,
+            returnElementType);
     }
 
     /// <summary>

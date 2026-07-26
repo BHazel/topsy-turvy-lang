@@ -30,6 +30,7 @@ namespace BWHazel.TopsyTurvy.Bindings;
 /// <param name="HostInjectedParameterCount">The number of trailing host-injected parameters.</param>
 /// <param name="Parameters">The Topsy Turvy-visible parameters, host-injected services excluded.</param>
 /// <param name="ReturnType">The inferred return type, or <c>null</c> for a void function.</param>
+/// <param name="ReturnElementType">The element type when <paramref name="ReturnType"/> is <see cref="LiteralType.Array"/>, otherwise <c>null</c>.</param>
 public sealed record BoundFunctionDescriptor(
     MethodInfo Method,
     string Name,
@@ -38,4 +39,5 @@ public sealed record BoundFunctionDescriptor(
     string? KeywordAnalogue,
     int HostInjectedParameterCount,
     IReadOnlyList<BoundParameter> Parameters,
-    LiteralType? ReturnType);
+    LiteralType? ReturnType,
+    LiteralType? ReturnElementType = null);
