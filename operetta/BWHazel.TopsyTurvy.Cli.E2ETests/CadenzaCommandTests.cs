@@ -220,4 +220,30 @@ public sealed class CadenzaCommandTests(CliFixture fixture)
         stdout.ShouldContain("name: YARN");
         stdout.ShouldNotContain("TypedParameter");
     }
+
+    /// <summary>
+    /// Tests that the cadenza command calls a function from an external library admitted at startup.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithAdmittedExternalLibrary_CallsExternalFunction()
+    {
+        (int _, string stdout, string _) = await this.RunWithStdinAsync(
+            $"cadenza --admit \"{FixtureLibraryPath}\"",
+            "BEHOLD SUMMON Greet WITH \"Ko-Ko\" IF YOU PLEASE.\n:exit\n");
+
+        stdout.ShouldContain("Hello, Ko-Ko!");
+    }
+
+    /// <summary>
+    /// Tests that the cadenza command returns exit code 1 and reports a clean error when the admitted external
+    /// library path does not exist, without ever starting the REPL loop.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithMissingExternalLibrary_ReturnsExitCode1()
+    {
+        (int exitCode, string _, string stderr) = await this.RunWithStdinAsync("cadenza --admit nonexistent.dll --tiptoe", ":exit\n");
+
+        exitCode.ShouldBe(1);
+        stderr.ShouldContain("not found");
+    }
 }
