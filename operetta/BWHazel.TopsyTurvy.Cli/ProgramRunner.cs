@@ -2,6 +2,7 @@ using System;
 using System.IO.Abstractions;
 using System.Linq;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
 using BWHazel.TopsyTurvy.Sdk.Interop.IO;
@@ -19,10 +20,11 @@ public class ProgramRunner
     /// </summary>
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
     /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
     /// <returns>A result containing the outcome of the syntax check.</returns>
-    public static ProgramExecutionResult Check(string filePath, IFileSystem? fileSystem = null)
+    public static ProgramExecutionResult Check(string filePath, IFileSystem? fileSystem = null, BindingCatalogue? externalFunctions = null)
     {
-        (ProgramExecutionResult result, _) = ParseFile(filePath, fileSystem);
+        (ProgramExecutionResult result, _) = ParseFile(filePath, fileSystem, externalFunctions);
         return result;
     }
 
@@ -31,11 +33,12 @@ public class ProgramRunner
     /// </summary>
     /// <param name="filePath">The path to the Topsy Turvy file.</param>
     /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
     /// <returns>
     /// A tuple containing the <see cref="ProgramExecutionResult"/> and the <see cref="ParseResult"/>,
     /// or <c>null</c> for the parse data if file loading failed before parsing could be attempted.
     /// </returns>
-    public static (ProgramExecutionResult Result, ParseResult? ParseData) ParseFile(string filePath, IFileSystem? fileSystem = null)
+    public static (ProgramExecutionResult Result, ParseResult? ParseData) ParseFile(string filePath, IFileSystem? fileSystem = null, BindingCatalogue? externalFunctions = null)
     {
         (bool success, string? errorMessage) = FileManager.TryReadSource(filePath, out string source, fileSystem);
         if (!success)
@@ -54,7 +57,7 @@ public class ProgramRunner
         }
 
         TopsyTurvyTypeChecker typeChecker = new();
-        TypeCheckResult typeCheckResult = typeChecker.Check(parseData.Program!, CreateFileResolver(filePath, fileSystem));
+        TypeCheckResult typeCheckResult = typeChecker.Check(parseData.Program!, CreateFileResolver(filePath, fileSystem), externalFunctions);
         if (!typeCheckResult.Success)
         {
             return (ProgramExecutionResult.TypeErrors(typeCheckResult.Diagnostics), parseData);
@@ -70,8 +73,9 @@ public class ProgramRunner
     /// <param name="io">The IO implementation to use during execution.</param>
     /// <param name="fileSystem">The file system to use or <c>null</c> to use the real file system.</param>
     /// <param name="commandLineArguments">Command-line arguments to pass to the program, or <c>null</c> for none.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
     /// <returns>A result containing the outcome of the execution.</returns>
-    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io, IFileSystem? fileSystem = null, string[]? commandLineArguments = null)
+    public static ProgramExecutionResult Run(string filePath, ITopsyTurvyIO io, IFileSystem? fileSystem = null, string[]? commandLineArguments = null, BindingCatalogue? externalFunctions = null)
     {
         (bool success, string? errorMessage) = FileManager.TryReadSource(filePath, out string source, fileSystem);
         if (!success)
@@ -92,13 +96,13 @@ public class ProgramRunner
         }
 
         TopsyTurvyTypeChecker typeCheckerForRun = new();
-        TypeCheckResult typeCheckResultForRun = typeCheckerForRun.Check(program, CreateFileResolver(filePath, fileSystem));
+        TypeCheckResult typeCheckResultForRun = typeCheckerForRun.Check(program, CreateFileResolver(filePath, fileSystem), externalFunctions);
         if (!typeCheckResultForRun.Success)
         {
             return ProgramExecutionResult.TypeErrors(typeCheckResultForRun.Diagnostics);
         }
 
-        Interpreter interpreter = new(io);
+        Interpreter interpreter = new(io, externalFunctions);
         DiagnosticCollection diagnostics = interpreter.Execute(program, options: new(null, filePath, null, commandLineArguments));
 
         if (diagnostics.HasErrors)

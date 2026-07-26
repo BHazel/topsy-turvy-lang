@@ -11,6 +11,7 @@
   <Project Path="BWHazel.TopsyTurvy.Sdk.Interop/BWHazel.TopsyTurvy.Sdk.Interop.csproj" />
   <Project Path="BWHazel.TopsyTurvy.StandardLibrary/BWHazel.TopsyTurvy.StandardLibrary.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Tests/BWHazel.TopsyTurvy.Tests.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture/BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture.csproj" />
   <Project Path="BWHazel.TopsyTurvy.TypeChecker/BWHazel.TopsyTurvy.TypeChecker.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor/BWHazel.TopsyTurvy.WebEditor.csproj" />
   <Project Path="BWHazel.TopsyTurvy.WebEditor.E2ETests/BWHazel.TopsyTurvy.WebEditor.E2ETests.csproj" />

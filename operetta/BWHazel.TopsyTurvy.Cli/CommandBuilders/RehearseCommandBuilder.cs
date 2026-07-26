@@ -26,13 +26,22 @@ public static class RehearseCommandBuilder
             Description = "Only prints program output and thus chooses to discard aestheticism."
         };
 
+        Option<string[]> admitOption = new("--admit")
+        {
+            Description = "Loads an external .NET assembly (.dll) so its functions become callable via SUMMON.  Can be specified multiple times."
+        };
+
+        admitOption.Aliases.Add("--include");
+
         rehearseCommand.Arguments.Add(fileArgument);
         rehearseCommand.Options.Add(tiptoeOption);
+        rehearseCommand.Options.Add(admitOption);
 
         rehearseCommand.SetAction(parseResult =>
             HandleRehearse(
                 parseResult.GetValue(fileArgument) ?? string.Empty,
-                parseResult.GetValue(tiptoeOption)));
+                parseResult.GetValue(tiptoeOption),
+                parseResult.GetValue(admitOption) ?? []));
 
         return rehearseCommand;
     }
@@ -42,15 +51,22 @@ public static class RehearseCommandBuilder
     /// </summary>
     /// <param name="filename">The filename of the Topsy Turvy file to rehearse.</param>
     /// <param name="tiptoe">A value indicating whether to only print program output.</param>
+    /// <param name="externalLibraryAssemblyPaths">The paths to external library assemblies to admit, or empty for none.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleRehearse(string filename, bool tiptoe)
+    private static int HandleRehearse(string filename, bool tiptoe, string[] externalLibraryAssemblyPaths)
     {
+        ExternalLibraryLoadResult loadResult = ExternalLibraryLoader.Load(externalLibraryAssemblyPaths);
+        if (loadResult.ErrorMessage is not null)
+        {
+            return PanelHelper.ReportUserError(tiptoe, loadResult.ErrorMessage);
+        }
+
         if (!tiptoe)
         {
             PanelHelper.WriteDefault("Now Rehearsing...", $"[cyan]{filename}[/]");
         }
 
-        ProgramExecutionResult result = ProgramRunner.Check(filename);
+        ProgramExecutionResult result = ProgramRunner.Check(filename, externalFunctions: loadResult.Catalogue);
         if (result.IsSuccess)
         {
             if (!tiptoe)
