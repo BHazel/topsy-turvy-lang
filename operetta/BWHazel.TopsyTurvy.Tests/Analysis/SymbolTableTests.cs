@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Parser;
 
 namespace BWHazel.TopsyTurvy.Tests.Analysis;
@@ -598,6 +599,90 @@ public class SymbolTableTests
         SymbolTable table = this.BuildTable(source);
 
         table.AllSymbols().ShouldNotContain(symbol => symbol.Kind == SymbolKind.Namespace);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.GetFunctionOverloads"/> method returns every function declared under
+    /// a shared name.
+    /// </summary>
+    [Fact]
+    public void GetFunctionOverloads_WithOverloadedFunction_ReturnsBothOverloads()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF first AS A PEER AND second AS A PEER TO FIND YARN
+              AND SO I FIND "two numbers"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        SymbolTable table = this.BuildTable(source);
+
+        IReadOnlyList<SymbolInfo> overloads = table.GetFunctionOverloads("describe");
+
+        overloads.Count.ShouldBe(2);
+        overloads.ShouldAllBe(overload => overload.Kind == SymbolKind.Function);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.GetFunctionOverloads"/> method returns an empty list for a name with
+    /// no declared function.
+    /// </summary>
+    [Fact]
+    public void GetFunctionOverloads_WithUnknownName_ReturnsEmpty()
+    {
+        SymbolTable table = this.BuildTable("HARK! \"Test\"\nFINALE.\n");
+
+        table.GetFunctionOverloads("NoSuchFunction").ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.AddExternalFunction"/> method adds a second external function sharing
+    /// a name with an already-added external function to the overload set, rather than treating it as shadowed.
+    /// </summary>
+    [Fact]
+    public void AddExternalFunction_WithSecondOverloadOfSameName_AddsToOverloadSetAndReturnsTrue()
+    {
+        SymbolTable table = this.BuildTable("HARK! \"Test\"\nFINALE.\n");
+
+        bool firstAdded = table.AddExternalFunction("Describe", [("value", LiteralType.Integer)], LiteralType.String, new());
+        bool secondAdded = table.AddExternalFunction("Describe", [("value", LiteralType.String)], LiteralType.String, new());
+
+        firstAdded.ShouldBeTrue();
+        secondAdded.ShouldBeTrue();
+        table.GetFunctionOverloads("Describe").Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.AddExternalFunction"/> method leaves a Topsy Turvy function alone and
+    /// reports it as shadowed, rather than adding a competing external overload under the same name.
+    /// </summary>
+    [Fact]
+    public void AddExternalFunction_WithNameAlreadyDeclaredInSource_ReturnsFalse()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM Describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        SymbolTable table = this.BuildTable(source);
+
+        bool added = table.AddExternalFunction("Describe", [("value", LiteralType.String)], LiteralType.String, new());
+
+        added.ShouldBeFalse();
+        table.TryGetSymbol("Describe", out SymbolInfo? info);
+        info!.DefinitionLine.ShouldBeGreaterThan(0);
     }
 
     /// <summary>

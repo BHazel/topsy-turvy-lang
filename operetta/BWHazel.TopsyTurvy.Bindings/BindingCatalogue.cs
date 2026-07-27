@@ -7,24 +7,25 @@ using BWHazel.TopsyTurvy.StandardLibrary;
 namespace BWHazel.TopsyTurvy.Bindings;
 
 /// <summary>
-/// An immutable, collision-checked set of bound function descriptors.
+/// An immutable, collision-checked set of bound function descriptors, grouped into overload sets by fully-qualified name.
 /// </summary>
 /// <remarks>
-/// Each descriptor is keyed by its fully-qualified name.  If two descriptors end up with the same key,
-/// whether from the same binding class, different classes or two merged catalogues, construction throws a
-/// <see cref="BindingCatalogueException"/> naming both sources rather than silently keeping one.  Lookup is
-/// case-insensitive.
+/// Each descriptor is grouped under its fully-qualified name; two descriptors under the same name coexist as
+/// overloads as long as their parameter types differ. If two descriptors end up with the same name **and** the
+/// same parameter types, whether from the same binding class, different classes or two merged catalogues,
+/// construction throws a <see cref="BindingCatalogueException"/> naming both sources rather than silently keeping
+/// one. Lookup is case-insensitive.
 /// </remarks>
 public sealed class BindingCatalogue
 {
-    private readonly IReadOnlyDictionary<string, BoundFunctionDescriptor> descriptorsByKey;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<BoundFunctionDescriptor>> descriptorsByKey;
 
     /// <summary>
     /// Initialises a new instance of the <see cref="BindingCatalogue"/> class.
     /// </summary>
     /// <param name="functions">The descriptors held by the catalogue.</param>
-    /// <param name="descriptorsByKey">The descriptors indexed by their resolver-convention key.</param>
-    private BindingCatalogue(IReadOnlyList<BoundFunctionDescriptor> functions, IReadOnlyDictionary<string, BoundFunctionDescriptor> descriptorsByKey)
+    /// <param name="descriptorsByKey">The descriptors indexed by their resolver-convention key, grouped into overload sets.</param>
+    private BindingCatalogue(IReadOnlyList<BoundFunctionDescriptor> functions, IReadOnlyDictionary<string, IReadOnlyList<BoundFunctionDescriptor>> descriptorsByKey)
     {
         this.Functions = functions;
         this.descriptorsByKey = descriptorsByKey;
@@ -65,7 +66,7 @@ public sealed class BindingCatalogue
     /// <remarks>
     /// This is intended for hosts that need no external functions.
     /// </remarks>
-    public static BindingCatalogue Empty { get; } = new([], new Dictionary<string, BoundFunctionDescriptor>(StringComparer.OrdinalIgnoreCase));
+    public static BindingCatalogue Empty { get; } = new([], new Dictionary<string, IReadOnlyList<BoundFunctionDescriptor>>(StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// Gets all descriptors held by the catalogue.
@@ -113,46 +114,106 @@ public sealed class BindingCatalogue
     }
 
     /// <summary>
-    /// Looks up a descriptor by resolved name.
+    /// Looks up every overload bound under a resolved name.
+    /// </summary>
+    /// <param name="qualifiedName">The fully-qualified name, or bare for global namespace, for a function, matching the convention of the resolver.</param>
+    /// <returns>Every descriptor bound under that name, or an empty list if none exist.</returns>
+    /// <remarks>
+    /// A caller resolving an actual call site should filter this list by the call argument types; this method
+    /// itself does not know what arguments, if any, the caller has.
+    /// </remarks>
+    public IReadOnlyList<BoundFunctionDescriptor> FindAll(string qualifiedName) =>
+        this.descriptorsByKey.TryGetValue(qualifiedName, out IReadOnlyList<BoundFunctionDescriptor>? descriptors)
+            ? descriptors
+            : [];
+
+    /// <summary>
+    /// Looks up the single descriptor bound under a resolved name.
     /// </summary>
     /// <param name="qualifiedName">The fully-qualified name, or bare for global namespace, for
     /// a function, matching the convention of the resolver.</param>
     /// <returns>The matching descriptor, or <c>null</c> if no descriptor has that key.</returns>
-    public BoundFunctionDescriptor? Find(string qualifiedName) =>
-        this.descriptorsByKey.TryGetValue(qualifiedName, out BoundFunctionDescriptor? descriptor)
-            ? descriptor
-            : null;
+    /// <exception cref="BindingCatalogueException">Thrown when more than one overload is bound under that name; call <see cref="FindAll"/> and resolve by argument type instead.</exception>
+    public BoundFunctionDescriptor? Find(string qualifiedName)
+    {
+        IReadOnlyList<BoundFunctionDescriptor> candidates = this.FindAll(qualifiedName);
+        return candidates.Count switch
+        {
+            0 => null,
+            1 => candidates[0],
+            _ => throw new BindingCatalogueException(
+                $"Function '{qualifiedName}' has {candidates.Count} overloads; resolving by name alone is ambiguous. Use {nameof(FindAll)} and resolve by argument type instead.")
+        };
+    }
 
     /// <summary>
-    /// Builds a lookup dictionary from a set of descriptors, keyed by qualified name, detecting collisions.
+    /// Builds a lookup dictionary from a set of descriptors, grouped into overload sets by qualified name,
+    /// detecting a same-name, same-parameter-types collision.
     /// </summary>
     /// <param name="functions">The descriptors to build the lookup from.</param>
-    /// <returns>A dictionary mapping each descriptor qualified name to the descriptor itself.</returns>
+    /// <returns>A dictionary mapping each qualified name to its overload set.</returns>
     /// <remarks>
     /// The key is <see cref="BoundFunctionDescriptor.Namespace"/> plus <see cref="BoundFunctionDescriptor.Name"/>,
     /// for example <c>Accounts.Payroll.CalculateTax</c>, matching how the interpreter and type checker already
     /// identify a qualified function internally. <see cref="BindingScanner"/> builds this dot-joined form before
     /// a descriptor ever reaches this method, so nothing here needs to construct it.
     /// </remarks>
-    /// <exception cref="BindingCatalogueException">Thrown when descriptors share a key.</exception>
-    private static IReadOnlyDictionary<string, BoundFunctionDescriptor> IndexByKey(IReadOnlyList<BoundFunctionDescriptor> functions)
+    /// <exception cref="BindingCatalogueException">Thrown when two descriptors share both a key and parameter types.</exception>
+    private static IReadOnlyDictionary<string, IReadOnlyList<BoundFunctionDescriptor>> IndexByKey(IReadOnlyList<BoundFunctionDescriptor> functions)
     {
-        Dictionary<string, BoundFunctionDescriptor> descriptorsByKey = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, List<BoundFunctionDescriptor>> overloadsByKey = new(StringComparer.OrdinalIgnoreCase);
         foreach (BoundFunctionDescriptor function in functions)
         {
             string key = function.Namespace is null
                 ? function.Name
                 : $"{function.Namespace}.{function.Name}";
 
-            if (descriptorsByKey.TryGetValue(key, out BoundFunctionDescriptor? existing))
+            if (!overloadsByKey.TryGetValue(key, out List<BoundFunctionDescriptor>? overloads))
             {
-                throw new BindingCatalogueException(
-                    $"Function '{key}' is bound more than once: '{existing.Method.DeclaringType?.FullName}.{existing.Method.Name}' and '{function.Method.DeclaringType?.FullName}.{function.Method.Name}'.");
+                overloads = [];
+                overloadsByKey[key] = overloads;
             }
 
-            descriptorsByKey[key] = function;
+            BoundFunctionDescriptor? duplicate = overloads.Find(existing => HasSameParameterTypes(existing, function));
+            if (duplicate is not null)
+            {
+                throw new BindingCatalogueException(
+                    $"Function '{key}' is bound more than once with the same parameter types: '{duplicate.Method.DeclaringType?.FullName}.{duplicate.Method.Name}' and '{function.Method.DeclaringType?.FullName}.{function.Method.Name}'.");
+            }
+
+            overloads.Add(function);
         }
 
-        return descriptorsByKey;
+        return overloadsByKey.ToDictionary(
+            pair => pair.Key,
+            IReadOnlyList<BoundFunctionDescriptor> (pair) => pair.Value,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether two descriptors have the same parameter list, comparing both the parameter type and,
+    /// for an array parameter, its element type.
+    /// </summary>
+    /// <param name="first">The first descriptor.</param>
+    /// <param name="second">The second descriptor.</param>
+    /// <returns><c>true</c> if every parameter matches in order, otherwise <c>false</c>.</returns>
+    private static bool HasSameParameterTypes(BoundFunctionDescriptor first, BoundFunctionDescriptor second)
+    {
+        if (first.Parameters.Count != second.Parameters.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < first.Parameters.Count; i++)
+        {
+            BoundParameter firstParameter = first.Parameters[i];
+            BoundParameter secondParameter = second.Parameters[i];
+            if (firstParameter.Type != secondParameter.Type || firstParameter.ArrayElementType != secondParameter.ArrayElementType)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

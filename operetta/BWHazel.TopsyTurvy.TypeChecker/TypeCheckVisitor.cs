@@ -73,7 +73,7 @@ internal sealed class TypeCheckVisitor
 
     /// <summary>
     /// The dot-joined namespace paths opened via <c>PRAY RECOGNISE</c> statements encountered so far
-    /// in <see cref="CheckStatements"/>, used by <see cref="ResolveFunctionSignature"/> to resolve a
+    /// in <see cref="CheckStatements"/>, used by <see cref="ResolveFunctionOverloads"/> to resolve a
     /// bare <c>SUMMON</c> name.
     /// </summary>
     private readonly HashSet<string> openNamespaces = [];
@@ -178,10 +178,12 @@ internal sealed class TypeCheckVisitor
     /// </summary>
     /// <param name="externalFunctions">The catalogue of external functions to seed.</param>
     /// <remarks>
-    /// A signature already present at a key, from a Topsy Turvy function collected earlier, is left alone: a
-    /// Topsy Turvy function shadows an external one of the same name, so growing the Standard Library can never change
-    /// the behaviour of an existing programme.  <see cref="ResolveFunctionSignature"/> needs no changes at all to see
-    /// a seeded signature: it already resolves purely against the model, with no idea whether a given signature came
+    /// A Topsy Turvy overload already collected under a key with the same parameter types is left alone: a
+    /// Topsy Turvy function shadows an external one of identical signature, so imported functions should never
+    /// change the behaviour of an existing programme.  Every other external descriptor is added as its own
+    /// overload, since <see cref="BindingCatalogue"/> has already rejected a true duplicate by the time a
+    /// descriptor reaches this method.  <see cref="ResolveFunctionOverloads"/> needs no changes at all to see a
+    /// seeded signature: it already resolves purely against the model, with no idea whether a given signature came
     /// from a Topsy Turvy function or an external one.
     /// </remarks>
     private void SeedExternalFunctionSignatures(BindingCatalogue externalFunctions)
@@ -189,16 +191,18 @@ internal sealed class TypeCheckVisitor
         foreach (BoundFunctionDescriptor functionDescriptor in externalFunctions.Functions)
         {
             string functionKey = QualifyName(functionDescriptor.Namespace, functionDescriptor.Name);
-            if (this.model.GetFunctionSignature(functionKey) is not null)
-            {
-                continue;
-            }
-
             FunctionSignature signature = new(
                 [.. functionDescriptor.Parameters.Select(static parameter => parameter.Type)],
                 functionDescriptor.ReturnType);
 
-            this.model.SetFunctionSignature(functionKey, signature);
+            bool shadowedByTopsyTurvyFunction = this.model.GetFunctionSignatures(functionKey)
+                .Any(existing => existing.ParameterTypes.SequenceEqual(signature.ParameterTypes));
+            if (shadowedByTopsyTurvyFunction)
+            {
+                continue;
+            }
+
+            this.model.AddFunctionSignature(functionKey, signature);
         }
     }
 
@@ -267,7 +271,21 @@ internal sealed class TypeCheckVisitor
                     [.. function.Parameters.Select(static parameter => parameter.Type)],
                     function.ReturnType);
 
-                this.model.SetFunctionSignature(QualifyName(namespacePrefix, function.Name), signature);
+                string key = QualifyName(namespacePrefix, function.Name);
+                bool isDuplicate = this.model.GetFunctionSignatures(key)
+                    .Any(existing => existing.ParameterTypes.SequenceEqual(signature.ParameterTypes));
+
+                if (isDuplicate)
+                {
+                    this.Error(
+                        $"Function '{function.Name}' is already declared with the same parameter types.",
+                        function.NameSpan);
+                }
+                else
+                {
+                    this.model.AddFunctionSignature(key, signature);
+                }
+
                 this.CollectFunctionSignatures(function.Body, sourceFileResolver, visitedImports, namespacePrefix);
             }
             else if (statement is ImportNode importNode && sourceFileResolver is not null && visitedImports.Add(importNode.FilePath))
@@ -1384,63 +1402,193 @@ internal sealed class TypeCheckVisitor
             return null;
         }
 
-        FunctionSignature? signature = this.ResolveFunctionSignature(functionIdentifier.Name, node.Span);
-        if (signature is null)
+        IReadOnlyList<FunctionSignature>? overloads = this.ResolveFunctionOverloads(functionIdentifier.Name, node.Span);
+        if (overloads is null)
         {
             return null;
         }
 
         IReadOnlyList<Expression> callArguments = [.. node.Arguments.Skip(1)];
-        if (callArguments.Count != signature.ParameterTypes.Count)
+        List<FunctionSignature> arityMatches = [.. overloads.Where(signature => signature.ParameterTypes.Count == callArguments.Count)];
+        if (arityMatches.Count == 0)
         {
+            string arities = string.Join(" or ", overloads.Select(static signature => signature.ParameterTypes.Count).Distinct().OrderBy(static count => count));
             this.Error(
-                $"Function '{functionIdentifier.Name}' expects {signature.ParameterTypes.Count} argument(s), got {callArguments.Count}.",
+                $"Function '{functionIdentifier.Name}' expects {arities} argument(s), got {callArguments.Count}.",
                 node.Span);
 
-            isVoid = signature.ReturnType is null;
-            return signature.ReturnType;
+            return null;
         }
 
+        LiteralType?[] argumentTypes = new LiteralType?[callArguments.Count];
+        bool anyArgumentVoid = false;
         for (int i = 0; i < callArguments.Count; i++)
         {
-            LiteralType? argumentType = this.EvaluateExpression(callArguments[i], out bool argumentIsVoid);
-            LiteralType parameterType = signature.ParameterTypes[i];
-
+            argumentTypes[i] = this.EvaluateExpression(callArguments[i], out bool argumentIsVoid);
             if (argumentIsVoid)
             {
-                this.Error(
-                    $"Argument {i + 1} of '{functionIdentifier.Name}' expects {TypeName(parameterType)}, got void.",
-                    callArguments[i].Span);
-            }
-            else if (argumentType is not null && !this.IsAssignableFrom(parameterType, argumentType.Value))
-            {
-                this.Error(
-                    $"Argument {i + 1} of '{functionIdentifier.Name}' expects {TypeName(parameterType)}, got {TypeName(argumentType.Value)}.",
-                    callArguments[i].Span);
+                this.Error($"Argument {i + 1} of '{functionIdentifier.Name}' cannot be void.", callArguments[i].Span);
+                anyArgumentVoid = true;
             }
         }
 
-        isVoid = signature.ReturnType is null;
-        return signature.ReturnType;
+        if (anyArgumentVoid)
+        {
+            return null;
+        }
+
+        // Pick the arity-matching candidate with the lowest ScoreOverload distance (0 = exact match on every
+        // parameter, higher = more widening needed). A tie for lowest score between two or more candidates
+        // means the call does not favour one overload over the other, so it is reported as ambiguous rather
+        // than silently picking whichever candidate happened to be scored first.
+        FunctionSignature? bestMatchSignature = null;
+        int bestMatchScore = int.MaxValue;
+        bool bestMatchIsAmbiguous = false;
+        foreach (FunctionSignature candidate in arityMatches)
+        {
+            int? candidateScore = this.ScoreOverload(candidate, argumentTypes);
+            if (candidateScore is null)
+            {
+                continue;
+            }
+
+            if (bestMatchSignature is null || candidateScore < bestMatchScore)
+            {
+                bestMatchSignature = candidate;
+                bestMatchScore = candidateScore.Value;
+                bestMatchIsAmbiguous = false;
+            }
+            else if (candidateScore == bestMatchScore)
+            {
+                bestMatchIsAmbiguous = true;
+            }
+        }
+
+        if (bestMatchSignature is null)
+        {
+            this.ReportNoMatchingOverload(functionIdentifier.Name, arityMatches, argumentTypes, callArguments, node.Span);
+            return null;
+        }
+
+        if (bestMatchIsAmbiguous)
+        {
+            this.Error(
+                $"Call to function '{functionIdentifier.Name}' is ambiguous between {arityMatches.Count} overloads.",
+                node.Span);
+
+            return null;
+        }
+
+        isVoid = bestMatchSignature.ReturnType is null;
+        return bestMatchSignature.ReturnType;
     }
 
     /// <summary>
-    /// Resolves a <c>SUMMON</c> call target, bare or namespace-qualified, to its function signature.
+    /// Scores how well a candidate overload matches a call already-inferred argument types.
+    /// </summary>
+    /// <param name="candidate">The candidate signature, already known to have the right parameter count.</param>
+    /// <param name="argumentTypes">The inferred type of each call argument, in order; <c>null</c> for an argument whose type could not be inferred.</param>
+    /// <returns>
+    /// The total widening distance across all parameters, zero for an exact match, or <c>null</c> if any
+    /// parameter rejects its argument outright.
+    /// </returns>
+    /// <remarks>
+    /// An argument whose type could not be inferred, for example an undeclared identifier already reported
+    /// elsewhere, is skipped rather than counted against or in favour of the candidate: it carries no
+    /// information either way, and penalising it would make an unrelated error cascade into a spurious
+    /// no-matching-overload or ambiguous-call diagnostic here as well.
+    /// </remarks>
+    private int? ScoreOverload(FunctionSignature candidate, IReadOnlyList<LiteralType?> argumentTypes)
+    {
+        int score = 0;
+        for (int i = 0; i < candidate.ParameterTypes.Count; i++)
+        {
+            LiteralType? argumentType = argumentTypes[i];
+            if (argumentType is null)
+            {
+                continue;
+            }
+
+            LiteralType parameterType = candidate.ParameterTypes[i];
+            if (parameterType == argumentType.Value)
+            {
+                continue;
+            }
+
+            if (!this.IsAssignableFrom(parameterType, argumentType.Value))
+            {
+                return null;
+            }
+
+            score += Math.Abs(IndexOfNumericWidening(argumentType.Value) - IndexOfNumericWidening(parameterType));
+        }
+
+        return score;
+    }
+
+    /// <summary>
+    /// Reports a diagnostic for a call that matched no overload by argument type, after arity had already narrowed
+    /// the overload set to at least one candidate.
+    /// </summary>
+    /// <param name="functionName">The called function name, for the diagnostic message.</param>
+    /// <param name="arityMatches">The overloads that matched the call argument count.</param>
+    /// <param name="argumentTypes">The inferred type of each call argument, in order.</param>
+    /// <param name="callArguments">The call argument expressions, in order, used only for their source spans.</param>
+    /// <param name="span">The call source span, used when there is more than one arity-matching overload.</param>
+    /// <remarks>
+    /// With exactly one arity-matching candidate, this reproduces the same per-argument diagnostics a
+    /// non-overloaded call has always reported, naming the single expected type.  With more than one, naming
+    /// a single expected type per argument would be misleading, so a single overload-level diagnostic is
+    /// reported instead.
+    /// </remarks>
+    private void ReportNoMatchingOverload(
+        string functionName,
+        IReadOnlyList<FunctionSignature> arityMatches,
+        IReadOnlyList<LiteralType?> argumentTypes,
+        IReadOnlyList<Expression> callArguments,
+        SourceSpan span)
+    {
+        if (arityMatches.Count == 1)
+        {
+            FunctionSignature signature = arityMatches[0];
+            for (int i = 0; i < signature.ParameterTypes.Count; i++)
+            {
+                LiteralType? argumentType = argumentTypes[i];
+                if (argumentType is not null && !this.IsAssignableFrom(signature.ParameterTypes[i], argumentType.Value))
+                {
+                    this.Error(
+                        $"Argument {i + 1} of '{functionName}' expects {TypeName(signature.ParameterTypes[i])}, got {TypeName(argumentType.Value)}.",
+                        callArguments[i].Span);
+                }
+            }
+
+            return;
+        }
+
+        this.Error($"No overload of function '{functionName}' matches the given argument types.", span);
+    }
+
+    /// <summary>
+    /// Resolves a <c>SUMMON</c> call target, bare or namespace-qualified, to its overload set.
     /// </summary>
     /// <param name="functionName">The name to resolve.</param>
     /// <param name="span">The source span of the call, used for diagnostics.</param>
-    /// <returns>The resolved <see cref="FunctionSignature"/>, or <c>null</c> if it could not be resolved.</returns>
+    /// <returns>The resolved overload set, or <c>null</c> if it could not be resolved.</returns>
     /// <remarks>
     /// <para>
     /// A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target and is looked up
     /// directly, since <c>.</c> never appears in a bare Topsy Turvy identifier.
     /// </para>
     /// <para>
-    /// A bare name is resolved in tiers, the first tier with exactly one match winning:
+    /// A bare name is resolved in tiers, the first tier with at least one match winning:
     /// * The entry programme namespace (<see cref="entryNamespace"/>).
     /// * Then each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
-    ///     * Two or more matches here is an ambiguous reference.
-    /// * Then finally the global (non-namespaced) signature.
+    ///     * Two or more namespaces matching here is an ambiguous reference.
+    /// * Then finally the global (non-namespaced) overload set.
+    /// </para>
+    /// <para>
+    /// This tiered lookup resolves a name to a namespace, not to a specific overload: once a tier overload
+    /// set is chosen, <see cref="InferSummon"/> resolves the specific overload within it by argument type.
     /// </para>
     /// <para>
     /// An unresolved name emits an <c>Error</c> diagnostic itself, unlike most <c>Infer*</c> methods in
@@ -1448,37 +1596,38 @@ internal sealed class TypeCheckVisitor
     /// path back to the caller.
     /// </para>
     /// </remarks>
-    private FunctionSignature? ResolveFunctionSignature(string functionName, SourceSpan span)
+    private IReadOnlyList<FunctionSignature>? ResolveFunctionOverloads(string functionName, SourceSpan span)
     {
         if (functionName.Contains('.'))
         {
-            FunctionSignature? qualifiedMatch = this.model.GetFunctionSignature(functionName);
-            if (qualifiedMatch is null)
+            IReadOnlyList<FunctionSignature> qualifiedMatches = this.model.GetFunctionSignatures(functionName);
+            if (qualifiedMatches.Count == 0)
             {
                 this.Error($"Function '{functionName}' is not defined.", span);
+                return null;
             }
 
-            return qualifiedMatch;
+            return qualifiedMatches;
         }
 
         if (this.entryNamespace is not null)
         {
-            FunctionSignature? sameNamespaceMatch = this.model.GetFunctionSignature(QualifyName(this.entryNamespace, functionName));
-            if (sameNamespaceMatch is not null)
+            IReadOnlyList<FunctionSignature> sameNamespaceMatches = this.model.GetFunctionSignatures(QualifyName(this.entryNamespace, functionName));
+            if (sameNamespaceMatches.Count > 0)
             {
-                return sameNamespaceMatch;
+                return sameNamespaceMatches;
             }
         }
 
         List<string> matchedNamespaces = [];
-        FunctionSignature? openNamespaceMatch = null;
+        IReadOnlyList<FunctionSignature>? openNamespaceMatches = null;
         foreach (string openNamespace in this.openNamespaces)
         {
-            FunctionSignature? functionCandidate = this.model.GetFunctionSignature(QualifyName(openNamespace, functionName));
-            if (functionCandidate is not null)
+            IReadOnlyList<FunctionSignature> candidate = this.model.GetFunctionSignatures(QualifyName(openNamespace, functionName));
+            if (candidate.Count > 0)
             {
                 matchedNamespaces.Add(openNamespace);
-                openNamespaceMatch = functionCandidate;
+                openNamespaceMatches = candidate;
             }
         }
 
@@ -1492,18 +1641,19 @@ internal sealed class TypeCheckVisitor
             return null;
         }
 
-        if (openNamespaceMatch is not null)
+        if (openNamespaceMatches is not null)
         {
-            return openNamespaceMatch;
+            return openNamespaceMatches;
         }
 
-        FunctionSignature? globalMatch = this.model.GetFunctionSignature(functionName);
-        if (globalMatch is null)
+        IReadOnlyList<FunctionSignature> globalMatches = this.model.GetFunctionSignatures(functionName);
+        if (globalMatches.Count == 0)
         {
             this.Error($"Function '{functionName}' is not defined.", span);
+            return null;
         }
 
-        return globalMatch;
+        return globalMatches;
     }
 
     /// <summary>

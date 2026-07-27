@@ -61,12 +61,15 @@ public class SignatureHelpHandler(DocumentStateManager documentStateManager)
     /// * The text before the cursor on the current line is scanned for a <c>SUMMON</c> keyword.  If not found, or the call is already complete (the closing <c>IF YOU PLEASE.</c> is present), <c>null</c> is returned.
     /// * The function name is extracted as the first token following <c>SUMMON</c> and looked up in the symbol table.  If not found or not a function, <c>null</c> is returned.
     /// * If no <c> WITH</c> has been typed yet, or the argument list begins with <c>NOTHING</c> (a zero-argument call), <c>null</c> is returned.
-    /// * The active parameter index is determined by counting <c>AND</c> separators in the argument text using <see cref="CountAndTokens"/>, clamped to the last parameter index.
-    /// * A <see cref="SignatureHelp"/> is built with the function label and parameter list and returned to the client.
+    /// * The argument index currently being typed is determined by counting <c>AND</c> separators in the argument text using <see cref="CountAndTokens"/>.
+    /// * Every overload declared under the function name is fetched from the symbol table and turned into its own <see cref="SignatureInformation"/> via <see cref="BuildSignatureInformation"/>.
+    /// * <see cref="FindActiveSignature"/> picks the first overload, in declaration order, whose parameter count still has room for the argument index above, defaulting to the first overload if none do; the active parameter index is then clamped to the last parameter index of that overload.
+    /// * A <see cref="SignatureHelp"/> is built with the full overload list and returned to the client.
     /// </remarks>
     /// <returns>
-    /// A task resolving to a <see cref="SignatureHelp"/> containing the function signature and the index of the
-    /// active parameter, or <c>null</c> if no in-progress function call is detected at the cursor position.
+    /// A task resolving to a <see cref="SignatureHelp"/> containing every declared overload of the function and the
+    /// index of the active signature and parameter, or <c>null</c> if no in-progress function call is detected at
+    /// the cursor position.
     /// </returns>
     public override Task<SignatureHelp?> Handle(SignatureHelpParams request, CancellationToken cancellationToken)
     {
@@ -126,30 +129,22 @@ public class SignatureHelpHandler(DocumentStateManager documentStateManager)
                 return Task.FromResult<SignatureHelp?>(null);
             }
 
-            int activeParamIndex = CountAndTokens(afterWithText);
-            int paramCount = info.TypedParameters?.Count ?? 0;
-            if (paramCount > 0)
-            {
-                activeParamIndex = Math.Min(activeParamIndex, paramCount - 1);
-            }
+            int calledArgumentIndex = CountAndTokens(afterWithText);
 
-            IReadOnlyList<TypedParameter> typedParameters = info.TypedParameters ?? [];
-            string label = $"{info.Name}({string.Join(", ", typedParameters.Select(static parameter => parameter.Name))})";
-            List<ParameterInformation> parameterInfoEntries = [.. typedParameters
-                .Select(static parameter => new ParameterInformation()
-                    {
-                        Label = parameter.Name
-                    })];
+            IReadOnlyList<SymbolInfo> overloads = state.SymbolTable.GetFunctionOverloads(functionName) is { Count: > 0 } candidates
+                ? candidates
+                : [info];
+
+            List<SignatureInformation> signatures = [.. overloads.Select(overload => BuildSignatureInformation(overload))];
+            int activeSignature = FindActiveSignature(overloads, calledArgumentIndex);
+            int activeParamIndex = overloads[activeSignature].TypedParameters is { Count: > 0 } activeParameters
+                ? Math.Min(calledArgumentIndex, activeParameters.Count - 1)
+                : 0;
 
             return Task.FromResult<SignatureHelp?>(new()
             {
-                Signatures = new(
-                    new SignatureInformation()
-                    {
-                        Label = label,
-                        Parameters = new(parameterInfoEntries)
-                    }),
-                ActiveSignature = 0,
+                Signatures = new(signatures),
+                ActiveSignature = activeSignature,
                 ActiveParameter = activeParamIndex
             });
         }
@@ -180,5 +175,52 @@ public class SignatureHelpHandler(DocumentStateManager documentStateManager)
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// Builds the LSP signature information for a single function overload.
+    /// </summary>
+    /// <param name="overload">The overload to build signature information for.</param>
+    /// <returns>The built <see cref="SignatureInformation"/>.</returns>
+    private static SignatureInformation BuildSignatureInformation(SymbolInfo overload)
+    {
+        IReadOnlyList<TypedParameter> typedParameters = overload.TypedParameters ?? [];
+        string label = $"{overload.Name}({string.Join(", ", typedParameters.Select(static parameter => parameter.Name))})";
+        List<ParameterInformation> parameterInfoEntries = [.. typedParameters
+            .Select(static parameter => new ParameterInformation()
+                {
+                    Label = parameter.Name
+                })];
+
+        return new()
+        {
+            Label = label,
+            Parameters = new(parameterInfoEntries)
+        };
+    }
+
+    /// <summary>
+    /// Picks which overload should be highlighted as the active signature.
+    /// </summary>
+    /// <param name="overloads">The candidate overloads, in declaration order.</param>
+    /// <param name="calledArgumentIndex">The zero-based index of the argument currently being typed.</param>
+    /// <returns>The index, within <paramref name="overloads"/>, of the first overload with room for that argument, or <c>0</c> if none have room.</returns>
+    /// <remarks>
+    /// Typing is in progress, so the argument types seen so far cannot be resolved with any confidence; picking by
+    /// arity alone is enough to steer the pop-up towards a plausible candidate as the user types, without the
+    /// heavier by-type resolution the type checker and interpreter perform against a complete, finished call.
+    /// </remarks>
+    private static int FindActiveSignature(IReadOnlyList<SymbolInfo> overloads, int calledArgumentIndex)
+    {
+        for (int i = 0; i < overloads.Count; i++)
+        {
+            int parameterCount = overloads[i].TypedParameters?.Count ?? 0;
+            if (parameterCount > calledArgumentIndex)
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
 }

@@ -722,6 +722,29 @@ MY DUTY IS DISCHARGED.
 SUMMON greet WITH "Ko-Ko" IF YOU PLEASE.
 ```
 
+### Overloading
+
+Two functions may share a name if their declared parameter types differ. A call is resolved to the one overload whose parameter types match the argument types, either exactly or via the same widening rules already used for arithmetic (§5) and assignment.
+
+```topsy
+IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+  AND SO I FIND "a whole number"
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+  AND SO I FIND "a piece of text"
+MY DUTY IS DISCHARGED.
+
+PRAY WELCOME first AS A YARN BEING SUMMON describe WITH 42 IF YOU PLEASE.
+PRAY WELCOME second AS A YARN BEING SUMMON describe WITH "Ko-Ko" IF YOU PLEASE.
+```
+
+- Overloading is resolved by parameter types only; the return type plays no part, and two overloads may not differ by return type alone.
+- A call whose argument types, after widening, match more than one overload equally well is an **ambiguous call**, a type error.
+- Two declarations sharing both a name and an identical parameter type list are a **duplicate declaration**, a type error, whether both are declared in Topsy Turvy source, both are external, or one of each.
+- A Topsy Turvy function still shadows a same-named external function of the same parameter types, exactly as an unoverloaded function does (§15).
+- Namespace resolution (§15) and overload resolution are independent: a bare or qualified name is first resolved to a namespace set of same-named declarations, then overload resolution picks among that set by parameter types.
+
 ---
 
 ## 14. Exception Handling

@@ -392,7 +392,8 @@ public sealed class ReplSession
             .GetVariables()
             .Where(variable => variable.Key != Keywords.SpecialNames.TheProps);
 
-        IReadOnlyDictionary<string, FunctionDefinitionNode> functions = interpreter.Functions;
+        IEnumerable<(string Name, FunctionDefinitionNode Function)> functions = interpreter.Functions
+            .SelectMany(entry => entry.Value.Select(function => (entry.Key, function)));
 
         if (plainText)
         {
@@ -417,10 +418,10 @@ public sealed class ReplSession
             {
                 Console.WriteLine("FUNCTIONS:");
                 Console.WriteLine($"  {"IDENTIFIER",-24} PARAMETERS");
-                foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+                foreach ((string name, FunctionDefinitionNode function) in functions)
                 {
-                    string parameters = string.Join(", ", function.Value.Parameters.Select(FormatParameter));
-                    Console.WriteLine($"  {function.Key,-24} {parameters}");
+                    string parameters = string.Join(", ", function.Parameters.Select(FormatParameter));
+                    Console.WriteLine($"  {name,-24} {parameters}");
                 }
             }
 
@@ -467,13 +468,13 @@ public sealed class ReplSession
             functionsTable.AddColumn(new("[bold]Identifier[/]"));
             functionsTable.AddColumn(new("[bold]Parameters[/]"));
 
-            foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+            foreach ((string name, FunctionDefinitionNode function) in functions)
             {
-                string parameters = function.Value.Parameters.Count == 0
+                string parameters = function.Parameters.Count == 0
                     ? "[dim](none)[/]"
-                    : Markup.Escape(string.Join(", ", function.Value.Parameters.Select(FormatParameter)));
+                    : Markup.Escape(string.Join(", ", function.Parameters.Select(FormatParameter)));
 
-                functionsTable.AddRow(Markup.Escape(function.Key), parameters);
+                functionsTable.AddRow(Markup.Escape(name), parameters);
             }
 
             AnsiConsole.Write(functionsTable);

@@ -142,6 +142,57 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="SignatureHelpHandler.Handle"/> method returns one <see cref="SignatureInformation"/>
+    /// per overload when the called function name has more than one declared signature.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithOverloadedFunction_ReturnsAllOverloadSignatures()
+    {
+        string overloadedSource = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF first AS A PEER AND second AS A PEER TO FIND YARN
+              AND SO I FIND "two numbers"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF first AS A PEER AND second AS A PEER TO FIND YARN
+              AND SO I FIND "two numbers"
+            MY DUTY IS DISCHARGED.
+            SUMMON describe WITH 1
+            FINALE.
+            """;
+
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, overloadedSource, this.parser.TryParse(overloadedSource));
+        manager.Update(this.testUri, source, this.parser.TryParse(source));
+        SignatureHelpHandler handler = new(manager);
+        string[] lines = source.Split('\n');
+        int summonLine = Array.FindIndex(lines, line => line.TrimStart().StartsWith("SUMMON"));
+        int cursorChar = lines[summonLine].Length;
+
+        SignatureHelp? result = await handler.Handle(this.MakeRequest(line: summonLine, character: cursorChar), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Signatures.Count().ShouldBe(2);
+        result.Signatures.ShouldAllBe(signature => signature.Label.Split('(')[0] == "describe");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="SignatureHelpHandler.Handle"/> method returns null when the line index is beyond the document length.
     /// </summary>
     [Fact]

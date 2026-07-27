@@ -45,6 +45,17 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
     public BoundFunctionDescriptor? Find(string qualifiedName) => catalogue.Find(qualifiedName);
 
     /// <summary>
+    /// Resolves the given name to every overload bound under it.
+    /// </summary>
+    /// <param name="qualifiedName">The bare or namespace-joined qualified name to resolve.</param>
+    /// <returns>Every matching descriptor, or an empty list if none exist in the catalogue.</returns>
+    /// <remarks>
+    /// Unlike <see cref="Find"/>, this never throws on more than one match: the interpreter calls this to
+    /// resolve a name to a namespace tier only, then picks the specific overload within it by argument type.
+    /// </remarks>
+    public IReadOnlyList<BoundFunctionDescriptor> FindAll(string qualifiedName) => catalogue.FindAll(qualifiedName);
+
+    /// <summary>
     /// Invokes the described external function with the given evaluated arguments.
     /// </summary>
     /// <param name="descriptor">The function to invoke.</param>
