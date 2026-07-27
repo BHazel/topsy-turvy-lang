@@ -2117,7 +2117,7 @@ public class TopsyTurvyToUtopIRTransformerTests
         WelcomeListInstruction welcomeList = result.Instructions.OfType<WelcomeListInstruction>().Single();
         welcomeList.Target.Name.ShouldBe("Numbers");
         welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
-        welcomeList.Size.ShouldBe(3);
+        welcomeList.Size.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
 
         AppointVictimInstruction[] appointVictims = [.. result.Instructions.OfType<AppointVictimInstruction>()];
         appointVictims.Length.ShouldBe(3);
@@ -2130,7 +2130,7 @@ public class TopsyTurvyToUtopIRTransformerTests
     }
 
     /// <summary>
-    /// Tests that an <see cref="ArrayDeclarationNode"/> with a bare <see cref="ArrayDeclarationNode.Size"/>
+    /// Tests that an <see cref="ArrayDeclarationNode"/> with a bare <see cref="ArrayDeclarationNode.SizeExpression"/>
     /// and no initial values emits only a <see cref="WelcomeListInstruction"/> sized accordingly, with no
     /// <see cref="AppointVictimInstruction"/>.
     /// </summary>
@@ -2143,7 +2143,7 @@ public class TopsyTurvyToUtopIRTransformerTests
                 Name = "Numbers",
                 NameSpan = PlaceholderSpan,
                 ElementType = LiteralType.Integer,
-                Size = 3,
+                SizeExpression = IntLiteral(3),
                 IsConstant = false,
                 InitialValues = [],
                 Span = PlaceholderSpan
@@ -2153,8 +2153,35 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         result.Instructions.Count.ShouldBe(1);
         WelcomeListInstruction welcomeList = result.Instructions[0].ShouldBeOfType<WelcomeListInstruction>();
-        welcomeList.Size.ShouldBe(3);
+        welcomeList.Size.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
         result.Instructions.OfType<AppointVictimInstruction>().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ArrayDeclarationNode"/> whose <see cref="ArrayDeclarationNode.SizeExpression"/> is a
+    /// variable reference transforms the size into a <see cref="VariableOperand"/> rather than requiring a literal.
+    /// </summary>
+    [Fact]
+    public void Transform_ArrayDeclarationWithVariableSize_EmitsWelcomeListWithVariableOperand()
+    {
+        ProgramNode program = Programme(
+            new DeclarationNode() { Name = "Count", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            new ArrayDeclarationNode()
+            {
+                Name = "Numbers",
+                NameSpan = PlaceholderSpan,
+                ElementType = LiteralType.Integer,
+                SizeExpression = new IdentifierNode { Name = "Count", Span = PlaceholderSpan },
+                IsConstant = false,
+                InitialValues = [],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = this.transformer.Transform(program);
+
+        WelcomeListInstruction welcomeList = result.Instructions.OfType<WelcomeListInstruction>().Single();
+        VariableOperand size = welcomeList.Size.ShouldBeOfType<VariableOperand>();
+        size.Variable.Name.ShouldBe("Count");
     }
 
     /// <summary>
@@ -2170,7 +2197,7 @@ public class TopsyTurvyToUtopIRTransformerTests
                 Name = "Numbers",
                 NameSpan = PlaceholderSpan,
                 ElementType = LiteralType.Integer,
-                Size = 3,
+                SizeExpression = IntLiteral(3),
                 IsConstant = false,
                 InitialValues = [],
                 Span = PlaceholderSpan

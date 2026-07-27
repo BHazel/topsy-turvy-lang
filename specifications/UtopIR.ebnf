@@ -82,9 +82,10 @@ AssignmentRhs         = WelcomeListRhs
                       | VictimListRhs
                       | SummonFindRhs ;
 
-WelcomeListRhs  = "welcome.list", Type, ",", IntegerLiteral ;
-(* Declares an array variable of the given element Type and size.  Tried
-   before WelcomeRhs, since "welcome" is a prefix of "welcome.list". *)
+WelcomeListRhs  = "welcome.list", Type, ",", Operand ;
+(* Declares an array variable of the given element Type and size.  The size
+   Operand may be a literal or a variable already holding the desired size.
+   Tried before WelcomeRhs, since "welcome" is a prefix of "welcome.list". *)
 WelcomeGallerypicRhs = "welcome.gallerypic", Type ;
 (* Declares a pointer variable of the given pointee Type.  Tried before
    WelcomeRhs, since "welcome" is a prefix of "welcome.gallerypic". *)

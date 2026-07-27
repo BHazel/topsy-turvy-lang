@@ -118,25 +118,26 @@ public class VisualGraphBuilderOtherTests : VisualGraphBuilderTestBase
     }
 
     /// <summary>
-    /// Tests that an array declaration with no initial values but a declared size uses the size as the
-    /// node literal value.
+    /// Tests that an array declaration with no initial values but a declared size creates a "Size" Data In port
+    /// linked to an expression node for that size, rather than storing it as a plain text value.
     /// </summary>
     [Fact]
-    public void Build_WithArrayDeclarationNoInitialValuesButSize_UsesSizeAsLiteralValue()
+    public void Build_WithArrayDeclarationNoInitialValuesButSize_CreatesLinkedSizePort()
     {
         ArrayDeclarationNode declaration = new()
         {
             Name = "items",
             NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
-            Size = 5,
+            SizeExpression = IntegerLiteral(5),
             InitialValues = [],
             Span = PlaceholderSpan
         };
 
         BlazorDiagram diagram = Build(WrapInProgram(declaration));
 
-        Node(diagram, "ArrayDeclarationNode").LiteralValue.ShouldBe("5");
+        TopsyTurvyVisualNodeModel node = Node(diagram, "ArrayDeclarationNode");
+        IsLinked(Port(node, "Size", VisualPortRole.DataIn)).ShouldBeTrue();
     }
 
     /// <summary>

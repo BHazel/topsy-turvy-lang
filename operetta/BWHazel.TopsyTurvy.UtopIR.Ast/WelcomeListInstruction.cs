@@ -6,8 +6,8 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// <remarks>
 /// <para>
 /// Corresponds to the UtopIR <c>welcome.list</c> instruction with the format
-/// <c>£&lt;name&gt; = welcome.list &lt;type&gt;, &lt;size&gt;</c>. <see cref="Size"/> is a compile-time
-/// integer literal, not an operand: no UtopIR spec form allows a variable size.
+/// <c>£&lt;name&gt; = welcome.list &lt;type&gt;, &lt;size&gt;</c>. <see cref="Size"/> is an <see cref="UtopIROperand"/>,
+/// either a compile-time literal or a variable already holding the desired size.
 /// </para>
 /// <para>
 /// For example, the Topsy Turvy declaration:
@@ -22,7 +22,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// new WelcomeListInstruction(
 ///     Target: new UtopIRVariable("Numbers"),
 ///     ElementType: UtopIRType.Peer,
-///     Size: 3);
+///     Size: new LiteralOperand(3));
 /// </code>
 /// <para>
 /// which is rendered in UtopIR source as:
@@ -30,8 +30,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// <code>
 /// £Numbers = welcome.list peer, 3
 /// </code>
+/// <para>
+/// A variable size, from a Topsy Turvy declaration such as <c>PRAY WELCOME Numbers AS A LITTLE LIST OF n PEER</c>,
+/// produces a <see cref="VariableOperand"/> instead, rendered as <c>£Numbers = welcome.list peer, £n</c>.
+/// </para>
 /// </remarks>
 /// <param name="Target">The virtual register being declared.</param>
 /// <param name="ElementType">The type of each array element.</param>
 /// <param name="Size">The number of elements in the array.</param>
-public sealed record WelcomeListInstruction(UtopIRVariable Target, UtopIRType ElementType, int Size) : UtopIRInstruction;
+public sealed record WelcomeListInstruction(UtopIRVariable Target, UtopIRType ElementType, UtopIROperand Size) : UtopIRInstruction;

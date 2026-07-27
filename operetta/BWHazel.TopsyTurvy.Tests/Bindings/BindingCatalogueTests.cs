@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Bindings;
 using Shouldly;
 
@@ -97,5 +99,61 @@ public class BindingCatalogueTests
         BindingCatalogue catalogue = BindingCatalogue.Create(typeof(TestValidBindingClass));
 
         catalogue.Find("Test.Namespace.NamespacedFunction").ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that two descriptors sharing a name but differing in parameter types coexist as overloads instead of colliding.
+    /// </summary>
+    [Fact]
+    public void Create_WithSameNameDifferentParameterTypes_DoesNotThrow()
+    {
+        BindingCatalogue catalogue = BindingCatalogue.Create(typeof(TestOverloadBindingClass));
+
+        catalogue.FindAll("Describe").Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that two descriptors sharing both a name and parameter types still throw, even when contributed by different binding classes.
+    /// </summary>
+    [Fact]
+    public void Create_WithSameNameAndSameParameterTypes_Throws()
+    {
+        Should.Throw<BindingCatalogueException>(() => BindingCatalogue.Create(typeof(TestOverloadBindingClass), typeof(TestOverloadDuplicateBindingClass)));
+    }
+
+    /// <summary>
+    /// Tests that a scalar parameter and an array parameter of the same element type are treated as distinct overloads.
+    /// </summary>
+    [Fact]
+    public void FindAll_WithScalarAndArrayOverloads_ReturnsBothCandidates()
+    {
+        BindingCatalogue catalogue = BindingCatalogue.Create(typeof(TestOverloadBindingClass));
+
+        IReadOnlyList<BoundFunctionDescriptor> candidates = catalogue.FindAll("Describe");
+
+        candidates.ShouldContain(descriptor => descriptor.Parameters[0].Type == LiteralType.Integer);
+        candidates.ShouldContain(descriptor => descriptor.Parameters[0].Type == LiteralType.Array);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BindingCatalogue.Find"/> throws when more than one overload is bound under a name.
+    /// </summary>
+    [Fact]
+    public void Find_WithMultipleOverloads_Throws()
+    {
+        BindingCatalogue catalogue = BindingCatalogue.Create(typeof(TestOverloadBindingClass));
+
+        Should.Throw<BindingCatalogueException>(() => catalogue.Find("Describe"));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BindingCatalogue.FindAll"/> returns an empty list for an unknown name.
+    /// </summary>
+    [Fact]
+    public void FindAll_WithUnknownName_ReturnsEmpty()
+    {
+        BindingCatalogue catalogue = BindingCatalogue.Default;
+
+        catalogue.FindAll("NoSuchFunction").ShouldBeEmpty();
     }
 }

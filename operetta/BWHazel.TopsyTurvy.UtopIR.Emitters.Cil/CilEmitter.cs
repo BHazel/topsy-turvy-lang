@@ -1106,6 +1106,12 @@ public sealed class CilEmitter
     /// Declares a CIL local variable for a <see cref="WelcomeListInstruction"/> and allocates a CLR
     /// array of the declared element type and size via <c>newarr</c>.
     /// </summary>
+    /// <remarks>
+    /// <see cref="WelcomeListInstruction.Size"/> is loaded like any other <see cref="UtopIROperand"/>, since it may
+    /// be a compile-time <see cref="LiteralOperand"/> or a <see cref="VariableOperand"/> already holding the desired
+    /// length; <c>newarr</c> requires an <c>int32</c> on the stack, which is exactly what both operand shapes push
+    /// for a <c>peer</c>-typed size, the only size type the type checker allows.
+    /// </remarks>
     /// <param name="welcomeList">The welcome.list instruction declaring the array variable.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
@@ -1122,7 +1128,7 @@ public sealed class CilEmitter
     {
         Type elementClrType = this.MapToClrType(welcomeList.ElementType);
 
-        ilGenerator.Emit(OpCodes.Ldc_I4, welcomeList.Size);
+        this.EmitStackLoadOperand(welcomeList.Size, ilGenerator, locals);
         ilGenerator.Emit(OpCodes.Newarr, elementClrType);
 
         LocalBuilder local = ilGenerator.DeclareLocal(elementClrType.MakeArrayType());

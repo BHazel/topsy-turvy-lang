@@ -200,4 +200,46 @@ public class BindingScannerTests
         BoundFunctionDescriptor descriptor = descriptors.Single(descriptor => descriptor.Method.Name == nameof(TestValidBindingClass.VoidFunction));
         descriptor.Namespace.ShouldBeNull();
     }
+
+    /// <summary>
+    /// Tests that <see cref="BindingScanner.Scan"/> maps an array-typed parameter to <see cref="LiteralType.Array"/>
+    /// with the correct element type.
+    /// </summary>
+    [Fact]
+    public void Scan_WithArrayParameter_MapsToArrayWithElementType()
+    {
+        IReadOnlyList<BoundFunctionDescriptor> descriptors = BindingScanner.Scan(typeof(TestArrayBindingClass));
+
+        BoundFunctionDescriptor descriptor = descriptors.Single(descriptor => descriptor.Method.Name == nameof(TestArrayBindingClass.Count));
+        descriptor.Parameters.ShouldHaveSingleItem();
+        descriptor.Parameters[0].Type.ShouldBe(LiteralType.Array);
+        descriptor.Parameters[0].ArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BindingScanner.Scan"/> maps an array-typed return value to <see cref="LiteralType.Array"/>
+    /// with the correct element type.
+    /// </summary>
+    [Fact]
+    public void Scan_WithArrayReturnType_MapsToArrayWithElementType()
+    {
+        IReadOnlyList<BoundFunctionDescriptor> descriptors = BindingScanner.Scan(typeof(TestArrayBindingClass));
+
+        BoundFunctionDescriptor descriptor = descriptors.Single(descriptor => descriptor.Method.Name == nameof(TestArrayBindingClass.Range));
+        descriptor.ReturnType.ShouldBe(LiteralType.Array);
+        descriptor.ReturnElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BindingScanner.Scan"/> leaves <see cref="BoundParameter.ArrayElementType"/> and
+    /// <see cref="BoundFunctionDescriptor.ReturnElementType"/> <c>null</c> for a non-array parameter and return type.
+    /// </summary>
+    [Fact]
+    public void Scan_WithNonArrayParameterAndReturnType_LeavesElementTypeNull()
+    {
+        IReadOnlyList<BoundFunctionDescriptor> descriptors = BindingScanner.Scan(typeof(TestValidBindingClass));
+
+        BoundFunctionDescriptor descriptor = descriptors.Single(descriptor => descriptor.Method.Name == nameof(TestValidBindingClass.ValueFunction));
+        descriptor.ReturnElementType.ShouldBeNull();
+    }
 }

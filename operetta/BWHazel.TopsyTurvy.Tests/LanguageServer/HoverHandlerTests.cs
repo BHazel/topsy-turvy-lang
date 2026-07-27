@@ -134,6 +134,72 @@ public class HoverHandlerTests : LanguageServerTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="HoverHandler.Handle"/> method includes every overload signature when hovering
+    /// over a function name with more than one declared overload, not just the first-declared one.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithCursorOnOverloadedFunctionName_ReturnsAllOverloadSignatures()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+              AND SO I FIND "a piece of text"
+            MY DUTY IS DISCHARGED.
+            SUMMON describe WITH 1 IF YOU PLEASE.
+            FINALE.
+            """;
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(this.MakeRequest(line: 10, character: 8), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        string markdown = result.Contents.MarkupContent!.Value;
+        markdown.ShouldContain("PEER");
+        markdown.ShouldContain("YARN");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="HoverHandler.Handle"/> method returns only the one overload declared on the
+    /// hovered line when the cursor is directly on a specific overload declaration, not every overload.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithCursorOnSpecificOverloadDeclaration_ReturnsOnlyThatOverload()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+              AND SO I FIND "a piece of text"
+            MY DUTY IS DISCHARGED.
+            SUMMON describe WITH 1 IF YOU PLEASE.
+            FINALE.
+            """;
+        DocumentStateManager manager = this.CreateManagerWithSource(source);
+        HoverHandler handler = new(manager);
+
+        Hover? result = await handler.Handle(this.MakeRequest(line: 3, character: 27), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.Contents.HasMarkupContent.ShouldBeTrue();
+        string markdown = result.Contents.MarkupContent!.Value;
+        markdown.ShouldContain("value AS A PEER");
+        markdown.ShouldNotContain("value AS A YARN");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="HoverHandler.Handle"/> method returns a namespace hover card when hovering over a
     /// namespace segment declared in the document, listing the functions it declares.
     /// </summary>

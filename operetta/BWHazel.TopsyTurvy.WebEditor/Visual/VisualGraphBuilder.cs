@@ -272,10 +272,10 @@ public sealed class VisualGraphBuilder
             ? "CONSERVATIVE "
             : string.Empty;
         
-        string sizeLabel = node.Size.HasValue
-            ? $" [{node.Size}]"
+        string sizeLabel = node.SizeExpression is not null
+            ? $" [{SizeExpressionLabel(node.SizeExpression)}]"
             : string.Empty;
-        
+
         string subtitle = $"{node.Name} : {constantLabel}LITTLE LIST OF {typeLabel}{sizeLabel}";
 
         TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY WELCOME", subtitle, VisualNodeKind.Declaration);
@@ -288,9 +288,11 @@ public sealed class VisualGraphBuilder
         statementNode.ArrayElementLiteralType = node.ElementType;
         statementNode.IsIdentifierConstant = node.IsConstant;
 
-        if (node.InitialValues.Count == 0 && node.Size.HasValue)
+        if (node.InitialValues.Count == 0 && node.SizeExpression is not null)
         {
-            statementNode.LiteralValue = node.Size.Value.ToString();
+            TopsyTurvyVisualPortModel sizePort = this.MakePort(statementNode, "Size", VisualPortRole.DataIn);
+            statementNode.AddPort(sizePort);
+            this.CreateExpressionNode(node.SizeExpression, sizePort, layout, diagram, anchor: statementNode.Position);
         }
 
         for (int i = 0; i < node.InitialValues.Count; i++)
@@ -653,9 +655,9 @@ public sealed class VisualGraphBuilder
     private static string FunctionSubtitle(FunctionDefinitionNode node)
     {
         string returnLabel = node.ReturnType is not null
-            ? $"→ {FormatLiteralType(node.ReturnType.Value)}"
+            ? $"→ {FormatLiteralType(node.ReturnType.Value, node.ReturnArrayElementType)}"
             : string.Empty;
-        
+
         return returnLabel.Length > 0
             ? $"{node.Name} {returnLabel}"
             : node.Name;
@@ -680,7 +682,7 @@ public sealed class VisualGraphBuilder
 
         foreach (TypedParameter parameter in node.Parameters)
         {
-            string paramLabel = $"{parameter.Name} : {FormatLiteralType(parameter.Type)}";
+            string paramLabel = $"{parameter.Name} : {FormatLiteralType(parameter.Type, parameter.ArrayElementType)}";
             statementNode.AddPort(this.MakePort(statementNode, paramLabel, VisualPortRole.DataOut));
         }
 
@@ -702,6 +704,7 @@ public sealed class VisualGraphBuilder
         openerNode.SymbolIdentifierNodeName = node.Name;
         openerNode.AstNode = node;
         openerNode.NodeLiteralType = node.ReturnType;
+        openerNode.ArrayElementLiteralType = node.ReturnArrayElementType;
         openerNode.AddPort(this.MakePort(openerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(openerNode);
 
@@ -721,6 +724,7 @@ public sealed class VisualGraphBuilder
             termNode.StatementType = "ParameterNode";
             termNode.SymbolIdentifierNodeName = parameter.Name;
             termNode.NodeLiteralType = parameter.Type;
+            termNode.ArrayElementLiteralType = parameter.ArrayElementType;
 
             TopsyTurvyVisualPortModel termOutPort = this.MakePort(termNode, "Out", VisualPortRole.DataOut);
             termNode.AddPort(termOutPort);
@@ -1787,10 +1791,28 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
-    /// Formats a literal type into a human-readable string representation.
+    /// Formats a literal type into a human-readable string representation, including the element type when the type is an array.
     /// </summary>
     /// <param name="type">The literal type to format.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
     /// <returns>A human-readable string representation of the literal type.</returns>
+    private static string FormatLiteralType(LiteralType type, LiteralType? elementType) =>
+        type == LiteralType.Array && elementType is not null
+            ? $"{FormatLiteralType(type)} {FormatLiteralType(elementType.Value)}"
+            : FormatLiteralType(type);
+
+    /// <summary>
+    /// Formats an array declaration size expression for display in its node subtitle.
+    /// </summary>
+    /// <param name="sizeExpression">The size expression.</param>
+    /// <returns>The literal value for a literal size, the variable name for an identifier size, or a generic placeholder for any other expression.</returns>
+    private static string SizeExpressionLabel(Expression sizeExpression) => sizeExpression switch
+    {
+        LiteralNode literal => literal.Value?.ToString() ?? Keywords.Literals.Naught,
+        IdentifierNode identifier => identifier.Name,
+        _ => "expr"
+    };
+
     private static string FormatLiteralType(LiteralType type) => type switch
     {
         LiteralType.Integer => Keywords.TypeNames.Peer,

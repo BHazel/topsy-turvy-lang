@@ -17,4 +17,5 @@ namespace BWHazel.TopsyTurvy.Bindings;
 /// <param name="Name">The Topsy Turvy-visible parameter name.</param>
 /// <param name="Type">The inferred Topsy Turvy type.</param>
 /// <param name="ClrType">The CLR parameter type, retained for marshalling.</param>
-public sealed record BoundParameter(string Name, LiteralType Type, Type ClrType);
+/// <param name="ArrayElementType">The element type when <paramref name="Type"/> is <see cref="LiteralType.Array"/>, otherwise <c>null</c>.</param>
+public sealed record BoundParameter(string Name, LiteralType Type, Type ClrType, LiteralType? ArrayElementType = null);

@@ -392,7 +392,8 @@ public sealed class ReplSession
             .GetVariables()
             .Where(variable => variable.Key != Keywords.SpecialNames.TheProps);
 
-        IReadOnlyDictionary<string, FunctionDefinitionNode> functions = interpreter.Functions;
+        IEnumerable<(string Name, FunctionDefinitionNode Function)> functions = interpreter.Functions
+            .SelectMany(entry => entry.Value.Select(function => (entry.Key, function)));
 
         if (plainText)
         {
@@ -416,11 +417,12 @@ public sealed class ReplSession
             if (showFunctions)
             {
                 Console.WriteLine("FUNCTIONS:");
-                Console.WriteLine($"  {"IDENTIFIER",-24} PARAMETERS");
-                foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+                Console.WriteLine($"  {"IDENTIFIER",-24} {"RETURNS",-24} PARAMETERS");
+                foreach ((string name, FunctionDefinitionNode function) in functions)
                 {
-                    string parameters = string.Join(", ", function.Value.Parameters.Select(FormatParameter));
-                    Console.WriteLine($"  {function.Key,-24} {parameters}");
+                    string returnType = FormatReturnType(function);
+                    string parameters = string.Join(", ", function.Parameters.Select(FormatParameter));
+                    Console.WriteLine($"  {name,-24} {returnType,-24} {parameters}");
                 }
             }
 
@@ -465,15 +467,19 @@ public sealed class ReplSession
             };
 
             functionsTable.AddColumn(new("[bold]Identifier[/]"));
+            functionsTable.AddColumn(new("[bold]Return Type[/]"));
             functionsTable.AddColumn(new("[bold]Parameters[/]"));
 
-            foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+            foreach ((string name, FunctionDefinitionNode function) in functions)
             {
-                string parameters = function.Value.Parameters.Count == 0
+                string returnType = function.ReturnType.HasValue
+                    ? $"[cyan]{Markup.Escape(FormatReturnType(function))}[/]"
+                    : "[dim](void)[/]";
+                string parameters = function.Parameters.Count == 0
                     ? "[dim](none)[/]"
-                    : Markup.Escape(string.Join(", ", function.Value.Parameters.Select(FormatParameter)));
+                    : Markup.Escape(string.Join(", ", function.Parameters.Select(FormatParameter)));
 
-                functionsTable.AddRow(Markup.Escape(function.Key), parameters);
+                functionsTable.AddRow(Markup.Escape(name), returnType, parameters);
             }
 
             AnsiConsole.Write(functionsTable);
@@ -486,7 +492,18 @@ public sealed class ReplSession
     /// <param name="parameter">The parameter to format.</param>
     /// <returns>A string in the form <c>name: TYPE</c>.</returns>
     private static string FormatParameter(TypedParameter parameter) =>
-        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type)}";
+        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type, parameter.ArrayElementType)}";
+
+    /// <summary>
+    /// Formats a function declared return type as a Topsy Turvy type keyword, or <c>(void)</c> for a function
+    /// with no <c>TO FIND</c> clause.
+    /// </summary>
+    /// <param name="function">The function to format the return type of.</param>
+    /// <returns>The return type keyword, or <c>(void)</c> when the function is void.</returns>
+    private static string FormatReturnType(FunctionDefinitionNode function) =>
+        function.ReturnType.HasValue
+            ? LiteralTypeNames.ToDisplayName(function.ReturnType.Value, function.ReturnArrayElementType)
+            : "(void)";
 
     /// <summary>
     /// Writes the REPL command help table.

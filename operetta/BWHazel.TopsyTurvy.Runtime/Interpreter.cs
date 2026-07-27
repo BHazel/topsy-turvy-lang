@@ -102,7 +102,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
 {
     private readonly ITopsyTurvyIO io = io;
     private readonly ExternalFunctionInvoker externalFunctions = new(externalFunctions ?? BindingCatalogue.Default);
-    private readonly Dictionary<string, FunctionDefinitionNode> functions = [];
+    private readonly Dictionary<string, List<FunctionDefinitionNode>> functions = [];
     private readonly Dictionary<FunctionDefinitionNode, string?> functionNamespaces = [];
     private readonly HashSet<string> openNamespaces = [];
     private CancellationToken cancellationToken;
@@ -112,14 +112,18 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     private string? currentExecutionNamespace;
 
     /// <summary>
-    /// Gets a read-only view of all functions defined in this interpreter instance.
+    /// Gets a read-only view of all functions defined in this interpreter instance, grouped into overload sets.
     /// </summary>
     /// <remarks>
     /// The dictionary is keyed by the function name, dot-qualified with its declaring file
     /// namespace path when it was declared under a <c>TOWN</c> declaration, e.g. <c>Accounts.Payroll.CalculateTax</c>,
-    /// or by its bare name when the declaring file has no <c>TOWN</c> declaration.
+    /// or by its bare name when the declaring file has no <c>TOWN</c> declaration.  Two or more functions
+    /// sharing a name are overloads of each other and appear together under that one key, in declaration order.
     /// </remarks>
-    public IReadOnlyDictionary<string, FunctionDefinitionNode> Functions => this.functions;
+    public IReadOnlyDictionary<string, IReadOnlyList<FunctionDefinitionNode>> Functions =>
+        this.functions.ToDictionary(
+            pair => pair.Key,
+            IReadOnlyList<FunctionDefinitionNode> (pair) => pair.Value);
 
     /// <summary>
     /// Gets the OS exit code produced by the most recent call to <see cref="Execute"/>.
@@ -275,7 +279,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
                 this.EvaluateExpression(expressionStatement.Expression, environment);
                 break;
             case FunctionDefinitionNode functionDefinition:
-                this.functions[QualifyName(this.currentExecutionNamespace, functionDefinition.Name)] = functionDefinition;
+                this.AddFunction(QualifyName(this.currentExecutionNamespace, functionDefinition.Name), functionDefinition);
                 this.functionNamespaces[functionDefinition] = this.currentExecutionNamespace;
                 break;
             case NamespaceDeclarationNode:
@@ -354,27 +358,31 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     /// <param name="node">The array declaration node.</param>
     /// <param name="environment">The environment.</param>
     /// <exception cref="TopsyTurvyRuntimeException">
-    /// Thrown when <see cref="ArrayDeclarationNode.Size"/> is set and <see cref="ArrayDeclarationNode.InitialValues"/>
-    /// is non-empty (mutually exclusive), or when <see cref="ArrayDeclarationNode.Size"/> is negative.
+    /// Thrown when <see cref="ArrayDeclarationNode.SizeExpression"/> is set and <see cref="ArrayDeclarationNode.InitialValues"/>
+    /// is non-empty (mutually exclusive), or when <see cref="ArrayDeclarationNode.SizeExpression"/> evaluates to a negative value.
     /// </exception>
     private void ExecuteArrayDeclaration(ArrayDeclarationNode node, TopsyTurvyEnvironment environment)
     {
-        if (node.Size.HasValue && node.InitialValues.Count > 0)
+        if (node.SizeExpression is not null && node.InitialValues.Count > 0)
         {
             throw new TopsyTurvyRuntimeException(
                 $"Array '{node.Name}' specifies both a size and a BEING initialiser: these are mutually exclusive.",
                 node.Span);
         }
 
-        if (node.Size.HasValue && node.Size.Value < 0)
+        long? size = node.SizeExpression is not null
+            ? ToLong(this.EvaluateExpression(node.SizeExpression, environment))
+            : null;
+
+        if (size.HasValue && size.Value < 0)
         {
             throw new TopsyTurvyRuntimeException(
-                $"Array '{node.Name}' was declared with a negative size ({node.Size.Value}).",
+                $"Array '{node.Name}' was declared with a negative size ({size.Value}).",
                 node.Span);
         }
 
-        List<TopsyTurvyValue> elements = node.Size.HasValue
-            ? [.. Enumerable.Repeat(GetDefaultValue(node.ElementType), node.Size.Value)]
+        List<TopsyTurvyValue> elements = size.HasValue
+            ? [.. Enumerable.Repeat(GetDefaultValue(node.ElementType), (int)size.Value)]
             : [.. node.InitialValues.Select(expression => this.EvaluateExpression(expression, environment))];
 
         environment.Declare(node.Name, TopsyTurvyValue.Array(elements), isConstant: node.IsConstant);
@@ -867,7 +875,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         {
             if (statement is FunctionDefinitionNode functionDefinition)
             {
-                this.functions[QualifyName(importedNamespace, functionDefinition.Name)] = functionDefinition;
+                this.AddFunction(QualifyName(importedNamespace, functionDefinition.Name), functionDefinition);
                 this.functionNamespaces[functionDefinition] = importedNamespace;
             }
         }
@@ -910,6 +918,27 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         namespacePrefix is null
             ? name
             : $"{namespacePrefix}.{name}";
+
+    /// <summary>
+    /// Adds a function definition to its overload set.
+    /// </summary>
+    /// <param name="key">The qualified key the function is registered under.</param>
+    /// <param name="function">The function definition to add.</param>
+    /// <remarks>
+    /// Two or more functions may share a key, either as legitimate overloads or, if the programme was executed
+    /// without first being type-checked, as a duplicate declaration; either way this method simply accumulates
+    /// them, since telling the two apart is the role of the type checker, not the interpreter.
+    /// </remarks>
+    private void AddFunction(string key, FunctionDefinitionNode function)
+    {
+        if (!this.functions.TryGetValue(key, out List<FunctionDefinitionNode>? overloads))
+        {
+            overloads = [];
+            this.functions[key] = overloads;
+        }
+
+        overloads.Add(function);
+    }
 
     /// <summary>
     /// Evaluates an expression and returns its value.
@@ -1610,25 +1639,24 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         SourceSpan span)
     {
         FunctionResolution resolution = this.ResolveFunction(functionName, span);
-        if (resolution.ExternalFunction is BoundFunctionDescriptor externalFunction)
+        if (resolution.ExternalFunctions is { Count: > 0 } externalCandidates)
         {
-            if (arguments.Count != externalFunction.Parameters.Count)
-            {
-                throw new TopsyTurvyRuntimeException(
-                    $"Function '{functionName}' expects {externalFunction.Parameters.Count} argument(s), got {arguments.Count}.",
-                    span);
-            }
+            BoundFunctionDescriptor externalFunction = ResolveOverload(
+                functionName,
+                externalCandidates,
+                static candidate => [.. candidate.Parameters.Select(static parameter => parameter.Type)],
+                arguments,
+                span);
 
             return this.externalFunctions.Invoke(externalFunction, arguments, this.io) ?? TopsyTurvyValue.Null();
         }
 
-        FunctionDefinitionNode function = resolution.UserFunction!;
-        if (arguments.Count != function.Parameters.Count)
-        {
-            throw new TopsyTurvyRuntimeException(
-                $"Function '{functionName}' expects {function.Parameters.Count} argument(s), got {arguments.Count}.",
-                span);
-        }
+        FunctionDefinitionNode function = ResolveOverload(
+            functionName,
+            resolution.UserFunctions!,
+            static candidate => [.. candidate.Parameters.Select(static parameter => parameter.Type)],
+            arguments,
+            span);
 
         TopsyTurvyEnvironment scope = TopsyTurvyEnvironment.CreateFunctionEnvironment();
         for (int i = 0; i < function.Parameters.Count; i++)
@@ -1657,19 +1685,19 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     }
 
     /// <summary>
-    /// Resolves a function name, bare or namespace-qualified, to a Topsy Turvy function or an external function.
+    /// Resolves a function name, bare or namespace-qualified, to a Topsy Turvy overload set or an external overload set.
     /// </summary>
     /// <param name="functionName">The name to resolve.</param>
     /// <param name="span">The source span of the call, used for diagnostics.</param>
     /// <returns>The resolved <see cref="FunctionResolution"/>.</returns>
     /// <remarks>
     /// <para>
-    /// A name is resolved in four tiers, the first tier with exactly one match winning:
+    /// A name is resolved in four tiers, the first tier with at least one match winning:
     /// * Tier 1: A name containing <c>.</c> was produced by a fully-qualified <c>SUMMON</c> target, since <c>.</c>
     ///   never appears in a bare Topsy Turvy identifier, and is looked up directly.
     /// * Tier 2: The namespace of the caller (<see cref="currentExecutionNamespace"/>).
     /// * Tier 3: Each namespace opened with <c>PRAY RECOGNISE</c> in <see cref="openNamespaces"/>.
-    ///     * Two or more matches here is an ambiguous reference.
+    ///     * Two or more namespaces matching here is an ambiguous reference.
     /// * Tier 4: The global (non-namespaced) dictionary entry.
     /// </para>
     /// <para>
@@ -1679,33 +1707,40 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     /// tier 4: the fallback happens tier by tier, not after all four tiers have already been tried against Topsy
     /// Turvy functions alone.
     /// </para>
+    /// <para>
+    /// This resolves a name to a namespace tier and, within it, to a Topsy Turvy or external overload set; it
+    /// does not resolve to a specific overload. <see cref="EvaluateFunctionCall"/> does that afterwards, via
+    /// <see cref="ResolveOverload"/>, once it has the call actual argument values in hand.
+    /// </para>
     /// </remarks>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when no function matches or when a bare name matches more than one open namespace.</exception>
     private FunctionResolution ResolveFunction(string functionName, SourceSpan span)
     {
         if (functionName.Contains('.'))
         {
-            if (this.functions.TryGetValue(functionName, out FunctionDefinitionNode? qualifiedMatch))
+            if (this.functions.TryGetValue(functionName, out List<FunctionDefinitionNode>? qualifiedMatch))
             {
                 return new(qualifiedMatch, null);
             }
 
-            return this.externalFunctions.Find(functionName) is BoundFunctionDescriptor qualifiedExternalMatch
-                ? new(null, qualifiedExternalMatch)
+            IReadOnlyList<BoundFunctionDescriptor> qualifiedExternalMatches = this.externalFunctions.FindAll(functionName);
+            return qualifiedExternalMatches.Count > 0
+                ? new(null, qualifiedExternalMatches)
                 : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
         }
 
         if (this.currentExecutionNamespace is not null)
         {
             string sameNamespaceQualified = QualifyName(this.currentExecutionNamespace, functionName);
-            if (this.functions.TryGetValue(sameNamespaceQualified, out FunctionDefinitionNode? sameNamespaceMatch))
+            if (this.functions.TryGetValue(sameNamespaceQualified, out List<FunctionDefinitionNode>? sameNamespaceMatch))
             {
                 return new(sameNamespaceMatch, null);
             }
 
-            if (this.externalFunctions.Find(sameNamespaceQualified) is BoundFunctionDescriptor sameNamespaceExternalMatch)
+            IReadOnlyList<BoundFunctionDescriptor> sameNamespaceExternalMatches = this.externalFunctions.FindAll(sameNamespaceQualified);
+            if (sameNamespaceExternalMatches.Count > 0)
             {
-                return new(null, sameNamespaceExternalMatch);
+                return new(null, sameNamespaceExternalMatches);
             }
         }
 
@@ -1714,15 +1749,19 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         foreach (string openNamespace in this.openNamespaces)
         {
             string qualified = QualifyName(openNamespace, functionName);
-            if (this.functions.TryGetValue(qualified, out FunctionDefinitionNode? candidate))
+            if (this.functions.TryGetValue(qualified, out List<FunctionDefinitionNode>? candidate))
             {
                 matchedNamespaces.Add(openNamespace);
                 openNamespaceMatch = new(candidate, null);
             }
-            else if (this.externalFunctions.Find(qualified) is BoundFunctionDescriptor externalCandidate)
+            else
             {
-                matchedNamespaces.Add(openNamespace);
-                openNamespaceMatch = new(null, externalCandidate);
+                IReadOnlyList<BoundFunctionDescriptor> externalCandidates = this.externalFunctions.FindAll(qualified);
+                if (externalCandidates.Count > 0)
+                {
+                    matchedNamespaces.Add(openNamespace);
+                    openNamespaceMatch = new(null, externalCandidates);
+                }
             }
         }
 
@@ -1739,14 +1778,179 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
             return openNamespaceMatch.Value;
         }
 
-        if (this.functions.TryGetValue(functionName, out FunctionDefinitionNode? globalMatch))
+        if (this.functions.TryGetValue(functionName, out List<FunctionDefinitionNode>? globalMatch))
         {
             return new(globalMatch, null);
         }
 
-        return this.externalFunctions.Find(functionName) is BoundFunctionDescriptor globalExternalMatch
-            ? new(null, globalExternalMatch)
+        IReadOnlyList<BoundFunctionDescriptor> globalExternalMatches = this.externalFunctions.FindAll(functionName);
+        return globalExternalMatches.Count > 0
+            ? new(null, globalExternalMatches)
             : throw new TopsyTurvyRuntimeException($"Function '{functionName}' is not defined.", span);
+    }
+
+    /// <summary>
+    /// Picks the specific overload within a resolved overload set that matches a call actual argument values.
+    /// </summary>
+    /// <typeparam name="T">The overload candidate type: <see cref="FunctionDefinitionNode"/> or <see cref="BoundFunctionDescriptor"/>.</typeparam>
+    /// <param name="functionName">The called function name, for diagnostics.</param>
+    /// <param name="candidates">The overload set resolved for that name, at whichever namespace tier matched.</param>
+    /// <param name="parameterTypesSelector">Extracts the declared parameter types for a candidate, in order.</param>
+    /// <param name="arguments">The call evaluated argument values, in order.</param>
+    /// <param name="span">The call source span, used for diagnostics.</param>
+    /// <returns>The single best-matching candidate.</returns>
+    /// <remarks>
+    /// Unlike the type checker, every argument here already has a concrete runtime
+    /// <see cref="LiteralType"/>, so there is no analogue of an unresolvable static type to skip over. A
+    /// programme that type-checked successfully is only ever expected to reach here with exactly one
+    /// candidate accepting the arguments; a genuinely ambiguous or unmatched call can still occur when the
+    /// interpreter is driven directly without type-checking first, which is why this reports an ordinary
+    /// <see cref="TopsyTurvyRuntimeException"/> rather than an internal assertion.
+    /// </remarks>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when no candidate arity matches, no candidate parameter types accept the arguments, or two or more candidates match equally well.</exception>
+    private static T ResolveOverload<T>(
+        string functionName,
+        IReadOnlyList<T> candidates,
+        Func<T, IReadOnlyList<LiteralType>> parameterTypesSelector,
+        IReadOnlyList<TopsyTurvyValue> arguments,
+        SourceSpan span)
+        where T : class
+    {
+        List<T> arityMatches = [.. candidates.Where(candidate => parameterTypesSelector(candidate).Count == arguments.Count)];
+        if (arityMatches.Count == 0)
+        {
+            string arities = string.Join(" or ", candidates.Select(candidate => parameterTypesSelector(candidate).Count).Distinct().OrderBy(count => count));
+            throw new TopsyTurvyRuntimeException(
+                $"Function '{functionName}' expects {arities} argument(s), got {arguments.Count}.",
+                span);
+        }
+
+        T? bestMatch = null;
+        int bestMatchScore = int.MaxValue;
+        bool bestMatchIsAmbiguous = false;
+        foreach (T candidate in arityMatches)
+        {
+            int? candidateScore = ScoreOverload(parameterTypesSelector(candidate), arguments);
+            if (candidateScore is null)
+            {
+                continue;
+            }
+
+            if (bestMatch is null || candidateScore < bestMatchScore)
+            {
+                bestMatch = candidate;
+                bestMatchScore = candidateScore.Value;
+                bestMatchIsAmbiguous = false;
+            }
+            else if (candidateScore == bestMatchScore)
+            {
+                bestMatchIsAmbiguous = true;
+            }
+        }
+
+        if (bestMatch is null)
+        {
+            throw new TopsyTurvyRuntimeException($"No overload of function '{functionName}' matches the given argument types.", span);
+        }
+
+        if (bestMatchIsAmbiguous)
+        {
+            throw new TopsyTurvyRuntimeException(
+                $"Call to function '{functionName}' is ambiguous between {arityMatches.Count} overloads.",
+                span);
+        }
+
+        return bestMatch;
+    }
+
+    /// <summary>
+    /// Scores how well a candidate overload parameter types match the already-evaluated argument values of a call.
+    /// </summary>
+    /// <param name="parameterTypes">The declared parameter types of the candidate, already known to match the argument count of the call.</param>
+    /// <param name="arguments">The evaluated argument values of the call, in order.</param>
+    /// <returns>
+    /// The total widening distance across all parameters, zero for an exact match, or <c>null</c> if any
+    /// parameter rejects its argument outright.
+    /// </returns>
+    private static int? ScoreOverload(IReadOnlyList<LiteralType> parameterTypes, IReadOnlyList<TopsyTurvyValue> arguments)
+    {
+        int score = 0;
+        for (int i = 0; i < parameterTypes.Count; i++)
+        {
+            LiteralType parameterType = parameterTypes[i];
+            LiteralType argumentType = arguments[i].LiteralType;
+            if (parameterType == argumentType)
+            {
+                continue;
+            }
+
+            if (!IsAssignableFrom(parameterType, argumentType))
+            {
+                return null;
+            }
+
+            score += Math.Abs(IndexOfNumericWidening(argumentType) - IndexOfNumericWidening(parameterType));
+        }
+
+        return score;
+    }
+
+    /// <summary>
+    /// Determines whether an argument of the given runtime type may be passed to a parameter of the given
+    /// declared type, allowing numeric widening.
+    /// </summary>
+    /// <param name="parameterType">The declared parameter type of the candidate.</param>
+    /// <param name="argumentType">The runtime type of the argument.</param>
+    /// <returns><c>true</c> if the argument may be passed to the parameter, otherwise <c>false</c>.</returns>
+    private static bool IsAssignableFrom(LiteralType parameterType, LiteralType argumentType)
+    {
+        if (parameterType == argumentType)
+        {
+            return true;
+        }
+
+        int parameterIndex = IndexOfNumericWidening(parameterType);
+        int argumentIndex = IndexOfNumericWidening(argumentType);
+        return parameterIndex != int.MaxValue && argumentIndex != int.MaxValue && parameterIndex <= argumentIndex;
+    }
+
+    /// <summary>
+    /// Defines the order of numeric types for widening conversions, from widest to narrowest.
+    /// </summary>
+    /// <remarks>
+    /// Duplicated from the same table in <see cref="ExternalFunctionInvoker"/> and the type checker, following
+    /// the established convention of this codebase for per-layer logic like this.
+    /// </remarks>
+    private static readonly LiteralType[] NumericWideningOrder =
+    [
+        LiteralType.Double,
+        LiteralType.Single,
+        LiteralType.UnsignedLong,
+        LiteralType.Long,
+        LiteralType.UnsignedInteger,
+        LiteralType.Integer,
+        LiteralType.UnsignedShort,
+        LiteralType.Short,
+        LiteralType.Byte,
+        LiteralType.SignedByte,
+    ];
+
+    /// <summary>
+    /// Returns the index of a numeric type in the widening order defined by <see cref="NumericWideningOrder"/>.
+    /// </summary>
+    /// <param name="type">The numeric type.</param>
+    /// <returns>The index of the type in the widening order, or <see cref="int.MaxValue"/> if it is not a numeric type.</returns>
+    private static int IndexOfNumericWidening(LiteralType type)
+    {
+        for (int i = 0; i < NumericWideningOrder.Length; i++)
+        {
+            if (NumericWideningOrder[i] == type)
+            {
+                return i;
+            }
+        }
+
+        return int.MaxValue;
     }
 
     /// <summary>

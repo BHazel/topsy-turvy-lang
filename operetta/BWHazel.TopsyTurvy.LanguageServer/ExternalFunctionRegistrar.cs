@@ -43,10 +43,10 @@ internal static class ExternalFunctionRegistrar
         foreach (BoundFunctionDescriptor descriptor in (externalFunctions ?? BindingCatalogue.Default).Functions)
         {
             DocumentationComment documentation = MapDocumentation(descriptor);
-            IReadOnlyList<(string Name, LiteralType Type)> parameters = [.. descriptor.Parameters
-                .Select(parameter => (parameter.Name, parameter.Type))];
+            IReadOnlyList<(string Name, LiteralType Type, LiteralType? ArrayElementType)> parameters = [.. descriptor.Parameters
+                .Select(parameter => (parameter.Name, parameter.Type, parameter.ArrayElementType))];
 
-            if (!symbolTable.AddExternalFunction(descriptor.Name, parameters, descriptor.ReturnType, documentation))
+            if (!symbolTable.AddExternalFunction(descriptor.Name, parameters, descriptor.ReturnType, descriptor.ReturnElementType, documentation))
             {
                 shadowedFunctions.Add(descriptor.Name);
             }

@@ -183,6 +183,56 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a function definition with
+    /// an array-typed parameter, including the parameter element type in the generated source rather than
+    /// emitting a bare <c>LITTLE LIST OF</c> with no element type.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinitionWithArrayParameter_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            IT IS MY DUTY TO PERFORM firstElement UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+              AND SO I FIND VICTIM 1 ON nums
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        FunctionDefinitionNode functionDefinition = result.Program!.Statements.OfType<FunctionDefinitionNode>().First();
+        functionDefinition.Parameters[0].Type.ShouldBe(LiteralType.Array);
+        functionDefinition.Parameters[0].ArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a function definition with
+    /// an array-typed return type, including the return element type in the generated source.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinitionWithArrayReturnType_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            IT IS MY DUTY TO PERFORM makeArray UNDER NO OBLIGATION TO FIND LITTLE LIST OF PEER
+              PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 IF YOU PLEASE.
+              AND SO I FIND numbers
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        FunctionDefinitionNode functionDefinition = result.Program!.Statements.OfType<FunctionDefinitionNode>().First();
+        functionDefinition.ReturnType.ShouldBe(LiteralType.Array);
+        functionDefinition.ReturnArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a try-catch block.
     /// </summary>
     [Fact]
@@ -984,6 +1034,25 @@ public class TopsyTurvyCodeGeneratorTests
         arrayDeclaration.Name.ShouldBe("arr");
         arrayDeclaration.ElementType.ShouldBe(LiteralType.Integer);
         arrayDeclaration.InitialValues.Count.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips an array declaration whose
+    /// size is a variable rather than a literal.
+    /// </summary>
+    [Fact]
+    public void Generate_ArrayDeclarationWithVariableSize_RoundTrips()
+    {
+        string source = "HARK! \"T\"\nPRAY WELCOME count AS A PEER BEING 5\nPRAY WELCOME arr AS A LITTLE LIST OF count PEER\nFINALE.";
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        ArrayDeclarationNode arrayDeclaration = result.Program!.Statements.OfType<ArrayDeclarationNode>().First();
+        arrayDeclaration.Name.ShouldBe("arr");
+        IdentifierNode sizeIdentifier = arrayDeclaration.SizeExpression.ShouldBeOfType<IdentifierNode>();
+        sizeIdentifier.Name.ShouldBe("count");
     }
 
     /// <summary>

@@ -97,7 +97,7 @@ public sealed class UtopIRCodeGenerator
                     $"{this.FormatOperand(victimYarn.YarnString)}, {this.FormatOperand(victimYarn.Index)}");
                 break;
             case WelcomeListInstruction welcomeList:
-                builder.AppendLine($"£{welcomeList.Target.Name} = {UtopIRKeywords.Instructions.WelcomeList} {this.TypeKeyword(welcomeList.ElementType)}, {welcomeList.Size}");
+                builder.AppendLine($"£{welcomeList.Target.Name} = {UtopIRKeywords.Instructions.WelcomeList} {this.TypeKeyword(welcomeList.ElementType)}, {this.FormatOperand(welcomeList.Size)}");
                 break;
             case AppointVictimInstruction appointVictim:
                 builder.AppendLine(

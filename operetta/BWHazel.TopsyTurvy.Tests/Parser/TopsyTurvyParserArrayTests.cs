@@ -101,7 +101,7 @@ public class TopsyTurvyParserArrayTests
     }
 
     /// <summary>
-    /// Tests that an array declaration with a size literal sets <see cref="ArrayDeclarationNode.Size"/> to that value.
+    /// Tests that an array declaration with a size literal sets <see cref="ArrayDeclarationNode.SizeExpression"/> to that value.
     /// </summary>
     [Fact]
     public void Parse_ArrayDeclaration_WithSize_SetsSize()
@@ -109,12 +109,13 @@ public class TopsyTurvyParserArrayTests
         ArrayDeclarationNode node = this.ParseFirstStatement<ArrayDeclarationNode>(
             "PRAY WELCOME arr AS A LITTLE LIST OF 3 YARN");
 
-        node.Size.ShouldBe(3);
+        LiteralNode size = node.SizeExpression.ShouldBeOfType<LiteralNode>();
+        size.Value.ShouldBe(3);
         node.InitialValues.ShouldBeEmpty();
     }
 
     /// <summary>
-    /// Tests that an array declaration without a size literal leaves <see cref="ArrayDeclarationNode.Size"/> as <c>null</c>.
+    /// Tests that an array declaration without a size literal leaves <see cref="ArrayDeclarationNode.SizeExpression"/> as <c>null</c>.
     /// </summary>
     [Fact]
     public void Parse_ArrayDeclaration_WithoutSize_LeavesSize_Null()
@@ -122,11 +123,11 @@ public class TopsyTurvyParserArrayTests
         ArrayDeclarationNode node = this.ParseFirstStatement<ArrayDeclarationNode>(
             "PRAY WELCOME arr AS A LITTLE LIST OF YARN");
 
-        node.Size.ShouldBeNull();
+        node.SizeExpression.ShouldBeNull();
     }
 
     /// <summary>
-    /// Tests that a zero-sized array declaration is parsed as <see cref="ArrayDeclarationNode.Size"/> equal to zero.
+    /// Tests that a zero-sized array declaration is parsed as <see cref="ArrayDeclarationNode.SizeExpression"/> equal to zero.
     /// </summary>
     [Fact]
     public void Parse_ArrayDeclaration_WithZeroSize_SetsSizeToZero()
@@ -134,7 +135,22 @@ public class TopsyTurvyParserArrayTests
         ArrayDeclarationNode node = this.ParseFirstStatement<ArrayDeclarationNode>(
             "PRAY WELCOME arr AS A LITTLE LIST OF 0 YARN");
 
-        node.Size.ShouldBe(0);
+        LiteralNode size = node.SizeExpression.ShouldBeOfType<LiteralNode>();
+        size.Value.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that an array declaration with a variable as its size sets <see cref="ArrayDeclarationNode.SizeExpression"/>
+    /// to an <see cref="IdentifierNode"/> rather than requiring a literal.
+    /// </summary>
+    [Fact]
+    public void Parse_ArrayDeclaration_WithVariableSize_SetsSizeToIdentifier()
+    {
+        ArrayDeclarationNode node = this.ParseFirstStatement<ArrayDeclarationNode>(
+            "PRAY WELCOME arr AS A LITTLE LIST OF n YARN");
+
+        IdentifierNode size = node.SizeExpression.ShouldBeOfType<IdentifierNode>();
+        size.Name.ShouldBe("n");
     }
 
     /// <summary>

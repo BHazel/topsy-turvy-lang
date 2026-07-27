@@ -71,10 +71,10 @@ public class TypeCheckerExternalFunctionTests
 
     /// <summary>
     /// Tests that a void external function used as a declaration initial value type-checks the same way a void
-    /// Topsy Turvy function does: silently, with no diagnostic.
+    /// Topsy Turvy function does: with a diagnostic, not silently.
     /// </summary>
     [Fact]
-    public void Check_WithVoidExternalFunctionAsDeclarationValue_SucceedsSilently()
+    public void Check_WithVoidExternalFunctionAsDeclarationValue_ReportsError()
     {
         TypeCheckResult result = this.Check("""
             HARK! "Void As Value"
@@ -85,7 +85,7 @@ public class TypeCheckerExternalFunctionTests
             FINALE.
             """);
 
-        result.Success.ShouldBeTrue();
+        result.Success.ShouldBeFalse();
     }
 
     /// <summary>

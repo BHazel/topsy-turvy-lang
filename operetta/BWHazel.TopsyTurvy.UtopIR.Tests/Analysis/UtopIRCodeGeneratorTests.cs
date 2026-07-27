@@ -476,7 +476,7 @@ public class UtopIRCodeGeneratorTests
     public void Generate_WelcomeListInstruction_EmitsCorrectLine()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3)
+            new WelcomeListInstruction(new UtopIRVariable("Numbers"), UtopIRType.Peer, new LiteralOperand(3))
         ]);
 
         string result = this.generator.Generate(program);
@@ -899,7 +899,7 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WelcomeListInstruction_RoundTripsThroughParser()
     {
-        WelcomeListInstruction original = new(new UtopIRVariable("Numbers"), UtopIRType.Peer, 3);
+        WelcomeListInstruction original = new(new UtopIRVariable("Numbers"), UtopIRType.Peer, new LiteralOperand(3));
         UtopIRProgram program = new([original]);
 
         string generated = this.generator.Generate(program).Trim();

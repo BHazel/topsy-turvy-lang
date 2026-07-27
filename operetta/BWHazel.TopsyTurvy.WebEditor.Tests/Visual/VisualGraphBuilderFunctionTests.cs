@@ -89,6 +89,53 @@ public class VisualGraphBuilderFunctionTests : VisualGraphBuilderTestBase
     }
 
     /// <summary>
+    /// Tests that an array-typed function parameter TERM node carries the array element type.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayParameter_TermNodeCarriesArrayElementType()
+    {
+        FunctionDefinitionNode function = new()
+        {
+            Name = "sumArray",
+            NameSpan = PlaceholderSpan,
+            Parameters = [new TypedParameter("nums", LiteralType.Array, PlaceholderSpan, LiteralType.Integer)],
+            Body = [],
+            Span = PlaceholderSpan,
+        };
+
+        BlazorDiagram diagram = Build(WrapInProgram(function));
+
+        TopsyTurvyVisualNodeModel term = Node(diagram, "ParameterNode");
+        term.NodeLiteralType.ShouldBe(LiteralType.Array);
+        term.ArrayElementLiteralType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that a function with an array return type includes the element type in its subtitle, and that the
+    /// opener node carries the return array element type.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayReturnType_SubtitleAndOpenerIncludeReturnElementType()
+    {
+        FunctionDefinitionNode function = new()
+        {
+            Name = "makeArray",
+            NameSpan = PlaceholderSpan,
+            Parameters = [],
+            ReturnType = LiteralType.Array,
+            ReturnArrayElementType = LiteralType.Integer,
+            Body = [],
+            Span = PlaceholderSpan
+        };
+
+        BlazorDiagram diagram = Build(WrapInProgram(function));
+
+        TopsyTurvyVisualNodeModel opener = Node(diagram, "FunctionBodyOpener");
+        opener.Subtitle.ShouldBe("makeArray → LITTLE LIST OF PEER");
+        opener.ArrayElementLiteralType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
     /// Tests that a function with a return type includes the arrow and type keyword in its subtitle.
     /// </summary>
     [Fact]

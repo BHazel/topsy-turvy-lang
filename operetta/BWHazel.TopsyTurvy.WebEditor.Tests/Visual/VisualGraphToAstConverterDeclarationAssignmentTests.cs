@@ -75,7 +75,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
             Name = "items",
             NameSpan = PlaceholderSpan,
             ElementType = LiteralType.Integer,
-            Size = 5,
+            SizeExpression = IntegerLiteral(5),
             InitialValues = [],
             Span = PlaceholderSpan,
         };
@@ -83,7 +83,7 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ProgramNode reconstructed = RoundTrip(WrapInProgram(declaration));
 
         ArrayDeclarationNode result = reconstructed.Statements.OfType<ArrayDeclarationNode>().Single();
-        result.Size.ShouldBe(5);
+        ((LiteralNode)result.SizeExpression!).Value.ShouldBe(5);
         result.InitialValues.ShouldBeEmpty();
     }
 
@@ -140,9 +140,9 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
     }
 
     /// <summary>
-    /// Tests that a fresh array declaration with no wired Victim ports (the shape produced when the node was
-    /// created directly as an array declaration with no elements) is reconstructed via the static factory path,
-    /// which ignores the diagram and only reads the visual node own properties.
+    /// Tests that a fresh array declaration with no wired Victim ports and no size (the shape produced when the
+    /// node was created directly as an array declaration with no elements) is reconstructed via the factory path
+    /// with an empty initial-values list and no size.
     /// </summary>
     [Fact]
     public void Factory_ArrayDeclarationWithNoWiredPorts_UsesStaticFactoryPath()
@@ -154,6 +154,30 @@ public class VisualGraphToAstConverterDeclarationAssignmentTests : VisualGraphTo
         ArrayDeclarationNode result = reconstructed.Statements.OfType<ArrayDeclarationNode>().Single();
         result.Name.ShouldBe("items");
         result.InitialValues.ShouldBeEmpty();
+        result.SizeExpression.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Tests that a fresh array declaration with a wired "Size" Data In port is reconstructed via the factory
+    /// path by reading the linked expression node from the diagram, not a plain-text field.
+    /// </summary>
+    [Fact]
+    public void Factory_ArrayDeclarationWithWiredSizePort_ReadsSizeFromDiagram()
+    {
+        ArrayDeclarationNode declaration = new()
+        {
+            Name = "items",
+            NameSpan = PlaceholderSpan,
+            ElementType = LiteralType.Integer,
+            SizeExpression = IntegerLiteral(5),
+            InitialValues = [],
+            Span = PlaceholderSpan
+        };
+
+        ProgramNode reconstructed = RoundTripAsFactory(WrapInProgram(declaration), "ArrayDeclarationNode");
+
+        ArrayDeclarationNode result = reconstructed.Statements.OfType<ArrayDeclarationNode>().Single();
+        ((LiteralNode)result.SizeExpression!).Value.ShouldBe(5);
     }
 
     /// <summary>

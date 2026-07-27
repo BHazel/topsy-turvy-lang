@@ -83,4 +83,42 @@ public class ClrTypeMapTests
 
         found.ShouldBeFalse();
     }
+
+    /// <summary>
+    /// Tests that <see cref="ClrTypeMap.TryGetArrayElementLiteralType"/> maps a one-dimensional array type to the
+    /// <see cref="LiteralType"/> of its element.
+    /// </summary>
+    [Fact]
+    public void TryGetArrayElementLiteralType_WithMappedElementType_ReturnsExpectedElementType()
+    {
+        bool arrayElementTypeFound = ClrTypeMap.TryGetArrayElementLiteralType(typeof(int[]), out LiteralType elementType);
+
+        arrayElementTypeFound.ShouldBeTrue();
+        elementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ClrTypeMap.TryGetArrayElementLiteralType"/> returns <c>false</c> for a non-array type.
+    /// </summary>
+    [Fact]
+    public void TryGetArrayElementLiteralType_WithNonArrayType_ReturnsFalse()
+    {
+        bool arrayElementTypeFound = ClrTypeMap.TryGetArrayElementLiteralType(typeof(int), out _);
+
+        arrayElementTypeFound.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ClrTypeMap.TryGetArrayElementLiteralType"/> returns <c>false</c> for an array whose
+    /// element type has no <see cref="LiteralType"/> mapping, including a nested array (an array of arrays).
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(object[]))]
+    [InlineData(typeof(int[][]))]
+    public void TryGetArrayElementLiteralType_WithUnmappedElementType_ReturnsFalse(Type clrType)
+    {
+        bool found = ClrTypeMap.TryGetArrayElementLiteralType(clrType, out _);
+
+        found.ShouldBeFalse();
+    }
 }

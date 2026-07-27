@@ -10,7 +10,7 @@ namespace BWHazel.TopsyTurvy.Tests.Analysis;
 public class HoverMarkdownBuilderDocumentationCommentTests
 {
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method returns the signature only when documentation is null.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method returns the signature only when documentation is null.
     /// </summary>
     [Fact]
     public void Build_WithNoDocumentation_ReturnsSignatureOnly()
@@ -28,7 +28,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes the summary when a LEGEND tag is present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes the summary when a LEGEND tag is present.
     /// </summary>
     [Fact]
     public void Build_WithSummary_IncludesSummaryInOutput()
@@ -50,7 +50,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes the deprecation notice when IsDeprecated is true.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes the deprecation notice when IsDeprecated is true.
     /// </summary>
     [Fact]
     public void Build_WithIsDeprecated_IncludesDeprecationNotice()
@@ -74,7 +74,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes the deprecation notice without a message when DeprecationMessage is null.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes the deprecation notice without a message when DeprecationMessage is null.
     /// </summary>
     [Fact]
     public void Build_WithIsDeprecatedAndNoMessage_IncludesDeprecationNoticeWithoutMessage()
@@ -96,7 +96,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes parameter descriptions when ARTICLE tags are present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes parameter descriptions when ARTICLE tags are present.
     /// </summary>
     [Fact]
     public void Build_WithParameters_IncludesParameterList()
@@ -130,7 +130,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes the return value when a CONSEQUENCE tag is present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes the return value when a CONSEQUENCE tag is present.
     /// </summary>
     [Fact]
     public void Build_WithReturnValue_IncludesReturnSection()
@@ -158,7 +158,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes thrown value descriptions when CURSES tags are present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes thrown value descriptions when CURSES tags are present.
     /// </summary>
     [Fact]
     public void Build_WithExceptions_IncludesThrowsSection()
@@ -186,7 +186,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes code examples when a CHORUS tag is present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes code examples when a CHORUS tag is present.
     /// </summary>
     [Fact]
     public void Build_WithExample_IncludesCodeBlock()
@@ -214,7 +214,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method includes see-also references when ENSEMBLE tags are present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method includes see-also references when ENSEMBLE tags are present.
     /// </summary>
     [Fact]
     public void Build_WithSeeAlso_IncludesSeeAlsoSection()
@@ -242,7 +242,7 @@ public class HoverMarkdownBuilderDocumentationCommentTests
     }
 
     /// <summary>
-    /// Tests that the <see cref="HoverMarkdownBuilder.Build"/> method still starts with the symbol signature when documentation is present.
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method still starts with the symbol signature when documentation is present.
     /// </summary>
     [Fact]
     public void Build_WithDocumentation_StartsWithSignature()

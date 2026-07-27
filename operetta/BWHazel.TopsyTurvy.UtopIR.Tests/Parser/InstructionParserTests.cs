@@ -272,7 +272,23 @@ public class InstructionParserTests
         WelcomeListInstruction welcomeList = result.Value.ShouldBeOfType<WelcomeListInstruction>();
         welcomeList.Target.Name.ShouldBe("Numbers");
         welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
-        welcomeList.Size.ShouldBe(3);
+        welcomeList.Size.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses a <c>welcome.list</c> assignment
+    /// whose size is a variable rather than a literal.
+    /// </summary>
+    [Fact]
+    public void AssignmentInstruction_WithWelcomeListVariableSize_ReturnsWelcomeListInstructionWithVariableOperand()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£Numbers = welcome.list peer, £Count"));
+
+        result.HasValue.ShouldBeTrue();
+        WelcomeListInstruction welcomeList = result.Value.ShouldBeOfType<WelcomeListInstruction>();
+        welcomeList.Target.Name.ShouldBe("Numbers");
+        welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
+        welcomeList.Size.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Count");
     }
 
     /// <summary>

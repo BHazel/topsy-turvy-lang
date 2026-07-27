@@ -1195,6 +1195,154 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a void function call
+    /// is used as a declaration initial value.
+    /// </summary>
+    [Fact]
+    public void Check_WithVoidFunctionAsDeclarationValue_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+              BEHOLD name
+            MY DUTY IS DISCHARGED.
+            PRAY WELCOME result AS A YARN BEING SUMMON greet WITH "Alice" IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a void function call
+    /// is used as an assignment value.
+    /// </summary>
+    [Fact]
+    public void Check_WithVoidFunctionAsAssignmentValue_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+              PRAY WELCOME result AS A YARN
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+              BEHOLD name
+            MY DUTY IS DISCHARGED.
+            result IS APPOINTED SUMMON greet WITH "Alice" IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a void function call
+    /// is used as an argument to another function call.
+    /// </summary>
+    [Fact]
+    public void Check_WithVoidFunctionAsArgument_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+              BEHOLD name
+            MY DUTY IS DISCHARGED.
+            IT IS MY DUTY TO PERFORM identity UNDER THE TERMS OF text AS A YARN TO FIND YARN
+              AND SO I FIND text
+            MY DUTY IS DISCHARGED.
+            SUMMON identity WITH SUMMON greet WITH "Alice" IF YOU PLEASE. IF YOU PLEASE.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when a void function call
+    /// is used as a guard condition.
+    /// </summary>
+    [Fact]
+    public void Check_WithVoidFunctionAsGuardCondition_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+              BEHOLD name
+            MY DUTY IS DISCHARGED.
+            YEOMAN SUMMON greet WITH "Alice" IF YOU PLEASE.
+              OTHERWISE,
+                A HIDEOUS CURSE ON "Guard failed"
+            UNDER ORDERS.
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when an array declaration size is
+    /// a variable rather than a literal.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationVariableSize_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A PEER BEING 3
+            PRAY WELCOME items AS A LITTLE LIST OF count PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when an array declaration size is
+    /// a general expression, not just a bare literal or variable.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationExpressionSize_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A PEER BEING 3
+            PRAY WELCOME items AS A LITTLE LIST OF SUM OF count AND 1 PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when an array declaration
+    /// size expression is not an integer type.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationNonIntegerSize_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A YARN BEING "three"
+            PRAY WELCOME items AS A LITTLE LIST OF count PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

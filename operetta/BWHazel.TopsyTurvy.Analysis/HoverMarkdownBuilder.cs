@@ -119,6 +119,42 @@ public static class HoverMarkdownBuilder
     }
 
     /// <summary>
+    /// Builds a Markdown hover string for every overload declared under a function name.
+    /// </summary>
+    /// <param name="overloads">The overload set to describe, in declaration order.</param>
+    /// <returns>A Markdown string suitable for display in a hover tooltip.</returns>
+    /// <remarks>
+    /// A single overload renders exactly as <see cref="Build(SymbolInfo)"/> does. Two or more are joined with the
+    /// same <c>"\n\n---\n\n"</c> separator <see cref="BuildNamespaceHover"/> already uses for multiple items.
+    /// </remarks>
+    public static string Build(IReadOnlyList<SymbolInfo> overloads) =>
+        overloads.Count == 1
+            ? Build(overloads[0])
+            : string.Join("\n\n---\n\n", overloads.Select(Build));
+
+    /// <summary>
+    /// Builds a Markdown hover string for a function name, favouring the one overload declared on the hovered
+    /// line, and only falling back to every overload when the cursor is not directly on a specific declaration.
+    /// </summary>
+    /// <param name="overloads">The overload set to describe, in declaration order.</param>
+    /// <param name="hoveredLine">The 0-indexed line the cursor is on.</param>
+    /// <returns>A Markdown string suitable for display in a hover tooltip.</returns>
+    /// <remarks>
+    /// Hovering one overload declaration already tells the reader which signature they are looking at, so
+    /// only that one is shown. Hovering anywhere else, e.g. a <c>SUMMON</c> call site, shows every overload.
+    /// </remarks>
+    public static string Build(IReadOnlyList<SymbolInfo> overloads, int hoveredLine)
+    {
+        SymbolInfo? hoveredOverload = overloads.Count > 1
+            ? overloads.FirstOrDefault(overload => overload.DefinitionLine == hoveredLine + 1)
+            : null;
+
+        return hoveredOverload is not null
+            ? Build(hoveredOverload)
+            : Build(overloads);
+    }
+
+    /// <summary>
     /// Builds a Markdown hover string for a namespace path.
     /// </summary>
     /// <param name="namespacePath">The namespace path segments.</param>
@@ -153,11 +189,11 @@ public static class HoverMarkdownBuilder
     {
         string parameterList = symbolInfo.TypedParameters is { Count: > 0 }
             ? string.Join(", ", symbolInfo.TypedParameters.Select(static parameter =>
-                $"{parameter.Name} AS A {LiteralTypeToKeyword(parameter.Type)}"))
+                $"{parameter.Name} AS A {LiteralTypeToKeyword(parameter.Type, parameter.ArrayElementType)}"))
             : string.Empty;
 
         string returnPart = symbolInfo.DeclaredType.HasValue
-            ? $" TO FIND {LiteralTypeToKeyword(symbolInfo.DeclaredType.Value)}"
+            ? $" TO FIND {LiteralTypeToKeyword(symbolInfo.DeclaredType.Value, symbolInfo.DeclaredArrayElementType)}"
             : string.Empty;
 
         return $"**(function)** `{symbolInfo.Name}`({parameterList}){returnPart}";
@@ -167,7 +203,8 @@ public static class HoverMarkdownBuilder
     /// Gets the display name for a <see cref="LiteralType"/> as a keyword string.
     /// </summary>
     /// <param name="type">The literal type.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
     /// <returns>The keyword string for the literal type.</returns>
-    private static string LiteralTypeToKeyword(LiteralType type) =>
-        LiteralTypeNames.ToDisplayName(type);
+    private static string LiteralTypeToKeyword(LiteralType type, LiteralType? elementType = null) =>
+        LiteralTypeNames.ToDisplayName(type, elementType);
 }

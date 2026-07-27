@@ -722,6 +722,52 @@ MY DUTY IS DISCHARGED.
 SUMMON greet WITH "Ko-Ko" IF YOU PLEASE.
 ```
 
+### Array Parameters and Return Values
+
+```topsy
+IT IS MY DUTY TO PERFORM sumArray UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+  <body>
+MY DUTY IS DISCHARGED.
+```
+
+- A parameter, or the `TO FIND` return type, may be `LITTLE LIST OF <type>` — the same array-type annotation `PRAY WELCOME` declarations already use (see §16 Arrays). Inside the function body an array parameter behaves exactly like an ordinary array variable: it may be indexed with `VICTIM`, its length read with `RECKONING OF`, and it may itself be passed as an argument where another array parameter is expected.
+
+**Example:**
+
+```topsy
+IT IS MY DUTY TO PERFORM sumArray UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+  PRAY WELCOME total AS A PEER BEING 0
+  PRAY WELCOME index AS A PEER BEING 1
+  BY A LEGAL FICTION ASCENDING index UNTIL ALIKE index AND SUM OF RECKONING OF nums AND 1
+    total IS APPOINTED SUM OF total AND VICTIM index ON nums
+  THE TERM EXPIRES.
+  AND SO I FIND total
+MY DUTY IS DISCHARGED.
+```
+
+### Overloading
+
+Two functions may share a name if their declared parameter types differ. A call is resolved to the one overload whose parameter types match the argument types, either exactly or via the same widening rules already used for arithmetic (§5) and assignment.
+
+```topsy
+IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+  AND SO I FIND "a whole number"
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+  AND SO I FIND "a piece of text"
+MY DUTY IS DISCHARGED.
+
+PRAY WELCOME first AS A YARN BEING SUMMON describe WITH 42 IF YOU PLEASE.
+PRAY WELCOME second AS A YARN BEING SUMMON describe WITH "Ko-Ko" IF YOU PLEASE.
+```
+
+- Overloading is resolved by parameter types only; the return type plays no part, and two overloads may not differ by return type alone.
+- A call whose argument types, after widening, match more than one overload equally well is an **ambiguous call**, a type error.
+- Two declarations sharing both a name and an identical parameter type list are a **duplicate declaration**, a type error, whether both are declared in Topsy Turvy source, both are external, or one of each.
+- A Topsy Turvy function still shadows a same-named external function of the same parameter types, exactly as an unoverloaded function does (§15).
+- Namespace resolution (§15) and overload resolution are independent: a bare or qualified name is first resolved to a namespace set of same-named declarations, then overload resolution picks among that set by parameter types.
+
 ---
 
 ## 14. Exception Handling
@@ -857,11 +903,12 @@ PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AN
 PRAY WELCOME scores     AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
 PRAY WELCOME empty      AS A LITTLE LIST OF PEER
 PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
+PRAY WELCOME buffer     AS A LITTLE LIST OF count PEER
 ```
 
 - `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
 - `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, `STITCH`, etc.); assigning an element of the wrong type is a type error. `NAUGHT` is not a valid element type.
-- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many elements, each initialised to the type's default value (see §3.4), making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
+- `<size>` — an optional expression placed between `LITTLE LIST OF` and `<type>`, evaluated when the declaration executes; pre-allocates the array with that many elements, each initialised to the type's default value (see §3.4), making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. Need not be a literal — a variable or any other integer-typed expression works, e.g. sizing a result array to match an input array of unknown length. Must evaluate to an integer type; any other type is a type error. A size of `0` produces an empty array. A negative size is a runtime error.
 - `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §7); omitting `BEING` produces an empty array, **not** `NAUGHT`.
 - `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
 - `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.

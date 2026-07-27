@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BWHazel.TopsyTurvy.Ast;
 using BWHazel.TopsyTurvy.Bindings;
@@ -42,6 +43,17 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
     /// <param name="qualifiedName">The bare or dot-joined qualified name to resolve.</param>
     /// <returns>The matching descriptor, or <c>null</c> if none exists in the catalogue.</returns>
     public BoundFunctionDescriptor? Find(string qualifiedName) => catalogue.Find(qualifiedName);
+
+    /// <summary>
+    /// Resolves the given name to every overload bound under it.
+    /// </summary>
+    /// <param name="qualifiedName">The bare or namespace-joined qualified name to resolve.</param>
+    /// <returns>Every matching descriptor, or an empty list if none exist in the catalogue.</returns>
+    /// <remarks>
+    /// Unlike <see cref="Find"/>, this never throws on more than one match: the interpreter calls this to
+    /// resolve a name to a namespace tier only, then picks the specific overload within it by argument type.
+    /// </remarks>
+    public IReadOnlyList<BoundFunctionDescriptor> FindAll(string qualifiedName) => catalogue.FindAll(qualifiedName);
 
     /// <summary>
     /// Invokes the described external function with the given evaluated arguments.
@@ -90,7 +102,7 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
 
         return descriptor.ReturnType is null
             ? null
-            : WrapReturnValue(result, descriptor.ReturnType.Value);
+            : WrapReturnValue(result, descriptor.ReturnType.Value, descriptor.ReturnElementType);
     }
 
     /// <summary>
@@ -103,18 +115,82 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the argument type is not the parameter type and is not a widening conversion to it.</exception>
     private static object ConvertArgument(TopsyTurvyValue argument, BoundParameter parameter, string functionName)
     {
-        if (argument.LiteralType == parameter.Type)
+        if (parameter.Type == LiteralType.Array)
         {
-            return argument.RawValue!;
+            return ConvertArrayArgument(argument, parameter, functionName);
         }
 
-        if (!IsNumericType(argument.LiteralType) || !IsNumericType(parameter.Type) || !IsWidening(parameter.Type, argument.LiteralType))
+        return ConvertValue(
+            argument,
+            parameter.Type,
+            $"Function '{functionName}' expects parameter '{parameter.Name}' to be {LiteralTypeNames.ToDisplayName(parameter.Type)}, got {LiteralTypeNames.ToDisplayName(argument.LiteralType)}.");
+    }
+
+    /// <summary>
+    /// Converts an evaluated array argument to a real CLR array matching the bound parameter element type.
+    /// </summary>
+    /// <param name="argument">The evaluated array argument.</param>
+    /// <param name="parameter">The array parameter it is being passed to.</param>
+    /// <param name="functionName">The name of the function being invoked, for the error message.</param>
+    /// <returns>A CLR array of the <paramref name="parameter"/> element CLR type.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the argument is not an array, or an element cannot be widened to the declared element type.</exception>
+    /// <remarks>
+    /// A Topsy Turvy array value is boxed as <c>List&lt;TopsyTurvyValue&gt;</c> in the interpreter, unlike a
+    /// UtopIR-compiled array, which is already a real CLR array by the time it reaches a bound method. This is the
+    /// one place that difference is bridged.
+    /// </remarks>
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050",
+        Justification = "The element type always comes from the ClrTypeMap fixed, closed set of scalar CLR types, never an arbitrary caller-supplied type, so Array.CreateInstance here is safe in practice; a genuine Native AOT publish of this path is not exercised today since no Standard Library function has an array parameter yet, and Embedded is explicitly out of scope for external library support.")]
+    private static object ConvertArrayArgument(TopsyTurvyValue argument, BoundParameter parameter, string functionName)
+    {
+        if (argument.LiteralType != LiteralType.Array)
         {
             throw new TopsyTurvyRuntimeException(
                 $"Function '{functionName}' expects parameter '{parameter.Name}' to be {LiteralTypeNames.ToDisplayName(parameter.Type)}, got {LiteralTypeNames.ToDisplayName(argument.LiteralType)}.");
         }
 
-        return argument.CastTo(parameter.Type).RawValue!;
+        List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)argument.RawValue!;
+        Type elementClrType = parameter.ClrType.GetElementType()!;
+        LiteralType elementType = parameter.ArrayElementType!.Value;
+        Array clrArray = Array.CreateInstance(elementClrType, elements.Count);
+
+        for (int i = 0; i < elements.Count; i++)
+        {
+            object elementValue = ConvertValue(
+                elements[i],
+                elementType,
+                $"Function '{functionName}' expects element {i} of parameter '{parameter.Name}' to be {LiteralTypeNames.ToDisplayName(elementType)}, got {LiteralTypeNames.ToDisplayName(elements[i].LiteralType)}.");
+
+            clrArray.SetValue(elementValue, i);
+        }
+
+        return clrArray;
+    }
+
+    /// <summary>
+    /// Converts a single value to a CLR value of the given target type, applying the same widening rules as
+    /// ordinary Topsy Turvy assignment.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <param name="targetType">The type to convert it to.</param>
+    /// <param name="errorMessage">The message to use if the conversion is not exact or widening.</param>
+    /// <returns>The converted CLR value.</returns>
+    /// <exception cref="TopsyTurvyRuntimeException">Thrown when the value type is not the target type and is not a widening conversion to it.</exception>
+    private static object ConvertValue(TopsyTurvyValue value, LiteralType targetType, string errorMessage)
+    {
+        if (value.LiteralType == targetType)
+        {
+            return value.RawValue!;
+        }
+
+        if (!IsNumericType(value.LiteralType) || !IsNumericType(targetType) || !IsWidening(targetType, value.LiteralType))
+        {
+            throw new TopsyTurvyRuntimeException(errorMessage);
+        }
+
+        return value.CastTo(targetType).RawValue!;
     }
 
     /// <summary>
@@ -157,8 +233,9 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
     /// </summary>
     /// <param name="clrValue">The raw CLR return value.</param>
     /// <param name="returnType">The Topsy Turvy type to wrap it as.</param>
+    /// <param name="arrayElementType">The element type when <paramref name="returnType"/> is <see cref="LiteralType.Array"/>, otherwise <c>null</c>.</param>
     /// <returns>The wrapped value.</returns>
-    private static TopsyTurvyValue WrapReturnValue(object? clrValue, LiteralType returnType) => returnType switch
+    private static TopsyTurvyValue WrapReturnValue(object? clrValue, LiteralType returnType, LiteralType? arrayElementType) => returnType switch
     {
         LiteralType.Integer => TopsyTurvyValue.Integer((int)clrValue!),
         LiteralType.Long => TopsyTurvyValue.Long((long)clrValue!),
@@ -173,6 +250,24 @@ public sealed class ExternalFunctionInvoker(BindingCatalogue catalogue)
         LiteralType.String => TopsyTurvyValue.String((string)clrValue!),
         LiteralType.Char => TopsyTurvyValue.Char((char)clrValue!),
         LiteralType.Boolean => TopsyTurvyValue.Boolean((bool)clrValue!),
+        LiteralType.Array => WrapArrayReturnValue((Array)clrValue!, arrayElementType!.Value),
         _ => throw new TopsyTurvyRuntimeException($"Function returned an unsupported type: {returnType}.")
     };
+
+    /// <summary>
+    /// Wraps a CLR array return value back into a Topsy Turvy array value, element by element.
+    /// </summary>
+    /// <param name="clrArray">The CLR array returned by the bound method.</param>
+    /// <param name="elementType">The Topsy Turvy type of each element.</param>
+    /// <returns>The wrapped array value.</returns>
+    private static TopsyTurvyValue WrapArrayReturnValue(Array clrArray, LiteralType elementType)
+    {
+        List<TopsyTurvyValue> elements = new(clrArray.Length);
+        foreach (object? element in clrArray)
+        {
+            elements.Add(WrapReturnValue(element, elementType, null));
+        }
+
+        return TopsyTurvyValue.Array(elements);
+    }
 }

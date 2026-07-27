@@ -23,7 +23,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// Each of the following is a private helper parser for the operands for instructions performing assignment
 /// (the "right-hand side").  They all take the already-parsed target variable name and are tried in turn by
 /// <see cref="AssignmentInstruction"/> below but differ only in which keyword and operand shape they match:
-/// * <c>WelcomeListRhs</c> matches the <c>welcome.list</c> keyword, required whitespace, an <see cref="OperandParser.Type"/>, a comma, then an integer literal size, producing a <see cref="WelcomeListInstruction"/>. Tried before <c>WelcomeRhs</c>.
+/// * <c>WelcomeListRhs</c> matches the <c>welcome.list</c> keyword, required whitespace, an <see cref="OperandParser.Type"/>, a comma, then an <see cref="OperandParser.Operand"/> size (a literal or a variable), producing a <see cref="WelcomeListInstruction"/>. Tried before <c>WelcomeRhs</c>.
 /// * <c>WelcomeRhs</c> matches the <c>welcome</c> keyword, required whitespace, then a <see cref="OperandParser.Type"/>, producing a <see cref="WelcomeInstruction"/>.
 /// * <c>AppointRhs</c> matches the <c>appoint</c> keyword, required whitespace, then an <see cref="OperandParser.Operand"/>, producing an <see cref="AppointInstruction"/>.
 /// * <c>WereRhs</c> matches the <c>were</c> keyword, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="OperandParser.Type"/>, producing a <see cref="WereInstruction"/>.
@@ -123,7 +123,7 @@ public static class InstructionParser
         from whitespace2 in Lexer.Whitespace
         from comma in Character.EqualTo(',')
         from whitespace3 in Lexer.Whitespace
-        from size in Numerics.IntegerInt32
+        from size in OperandParser.Operand
         select (UtopIRInstruction)new WelcomeListInstruction(new UtopIRVariable(target), elementType, size);
 
     /// <summary>

@@ -25,14 +25,18 @@ namespace BWHazel.TopsyTurvy.Analysis;
 public class SymbolTable
 {
     private readonly Dictionary<string, SymbolInfo> symbols;
+    private readonly Dictionary<string, List<SymbolInfo>> functionOverloads;
+    private readonly HashSet<string> externalFunctionNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initialises a new instance of the <see cref="SymbolTable"/> class.
     /// </summary>
     /// <param name="symbols">The symbols.</param>
-    private SymbolTable(Dictionary<string, SymbolInfo> symbols)
+    /// <param name="functionOverloads">The overload set of every function symbol, keyed by name.</param>
+    private SymbolTable(Dictionary<string, SymbolInfo> symbols, Dictionary<string, List<SymbolInfo>> functionOverloads)
     {
         this.symbols = symbols;
+        this.functionOverloads = functionOverloads;
     }
 
     /// <summary>
@@ -47,6 +51,7 @@ public class SymbolTable
     public static SymbolTable Build(ProgramNode program, string originalSource)
     {
         Dictionary<string, SymbolInfo> collectedSymbols = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, List<SymbolInfo>> functionOverloads = new(StringComparer.OrdinalIgnoreCase);
         string[] sourceLines = originalSource.Split('\n');
 
         collectedSymbols[Keywords.SpecialNames.TheProps] = new SymbolInfo()
@@ -57,8 +62,25 @@ public class SymbolTable
             TypeDisplayName = $"CONSERVATIVE {Keywords.TypeNames.LittleListOf} {Keywords.TypeNames.Yarn}"
         };
 
-        CollectFromStatements(program.Statements, collectedSymbols, sourceLines);
-        return new SymbolTable(collectedSymbols);
+        CollectFromStatements(program.Statements, collectedSymbols, functionOverloads, sourceLines);
+        return new SymbolTable(collectedSymbols, functionOverloads);
+    }
+
+    /// <summary>
+    /// Adds a function symbol to its overload set.
+    /// </summary>
+    /// <param name="name">The function name.</param>
+    /// <param name="symbolInfo">The function symbol to add.</param>
+    /// <param name="functionOverloads">The dictionary to collect the overload set into.</param>
+    private static void AddFunctionOverload(string name, SymbolInfo symbolInfo, Dictionary<string, List<SymbolInfo>> functionOverloads)
+    {
+        if (!functionOverloads.TryGetValue(name, out List<SymbolInfo>? overloads))
+        {
+            overloads = [];
+            functionOverloads[name] = overloads;
+        }
+
+        overloads.Add(symbolInfo);
     }
 
     /// <summary>
@@ -80,39 +102,63 @@ public class SymbolTable
         this.symbols.TryGetValue(name, out info);
 
     /// <summary>
+    /// Gets every overload declared under a function name.
+    /// </summary>
+    /// <param name="name">The function name to look up.</param>
+    /// <returns>Every <see cref="SymbolInfo"/> declared under that name, in declaration order, or an empty list if none exist.</returns>
+    /// <remarks>
+    /// <see cref="TryGetSymbol"/> only ever surfaces the first overload registered under a name, matching how
+    /// hover and completion already treated an overloaded name before overloading existed as a language feature.
+    /// This method exists for consumers that need the whole overload set.
+    /// </remarks>
+    public IReadOnlyList<SymbolInfo> GetFunctionOverloads(string name) =>
+        this.functionOverloads.TryGetValue(name, out List<SymbolInfo>? overloads)
+            ? overloads
+            : [];
+
+    /// <summary>
     /// Adds an external function (Standard Library or an external library) to the symbol table so it participates
     /// in hover, completion and the other analysis features exactly as a Topsy Turvy-defined function would.
     /// </summary>
     /// <param name="name">The function name, as visible to Topsy Turvy source.</param>
     /// <param name="parameters">The function parameters, in declaration order.</param>
     /// <param name="returnType">The declared return type, or <c>null</c> for a void function.</param>
+    /// <param name="returnArrayElementType">The array element type of <paramref name="returnType"/>, when it is <see cref="LiteralType.Array"/>.</param>
     /// <param name="documentation">The mapped documentation comment for the function.</param>
-    /// <returns><c>true</c> if the function was added, or <c>false</c> if a symbol already exists under this name and was left untouched.</returns>
+    /// <returns><c>true</c> if the function was added, or <c>false</c> if some other symbol already occupied this name and was left untouched.</returns>
     /// <remarks>
     /// An external function has no source position of its own, so <see cref="SymbolInfo.DefinitionLine"/> and
     /// <see cref="SymbolInfo.DefinitionColumn"/> are left at their default of zero, the convention this class already
-    /// uses to mean the position could not be determined.  A symbol already present under this name, whether a
-    /// Topsy Turvy function, a variable, or another external function, is left alone: a Topsy Turvy function must
-    /// always be able to shadow an external one of the same name, matching the rule the interpreter and type
-    /// checker already follow.
+    /// uses to mean the position could not be determined.  A variable or a Topsy Turvy function already present
+    /// under this name is left alone: a Topsy Turvy function must always be able to shadow an external one of the
+    /// same name, matching the rule the interpreter and type checker already follow.  Two external functions
+    /// sharing a name are a legitimate overload, not a collision, so a second call under the same name still adds
+    /// to the overload set and still returns <c>true</c>; only <see cref="TryGetSymbol"/>, which only ever answers
+    /// with one symbol per name, keeps whichever was registered first.
     /// </remarks>
-    public bool AddExternalFunction(string name, IReadOnlyList<(string Name, LiteralType Type)> parameters, LiteralType? returnType, DocumentationComment documentation)
+    public bool AddExternalFunction(string name, IReadOnlyList<(string Name, LiteralType Type, LiteralType? ArrayElementType)> parameters, LiteralType? returnType, LiteralType? returnArrayElementType, DocumentationComment documentation)
     {
-        if (this.symbols.ContainsKey(name))
-        {
-            return false;
-        }
-
-        this.symbols[name] = new SymbolInfo()
+        SymbolInfo symbolInfo = new()
         {
             Name = name,
             Kind = SymbolKind.Function,
             DeclaredType = returnType,
+            DeclaredArrayElementType = returnArrayElementType,
             TypedParameters = [.. parameters.Select(static parameter =>
-                new TypedParameter(parameter.Name, parameter.Type, new SourceSpan(new(0, 0), new(0, 0))))],
+                new TypedParameter(parameter.Name, parameter.Type, new SourceSpan(new(0, 0), new(0, 0)), parameter.ArrayElementType))],
             Documentation = documentation
         };
 
+        AddFunctionOverload(name, symbolInfo, this.functionOverloads);
+
+        bool shadowedByExistingSymbol = this.symbols.ContainsKey(name) && !this.externalFunctionNames.Contains(name);
+        this.externalFunctionNames.Add(name);
+        if (shadowedByExistingSymbol)
+        {
+            return false;
+        }
+
+        this.symbols.TryAdd(name, symbolInfo);
         return true;
     }
 
@@ -200,12 +246,13 @@ public class SymbolTable
     /// </summary>
     /// <param name="statements">The statements to process.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="functionOverloads">The dictionary to collect each function overload set into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void CollectFromStatements(IReadOnlyList<Statement> statements, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    private static void CollectFromStatements(IReadOnlyList<Statement> statements, Dictionary<string, SymbolInfo> collectedSymbols, Dictionary<string, List<SymbolInfo>> functionOverloads, string[] sourceLines)
     {
         foreach (Statement statement in statements)
         {
-            CollectFromStatement(statement, collectedSymbols, sourceLines);
+            CollectFromStatement(statement, collectedSymbols, functionOverloads, sourceLines);
         }
     }
 
@@ -214,8 +261,9 @@ public class SymbolTable
     /// </summary>
     /// <param name="statement">The statement to process.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="functionOverloads">The dictionary to collect each function overload set into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void CollectFromStatement(Statement statement, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    private static void CollectFromStatement(Statement statement, Dictionary<string, SymbolInfo> collectedSymbols, Dictionary<string, List<SymbolInfo>> functionOverloads, string[] sourceLines)
     {
         switch (statement)
         {
@@ -247,31 +295,31 @@ public class SymbolTable
                 AddPointerVariable(pointerDeclaration, collectedSymbols, sourceLines);
                 break;
             case FunctionDefinitionNode function:
-                AddFunction(function, collectedSymbols, sourceLines);
+                AddFunction(function, collectedSymbols, functionOverloads, sourceLines);
                 break;
             case ConditionalNode conditional:
-                CollectFromStatements(conditional.TrueBlock, collectedSymbols, sourceLines);
+                CollectFromStatements(conditional.TrueBlock, collectedSymbols, functionOverloads, sourceLines);
                 foreach (ElseIfBranch elseIf in conditional.ElseIfs)
                 {
-                    CollectFromStatements(elseIf.Block, collectedSymbols, sourceLines);
+                    CollectFromStatements(elseIf.Block, collectedSymbols, functionOverloads, sourceLines);
                 }
 
-                CollectFromStatements(conditional.ElseBlock, collectedSymbols, sourceLines);
+                CollectFromStatements(conditional.ElseBlock, collectedSymbols, functionOverloads, sourceLines);
                 break;
             case LoopNode loop:
-                CollectFromStatements(loop.Body, collectedSymbols, sourceLines);
+                CollectFromStatements(loop.Body, collectedSymbols, functionOverloads, sourceLines);
                 break;
             case SwitchNode switchNode:
                 foreach (SwitchCase switchCase in switchNode.Cases)
                 {
-                    CollectFromStatements(switchCase.Block, collectedSymbols, sourceLines);
+                    CollectFromStatements(switchCase.Block, collectedSymbols, functionOverloads, sourceLines);
                 }
 
-                CollectFromStatements(switchNode.DefaultBlock, collectedSymbols, sourceLines);
+                CollectFromStatements(switchNode.DefaultBlock, collectedSymbols, functionOverloads, sourceLines);
                 break;
             case TryCatchNode tryCatch:
-                CollectFromStatements(tryCatch.SuccessBlock, collectedSymbols, sourceLines);
-                CollectFromStatements(tryCatch.ExceptionBlock, collectedSymbols, sourceLines);
+                CollectFromStatements(tryCatch.SuccessBlock, collectedSymbols, functionOverloads, sourceLines);
+                CollectFromStatements(tryCatch.ExceptionBlock, collectedSymbols, functionOverloads, sourceLines);
                 break;
             case NamespaceDeclarationNode namespaceDeclaration:
                 AddNamespace(namespaceDeclaration, collectedSymbols, sourceLines);
@@ -329,8 +377,8 @@ public class SymbolTable
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
-            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
-                ? $"{declaration.Size.Value} "
+            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.SizeExpression is LiteralNode { Type: LiteralType.Integer } sizeLiteral
+                ? $"{sizeLiteral.Value} "
                 : "")}{LiteralTypeNames.ToDisplayName(declaration.ElementType)}",
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,
@@ -371,22 +419,30 @@ public class SymbolTable
     /// </summary>
     /// <param name="function">The function definition node representing the function.</param>
     /// <param name="collectedSymbols">The dictionary to collect symbol information into.</param>
+    /// <param name="functionOverloads">The dictionary to collect the function overload set into.</param>
     /// <param name="sourceLines">The original source lines.</param>
-    private static void AddFunction(FunctionDefinitionNode function, Dictionary<string, SymbolInfo> collectedSymbols, string[] sourceLines)
+    /// <remarks>
+    /// Two or more functions sharing a name are overloads of each other and every one of them is recorded in
+    /// <paramref name="functionOverloads"/>; only the first one is kept in <paramref name="collectedSymbols"/>,
+    /// since that dictionary answers with one symbol per name for hover and completion, tools that have always
+    /// shown one candidate regardless of whether a name was overloaded.
+    /// </remarks>
+    private static void AddFunction(FunctionDefinitionNode function, Dictionary<string, SymbolInfo> collectedSymbols, Dictionary<string, List<SymbolInfo>> functionOverloads, string[] sourceLines)
     {
-        if (!collectedSymbols.ContainsKey(function.Name))
+        SymbolInfo symbolInfo = new()
         {
-            collectedSymbols[function.Name] = new SymbolInfo()
-            {
-                Name = function.Name,
-                Kind = SymbolKind.Function,
-                DeclaredType = function.ReturnType,
-                TypedParameters = function.Parameters,
-                DefinitionLine = function.NameSpan.Start.Line,
-                DefinitionColumn = function.NameSpan.Start.Column,
-                Documentation = FindDocumentationComment(sourceLines, function.NameSpan.Start.Line)
-            };
-        }
+            Name = function.Name,
+            Kind = SymbolKind.Function,
+            DeclaredType = function.ReturnType,
+            DeclaredArrayElementType = function.ReturnArrayElementType,
+            TypedParameters = function.Parameters,
+            DefinitionLine = function.NameSpan.Start.Line,
+            DefinitionColumn = function.NameSpan.Start.Column,
+            Documentation = FindDocumentationComment(sourceLines, function.NameSpan.Start.Line)
+        };
+
+        AddFunctionOverload(function.Name, symbolInfo, functionOverloads);
+        collectedSymbols.TryAdd(function.Name, symbolInfo);
 
         foreach (TypedParameter parameter in function.Parameters)
         {
@@ -404,7 +460,7 @@ public class SymbolTable
             }
         }
 
-        CollectFromStatements(function.Body, collectedSymbols, sourceLines);
+        CollectFromStatements(function.Body, collectedSymbols, functionOverloads, sourceLines);
     }
 
     /// <summary>

@@ -109,4 +109,60 @@ public class ExternalFunctionInvokerTests
 
         result.ShouldBeNull();
     }
+
+    /// <summary>
+    /// Tests that <see cref="ExternalFunctionInvoker.Invoke"/> marshals an array argument into a real CLR array
+    /// before invoking the bound method.
+    /// </summary>
+    [Fact]
+    public void Invoke_WithArrayArgument_MarshalsToClrArray()
+    {
+        ExternalFunctionInvoker invoker = new(this.catalogue);
+        BoundFunctionDescriptor descriptor = invoker.Find("TestArraySum")!;
+        TestIO io = new([], new Queue<string>());
+        TopsyTurvyValue arrayArgument = TopsyTurvyValue.Array([TopsyTurvyValue.Integer(1), TopsyTurvyValue.Integer(2), TopsyTurvyValue.Integer(3)]);
+
+        TopsyTurvyValue? result = invoker.Invoke(descriptor, [arrayArgument], io);
+
+        result.ShouldNotBeNull();
+        result!.LiteralType.ShouldBe(LiteralType.Integer);
+        result.RawValue.ShouldBe(6);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ExternalFunctionInvoker.Invoke"/> throws when an array argument element is not
+    /// numeric-compatible with the declared element type.
+    /// </summary>
+    [Fact]
+    public void Invoke_WithArrayArgumentElementTypeMismatch_Throws()
+    {
+        ExternalFunctionInvoker invoker = new(this.catalogue);
+        BoundFunctionDescriptor descriptor = invoker.Find("TestArraySum")!;
+        TestIO io = new([], new Queue<string>());
+        TopsyTurvyValue arrayArgument = TopsyTurvyValue.Array([TopsyTurvyValue.Integer(1), TopsyTurvyValue.String("nope")]);
+
+        Should.Throw<TopsyTurvyRuntimeException>(() => invoker.Invoke(descriptor, [arrayArgument], io));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ExternalFunctionInvoker.Invoke"/> marshals a CLR array return value back into a Topsy
+    /// Turvy array value.
+    /// </summary>
+    [Fact]
+    public void Invoke_WithArrayReturnType_MarshalsToTopsyTurvyArray()
+    {
+        ExternalFunctionInvoker invoker = new(this.catalogue);
+        BoundFunctionDescriptor descriptor = invoker.Find("TestArrayRange")!;
+        TestIO io = new([], new Queue<string>());
+
+        TopsyTurvyValue? result = invoker.Invoke(descriptor, [TopsyTurvyValue.Integer(3)], io);
+
+        result.ShouldNotBeNull();
+        result!.LiteralType.ShouldBe(LiteralType.Array);
+        List<TopsyTurvyValue> elements = (List<TopsyTurvyValue>)result.RawValue!;
+        elements.Count.ShouldBe(3);
+        elements[0].RawValue.ShouldBe(1);
+        elements[1].RawValue.ShouldBe(2);
+        elements[2].RawValue.ShouldBe(3);
+    }
 }

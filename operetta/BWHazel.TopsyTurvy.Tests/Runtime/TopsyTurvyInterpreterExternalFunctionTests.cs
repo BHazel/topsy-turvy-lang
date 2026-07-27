@@ -149,4 +149,60 @@ public class TopsyTurvyInterpreterExternalFunctionTests : TopsyTurvyInterpreterT
         diagnostics.HasErrors.ShouldBeFalse();
         output.ShouldContain("Hello");
     }
+
+    /// <summary>
+    /// Tests that <c>SUMMON</c> of an external function taking an array argument marshals a declared array
+    /// variable into the bound method correctly.
+    /// </summary>
+    [Fact]
+    public void Execute_WithSummonExternalFunctionTakingArrayArgument_ReturnsSum()
+    {
+        string source = """
+            HARK! "Array Argument"
+            PRINCIPALS
+              PRAY WELCOME nums AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+              PRAY WELCOME total AS A PEER BEING SUMMON TestArraySum WITH nums IF YOU PLEASE.
+            THE CURTAIN RISES.
+            BEHOLD total
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter(this.catalogue);
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldContain("6");
+    }
+
+    /// <summary>
+    /// Tests that <c>SUMMON</c> of an external function returning an array marshals the CLR array result back into
+    /// a Topsy Turvy array variable, readable element-by-element with <c>VICTIM</c>.
+    /// </summary>
+    [Fact]
+    public void Execute_WithSummonExternalFunctionReturningArray_PopulatesArrayVariable()
+    {
+        string source = """
+            HARK! "Array Return"
+            PRINCIPALS
+              PRAY WELCOME result AS A LITTLE LIST OF PEER
+            THE CURTAIN RISES.
+            result IS APPOINTED SUMMON TestArrayRange WITH 3 IF YOU PLEASE.
+            BEHOLD VICTIM 1 ON result
+            BEHOLD VICTIM 2 ON result
+            BEHOLD VICTIM 3 ON result
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter(this.catalogue);
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldContain("1");
+        output.ShouldContain("2");
+        output.ShouldContain("3");
+    }
 }
