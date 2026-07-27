@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -190,6 +191,59 @@ public class SignatureHelpHandlerTests : LanguageServerTestBase
         result.ShouldNotBeNull();
         result.Signatures.Count().ShouldBe(2);
         result.Signatures.ShouldAllBe(signature => signature.Label.Split('(')[0] == "describe");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SignatureHelpHandler.Handle"/> method includes each parameter type in an
+    /// overload label, so two overloads differing only by parameter type render as distinct signatures.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithOverloadsDifferingOnlyByParameterType_ReturnsDistinctLabels()
+    {
+        string overloadedSource = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+              AND SO I FIND "a piece of text"
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A PEER TO FIND YARN
+              AND SO I FIND "a whole number"
+            MY DUTY IS DISCHARGED.
+
+            IT IS MY DUTY TO PERFORM describe UNDER THE TERMS OF value AS A YARN TO FIND YARN
+              AND SO I FIND "a piece of text"
+            MY DUTY IS DISCHARGED.
+            SUMMON describe WITH 1
+            FINALE.
+            """;
+
+        DocumentStateManager manager = new();
+        manager.Update(this.testUri, overloadedSource, this.parser.TryParse(overloadedSource));
+        manager.Update(this.testUri, source, this.parser.TryParse(source));
+        SignatureHelpHandler handler = new(manager);
+        string[] lines = source.Split('\n');
+        int summonLine = Array.FindIndex(lines, line => line.TrimStart().StartsWith("SUMMON"));
+        int cursorChar = lines[summonLine].Length;
+
+        SignatureHelp? result = await handler.Handle(this.MakeRequest(line: summonLine, character: cursorChar), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        List<string> labels = [.. result.Signatures.Select(signature => signature.Label)];
+        labels.Distinct().Count().ShouldBe(2);
+        labels.ShouldContain(label => label.Contains("PEER"));
+        labels.ShouldContain(label => label.Contains("YARN"));
     }
 
     /// <summary>
