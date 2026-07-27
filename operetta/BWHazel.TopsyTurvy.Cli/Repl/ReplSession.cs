@@ -487,7 +487,7 @@ public sealed class ReplSession
     /// <param name="parameter">The parameter to format.</param>
     /// <returns>A string in the form <c>name: TYPE</c>.</returns>
     private static string FormatParameter(TypedParameter parameter) =>
-        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type)}";
+        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type, parameter.ArrayElementType)}";
 
     /// <summary>
     /// Writes the REPL command help table.

@@ -30,4 +30,15 @@ public static class LiteralTypeNames
         LiteralType.Pointer => Keywords.TypeNames.GalleryPictureOf,
         _ => "unknown"
     };
+
+    /// <summary>
+    /// Converts a <see cref="LiteralType"/> to a user-friendly display name, including the element type when the type is an array.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
+    /// <returns>The user-friendly display name.</returns>
+    public static string ToDisplayName(LiteralType type, LiteralType? elementType) =>
+        type == LiteralType.Array && elementType is not null
+            ? $"{ToDisplayName(type)} {ToDisplayName(elementType.Value)}"
+            : ToDisplayName(type);
 }

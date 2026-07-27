@@ -49,6 +49,49 @@ public class HoverMarkdownBuilderTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method produces the expected Markdown for a function symbol with an array-typed parameter.
+    /// </summary>
+    [Fact]
+    public void Build_WithFunctionWithArrayParameter_ReturnsSignatureWithElementTypes()
+    {
+        SymbolInfo info = new()
+        {
+            Name = "sumArray",
+            Kind = SymbolKind.Function,
+            DeclaredType = LiteralType.Integer,
+            DeclaredArrayElementType = null,
+            TypedParameters =
+            [
+                new TypedParameter("nums", LiteralType.Array, new(new(0, 0), new(0, 0)), LiteralType.Integer)
+            ]
+        };
+
+        string result = HoverMarkdownBuilder.Build(info);
+
+        result.ShouldBe("**(function)** `sumArray`(nums AS A LITTLE LIST OF PEER) TO FIND PEER");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method produces the expected Markdown for a function symbol with an array-typed return type.
+    /// </summary>
+    [Fact]
+    public void Build_WithFunctionWithArrayReturnType_ReturnsSignatureWithReturnElementType()
+    {
+        SymbolInfo info = new()
+        {
+            Name = "makeArray",
+            Kind = SymbolKind.Function,
+            DeclaredType = LiteralType.Array,
+            DeclaredArrayElementType = LiteralType.Integer,
+            TypedParameters = []
+        };
+
+        string result = HoverMarkdownBuilder.Build(info);
+
+        result.ShouldBe("**(function)** `makeArray`() TO FIND LITTLE LIST OF PEER");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> method produces the expected Markdown for a function symbol with an empty parameters list.
     /// </summary>
     [Fact]

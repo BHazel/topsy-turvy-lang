@@ -653,9 +653,9 @@ public sealed class VisualGraphBuilder
     private static string FunctionSubtitle(FunctionDefinitionNode node)
     {
         string returnLabel = node.ReturnType is not null
-            ? $"→ {FormatLiteralType(node.ReturnType.Value)}"
+            ? $"→ {FormatLiteralType(node.ReturnType.Value, node.ReturnArrayElementType)}"
             : string.Empty;
-        
+
         return returnLabel.Length > 0
             ? $"{node.Name} {returnLabel}"
             : node.Name;
@@ -680,7 +680,7 @@ public sealed class VisualGraphBuilder
 
         foreach (TypedParameter parameter in node.Parameters)
         {
-            string paramLabel = $"{parameter.Name} : {FormatLiteralType(parameter.Type)}";
+            string paramLabel = $"{parameter.Name} : {FormatLiteralType(parameter.Type, parameter.ArrayElementType)}";
             statementNode.AddPort(this.MakePort(statementNode, paramLabel, VisualPortRole.DataOut));
         }
 
@@ -702,6 +702,7 @@ public sealed class VisualGraphBuilder
         openerNode.SymbolIdentifierNodeName = node.Name;
         openerNode.AstNode = node;
         openerNode.NodeLiteralType = node.ReturnType;
+        openerNode.ArrayElementLiteralType = node.ReturnArrayElementType;
         openerNode.AddPort(this.MakePort(openerNode, "Out", VisualPortRole.FlowOut));
         diagram.Nodes.Add(openerNode);
 
@@ -721,6 +722,7 @@ public sealed class VisualGraphBuilder
             termNode.StatementType = "ParameterNode";
             termNode.SymbolIdentifierNodeName = parameter.Name;
             termNode.NodeLiteralType = parameter.Type;
+            termNode.ArrayElementLiteralType = parameter.ArrayElementType;
 
             TopsyTurvyVisualPortModel termOutPort = this.MakePort(termNode, "Out", VisualPortRole.DataOut);
             termNode.AddPort(termOutPort);
@@ -1787,10 +1789,16 @@ public sealed class VisualGraphBuilder
     }
 
     /// <summary>
-    /// Formats a literal type into a human-readable string representation.
+    /// Formats a literal type into a human-readable string representation, including the element type when the type is an array.
     /// </summary>
     /// <param name="type">The literal type to format.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
     /// <returns>A human-readable string representation of the literal type.</returns>
+    private static string FormatLiteralType(LiteralType type, LiteralType? elementType) =>
+        type == LiteralType.Array && elementType is not null
+            ? $"{FormatLiteralType(type)} {FormatLiteralType(elementType.Value)}"
+            : FormatLiteralType(type);
+
     private static string FormatLiteralType(LiteralType type) => type switch
     {
         LiteralType.Integer => Keywords.TypeNames.Peer,

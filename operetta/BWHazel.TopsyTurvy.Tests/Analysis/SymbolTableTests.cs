@@ -651,8 +651,8 @@ public class SymbolTableTests
     {
         SymbolTable table = this.BuildTable("HARK! \"Test\"\nFINALE.\n");
 
-        bool firstAdded = table.AddExternalFunction("Describe", [("value", LiteralType.Integer)], LiteralType.String, new());
-        bool secondAdded = table.AddExternalFunction("Describe", [("value", LiteralType.String)], LiteralType.String, new());
+        bool firstAdded = table.AddExternalFunction("Describe", [("value", LiteralType.Integer, null)], LiteralType.String, null, new());
+        bool secondAdded = table.AddExternalFunction("Describe", [("value", LiteralType.String, null)], LiteralType.String, null, new());
 
         firstAdded.ShouldBeTrue();
         secondAdded.ShouldBeTrue();
@@ -678,11 +678,67 @@ public class SymbolTableTests
 
         SymbolTable table = this.BuildTable(source);
 
-        bool added = table.AddExternalFunction("Describe", [("value", LiteralType.String)], LiteralType.String, new());
+        bool added = table.AddExternalFunction("Describe", [("value", LiteralType.String, null)], LiteralType.String, null, new());
 
         added.ShouldBeFalse();
         table.TryGetSymbol("Describe", out SymbolInfo? info);
         info!.DefinitionLine.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.AddExternalFunction"/> method records the array element type for
+    /// an array-typed parameter, distinct from the return type own element type, so a swap between the two
+    /// would be caught.
+    /// </summary>
+    [Fact]
+    public void AddExternalFunction_WithArrayParameter_RecordsParameterElementType()
+    {
+        SymbolTable table = this.BuildTable("HARK! \"Test\"\nFINALE.\n");
+
+        table.AddExternalFunction("SumArray", [("nums", LiteralType.Array, LiteralType.String)], LiteralType.Array, LiteralType.Integer, new());
+
+        table.TryGetSymbol("SumArray", out SymbolInfo? info);
+        info!.TypedParameters![0].ArrayElementType.ShouldBe(LiteralType.String);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.AddExternalFunction"/> method records the array element type for
+    /// an array-typed return type, distinct from the parameter element type, so a swap between the two
+    /// would be caught.
+    /// </summary>
+    [Fact]
+    public void AddExternalFunction_WithArrayReturnType_RecordsReturnElementType()
+    {
+        SymbolTable table = this.BuildTable("HARK! \"Test\"\nFINALE.\n");
+
+        table.AddExternalFunction("SumArray", [("nums", LiteralType.Array, LiteralType.String)], LiteralType.Array, LiteralType.Integer, new());
+
+        table.TryGetSymbol("SumArray", out SymbolInfo? info);
+        info!.DeclaredArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SymbolTable.Build"/> method records the array element type for a Topsy Turvy
+    /// function array-typed return type.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayReturnTypeFunction_RecordsReturnArrayElementType()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM makeArray UNDER NO OBLIGATION TO FIND LITTLE LIST OF PEER
+              PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 IF YOU PLEASE.
+              AND SO I FIND numbers
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        SymbolTable table = this.BuildTable(source);
+
+        table.TryGetSymbol("makeArray", out SymbolInfo? info);
+        info!.DeclaredArrayElementType.ShouldBe(LiteralType.Integer);
     }
 
     /// <summary>

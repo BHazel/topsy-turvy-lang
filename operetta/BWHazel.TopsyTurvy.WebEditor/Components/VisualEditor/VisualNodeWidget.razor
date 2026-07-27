@@ -306,6 +306,23 @@ The node layout is a vertical stack of rows:
                         }
                     </MudSelect>
                 }
+                @if (this.Node.NodeLiteralType == LiteralType.Array)
+                {
+                    <MudSelect T="LiteralType?" Label="Return Element Type" Value="@this.Node.ArrayElementLiteralType"
+                        ValueChanged="@(value => this.OnPropertyChanged(() =>
+                        {
+                            this.Node.ArrayElementLiteralType = value;
+                            this.UpdateFunctionSubtitle();
+                        }))"
+                        Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null && type != LiteralType.Array))
+                        {
+                            <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                                @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                }
                 <MudButton StartIcon="@Icons.Material.Outlined.Add"
                     Size="MudBlazor.Size.Small"
                     OnClick="@this.AddParameter">Add Parameter</MudButton>
@@ -329,6 +346,20 @@ The node layout is a vertical stack of rows:
                         </MudSelectItem>
                     }
                 </MudSelect>
+                
+                @if (this.Node.NodeLiteralType == LiteralType.Array)
+                {
+                    <MudSelect T="LiteralType?" Label="Element Type" Value="@this.Node.ArrayElementLiteralType"
+                        ValueChanged="@(value => this.OnPropertyChanged(() => this.Node.ArrayElementLiteralType = value))"
+                        Class="visual-node-edit-field" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (LiteralType literalType in Enum.GetValues<LiteralType>().Where(type => type != LiteralType.Null && type != LiteralType.Array))
+                        {
+                            <MudSelectItem T="LiteralType?" Value="@((LiteralType?)literalType)">
+                                @(VisualTypeMaps.TypeToKeyword.TryGetValue(literalType, out string? keyword) ? keyword : literalType.ToString())
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                }
             }
             else if (this.Node.StatementType == "TryCatchOpener")
             {
@@ -864,9 +895,12 @@ The node layout is a vertical stack of rows:
     {
         string functionName = this.Node.SymbolIdentifierNodeName ?? "functionName";
         string returnPart = this.Node.NodeLiteralType.HasValue && VisualTypeMaps.TypeToKeyword.TryGetValue(this.Node.NodeLiteralType.Value, out string? keyword)
-            ? $" → {keyword}"
+            ? this.Node.NodeLiteralType == LiteralType.Array && this.Node.ArrayElementLiteralType.HasValue
+                && VisualTypeMaps.TypeToKeyword.TryGetValue(this.Node.ArrayElementLiteralType.Value, out string? elementKeyword)
+                ? $" → {keyword} {elementKeyword}"
+                : $" → {keyword}"
             : string.Empty;
-        
+
         this.Node.Subtitle = $"{functionName}{returnPart}";
     }
 

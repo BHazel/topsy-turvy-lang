@@ -183,6 +183,56 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a function definition with
+    /// an array-typed parameter, including the parameter element type in the generated source rather than
+    /// emitting a bare <c>LITTLE LIST OF</c> with no element type.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinitionWithArrayParameter_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            IT IS MY DUTY TO PERFORM firstElement UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+              AND SO I FIND VICTIM 1 ON nums
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        FunctionDefinitionNode functionDefinition = result.Program!.Statements.OfType<FunctionDefinitionNode>().First();
+        functionDefinition.Parameters[0].Type.ShouldBe(LiteralType.Array);
+        functionDefinition.Parameters[0].ArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a function definition with
+    /// an array-typed return type, including the return element type in the generated source.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinitionWithArrayReturnType_RoundTrips()
+    {
+        string source = """
+            HARK! "T"
+            IT IS MY DUTY TO PERFORM makeArray UNDER NO OBLIGATION TO FIND LITTLE LIST OF PEER
+              PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 IF YOU PLEASE.
+              AND SO I FIND numbers
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        FunctionDefinitionNode functionDefinition = result.Program!.Statements.OfType<FunctionDefinitionNode>().First();
+        functionDefinition.ReturnType.ShouldBe(LiteralType.Array);
+        functionDefinition.ReturnArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a try-catch block.
     /// </summary>
     [Fact]

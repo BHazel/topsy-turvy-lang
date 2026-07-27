@@ -36,6 +36,33 @@ public class VisualGraphToAstConverterFunctionTests : VisualGraphToAstConverterT
     }
 
     /// <summary>
+    /// Tests that a function definition with an array-typed parameter and an array-typed return type round-trips
+    /// with both element types preserved, distinct from each other so a swap between the two would be caught.
+    /// </summary>
+    [Fact]
+    public void RoundTrip_FunctionDefinition_PreservesArrayParameterAndReturnElementTypes()
+    {
+        FunctionDefinitionNode function = new()
+        {
+            Name = "sumArray",
+            NameSpan = PlaceholderSpan,
+            Parameters = [new TypedParameter("nums", LiteralType.Array, PlaceholderSpan, LiteralType.String)],
+            ReturnType = LiteralType.Array,
+            ReturnArrayElementType = LiteralType.Integer,
+            Body = [],
+            Span = PlaceholderSpan,
+        };
+
+        ProgramNode reconstructed = RoundTrip(WrapInProgram(function));
+
+        FunctionDefinitionNode result = reconstructed.Statements.OfType<FunctionDefinitionNode>().Single();
+        result.Parameters[0].Type.ShouldBe(LiteralType.Array);
+        result.Parameters[0].ArrayElementType.ShouldBe(LiteralType.String);
+        result.ReturnType.ShouldBe(LiteralType.Array);
+        result.ReturnArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
     /// Tests that a function with no return type stays without one after round-tripping.
     /// </summary>
     [Fact]

@@ -222,6 +222,21 @@ public sealed class CadenzaCommandTests(CliFixture fixture)
     }
 
     /// <summary>
+    /// Tests that the :armoury command lists an array-typed function parameter with its element type included.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithArmouryCommand_ListsArrayParameterWithElementType()
+    {
+        (int _, string stdout, string _) = await this.RunWithStdinAsync(
+            "cadenza",
+            "IT IS MY DUTY TO PERFORM FirstElement UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER AND SO I FIND VICTIM 1 ON nums MY DUTY IS DISCHARGED.\n" +
+            ":armoury\n" +
+            ":exit\n");
+
+        stdout.ShouldContain("nums: LITTLE LIST OF PEER");
+    }
+
+    /// <summary>
     /// Tests that the cadenza command calls a function from an external library admitted at startup.
     /// </summary>
     [Fact]

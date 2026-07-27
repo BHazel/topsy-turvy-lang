@@ -722,6 +722,29 @@ MY DUTY IS DISCHARGED.
 SUMMON greet WITH "Ko-Ko" IF YOU PLEASE.
 ```
 
+### Array Parameters and Return Values
+
+```topsy
+IT IS MY DUTY TO PERFORM sumArray UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+  <body>
+MY DUTY IS DISCHARGED.
+```
+
+- A parameter, or the `TO FIND` return type, may be `LITTLE LIST OF <type>` — the same array-type annotation `PRAY WELCOME` declarations already use (see §16 Arrays). Inside the function body an array parameter behaves exactly like an ordinary array variable: it may be indexed with `VICTIM`, its length read with `RECKONING OF`, and it may itself be passed as an argument where another array parameter is expected.
+
+**Example:**
+
+```topsy
+IT IS MY DUTY TO PERFORM sumArray UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+  PRAY WELCOME total AS A PEER BEING 0
+  PRAY WELCOME index AS A PEER BEING 1
+  BY A LEGAL FICTION ASCENDING index UNTIL ALIKE index AND SUM OF RECKONING OF nums AND 1
+    total IS APPOINTED SUM OF total AND VICTIM index ON nums
+  THE TERM EXPIRES.
+  AND SO I FIND total
+MY DUTY IS DISCHARGED.
+```
+
 ### Overloading
 
 Two functions may share a name if their declared parameter types differ. A call is resolved to the one overload whose parameter types match the argument types, either exactly or via the same widening rules already used for arithmetic (§5) and assignment.

@@ -133,10 +133,10 @@ public static class SignatureHelpBuilder
     {
         IReadOnlyList<TypedParameter> typedParameters = overload.TypedParameters ?? [];
         List<string> parameterLabels = [.. typedParameters
-            .Select(static parameter => $"{parameter.Name} AS A {LiteralTypeNames.ToDisplayName(parameter.Type)}")];
+            .Select(static parameter => $"{parameter.Name} AS A {LiteralTypeNames.ToDisplayName(parameter.Type, parameter.ArrayElementType)}")];
 
         string returnPart = overload.DeclaredType is LiteralType returnType
-            ? $" TO FIND {LiteralTypeNames.ToDisplayName(returnType)}"
+            ? $" TO FIND {LiteralTypeNames.ToDisplayName(returnType, overload.DeclaredArrayElementType)}"
             : string.Empty;
 
         string label = $"{overload.Name}({string.Join(", ", parameterLabels)}){returnPart}";

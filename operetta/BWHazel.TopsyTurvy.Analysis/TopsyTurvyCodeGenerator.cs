@@ -263,7 +263,7 @@ public sealed class TopsyTurvyCodeGenerator
                         }
 
                         TypedParameter parameter = functionDefinition.Parameters[i];
-                        generatedCodeBuilder.Append($"{parameter.Name} AS A {this.TypeKeyword(parameter.Type)}");
+                        generatedCodeBuilder.Append($"{parameter.Name} AS A {this.TypeKeyword(parameter.Type, parameter.ArrayElementType)}");
                     }
                 }
                 else
@@ -273,7 +273,7 @@ public sealed class TopsyTurvyCodeGenerator
 
                 if (functionDefinition.ReturnType.HasValue)
                 {
-                    generatedCodeBuilder.Append($" TO FIND {this.TypeKeyword(functionDefinition.ReturnType.Value)}");
+                    generatedCodeBuilder.Append($" TO FIND {this.TypeKeyword(functionDefinition.ReturnType.Value, functionDefinition.ReturnArrayElementType)}");
                 }
 
                 generatedCodeBuilder.AppendLine();
@@ -587,6 +587,18 @@ public sealed class TopsyTurvyCodeGenerator
         Operator.TranspositionDown => "TRANSPOSITION DOWN",
         _ => throw new ArgumentOutOfRangeException(nameof(theOperator), theOperator, "Unknown operator.")
     };
+
+    /// <summary>
+    /// Returns the Topsy Turvy type keyword for the given <see cref="LiteralType"/>, including the element type
+    /// when the type is an array.
+    /// </summary>
+    /// <param name="type">The type to convert.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
+    /// <returns>The type keyword string.</returns>
+    private string TypeKeyword(LiteralType type, LiteralType? elementType) =>
+        type == LiteralType.Array && elementType is not null
+            ? $"{this.TypeKeyword(type)} {this.TypeKeyword(elementType.Value)}"
+            : this.TypeKeyword(type);
 
     /// <summary>
     /// Returns the Topsy Turvy type keyword for the given <see cref="LiteralType"/>.

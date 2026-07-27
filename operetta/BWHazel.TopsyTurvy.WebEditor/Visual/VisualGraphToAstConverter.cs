@@ -812,7 +812,8 @@ public sealed class VisualGraphToAstConverter
                     ? new TypedParameter(
                         termNode.SymbolIdentifierNodeName ?? string.Empty,
                         termNode.NodeLiteralType ?? LiteralType.String,
-                        PlaceholderSpan)
+                        PlaceholderSpan,
+                        termNode.ArrayElementLiteralType)
                     : null;
             })
             .OfType<TypedParameter>()];
@@ -823,6 +824,7 @@ public sealed class VisualGraphToAstConverter
             NameSpan = PlaceholderSpan,
             Parameters = parameters.AsReadOnly(),
             ReturnType = openerNode.NodeLiteralType,
+            ReturnArrayElementType = openerNode.ArrayElementLiteralType,
             Body = body,
             Span = PlaceholderSpan,
         };
@@ -925,7 +927,8 @@ public sealed class VisualGraphToAstConverter
                     ? new TypedParameter(
                         termNode.SymbolIdentifierNodeName ?? string.Empty,
                         termNode.NodeLiteralType ?? LiteralType.String,
-                        PlaceholderSpan)
+                        PlaceholderSpan,
+                        termNode.ArrayElementLiteralType)
                     : null;
             })
             .OfType<TypedParameter>()];
@@ -936,6 +939,7 @@ public sealed class VisualGraphToAstConverter
             NameSpan = original.NameSpan,
             Parameters = parameters.Count > 0 ? parameters.AsReadOnly() : original.Parameters,
             ReturnType = visualNode.NodeLiteralType ?? original.ReturnType,
+            ReturnArrayElementType = visualNode.ArrayElementLiteralType ?? original.ReturnArrayElementType,
             Body = this.WalkFlowStatements(visualNode, visualNode.PairedCloserId, diagram),
             Span = PlaceholderSpan,
         };

@@ -1008,14 +1008,44 @@ internal sealed class TypeCheckVisitor
     /// Checks a function definition for type correctness.
     /// </summary>
     /// <param name="node">The function definition node to check.</param>
+    /// <remarks>
+    /// An array-typed parameter has its element type declared via <see cref="DeclareArrayElementType"/>, the same
+    /// helper an ordinary array variable declaration uses, so the parameter can be indexed, have its length read,
+    /// or itself be passed to another array parameter inside the body exactly like an array variable.  An
+    /// array-typed return declared with a <c>NAUGHT</c> element type is rejected here, mirroring
+    /// the equivalent rejection in <see cref="CheckArrayDeclaration"/> for a variable declaration.
+    /// </remarks>
     private void CheckFunctionDefinition(FunctionDefinitionNode node)
     {
         this.PushScope();
         this.functionReturnTypeStack.Push(node.ReturnType);
 
+        if (node.ReturnType == LiteralType.Array && node.ReturnArrayElementType is null or LiteralType.Null)
+        {
+            this.Error(
+                $"A LITTLE LIST OF NAUGHT is not a valid return type for '{node.Name}'.  A concrete element type must be specified.",
+                node.Span);
+        }
+
         foreach (TypedParameter parameter in node.Parameters)
         {
             this.DeclareSymbol(parameter.Name, parameter.Type);
+
+            if (parameter.Type != LiteralType.Array)
+            {
+                continue;
+            }
+
+            if (parameter.ArrayElementType is null or LiteralType.Null)
+            {
+                this.Error(
+                    $"A LITTLE LIST OF NAUGHT is not a valid array type for parameter '{parameter.Name}'.  A concrete element type must be specified.",
+                    parameter.Span);
+            }
+            else
+            {
+                this.DeclareArrayElementType(parameter.Name, parameter.ArrayElementType.Value);
+            }
         }
 
         this.CheckStatements(node.Body);

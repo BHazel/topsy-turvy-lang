@@ -379,4 +379,62 @@ public class TopsyTurvyInterpreterFunctionTests : TopsyTurvyInterpreterTestBase
 
         diagnostics.HasErrors.ShouldBeTrue();
     }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method correctly binds an array argument to an array-typed parameter and indexes it inside the function body.
+    /// </summary>
+    [Fact]
+    public void Execute_WithArrayParameter_IndexesArgumentCorrectly()
+    {
+        string source = """
+            HARK! "Array Parameter"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM firstElement UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+              AND SO I FIND VICTIM 1 ON nums
+            MY DUTY IS DISCHARGED.
+
+            PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+            BEHOLD SUMMON firstElement WITH numbers IF YOU PLEASE.
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("10");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method correctly returns an array value constructed inside a function body.
+    /// </summary>
+    [Fact]
+    public void Execute_WithArrayReturnType_ReturnsArrayValue()
+    {
+        string source = """
+            HARK! "Array Return"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM makeArray UNDER NO OBLIGATION TO FIND LITTLE LIST OF PEER
+              PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+              AND SO I FIND numbers
+            MY DUTY IS DISCHARGED.
+
+            BEHOLD SUMMON makeArray WITH NOTHING IF YOU PLEASE.
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("[1, 2, 3]");
+    }
 }

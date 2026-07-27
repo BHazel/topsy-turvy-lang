@@ -246,15 +246,15 @@ GuardClause     = "YEOMAN", Expression, "OTHERWISE,", StatementList, "UNDER ORDE
 (*----------------------------------------------------------------------------*)
 FunctionDefinition = "IT IS MY DUTY TO PERFORM", Identifier,
                     ( "UNDER THE TERMS OF", ParameterList | "UNDER NO OBLIGATION" ),
-                    [ "TO FIND", ScalarType ],
+                    [ "TO FIND", Type ],
                     FunctionBody,
                     ( "MY DUTY IS DISCHARGED." | "MY DUTY IS PREMATURELY DISCHARGED." ) ;
-(* TO FIND ScalarType declares the return type.  Omitting it means the function is void —
+(* TO FIND Type declares the return type.  Omitting it means the function is void —
    no AND SO I FIND expression is expected. *)
 
 ParameterList      = TypedParameter, { "AND", TypedParameter } ;
 
-TypedParameter     = Identifier, "AS A", ScalarType ;
+TypedParameter     = Identifier, "AS A", Type ;
 
 FunctionBody       = { Statement }, [ "AND SO I FIND", Expression ] ;
 

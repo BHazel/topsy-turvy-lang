@@ -1134,25 +1134,25 @@ public static class StatementParser
          from firstParameter in Lexer.Identifier
          from firstParameterEnd in CurrentOffset
          from firstAsAKeyword in Ws(Lexer.Keyword("AS A"))
-         from firstParameterType in Ws(ExpressionParser.TypeKeyword)
+         from firstParameterType in Ws(ExpressionParser.ParameterOrReturnTypeKeyword)
          from remainingParameters in (
              from andKeyword in Ws(Lexer.Keyword("AND"))
              from parameterStart in Ws(CurrentOffset)
              from parameter in Lexer.Identifier
              from parameterEnd in CurrentOffset
              from parameterAsAKeyword in Ws(Lexer.Keyword("AS A"))
-             from parameterType in Ws(ExpressionParser.TypeKeyword)
-             select new TypedParameter(parameter, parameterType, BuildSpan(parameterStart, parameterEnd))
+             from parameterType in Ws(ExpressionParser.ParameterOrReturnTypeKeyword)
+             select new TypedParameter(parameter, parameterType.Type, BuildSpan(parameterStart, parameterEnd), parameterType.ElementType)
          )
          .Try()
          .Many()
          select new List<TypedParameter>(remainingParameters.Length + 1)
          {
-            new TypedParameter(firstParameter, firstParameterType, BuildSpan(firstParameterStart, firstParameterEnd))
-        }
-        .Concat(remainingParameters)
-        .ToList())
-        .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION"))
+            new TypedParameter(firstParameter, firstParameterType.Type, BuildSpan(firstParameterStart, firstParameterEnd), firstParameterType.ElementType)
+         }
+         .Concat(remainingParameters)
+         .ToList())
+         .Or(Ws(Lexer.Keyword("UNDER NO OBLIGATION"))
             .Select(_ => new List<TypedParameter>()));
 
     /// <summary>
@@ -1219,8 +1219,8 @@ public static class StatementParser
         from functionName in Lexer.Identifier
         from nameEndOffset in CurrentOffset
         from parameters in ParameterList
-        from returnType in Ws(Lexer.Keyword("TO FIND").IgnoreThen(Ws(ExpressionParser.TypeKeyword)))
-            .Select(type => (LiteralType?)type)
+        from returnTypeAnnotation in Ws(Lexer.Keyword("TO FIND").IgnoreThen(Ws(ExpressionParser.ParameterOrReturnTypeKeyword)))
+            .Select(annotation => ((LiteralType Type, LiteralType? ElementType)?)annotation)
             .Try()
             .OptionalOrDefault(null)
         from body in WsMany(Parse.Ref(() => Statement!))
@@ -1232,7 +1232,8 @@ public static class StatementParser
             Name = functionName,
             NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
             Parameters = [.. parameters],
-            ReturnType = returnType,
+            ReturnType = returnTypeAnnotation?.Type,
+            ReturnArrayElementType = returnTypeAnnotation?.ElementType,
             Body = [.. body],
             Span = BuildSpan(startOffset, endOffset)
         };

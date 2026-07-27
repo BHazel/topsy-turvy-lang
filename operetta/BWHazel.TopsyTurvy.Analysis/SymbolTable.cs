@@ -123,6 +123,7 @@ public class SymbolTable
     /// <param name="name">The function name, as visible to Topsy Turvy source.</param>
     /// <param name="parameters">The function parameters, in declaration order.</param>
     /// <param name="returnType">The declared return type, or <c>null</c> for a void function.</param>
+    /// <param name="returnArrayElementType">The array element type of <paramref name="returnType"/>, when it is <see cref="LiteralType.Array"/>.</param>
     /// <param name="documentation">The mapped documentation comment for the function.</param>
     /// <returns><c>true</c> if the function was added, or <c>false</c> if some other symbol already occupied this name and was left untouched.</returns>
     /// <remarks>
@@ -135,15 +136,16 @@ public class SymbolTable
     /// to the overload set and still returns <c>true</c>; only <see cref="TryGetSymbol"/>, which only ever answers
     /// with one symbol per name, keeps whichever was registered first.
     /// </remarks>
-    public bool AddExternalFunction(string name, IReadOnlyList<(string Name, LiteralType Type)> parameters, LiteralType? returnType, DocumentationComment documentation)
+    public bool AddExternalFunction(string name, IReadOnlyList<(string Name, LiteralType Type, LiteralType? ArrayElementType)> parameters, LiteralType? returnType, LiteralType? returnArrayElementType, DocumentationComment documentation)
     {
         SymbolInfo symbolInfo = new()
         {
             Name = name,
             Kind = SymbolKind.Function,
             DeclaredType = returnType,
+            DeclaredArrayElementType = returnArrayElementType,
             TypedParameters = [.. parameters.Select(static parameter =>
-                new TypedParameter(parameter.Name, parameter.Type, new SourceSpan(new(0, 0), new(0, 0))))],
+                new TypedParameter(parameter.Name, parameter.Type, new SourceSpan(new(0, 0), new(0, 0)), parameter.ArrayElementType))],
             Documentation = documentation
         };
 
@@ -432,6 +434,7 @@ public class SymbolTable
             Name = function.Name,
             Kind = SymbolKind.Function,
             DeclaredType = function.ReturnType,
+            DeclaredArrayElementType = function.ReturnArrayElementType,
             TypedParameters = function.Parameters,
             DefinitionLine = function.NameSpan.Start.Line,
             DefinitionColumn = function.NameSpan.Start.Column,

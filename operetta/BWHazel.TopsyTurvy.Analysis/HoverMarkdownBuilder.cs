@@ -189,11 +189,11 @@ public static class HoverMarkdownBuilder
     {
         string parameterList = symbolInfo.TypedParameters is { Count: > 0 }
             ? string.Join(", ", symbolInfo.TypedParameters.Select(static parameter =>
-                $"{parameter.Name} AS A {LiteralTypeToKeyword(parameter.Type)}"))
+                $"{parameter.Name} AS A {LiteralTypeToKeyword(parameter.Type, parameter.ArrayElementType)}"))
             : string.Empty;
 
         string returnPart = symbolInfo.DeclaredType.HasValue
-            ? $" TO FIND {LiteralTypeToKeyword(symbolInfo.DeclaredType.Value)}"
+            ? $" TO FIND {LiteralTypeToKeyword(symbolInfo.DeclaredType.Value, symbolInfo.DeclaredArrayElementType)}"
             : string.Empty;
 
         return $"**(function)** `{symbolInfo.Name}`({parameterList}){returnPart}";
@@ -203,7 +203,8 @@ public static class HoverMarkdownBuilder
     /// Gets the display name for a <see cref="LiteralType"/> as a keyword string.
     /// </summary>
     /// <param name="type">The literal type.</param>
+    /// <param name="elementType">The array element type, when <paramref name="type"/> is <see cref="LiteralType.Array"/>.</param>
     /// <returns>The keyword string for the literal type.</returns>
-    private static string LiteralTypeToKeyword(LiteralType type) =>
-        LiteralTypeNames.ToDisplayName(type);
+    private static string LiteralTypeToKeyword(LiteralType type, LiteralType? elementType = null) =>
+        LiteralTypeNames.ToDisplayName(type, elementType);
 }

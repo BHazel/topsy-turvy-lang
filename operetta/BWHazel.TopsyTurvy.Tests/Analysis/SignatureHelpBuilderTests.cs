@@ -51,6 +51,60 @@ public class SignatureHelpBuilderTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="SignatureHelpBuilder.Build"/> method includes an array-typed parameter element
+    /// type in the signature label.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayParameter_IncludesParameterElementTypeInLabel()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM firstElement UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER TO FIND PEER
+              AND SO I FIND VICTIM 1 ON nums
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+        SymbolTable table = this.BuildTable(source);
+        string liveText = "SUMMON firstElement WITH numbers";
+
+        SignatureHelpResult? result = SignatureHelpBuilder.Build(liveText, 0, liveText.Length, table);
+
+        result.ShouldNotBeNull();
+        result.Signatures.ShouldHaveSingleItem();
+        result.Signatures[0].Label.ShouldBe("firstElement(nums AS A LITTLE LIST OF PEER) TO FIND PEER");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="SignatureHelpBuilder.Build"/> method includes an array-typed return type
+    /// element type in the signature label, distinct from the parameter element type, so a swap between
+    /// the two would be caught.
+    /// </summary>
+    [Fact]
+    public void Build_WithArrayReturnType_IncludesReturnElementTypeInLabel()
+    {
+        string source = """
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            IT IS MY DUTY TO PERFORM makeArray UNDER THE TERMS OF seed AS A YARN TO FIND LITTLE LIST OF PEER
+              PRAY WELCOME numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 IF YOU PLEASE.
+              AND SO I FIND numbers
+            MY DUTY IS DISCHARGED.
+            FINALE.
+            """;
+        SymbolTable table = this.BuildTable(source);
+        string liveText = "SUMMON makeArray WITH \"x\"";
+
+        SignatureHelpResult? result = SignatureHelpBuilder.Build(liveText, 0, liveText.Length, table);
+
+        result.ShouldNotBeNull();
+        result.Signatures.ShouldHaveSingleItem();
+        result.Signatures[0].Label.ShouldBe("makeArray(seed AS A YARN) TO FIND LITTLE LIST OF PEER");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="SignatureHelpBuilder.Build"/> method includes each parameter type in an
     /// overload label, so two overloads differing only by parameter type render as distinct signatures.
     /// </summary>
