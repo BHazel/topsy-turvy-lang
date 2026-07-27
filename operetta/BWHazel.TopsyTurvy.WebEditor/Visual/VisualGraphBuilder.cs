@@ -272,10 +272,10 @@ public sealed class VisualGraphBuilder
             ? "CONSERVATIVE "
             : string.Empty;
         
-        string sizeLabel = node.Size.HasValue
-            ? $" [{node.Size}]"
+        string sizeLabel = node.SizeExpression is not null
+            ? $" [{SizeExpressionLabel(node.SizeExpression)}]"
             : string.Empty;
-        
+
         string subtitle = $"{node.Name} : {constantLabel}LITTLE LIST OF {typeLabel}{sizeLabel}";
 
         TopsyTurvyVisualNodeModel statementNode = this.MakeNode(layout.NextPrimaryPosition(), "PRAY WELCOME", subtitle, VisualNodeKind.Declaration);
@@ -288,9 +288,11 @@ public sealed class VisualGraphBuilder
         statementNode.ArrayElementLiteralType = node.ElementType;
         statementNode.IsIdentifierConstant = node.IsConstant;
 
-        if (node.InitialValues.Count == 0 && node.Size.HasValue)
+        if (node.InitialValues.Count == 0 && node.SizeExpression is not null)
         {
-            statementNode.LiteralValue = node.Size.Value.ToString();
+            TopsyTurvyVisualPortModel sizePort = this.MakePort(statementNode, "Size", VisualPortRole.DataIn);
+            statementNode.AddPort(sizePort);
+            this.CreateExpressionNode(node.SizeExpression, sizePort, layout, diagram, anchor: statementNode.Position);
         }
 
         for (int i = 0; i < node.InitialValues.Count; i++)
@@ -1798,6 +1800,18 @@ public sealed class VisualGraphBuilder
         type == LiteralType.Array && elementType is not null
             ? $"{FormatLiteralType(type)} {FormatLiteralType(elementType.Value)}"
             : FormatLiteralType(type);
+
+    /// <summary>
+    /// Formats an array declaration size expression for display in its node subtitle.
+    /// </summary>
+    /// <param name="sizeExpression">The size expression.</param>
+    /// <returns>The literal value for a literal size, the variable name for an identifier size, or a generic placeholder for any other expression.</returns>
+    private static string SizeExpressionLabel(Expression sizeExpression) => sizeExpression switch
+    {
+        LiteralNode literal => literal.Value?.ToString() ?? Keywords.Literals.Naught,
+        IdentifierNode identifier => identifier.Name,
+        _ => "expr"
+    };
 
     private static string FormatLiteralType(LiteralType type) => type switch
     {

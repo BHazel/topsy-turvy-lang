@@ -986,7 +986,7 @@ public class CilEmitterTests
     public void Emit_WelcomeListAppointVictimVictimList_StoresAndReadsElement()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
@@ -998,6 +998,25 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> whose size is a <see cref="VariableOperand"/> rather than
+    /// a <see cref="LiteralOperand"/> allocates a CLR array sized to the variable current value.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListWithVariableSize_AllocatesArraySizedToVariable()
+    {
+        UtopIRProgram program = new([
+            new WelcomeInstruction(new("Count"), UtopIRType.Peer),
+            new AppointInstruction(new("Count"), new LiteralOperand(3)),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new VariableOperand(new("Count"))),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(3)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ]);
+
+        RunProgram(program).ShouldBe(30);
+    }
+
+    /// <summary>
     /// Tests that a <see cref="WelcomeListInstruction"/> declared with a bare size and no
     /// <see cref="AppointVictimInstruction"/>s produces a <c>newarr</c>-zero-initialised element when
     /// read back, matching the Topsy Turvy "pre-allocated with default values" semantics.
@@ -1006,7 +1025,7 @@ public class CilEmitterTests
     public void Emit_WelcomeListWithBareSizeAndNoAppointVictim_ReadsZeroInitialisedElement()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
             new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(1)),
             new FindInstruction(new VariableOperand(new("r")))
         ]);
@@ -1022,7 +1041,7 @@ public class CilEmitterTests
     public void Emit_PicturetoAndViewfromOnArray_ReadsFirstElement()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
@@ -1044,7 +1063,7 @@ public class CilEmitterTests
     public void Emit_Viewto_WritesThroughIntoArrayElement()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
@@ -1066,7 +1085,7 @@ public class CilEmitterTests
     public void Emit_PointerArithmeticSum_AdvancesToCorrectElement()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 3),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
@@ -1161,7 +1180,7 @@ public class CilEmitterTests
     public void Emit_AppointNaughtToPointer_ReZeroesHandleWithoutThrowing()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 1),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(1)),
             new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
             new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
             new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
@@ -1180,7 +1199,7 @@ public class CilEmitterTests
     public void Emit_AppointNaughtToArray_SetsArrayReferenceToNullWithoutThrowing()
     {
         UtopIRProgram program = new([
-            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, 1),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(1)),
             new AppointInstruction(new("Numbers"), new LiteralOperand(NaughtLiteral.Instance)),
             new FindInstruction(new LiteralOperand(1))
         ]);

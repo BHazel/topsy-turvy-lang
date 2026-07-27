@@ -684,6 +684,69 @@ public sealed class SorcererCommandTests(CliFixture fixture)
     }
 
     /// <summary>
+    /// Tests that a compiled programme declaring an array whose size is a variable, not a literal, runs correctly
+    /// in an isolated directory, confirming the <c>welcome.list</c> variable-size operand support reaches the CIL
+    /// emitter end to end, not just the interpreter.
+    /// </summary>
+    [Fact]
+    public async Task Sorcerer_TargetDotNetWithVariableSizedArray_RunsInIsolatedDirectoryAndReturnsCorrectExitCode()
+    {
+        const string source =
+            """
+            HARK! "Variable-Sized Array"
+            PRINCIPALS
+              PRAY WELCOME count AS A PEER BEING 3
+              PRAY WELCOME nums AS A LITTLE LIST OF count PEER
+            THE CURTAIN RISES.
+            VICTIM 3 ON nums IS APPOINTED 6
+            AND SO I FIND VICTIM 3 ON nums
+            FINALE.
+            """;
+
+        File.WriteAllText(Path.Combine(this.WorkingDirectory, "prog.topsy"), source);
+
+        (int compileExitCode, string _, string _) = await this.RunAsync("sorcerer prog.topsy --target dotnet --tiptoe");
+
+        compileExitCode.ShouldBe(0);
+
+        string isolatedDirectory = Path.Combine(this.WorkingDirectory, "isolated-variable-array");
+        Directory.CreateDirectory(isolatedDirectory);
+        foreach (string requiredFile in new[] { "prog.dll", "prog.runtimeconfig.json" })
+        {
+            File.Copy(Path.Combine(this.WorkingDirectory, requiredFile), Path.Combine(isolatedDirectory, requiredFile));
+        }
+
+        ProcessStartInfo startInfo = new("dotnet", "prog.dll")
+        {
+            WorkingDirectory = isolatedDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
+        using Process process = new()
+        {
+            StartInfo = startInfo
+        };
+
+        process.Start();
+
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        bool exited = process.WaitForExit(TimeSpan.FromSeconds(10));
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+        }
+
+        string stderr = await stderrTask;
+        await stdoutTask;
+
+        stderr.ShouldBeEmpty();
+        process.ExitCode.ShouldBe(6);
+    }
+
+    /// <summary>
     /// Tests that a Topsy Turvy construct the UtopIR transformer does not support reports a clean error message
     /// rather than an unhandled exception stack trace.
     /// </summary>

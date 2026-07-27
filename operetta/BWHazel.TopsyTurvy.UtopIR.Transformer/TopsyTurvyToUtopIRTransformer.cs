@@ -354,10 +354,11 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     /// followed by one <see cref="AppointVictimInstruction"/> per initial value, when present.
     /// </summary>
     /// <remarks>
-    /// The declared size is <see cref="ArrayDeclarationNode.Size"/> when set, otherwise the count of
-    /// <see cref="ArrayDeclarationNode.InitialValues"/> (zero for neither). Records the element type in
-    /// <see cref="arrayElementTypes"/>, since <paramref name="declaredTypes"/> only ever records the
-    /// <see cref="UtopIRType.Array"/> marker for this variable, not its true element type.
+    /// The declared size is <see cref="ArrayDeclarationNode.SizeExpression"/>, transformed to an operand, when set
+    /// otherwise a <see cref="LiteralOperand"/> holding the count of <see cref="ArrayDeclarationNode.InitialValues"/>
+    /// (zero for neither). Records the element type in <see cref="arrayElementTypes"/>, since
+    /// <paramref name="declaredTypes"/> only ever records the <see cref="UtopIRType.Array"/> marker for this
+    /// variable, not its true element type.
     /// </remarks>
     /// <param name="declaration">The array declaration statement to transform.</param>
     /// <param name="instructions">The instruction list being built.</param>
@@ -366,7 +367,9 @@ public sealed class TopsyTurvyToUtopIRTransformer(ITemporaryVariableNameFormatte
     {
         UtopIRVariable target = new(declaration.Name);
         UtopIRType elementType = this.MapType(declaration.ElementType);
-        int size = declaration.Size ?? declaration.InitialValues.Count;
+        UtopIROperand size = declaration.SizeExpression is not null
+            ? this.TransformExpression(declaration.SizeExpression, instructions, declaredTypes)
+            : new LiteralOperand(declaration.InitialValues.Count);
 
         instructions.Add(new WelcomeListInstruction(target, elementType, size));
         declaredTypes[declaration.Name] = UtopIRType.Array;

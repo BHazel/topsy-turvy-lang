@@ -358,27 +358,31 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     /// <param name="node">The array declaration node.</param>
     /// <param name="environment">The environment.</param>
     /// <exception cref="TopsyTurvyRuntimeException">
-    /// Thrown when <see cref="ArrayDeclarationNode.Size"/> is set and <see cref="ArrayDeclarationNode.InitialValues"/>
-    /// is non-empty (mutually exclusive), or when <see cref="ArrayDeclarationNode.Size"/> is negative.
+    /// Thrown when <see cref="ArrayDeclarationNode.SizeExpression"/> is set and <see cref="ArrayDeclarationNode.InitialValues"/>
+    /// is non-empty (mutually exclusive), or when <see cref="ArrayDeclarationNode.SizeExpression"/> evaluates to a negative value.
     /// </exception>
     private void ExecuteArrayDeclaration(ArrayDeclarationNode node, TopsyTurvyEnvironment environment)
     {
-        if (node.Size.HasValue && node.InitialValues.Count > 0)
+        if (node.SizeExpression is not null && node.InitialValues.Count > 0)
         {
             throw new TopsyTurvyRuntimeException(
                 $"Array '{node.Name}' specifies both a size and a BEING initialiser: these are mutually exclusive.",
                 node.Span);
         }
 
-        if (node.Size.HasValue && node.Size.Value < 0)
+        long? size = node.SizeExpression is not null
+            ? ToLong(this.EvaluateExpression(node.SizeExpression, environment))
+            : null;
+
+        if (size.HasValue && size.Value < 0)
         {
             throw new TopsyTurvyRuntimeException(
-                $"Array '{node.Name}' was declared with a negative size ({node.Size.Value}).",
+                $"Array '{node.Name}' was declared with a negative size ({size.Value}).",
                 node.Span);
         }
 
-        List<TopsyTurvyValue> elements = node.Size.HasValue
-            ? [.. Enumerable.Repeat(GetDefaultValue(node.ElementType), node.Size.Value)]
+        List<TopsyTurvyValue> elements = size.HasValue
+            ? [.. Enumerable.Repeat(GetDefaultValue(node.ElementType), (int)size.Value)]
             : [.. node.InitialValues.Select(expression => this.EvaluateExpression(expression, environment))];
 
         environment.Declare(node.Name, TopsyTurvyValue.Array(elements), isConstant: node.IsConstant);

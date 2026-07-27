@@ -903,11 +903,12 @@ PRAY WELCOME miscreants AS A LITTLE LIST OF YARN BEING "Pooh-Bah" AND "Ko-Ko" AN
 PRAY WELCOME scores     AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
 PRAY WELCOME empty      AS A LITTLE LIST OF PEER
 PRAY WELCOME slots      AS A LITTLE LIST OF 3 YARN
+PRAY WELCOME buffer     AS A LITTLE LIST OF count PEER
 ```
 
 - `A LITTLE LIST OF <type>` — the array type annotation; drawn from Ko-Ko's famous "I've Got a Little List" from *The Mikado*, in which he catalogues all the people who would not be missed — every array is, at heart, such a list.
 - `<type>` — the declared element type (`PEER`, `FATHOM`, `YARN`, `DECREE`, `STITCH`, etc.); assigning an element of the wrong type is a type error. `NAUGHT` is not a valid element type.
-- `<size>` — an optional integer literal placed between `LITTLE LIST OF` and `<type>`; pre-allocates the array with that many elements, each initialised to the type's default value (see §3.4), making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. A size of `0` produces an empty array. A negative size is a runtime error.
+- `<size>` — an optional expression placed between `LITTLE LIST OF` and `<type>`, evaluated when the declaration executes; pre-allocates the array with that many elements, each initialised to the type's default value (see §3.4), making element assignment (`VICTIM n ON arr IS APPOINTED val`) usable without a `BEING` clause. Need not be a literal — a variable or any other integer-typed expression works, e.g. sizing a result array to match an input array of unknown length. Must evaluate to an integer type; any other type is a type error. A size of `0` produces an empty array. A negative size is a runtime error.
 - `BEING <expr> AND <expr> ... IF YOU PLEASE.` — initial element list; follows the same `IF YOU PLEASE.` convention as other variable-length constructs (see §7); omitting `BEING` produces an empty array, **not** `NAUGHT`.
 - `<size>` and `BEING` are **mutually exclusive** — providing both on the same declaration is a runtime error.
 - `CONSERVATIVE` — a constant array; the variable cannot be reassigned and no element can be replaced after declaration.

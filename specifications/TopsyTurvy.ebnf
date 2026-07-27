@@ -61,12 +61,13 @@ PrincipalBlock  = "PRINCIPALS", { PointerDeclaration | Declaration | ArrayDeclar
 
 Declaration         = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], ScalarType, [ "BEING", Expression ] ;
 
-ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "LITTLE LIST OF", [ Integer ], ScalarType,
+ArrayDeclaration    = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "LITTLE LIST OF", [ Expression ], ScalarType,
                       [ "BEING", Expression, { "AND", Expression }, "IF YOU PLEASE." ] ;
 (* Note: "AS A LITTLE LIST OF" is the user-visible phrase; the parser consumes "AS A" first,
    leaving "LITTLE LIST OF" as the array-type marker.  The "A" is shared between the two tokens.
-   The optional Integer pre-allocates that many NAUGHT elements; mutually exclusive with the BEING clause
-   (providing both is a runtime error).  A negative Integer is also a runtime error. *)
+   The optional size Expression pre-allocates that many NAUGHT elements, evaluated when the declaration
+   executes (a literal, a variable, or any other integer-typed expression); mutually exclusive with the
+   BEING clause (providing both is a runtime error).  A negative or non-integer-typed size is also an error. *)
 
 PointerDeclaration  = "PRAY WELCOME", Identifier, "AS A", [ MutabilityModifier ], "GALLERY PICTURE OF", ScalarType,
                       [ "BEING", Expression ] ;

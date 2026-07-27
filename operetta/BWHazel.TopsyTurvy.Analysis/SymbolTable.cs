@@ -377,8 +377,8 @@ public class SymbolTable
             Name = declaration.Name,
             Kind = SymbolKind.Variable,
             IsConstant = declaration.IsConstant,
-            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.Size.HasValue
-                ? $"{declaration.Size.Value} "
+            TypeDisplayName = $"{Keywords.TypeNames.LittleListOf} {(declaration.SizeExpression is LiteralNode { Type: LiteralType.Integer } sizeLiteral
+                ? $"{sizeLiteral.Value} "
                 : "")}{LiteralTypeNames.ToDisplayName(declaration.ElementType)}",
             DefinitionLine = declaration.NameSpan.Start.Line,
             DefinitionColumn = declaration.NameSpan.Start.Column,

@@ -1286,6 +1286,63 @@ public class TypeCheckerTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when an array declaration size is
+    /// a variable rather than a literal.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationVariableSize_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A PEER BEING 3
+            PRAY WELCOME items AS A LITTLE LIST OF count PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method succeeds when an array declaration size is
+    /// a general expression, not just a bare literal or variable.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationExpressionSize_Succeeds()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A PEER BEING 3
+            PRAY WELCOME items AS A LITTLE LIST OF SUM OF count AND 1 PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="TopsyTurvyTypeChecker.Check"/> method reports an error when an array declaration
+    /// size expression is not an integer type.
+    /// </summary>
+    [Fact]
+    public void Check_WithArrayDeclarationNonIntegerSize_ReportsError()
+    {
+        TypeCheckResult result = this.Check("""
+            HARK! "Test"
+            PRINCIPALS
+            THE CURTAIN RISES.
+            PRAY WELCOME count AS A YARN BEING "three"
+            PRAY WELCOME items AS A LITTLE LIST OF count PEER
+            FINALE.
+            """);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    /// <summary>
     /// Runs the type checker on the given source code and returns the result.
     /// </summary>
     /// <param name="source">The source code to check.</param>

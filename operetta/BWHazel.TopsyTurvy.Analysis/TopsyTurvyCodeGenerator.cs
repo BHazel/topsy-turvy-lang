@@ -82,9 +82,10 @@ public sealed class TopsyTurvyCodeGenerator
                 string arrayConstantModifier = arrayDeclaration.IsConstant ? "CONSERVATIVE " : string.Empty;
                 string elementTypeName = this.TypeKeyword(arrayDeclaration.ElementType);
                 generatedCodeBuilder.Append($"{indent}PRAY WELCOME {arrayDeclaration.Name} AS A {arrayConstantModifier}LITTLE LIST OF");
-                if (arrayDeclaration.Size.HasValue)
+                if (arrayDeclaration.SizeExpression is not null)
                 {
-                    generatedCodeBuilder.Append($" {arrayDeclaration.Size.Value}");
+                    generatedCodeBuilder.Append(' ');
+                    this.WriteExpression(arrayDeclaration.SizeExpression, generatedCodeBuilder);
                 }
 
                 generatedCodeBuilder.Append($" {elementTypeName}");

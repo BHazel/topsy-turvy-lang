@@ -455,12 +455,29 @@ internal sealed class TypeCheckVisitor
     /// Checks an array declaration for type correctness.
     /// </summary>
     /// <param name="node">The array declaration node to check.</param>
+    /// <remarks>
+    /// <see cref="ArrayDeclarationNode.SizeExpression"/>, when present, must evaluate to an integer type,
+    /// the same rule <see cref="CheckArrayElementAssignment"/> already applies to an array index.
+    /// </remarks>
     private void CheckArrayDeclaration(ArrayDeclarationNode node)
     {
         if (node.ElementType == LiteralType.Null)
         {
             this.Error("A LITTLE LIST OF NAUGHT is not a valid array type.  A concrete element type must be specified.", node.Span);
             return;
+        }
+
+        if (node.SizeExpression is not null)
+        {
+            LiteralType? sizeType = this.EvaluateExpression(node.SizeExpression, out bool sizeIsVoid);
+            if (sizeIsVoid)
+            {
+                this.Error("Array size must be an integer type, got void.", node.Span);
+            }
+            else if (sizeType is not null && !IntegerTypes.Contains(sizeType.Value))
+            {
+                this.Error($"Array size must be an integer type, got {TypeName(sizeType.Value)}.", node.Span);
+            }
         }
 
         this.DeclareSymbol(node.Name, LiteralType.Array);

@@ -1037,6 +1037,25 @@ public class TopsyTurvyCodeGeneratorTests
     }
 
     /// <summary>
+    /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips an array declaration whose
+    /// size is a variable rather than a literal.
+    /// </summary>
+    [Fact]
+    public void Generate_ArrayDeclarationWithVariableSize_RoundTrips()
+    {
+        string source = "HARK! \"T\"\nPRAY WELCOME count AS A PEER BEING 5\nPRAY WELCOME arr AS A LITTLE LIST OF count PEER\nFINALE.";
+
+        string generatedCode = this.GenerateFromSource(source);
+
+        ParseResult result = this.parser.TryParse(generatedCode);
+        result.Diagnostics.ShouldBeEmpty();
+        ArrayDeclarationNode arrayDeclaration = result.Program!.Statements.OfType<ArrayDeclarationNode>().First();
+        arrayDeclaration.Name.ShouldBe("arr");
+        IdentifierNode sizeIdentifier = arrayDeclaration.SizeExpression.ShouldBeOfType<IdentifierNode>();
+        sizeIdentifier.Name.ShouldBe("count");
+    }
+
+    /// <summary>
     /// Tests that the <see cref="TopsyTurvyCodeGenerator.Generate"/> method round-trips a <c>VICTIM … ON … IS APPOINTED</c> array element assignment.
     /// </summary>
     [Fact]

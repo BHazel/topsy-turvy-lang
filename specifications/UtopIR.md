@@ -201,7 +201,7 @@ The `welcome.list` instruction declares an array variable of a specified `type` 
 **Operands**
 
 * **`<type>`:** The type of the array variable with options being any supported type; please see Appendix B for the complete type list.
-* **`<size>`:** The size of the array variable as an integer literal; any value of any other type is a complilation error.
+* **`<size>`:** The size of the array variable as a literal or a variable of type `peer`; any other type is a compilation error.
 
 **Format**
 

@@ -521,11 +521,14 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// * It optionally matches a mutability modifier (<c>CONSERVATIVE</c> or <c>LIBERAL</c>), back-tracking if absent.
 /// * It then matches the <c>LITTLE LIST OF</c> keyword.
 ///     * This does not match <c>A LITTLE LIST OF</c>, because the <c>A</c> was already consumed with <c>AS A</c> above.
-/// * It optionally matches an integer size literal, back-tracking if absent.
-///     * Since <see cref="Lexer.IntegerLiteral"/> returns a <c>long</c>, the parsed size is narrowed to <c>int?</c> via a <c>checked</c> cast: an
-///     out-of-range size (larger than <see cref="int.MaxValue"/>) fails this parser alternative rather than silently wrapping, which is equivalent
-///     to no size being given.
-/// * It then matches a scalar type keyword using <see cref="ExpressionParser.TypeKeyword"/>.
+/// * It then matches an optional size, ordered as two alternatives to avoid ambiguity between a size expression and the type
+/// keyword that always follows it:
+///     * The first alternative tries a bare <see cref="ExpressionParser.TypeKeyword"/> directly, with no size present at all.
+///     This is tried first specifically so that a plain <c>LITTLE LIST OF PEER</c> (no size) is never misread as a size
+///     expression consisting of a single identifier that happens to spell a type keyword.
+///     * Only if that fails does the second alternative parse a full <see cref="ExpressionParser.Expression"/> for the size, e.g.
+///     a literal, a variable, or any other expression such as <c>LITTLE LIST OF n PEER</c> or <c>LITTLE LIST OF SUM OF n AND 1 PEER</c>,
+///     followed by a mandatory <see cref="ExpressionParser.TypeKeyword"/>.
 /// * Finally it tries to match the optional <c>BEING ... IF YOU PLEASE.</c> initialiser clause via the <c>ArrayInitialiser</c> parser.
 /// </para>
 /// <para>
@@ -729,18 +732,20 @@ public static class StatementParser
              .Try()))
              .OptionalOrDefault(null!)
          from littleListOfKeyword in Ws(Lexer.Keyword("LITTLE LIST OF"))
-         from sizeValue in Ws(Lexer.IntegerLiteral).Select(value => checked((int?)value))
-            .Try()
-            .OptionalOrDefault(null)
-         from elementType in Ws(ExpressionParser.TypeKeyword)
+         from sizeAndType in
+            (from noSizeType in Ws(ExpressionParser.TypeKeyword) select ((Expression?)null, Type: noSizeType))
+                .Try()
+                .Or(from sizeExpression in Ws(ExpressionParser.Expression)
+                    from typeAfterSize in Ws(ExpressionParser.TypeKeyword)
+                    select ((Expression?)sizeExpression, Type: typeAfterSize))
          from initialValues in ArrayInitialiser
          from endOffset in CurrentOffset
          select (Statement)new ArrayDeclarationNode()
          {
              Name = variableName,
              NameSpan = BuildSpan(nameStartOffset, nameEndOffset),
-             ElementType = elementType,
-             Size = sizeValue,
+             ElementType = sizeAndType.Type,
+             SizeExpression = sizeAndType.Item1,
              IsConstant = mutabilityModifier == "CONSERVATIVE",
              InitialValues = initialValues ?? [],
              Span = BuildSpan(startOffset, endOffset)
