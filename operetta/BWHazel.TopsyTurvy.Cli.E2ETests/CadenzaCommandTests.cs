@@ -237,6 +237,36 @@ public sealed class CadenzaCommandTests(CliFixture fixture)
     }
 
     /// <summary>
+    /// Tests that the :armoury command displays a function declared return type.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithArmouryCommand_DisplaysFunctionReturnType()
+    {
+        (int _, string stdout, string _) = await this.RunWithStdinAsync(
+            "cadenza",
+            "IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF name AS A YARN TO FIND YARN AND SO I FIND name MY DUTY IS DISCHARGED.\n" +
+            ":armoury\n" +
+            ":exit\n");
+
+        stdout.ShouldContain("YARN");
+    }
+
+    /// <summary>
+    /// Tests that the :armoury command displays "(void)" as the return type for a function with no TO FIND clause.
+    /// </summary>
+    [Fact]
+    public async Task Cadenza_WithArmouryCommand_DisplaysVoidForFunctionWithNoReturnType()
+    {
+        (int _, string stdout, string _) = await this.RunWithStdinAsync(
+            "cadenza",
+            "IT IS MY DUTY TO PERFORM Shout UNDER THE TERMS OF name AS A YARN BEHOLD name MY DUTY IS DISCHARGED.\n" +
+            ":armoury\n" +
+            ":exit\n");
+
+        stdout.ShouldContain("(void)");
+    }
+
+    /// <summary>
     /// Tests that the cadenza command calls a function from an external library admitted at startup.
     /// </summary>
     [Fact]
