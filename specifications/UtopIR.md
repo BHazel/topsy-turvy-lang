@@ -14,12 +14,12 @@ The language is designed around virtual registers and a stack.
 
 ## 1. File Structure
 
-> TODO: The `duty ... discharged` block structure is currently not in scope for development.  The current implementation are only concerned with instructions themselves that will eventually sit within this block.
+Unlike in Topsy Turvy, UtopIR does not have an equivalent to the `HARK!`...`FINALE.` keywords.  Instead a file must have an `Opera` function which serves as the entry point to a programme.  This `Opera` function will contain all top-level statements in a Topsy Turvy code file and variables declared in a `PRINCIPALS` block.
 
-Unlike in Topsy Turvy, UtopIR does not have an equivalent to the `HARK!`...`FINALE.` keywords.  Instead a file must have an `Opera` function which serves as the entry point to a programme.
+> TODO: Support for command-line arguments via the `term Props list.yarn` is not currently implemented but included for visibility for what an implementation will look like.
 
 ```utopir
-duty Opera terms TheProps: yarn finds peer
+duty &Opera, term Props list.yarn, finds peer
     @ Main programme code...
     find 0
 discharged
@@ -91,7 +91,83 @@ find 1
 
 ### 3.4.1. Function Identifiers
 
-Function identifiers all start with the `&` character, followed by the function name which can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.
+Function identifiers all start with the `&` character, followed by the fully-qualified function name, including the complete namespace path if not in the global namespace.  The identifier can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.  The namespace delimiter is the `*` character.  Each namespace part has no prefix character.
+
+### 3.4.2. Function Parameters
+
+Function parameters all start with the `%` character, followed by the parameter name which can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.  Parameters can only appear within a function definition, both in the declaration and body.
+
+### 3.4.3. Function Definitions
+
+A function is defined in a dedicated block:
+
+* The `duty` opener including parameters and return type.
+* The function body comprising regular UtopIR instructions.
+* The `discharged` closer to end the function definition.
+
+The `duty` opener takes the format:
+
+```utopir
+duty &<fn-name>, [term <type> %<param-name>, ...] [finds <ret-type>]
+```
+
+* **`&<fn-name>`:** The function name, as called in `summon`* instructions.
+* **`term <type> %<param-name>`:** The parameter type and name, one for each parameter separated by a comma, and optional if no parameters.
+* **`finds <type>`:** The return type, optional if no return value.
+
+**Format**
+
+```
+duty <fn-name>, [term <type> %<param-name>, ...] [finds <ret-type>]
+  @ Function instructions here.
+discharged
+```
+
+**Example**
+
+For the following Topsy Turvy code, without body for brevity:
+
+```topsy
+IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF Name
+  ASIDE: Logic.
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+  ASIDE: Logic.
+MY DUTY IS DISCHARGED.
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+duty &Greet, term yarn %Name
+  @ Logic
+discharged
+
+duty &Add, term peer %Num1, term peer %Num2, finds peer
+  @ Logic
+discharged
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Logic WITH DISTRICT UtilityFunctions
+ASIDE: or (but not both in the same file)...
+TOWN Logic*UtilityFunctions
+```
+
+then the function declarations in UtopIR would be:
+
+```utopir
+duty &Logic*UtilityFunctions*Greet, term yarn %Name
+  @ Logic
+discharged
+
+duty &Logic*UtilityFunctions*Add, term peer %Num1, term peer %Num2, finds peer
+  @ Logic
+discharged
+```
 
 ## 4. Instructions
 
@@ -1675,8 +1751,8 @@ The following instructions are used to call functions:
 
 |Instruction|Description|Mechanism|Example|
 |-|-|-|-|
-|`summon <function>`|Calls a void function or ignores the result.|Stack|`summon &Function`|
-|`summon.find <function>`|Calls a returning function and collects the result.|Stack/Virtual Register|`£Result = summon.find &Function`|
+|`summon <function>, [term <type>, ...]`|Calls a void function or ignores the result.|Stack|`summon &Function`|
+|`summon.find <function>, [term <type>, ...]`|Calls a returning function and collects the result.|Stack/Virtual Register|`£Result = summon.find &Function term peer`|
 
 The function call instructions use a combination of virtual registers and the stack to perform a function call:
 * Each parameter is pushed onto the stack using the `prentice` instruction in the order as defined in the function definition in Topsy Turvy.  If there are no parameters no values are pushed onto the stack.
@@ -1684,36 +1760,60 @@ The function call instructions use a combination of virtual registers and the st
 
 #### 4.8.1. `summon` Instruction
 
-The `summon` instruction calls a `function`, which must be accessible; calling an inaccessible function is a compilation error.  Both void and returning functions can be called using `summon`, however, a return value will always be ignored.
+The `summon` instruction calls a `function`, which must be accessible; the instruction includes the function signature, to allow for overloading, as a series of `term <type>` operands, one for each parameter; if there are no parameters no `term` operands are provided.  Calling an inaccessible function is a compilation error.  Both void and returning functions can be called using `summon`, however, a return value will always be ignored.
 
 **Operands**
 
 * **`<function>`:** The function to call.
+* **`term <type>`:** A functino parameter of the specified `type`; there should be one `term` for each parameter.
 
 **Format**
 
 ```utopir
-summon <function>
+summon <function>[, term <type>, ...]
 ```
 
 **Example**
 
-The following example in Topsy Turvy calls a void `&ReadPoem` function with a single `yarn` string parameter:
+The following example in Topsy Turvy calls the void `&ReadPoem` and `&RepeatPoem` functions:
 
 ```topsy
 SUMMON ReadPoem WITH Name IF YOU PLEASE.
+SUMMON RepeatPoem WITH Name AND Times IF YOU PLEASE.
 ```
 
 with the following equivalent in UtopIR:
 
 ```utopir
 prentice £Name
-summon &ReadPoem
+summon &ReadPoem, term yarn
+
+prentice £Name
+prentice £Times
+summon &RepeatPoem, term yarn, term peer
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+TOWN Aesthetic*Writing
+```
+
+then the `summon` instructions in UtopIR would be:
+
+```utopir
+prentice £Name
+summon &Aesthetic*Writing*ReadPoem, term yarn
+
+prentice £Name
+prentice £Times
+summon &Aesthetic*Writing*RepeatPoem, term yarn, term peer
 ```
 
 #### 4.8.2. `summon.find` Instruction
 
-The `summon.find` instruction calls a `function`, which must be accessible; calling an inaccessible function is a compilation error.  Only returning functions can be called using `summon.find` and the return value is assigned to a virtual register.
+The `summon.find` instruction calls a `function`, which must be accessible; the instruction includes the function signature, to allow for overloading, as a series of `term <type>` operands, one for each parameter; if there are no parameters no `term` operands are provided.  Calling an inaccessible function is a compilation error.  Only returning functions can be called using `summon.find` and the return value is assigned to a virtual register.
 
 **Operands**
 
@@ -1722,22 +1822,45 @@ The `summon.find` instruction calls a `function`, which must be accessible; call
 **Format**
 
 ```utopir
-£<var-name> = summon.find <function>
+£<var-name> = summon.find <function>[, term <type>, ...]
 ```
 
 **Example**
 
-The following example in Topsy Turvy calls a `&GetPoem` function with a single `yarn` string parameter and a returned `yarn` value:
+The following example in Topsy Turvy calls the `&GetPoem` and `&GetPoemRepeats` functions:
 
 ```topsy
 Poem IS APPOINTED SUMMON GetPoem WITH Name IF YOU PLEASE.
+PoemRepeats IS APPOINTED SUMMON GetPoemRepeats WITH Name AND Times IF YOU PLEASE.
 ```
 
 with the following equivalent in UtopIR:
 
 ```utopir
 prentice £Name
-£Poem = summon.find &GetPoem
+£Poem = summon.find &GetPoem, term yarn
+
+prentice £Name
+prentice £Times
+£PoemRepeats = summon.find &GetPoemRepeats, term yarn, term peer
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+TOWN Aesthetic*Writing
+```
+
+then the `summon.find` instructions in UtopIR would be:
+
+```utopir
+prentice £Name
+£Poem = summon.find &Aesthetic*Writing*GetPoem, term yarn
+
+prentice £Name
+prentice £Times
+£PoemRepeats = summon.find &Aesthetic*Writing*GetPoemRepeats, term yarn, term peer
 ```
 
 ## 5. Examples
@@ -2357,8 +2480,6 @@ appoint.victim £Numbers, 3, 30
 
 This example demonstrates how to call functions, both void and returning.
 
-**Please note that functions themselves are not yet implemented in UtopIR.**
-
 ```topsy
 IT IS MY DUTY TO PERFORM DoNothing UNDER NO OBLIGATION
   SUM OF 0 AND 0
@@ -2384,10 +2505,113 @@ summon &DoNothing
 
 prentice 4
 prentice 5
-£_summonfind_Add_4_5 = summon.find &Add
-£AddResult = appoint £_summon_Add_4_5
+£_summonfind_Add_4_5 = summon.find &Add, term peer, term peer
+£AddResult = appoint £_summonfind_Add_4_5
 
 find £AddResult
+```
+
+### 5.8 Defining Functions & Main Function
+
+This example demonstrates how to define both void and returning functions and how to call them.  It also demonstrates how executable code outside of a function, i.e. the main code for a Topsy Turvy programme, is transformed to UtopIR.
+
+**Please note the `Behold` function in this example is a hypothetical call to the `BEHOLD` built-in and will change in the future when Standard Library and namespace support matures.**
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRINCIPALS
+    PRAY WELCOME User AS A YARN BEING "Iolante"
+THE CURTAIN RISES.
+
+IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF Name
+    BEHOLD "Hello, " WITHOUT CEREMONY
+    BEHOLD Name WITHOUT CEREMONY
+    BEHOLD "!"
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+    AND SO I FIND SUM OF Num1 AND Num2
+MY DUTY IS DISCHARGED.
+
+SUMMON Greet WITH User IF YOU PLEASE.
+
+PRAY WELCOME Total AS A PEER BEING SUMMON Add WITH 4 AND 5 IF YOU PLEASE.
+AND SO I FIND Total
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+duty &Greet, term yarn %Name
+    prentice "Hello, "
+    prentice verity
+    summon &Behold
+    prentice %Name
+    prentice verity
+    summon &Behold
+    prentice "!"
+    prentice nay
+    summon &Behold
+discharged
+
+duty &Add, term peer %Num1, term peer %Num2, finds peer
+    £_sum_Num1_Num2 = sum %Num1, %Num2
+    find £_sum_Num1_Num2
+discharged
+
+duty &Opera, finds peer
+    £User = welcome yarn
+    £User = appoint "Iolanthe"
+
+    prentice £User
+    summon &Greet, term yarn
+
+    £Total = welcome peer
+    £Total = appoint 0
+    prentice 4
+    prentice 5
+    £_summonfind_Add_4_5 = summon.find &Add, term peer, term peer
+    £Total = appoint £_summonfind_Add_4_5
+
+    find £Total
+discharged
+```
+
+### 5.9 Namespaced Functions
+
+This example demonstrates a function declared under a `TOWN` namespace, called by its bare name from
+within that same namespace.
+
+For the following example in Topsy Turvy:
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+
+IT IS MY DUTY TO PERFORM ReadPoem UNDER THE TERMS OF Name
+    BEHOLD Name
+MY DUTY IS DISCHARGED.
+
+SUMMON ReadPoem WITH "Iolanthe" IF YOU PLEASE.
+
+AND SO I FIND 0
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+duty &Aesthetic*Writing*ReadPoem, term yarn %Name
+    prentice %Name
+    prentice verity
+    summon &Behold
+discharged
+
+duty &Opera, finds peer
+    prentice "Iolanthe"
+    summon &Aesthetic*Writing*ReadPoem, term yarn
+
+    find 0
+discharged
 ```
 
 ## Appendix A. Instruction Reference
@@ -2395,7 +2619,7 @@ find £AddResult
 |Instruction|Description|Example|
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
-|`welcome.list <type>`|Array Variable Declaration|`£Numbers = welcome.list peer, 3`|
+|`welcome.list <type>, <size>`|Array Variable Declaration|`£Numbers = welcome.list peer, 3`|
 |`appoint <value>`|Variable Assignment|`£LovesickMaidens = appoint 20`|
 |`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
@@ -2437,8 +2661,8 @@ find £AddResult
 |`sail <label>`|Branches to the specified label.|`sail LABEL`|
 |`sailalike <value>, <label>`|Branches to the specified label if the `decree` value indicates equality.|`sailalike £IsLord, !LABEL`|
 |`sailunlike <value>, <label>`|Branches to the specified label if the `decree` value indicates inequality.|`sailunlike £IsLord, !LABEL`|
-|`summon <function>`|Calls a void function or ignores the result.|`summon &Function`|
-|`summon.find <function>`|Calls a returning function and collects the result.|`£Result = summon.find &Function`|
+|`summon <function>, [term <type>, ...]`|Calls a void function or ignores the result.|`summon &Function`|
+|`summon.find <function>, [term <type>, ...]`|Calls a returning function and collects the result.|`£Result = summon.find &Function term peer`|
 
 ## Appendix B. Type Reference
 
@@ -2453,7 +2677,9 @@ find £AddResult
 |Boolean|`DECREE`|`decree`|
 |Character|`STITCH`|`stitch`|
 |String|`YARN`|`yarn`|
+|Array|`LITTLE LIST OF <TYPE>`|`list.<type>`|
 
 * For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
 * The Boolean `decree` type defines its _true_ and _false_ literals as `verity` and `nay`.
 * The Null `naught` literal can be assigned to a pointer without a pointee, an array or `yarn` string.
+* `list.<type>` is a special type used exclusively in `term` operands; it cannot be used in declaration or assignment instructions.
