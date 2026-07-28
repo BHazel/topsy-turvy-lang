@@ -15,42 +15,48 @@ public class UtopIRParserTests
     /// Tests that <see cref="UtopIRParser.TryParse"/> parses a worked example from into the expected instruction sequence.
     /// </summary>
     [Fact]
-    public void TryParse_WithWorkedExampleFromSpec_ProducesExpectedInstructions()
+    public void TryParse_WithWorkedExample_ProducesExpectedInstructions()
     {
         const string source =
             """
-            £Peer1 = welcome peer
-            £Peer1 = appoint 42
-            £Peer2 = welcome peer
-            £Peer2 = appoint 30
-            £PeerResultA = welcome peer
-            £_sum_Peer1_Peer2 = sum £Peer1, £Peer2
-            £PeerResultA = appoint £_sum_Peer1_Peer2
+            duty &Opera, finds peer
+                £Peer1 = welcome peer
+                £Peer1 = appoint 42
+                £Peer2 = welcome peer
+                £Peer2 = appoint 30
+                £PeerResultA = welcome peer
+                £_sum_Peer1_Peer2 = sum £Peer1, £Peer2
+                £PeerResultA = appoint £_sum_Peer1_Peer2
 
-            find £PeerResultA
+                find £PeerResultA
+            discharged
             """;
 
         UtopIRParseResult result = this.parser.TryParse(source);
 
         result.Success.ShouldBeTrue();
         result.Diagnostics.ShouldBeEmpty();
-        result.Program!.Instructions.Count.ShouldBe(8);
-        result.Program.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer1");
-        result.Program.Instructions[5].ShouldBeOfType<ArithmeticInstruction>().Target.Name.ShouldBe("_sum_Peer1_Peer2");
-        FindInstruction find = result.Program.Instructions[7].ShouldBeOfType<FindInstruction>();
+        result.Program!.Functions.Count.ShouldBe(1);
+        UtopIRFunctionDefinition opera = result.Program.Functions[0];
+        opera.Name.ShouldBe("Opera");
+        opera.Body.Count.ShouldBe(8);
+        opera.Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer1");
+        opera.Body[5].ShouldBeOfType<ArithmeticInstruction>().Target.Name.ShouldBe("_sum_Peer1_Peer2");
+        FindInstruction find = opera.Body[7].ShouldBeOfType<FindInstruction>();
         find.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PeerResultA");
     }
 
     /// <summary>
-    /// Tests that <see cref="UtopIRParser.TryParse"/> returns an empty programme for empty source text.
+    /// Tests that <see cref="UtopIRParser.TryParse"/> returns an empty function body for an <c>Opera</c> function with no instructions.
     /// </summary>
     [Fact]
-    public void TryParse_WithEmptySource_ReturnsEmptyProgramme()
+    public void TryParse_WithEmptyFunctionBody_ReturnsEmptyBody()
     {
-        UtopIRParseResult result = this.parser.TryParse(string.Empty);
+        UtopIRParseResult result = this.parser.TryParse("duty &Opera\ndischarged");
 
         result.Success.ShouldBeTrue();
-        result.Program!.Instructions.ShouldBeEmpty();
+        result.Program!.Functions.Count.ShouldBe(1);
+        result.Program.Functions[0].Body.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -59,13 +65,13 @@ public class UtopIRParserTests
     [Fact]
     public void TryParse_WithMalformedInstruction_ReportsDiagnosticAtCorrectLine()
     {
-        const string source = "£a = welcome peer\n£a = bogus 5";
+        const string source = "duty &Opera\n£a = welcome peer\n£a = bogus 5\ndischarged";
 
         UtopIRParseResult result = this.parser.TryParse(source);
 
         result.Success.ShouldBeFalse();
         result.Diagnostics.Count.ShouldBe(1);
-        result.Diagnostics[0].Line.ShouldBe(2);
+        result.Diagnostics[0].Line.ShouldBe(3);
     }
 
     /// <summary>
@@ -83,9 +89,10 @@ public class UtopIRParserTests
     [Fact]
     public void Parse_WithValidSource_ReturnsProgramme()
     {
-        UtopIRProgram program = this.parser.Parse("£a = welcome peer\n£a = appoint 5\nfind £a");
+        UtopIRProgram program = this.parser.Parse("duty &Opera\n£a = welcome peer\n£a = appoint 5\nfind £a\ndischarged");
 
-        program.Instructions.Count.ShouldBe(3);
+        program.Functions.Count.ShouldBe(1);
+        program.Functions[0].Body.Count.ShouldBe(3);
     }
 
     /// <summary>
@@ -95,22 +102,28 @@ public class UtopIRParserTests
     public void TryParse_RoundTripsCodeGeneratorOutput()
     {
         UtopIRProgram original = new([
-            new WelcomeInstruction(new("a"), UtopIRType.Peer),
-            new AppointInstruction(new("a"), new LiteralOperand(10)),
-            new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
-            new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Chancellor),
-            new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
-            new PrenticeInstruction(new LiteralOperand(99)),
-            new LeaveInstruction(new("r")),
-            new SummonInstruction(new FunctionReference("PreviewBehold")),
-            new SummonFindInstruction(new("input"), new FunctionReference("PreviewPrayTell")),
-            new FindInstruction(new VariableOperand(new("r")))
+            new UtopIRFunctionDefinition(
+                "Opera",
+                [],
+                new UtopIRTermType(UtopIRType.Peer),
+                [
+                    new WelcomeInstruction(new("a"), UtopIRType.Peer),
+                    new AppointInstruction(new("a"), new LiteralOperand(10)),
+                    new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
+                    new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Chancellor),
+                    new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
+                    new PrenticeInstruction(new LiteralOperand(99)),
+                    new LeaveInstruction(new("r")),
+                    new SummonInstruction(new FunctionReference("PreviewBehold"), []),
+                    new SummonFindInstruction(new("input"), new FunctionReference("PreviewPrayTell"), []),
+                    new FindInstruction(new VariableOperand(new("r")))
+                ])
         ]);
 
         string generated = new UtopIRCodeGenerator().Generate(original);
         UtopIRParseResult result = this.parser.TryParse(generated);
 
         result.Success.ShouldBeTrue();
-        result.Program!.Instructions.ShouldBe(original.Instructions);
+        result.Program!.Functions.ShouldBe(original.Functions);
     }
 }

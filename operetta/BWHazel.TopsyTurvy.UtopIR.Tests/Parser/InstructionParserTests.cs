@@ -658,4 +658,141 @@ public class InstructionParserTests
 
         result.HasValue.ShouldBeFalse();
     }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.Summon"/> parses the trailing <c>term</c> signature clause.
+    /// </summary>
+    [Fact]
+    public void Summon_WithSignatureClause_PopulatesParameterTypes()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.Summon(new("summon &Add, term peer, term peer"));
+
+        result.HasValue.ShouldBeTrue();
+        SummonInstruction summon = result.Value.ShouldBeOfType<SummonInstruction>();
+        summon.ParameterTypes.Count.ShouldBe(2);
+        summon.ParameterTypes[0].Type.ShouldBe(UtopIRType.Peer);
+        summon.ParameterTypes[1].Type.ShouldBe(UtopIRType.Peer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.AssignmentInstruction"/> parses the trailing <c>term</c>
+    /// signature clause on a <c>summon.find</c> right-hand side.
+    /// </summary>
+    [Fact]
+    public void SummonFind_WithSignatureClause_PopulatesParameterTypes()
+    {
+        Result<UtopIRInstruction> result = InstructionParser.AssignmentInstruction(new("£r = summon.find &Add, term peer, term peer"));
+
+        result.HasValue.ShouldBeTrue();
+        SummonFindInstruction summonFind = result.Value.ShouldBeOfType<SummonFindInstruction>();
+        summonFind.ParameterTypes.Count.ShouldBe(2);
+        summonFind.ParameterTypes[0].Type.ShouldBe(UtopIRType.Peer);
+        summonFind.ParameterTypes[1].Type.ShouldBe(UtopIRType.Peer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.FunctionDefinition"/> parses a complete <c>duty</c> ...
+    /// <c>discharged</c> block with parameters and a return type.
+    /// </summary>
+    [Fact]
+    public void FunctionDefinition_WithParametersAndReturnType_ReturnsExpectedDefinition()
+    {
+        const string source =
+            """
+            duty &Add, term peer %Num1, term peer %Num2, finds peer
+                £_sum_Num1_Num2 = sum %Num1, %Num2
+                find £_sum_Num1_Num2
+            discharged
+            """;
+
+        Result<UtopIRFunctionDefinition> result = InstructionParser.FunctionDefinition(new(source));
+
+        result.HasValue.ShouldBeTrue();
+        UtopIRFunctionDefinition function = result.Value;
+        function.Name.ShouldBe("Add");
+        function.Parameters.Count.ShouldBe(2);
+        function.Parameters[0].Name.ShouldBe("Num1");
+        function.Parameters[0].Type.Type.ShouldBe(UtopIRType.Peer);
+        function.Parameters[1].Name.ShouldBe("Num2");
+        function.ReturnType.ShouldNotBeNull();
+        function.ReturnType!.Type.ShouldBe(UtopIRType.Peer);
+        function.Body.Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.FunctionDefinition"/> parses a parameterless, void
+    /// <c>duty</c> block with an empty body.
+    /// </summary>
+    [Fact]
+    public void FunctionDefinition_WithNoParametersOrReturnType_ReturnsEmptyBody()
+    {
+        Result<UtopIRFunctionDefinition> result = InstructionParser.FunctionDefinition(new("duty &DoNothing\ndischarged"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.Name.ShouldBe("DoNothing");
+        result.Value.Parameters.ShouldBeEmpty();
+        result.Value.ReturnType.ShouldBeNull();
+        result.Value.Body.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.FunctionDefinition"/> parses a <c>term list.&lt;type&gt;</c>
+    /// parameter into a <see cref="UtopIRTermType"/> with <see cref="UtopIRType.Array"/> and the correct element type.
+    /// </summary>
+    [Fact]
+    public void FunctionDefinition_WithArrayParameter_ReturnsArrayTermType()
+    {
+        const string source =
+            """
+            duty &FirstElement, term list.peer %Numbers, finds peer
+                find 0
+            discharged
+            """;
+
+        Result<UtopIRFunctionDefinition> result = InstructionParser.FunctionDefinition(new(source));
+
+        result.HasValue.ShouldBeTrue();
+        UtopIRFunctionParameter parameter = result.Value.Parameters[0];
+        parameter.Type.Type.ShouldBe(UtopIRType.Array);
+        parameter.Type.ElementType.ShouldBe(UtopIRType.Peer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.FunctionDefinitionSequence"/> parses multiple function
+    /// definitions, separated by a blank line, in source order.
+    /// </summary>
+    [Fact]
+    public void FunctionDefinitionSequence_WithMultipleFunctions_ReturnsInSourceOrder()
+    {
+        const string source =
+            """
+            duty &Add, term peer %Num1, term peer %Num2, finds peer
+                find %Num1
+            discharged
+
+            duty &Opera, finds peer
+                find 0
+            discharged
+            """;
+
+        Result<UtopIRFunctionDefinition[]> result = InstructionParser.FunctionDefinitionSequence()(new(source));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.Length.ShouldBe(2);
+        result.Value[0].Name.ShouldBe("Add");
+        result.Value[1].Name.ShouldBe("Opera");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="InstructionParser.FunctionDefinition"/> parses a namespace-qualified
+    /// function reference in the <c>duty</c> header.
+    /// </summary>
+    [Fact]
+    public void FunctionDefinition_WithNamespaceQualifiedName_ParsesFullyQualifiedName()
+    {
+        Result<UtopIRFunctionDefinition> result = InstructionParser.FunctionDefinition(new("duty &Aesthetic*Writing*Greet\ndischarged"));
+
+        result.HasValue.ShouldBeTrue();
+        result.Value.Name.ShouldBe("Aesthetic*Writing*Greet");
+    }
 }

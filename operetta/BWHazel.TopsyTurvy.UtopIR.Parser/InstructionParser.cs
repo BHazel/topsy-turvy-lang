@@ -39,8 +39,8 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <c>WelcomeGallerypicRhs</c> matches the <c>welcome.gallerypic</c> keyword, required whitespace, then a <see cref="OperandParser.Type"/>, producing a <see cref="WelcomeGallerypicInstruction"/>. Tried before <c>WelcomeRhs</c>.
 /// * <c>PicturetoRhs</c> matches the <c>pictureto</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointee, producing a <see cref="PicturetoInstruction"/>.
 /// * <c>ViewfromRhs</c> matches the <c>viewfrom</c> keyword, required whitespace, then a <see cref="Lexer.Variable"/> pointer, producing a <see cref="ViewfromInstruction"/>.
-/// * <c>PointerArithmeticRhs</c> matches an <see cref="OperandParser.PointerArithmeticOperation"/> mnemonic, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> offset, producing a <see cref="PointerArithmeticInstruction"/>. Tried before <c>ArithmeticRhs</c>.
-/// * <c>SummonFindRhs</c> matches the <c>summon.find</c> keyword, required whitespace, then a <see cref="Lexer.FunctionReference"/>, producing a <see cref="SummonFindInstruction"/>. Tried before <c>ArithmeticRhs</c>: <c>summon.find</c> shares the <c>sum</c> prefix with the <c>Sum</c> arithmetic mnemonic, and <see cref="Lexer.Keyword(string)"/> has no trailing word-boundary check.
+/// * <c>PointerArithmeticRhs</c> matches an <see cref="OperandParser.PointerArithmeticOperation"/> mnemonic, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> offset, producing a <see cref="PointerArithmeticInstruction"/>. Tried before <c>ArithmeticRhs</c>, defensively, for consistency with the longest/most-specific-mnemonic-first discipline used elsewhere.
+/// * <c>SummonFindRhs</c> matches the <c>summon.find</c> keyword, required whitespace, a <see cref="Lexer.FunctionReference"/>, then the optional trailing <c>, term &lt;type&gt;, ...</c> signature clause (<c>SummonSignature</c>), producing a <see cref="SummonFindInstruction"/>. Tried before <c>ArithmeticRhs</c>: <c>summon.find</c> shares the <c>sum</c> prefix with the <c>Sum</c> arithmetic mnemonic, and <see cref="Lexer.Keyword(string)"/> has no trailing word-boundary check.
 ///
 /// ### Assignment Instruction
 /// * <see cref="AssignmentInstruction"/> matches <c>£&lt;var&gt; = &lt;rhs&gt;</c>:
@@ -55,7 +55,7 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// * <see cref="Sail"/> matches the <c>sail</c> keyword, required whitespace, then a <see cref="Lexer.Label"/>, producing a <see cref="SailInstruction"/>.
 /// * <see cref="SailAlike"/> matches the <c>sailalike</c> keyword, required whitespace, an <see cref="OperandParser.Operand"/>, a comma (with optional surrounding whitespace), then a <see cref="Lexer.Label"/>, producing a <see cref="SailAlikeInstruction"/>.
 /// * <see cref="SailUnlike"/> matches the <c>sailunlike</c> keyword the same way as <see cref="SailAlike"/>, producing a <see cref="SailUnlikeInstruction"/>.
-/// * <see cref="Summon"/> matches the <c>summon</c> keyword, required whitespace, then a <see cref="Lexer.FunctionReference"/>, producing a <see cref="SummonInstruction"/>.
+/// * <see cref="Summon"/> matches the <c>summon</c> keyword, required whitespace, a <see cref="Lexer.FunctionReference"/>, then the optional trailing <c>, term &lt;type&gt;, ...</c> signature clause, producing a <see cref="SummonInstruction"/>.
 /// * <see cref="AppointVictim"/> matches the <c>appoint.victim</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> array name, a comma, an <see cref="OperandParser.Operand"/> index, a comma, then an <see cref="OperandParser.Operand"/> value, producing an <see cref="AppointVictimInstruction"/>.
 /// * <see cref="ViewTo"/> matches the <c>viewto</c> keyword, required whitespace, a <see cref="Lexer.Variable"/> pointer, a comma, then an <see cref="OperandParser.Operand"/> value, producing a <see cref="ViewtoInstruction"/>.
 /// * <see cref="Label"/> matches a bare <see cref="Lexer.Label"/> on its own line, producing a <see cref="LabelInstruction"/>.
@@ -91,9 +91,30 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// UtopIR evolution, therefore instead of a flat loop iterating over lines it is a reusable
 /// recursive combinator implementing the committed-parse pattern and can therefore return
 /// specific locations of errors, rather than silently ending the sequence:
-///     * The top-level programme parser (see <see cref="UtopIRParser"/>) is simply
-///     <see cref="InstructionSequence"/> run with no terminator, so it stops only at end-of-input.
+///     * <see cref="InstructionSequence"/> is also used, with <see cref="DischargedTerminator"/> as its
+///     terminator, to parse a single function body: please see Function Definitions below. The top-level
+///     programme parser (see <see cref="UtopIRParser"/>) uses <see cref="FunctionDefinitionSequence"/>
+///     instead, never <see cref="InstructionSequence"/> directly.
 ///     * It returns the instructions found, in source order, with comment and blank lines omitted.
+///
+/// ### Function Definitions
+/// * <see cref="DutyHeader"/> matches:
+///     * The <c>duty</c> keyword, required whitespace, then a <see cref="Lexer.FunctionReference"/>.
+///     * Then zero or more <see cref="DutyParameterEntry"/> entries (<see cref="DutyParameterList"/>).
+///     * Then an optional trailing <see cref="DutyFindsClause"/>.
+///     * Finally <see cref="DutyHeaderLine"/> wraps it with the same leading/trailing-whitespace handling as <see cref="Line"/>.
+/// * <see cref="DischargedTerminator"/> matches:
+///     * Without consuming, the <c>discharged</c> keyword.
+///     * Then it is passed as the <see cref="InstructionSequence"/> terminator so a function body stops exactly at its closer.
+///     * <see cref="DischargedLine"/> then consumes that closer line for real.
+/// * <see cref="FunctionDefinition"/> assembles a whole <c>duty</c> ... <c>discharged</c> block:
+///     * It first matches the header line.
+///     * Then on a <see cref="Newline"/>.
+///     * Then the body via <see cref="InstructionSequence"/>.
+///     * Finally the closer line, mirroring the <see cref="InstructionSequence"/> manual <see cref="TextSpan"/> threading rather than LINQ combinators, since it spans multiple lines with a variable-length body in between.
+/// * <see cref="BlankLine"/>/<see cref="SkipBlankLines"/> advance past any blank or comment-only lines between function definitions at the top level:
+///     * Only committing to skipping a line once a trailing newline, or end-of-input, is also confirmed, otherwise what looked like a blank line leading whitespace could, in fact, be the next instruction.
+/// * <see cref="FunctionDefinitionSequence"/> parses a whole UtopIR programme as one or more <see cref="FunctionDefinition"/> blocks to end-of-input, the top-level grammar `UtopIRParser` uses.
 /// </para>
 /// </remarks>
 public static class InstructionParser
@@ -326,6 +347,29 @@ public static class InstructionParser
         select (UtopIRInstruction)new VictimListInstruction(new UtopIRVariable(target), new UtopIRVariable(array), index);
 
     /// <summary>
+    /// Parses a single <c>, term &lt;type&gt;</c> entry of a <c>summon</c>/<c>summon.find</c> trailing
+    /// signature clause, returning the matched <see cref="UtopIRTermType"/>.
+    /// </summary>
+    private static readonly TextParser<UtopIRTermType> SummonSignatureTerm =
+        from whitespace1 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace2 in Lexer.Whitespace
+        from termKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Term)
+        from whitespace3 in Lexer.WhitespaceRequired
+        from type in OperandParser.TermType
+        select type;
+
+    /// <summary>
+    /// Parses the optional trailing <c>, term &lt;type&gt;, ...</c> signature clause of a
+    /// <c>summon</c>/<c>summon.find</c> instruction, returning one entry per parameter in declaration
+    /// order, or an empty list for a parameterless function.
+    /// </summary>
+    private static readonly TextParser<UtopIRTermType[]> SummonSignature =
+        SummonSignatureTerm
+            .Try()
+            .Many();
+
+    /// <summary>
     /// Parses a <c>summon.find</c> assignment right-hand side for the given target variable.
     /// </summary>
     /// <param name="target">The already-parsed assignment target variable name.</param>
@@ -333,7 +377,8 @@ public static class InstructionParser
         from summonFindKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.SummonFind)
         from whitespace in Lexer.WhitespaceRequired
         from function in Lexer.FunctionReference
-        select (UtopIRInstruction)new SummonFindInstruction(new UtopIRVariable(target), new FunctionReference(function));
+        from parameterTypes in SummonSignature
+        select (UtopIRInstruction)new SummonFindInstruction(new UtopIRVariable(target), new FunctionReference(function), parameterTypes);
 
     /// <summary>
     /// Parses <c>£&lt;var&gt; = &lt;rhs&gt;</c>, dispatching to the correct right-hand-side parser.
@@ -425,7 +470,8 @@ public static class InstructionParser
         from summonKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Summon)
         from whitespace in Lexer.WhitespaceRequired
         from function in Lexer.FunctionReference
-        select (UtopIRInstruction)new SummonInstruction(new FunctionReference(function));
+        from parameterTypes in SummonSignature
+        select (UtopIRInstruction)new SummonInstruction(new FunctionReference(function), parameterTypes);
 
     /// <summary>
     /// Parses a bare label declaration.
@@ -551,5 +597,208 @@ public static class InstructionParser
             }
 
             return Result.Value(instructions.ToArray(), input, remainder);
+        };
+
+    /// <summary>
+    /// Parses a single <c>, term &lt;type&gt; %&lt;param-name&gt;</c> entry of a <c>duty</c> header.
+    /// </summary>
+    private static readonly TextParser<UtopIRFunctionParameter> DutyParameterEntry =
+        from whitespace1 in Lexer.Whitespace
+        from comma in Character.EqualTo(',')
+        from whitespace2 in Lexer.Whitespace
+        from termKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Term)
+        from whitespace3 in Lexer.WhitespaceRequired
+        from type in OperandParser.TermType
+        from whitespace4 in Lexer.WhitespaceRequired
+        from name in Lexer.Parameter
+        select new UtopIRFunctionParameter(type, name);
+
+    /// <summary>
+    /// Parses zero or more <see cref="DutyParameterEntry"/> entries of a <c>duty</c> header.
+    /// </summary>
+    private static readonly TextParser<UtopIRFunctionParameter[]> DutyParameterList =
+        DutyParameterEntry
+            .Try()
+            .Many();
+
+    /// <summary>
+    /// Parses the optional trailing <c>, finds &lt;type&gt;</c> clause of a <c>duty</c> header.
+    /// </summary>
+    private static readonly TextParser<UtopIRTermType?> DutyFindsClause =
+        (from whitespace1 in Lexer.Whitespace
+         from comma in Character.EqualTo(',')
+         from whitespace2 in Lexer.Whitespace
+         from findsKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Finds)
+         from whitespace3 in Lexer.WhitespaceRequired
+         from type in OperandParser.TermType
+         select (UtopIRTermType?)type)
+            .Try()
+            .OptionalOrDefault(null);
+
+    /// <summary>
+    /// Parses a <c>duty</c> header, matching the format
+    /// <c>duty &amp;&lt;fn-name&gt;, [term &lt;type&gt; %&lt;param-name&gt;, ...] [finds &lt;type&gt;]</c>.
+    /// </summary>
+    private static readonly TextParser<(string Name, UtopIRFunctionParameter[] Parameters, UtopIRTermType? ReturnType)> DutyHeader =
+        from dutyKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Duty)
+        from whitespace in Lexer.WhitespaceRequired
+        from function in Lexer.FunctionReference
+        from parameters in DutyParameterList
+        from returnType in DutyFindsClause
+        select (function, parameters, returnType);
+
+    /// <summary>
+    /// Parses a complete <c>duty</c> header line, including any surrounding whitespace.
+    /// </summary>
+    private static readonly TextParser<(string Name, UtopIRFunctionParameter[] Parameters, UtopIRTermType? ReturnType)> DutyHeaderLine =
+        from leadingWhitespace in Lexer.Whitespace
+        from header in DutyHeader
+        from trailingWhitespace in Lexer.Whitespace
+        select header;
+
+    /// <summary>
+    /// Matches, without consuming, a <c>discharged</c> line.
+    /// </summary>
+    /// <remarks>
+    /// Optional leading whitespace then the <c>discharged</c> keyword.
+    /// Used as the <c>terminator</c> passed to
+    /// <see cref="InstructionSequence(TextParser{Unit})"/> when parsing a function body.
+    /// </remarks>
+    private static readonly TextParser<Unit> DischargedTerminator =
+        (from leadingWhitespace in Lexer.Whitespace
+         from dischargedKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Discharged)
+         select Unit.Value)
+            .Try();
+
+    /// <summary>
+    /// Parses a complete <c>discharged</c> closer line, consuming it.
+    /// </summary>
+    private static readonly TextParser<string> DischargedLine =
+        from leadingWhitespace in Lexer.Whitespace
+        from dischargedKeyword in Lexer.Keyword(UtopIRKeywords.Instructions.Discharged)
+        from trailingWhitespace in Lexer.Whitespace
+        select dischargedKeyword;
+
+    /// <summary>
+    /// Parses one complete <c>duty</c> ... <c>discharged</c> function definition block.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="DutyHeaderLine"/>, a body parsed by <see cref="InstructionSequence(TextParser{Unit})"/>
+    /// with <see cref="DischargedTerminator"/> as its terminator, then the <see cref="DischargedLine"/>
+    /// itself.
+    /// </remarks>
+    public static readonly TextParser<UtopIRFunctionDefinition> FunctionDefinition =
+        input =>
+        {
+            Result<(string Name, UtopIRFunctionParameter[] Parameters, UtopIRTermType? ReturnType)> headerResult = DutyHeaderLine(input);
+            if (!headerResult.HasValue)
+            {
+                return Result.CastEmpty<(string, UtopIRFunctionParameter[], UtopIRTermType?), UtopIRFunctionDefinition>(headerResult);
+            }
+
+            TextSpan remainder = headerResult.Remainder;
+            Result<char> headerNewlineResult = Newline(remainder);
+            if (!headerNewlineResult.HasValue)
+            {
+                return Result.CastEmpty<char, UtopIRFunctionDefinition>(headerNewlineResult);
+            }
+
+            remainder = headerNewlineResult.Remainder;
+
+            Result<UtopIRInstruction[]> bodyResult = InstructionSequence(DischargedTerminator)(remainder);
+            if (!bodyResult.HasValue)
+            {
+                return Result.CastEmpty<UtopIRInstruction[], UtopIRFunctionDefinition>(bodyResult);
+            }
+
+            remainder = bodyResult.Remainder;
+
+            Result<string> dischargedResult = DischargedLine(remainder);
+            if (!dischargedResult.HasValue)
+            {
+                return Result.CastEmpty<string, UtopIRFunctionDefinition>(dischargedResult);
+            }
+
+            remainder = dischargedResult.Remainder;
+
+            (string name, UtopIRFunctionParameter[] parameters, UtopIRTermType? returnType) = headerResult.Value;
+            UtopIRFunctionDefinition function = new(name, parameters, returnType, bodyResult.Value);
+            return Result.Value(function, input, remainder);
+        };
+
+    /// <summary>
+    /// Matches a blank or comment-only line without requiring an instruction.
+    /// </summary>
+    /// <remarks>
+    /// Used by <see cref="SkipBlankLines"/> to find the start of the next <see cref="FunctionDefinition"/>.
+    /// </remarks>
+    private static readonly TextParser<Unit> BlankLine =
+        from leadingWhitespace in Lexer.Whitespace
+        from comment in Lexer.Comment.Select(_ => Unit.Value).OptionalOrDefault(Unit.Value)
+        from trailingWhitespace in Lexer.Whitespace
+        select Unit.Value;
+
+    /// <summary>
+    /// Advances past any run of blank or comment-only lines, stopping at the start of a
+    /// <c>duty</c> header or at end-of-input.
+    /// </summary>
+    /// <remarks>
+    /// A line is only skipped once a trailing <see cref="Newline"/>, or end-of-input, is also
+    /// confirmed after it. Otherwise the whitespace <see cref="BlankLine"/> matched was the leading
+    /// whitespace of a <c>duty</c> line, and the original, unconsumed <paramref name="input"/> is
+    /// returned instead.
+    /// </remarks>
+    /// <param name="input">The span to advance past leading blank lines in.</param>
+    /// <returns>The span positioned at the first non-blank line, or at end-of-input.</returns>
+    private static TextSpan SkipBlankLines(TextSpan input)
+    {
+        TextSpan remainder = input;
+        while (true)
+        {
+            Result<Unit> blankResult = BlankLine(remainder);
+            if (!blankResult.HasValue)
+            {
+                return remainder;
+            }
+
+            TextSpan afterBlank = blankResult.Remainder;
+            if (afterBlank.IsAtEnd)
+            {
+                return afterBlank;
+            }
+
+            Result<char> newlineResult = Newline(afterBlank);
+            if (!newlineResult.HasValue)
+            {
+                return remainder;
+            }
+
+            remainder = newlineResult.Remainder;
+        }
+    }
+
+    /// <summary>
+    /// Parses a whole UtopIR programme as one or more <see cref="FunctionDefinition"/> blocks,
+    /// separated by any number of blank/comment lines, to end-of-input.
+    /// </summary>
+    /// <returns>A parser producing the function definitions found, in source order.</returns>
+    public static TextParser<UtopIRFunctionDefinition[]> FunctionDefinitionSequence() =>
+        input =>
+        {
+            List<UtopIRFunctionDefinition> functions = [];
+            TextSpan remainder = SkipBlankLines(input);
+            while (!remainder.IsAtEnd)
+            {
+                Result<UtopIRFunctionDefinition> functionResult = FunctionDefinition(remainder);
+                if (!functionResult.HasValue)
+                {
+                    return Result.CastEmpty<UtopIRFunctionDefinition, UtopIRFunctionDefinition[]>(functionResult);
+                }
+
+                functions.Add(functionResult.Value);
+                remainder = SkipBlankLines(functionResult.Remainder);
+            }
+
+            return Result.Value(functions.ToArray(), input, remainder);
         };
 }
