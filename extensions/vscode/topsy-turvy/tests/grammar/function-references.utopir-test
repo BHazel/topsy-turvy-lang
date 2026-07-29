@@ -10,3 +10,8 @@ summon &DoNothing
 
 £r = summon.find &GetValue
 //               ^ entity.name.function.utopir
+
+// ── Namespace-qualified function references ──────────────────────
+
+summon &Aesthetic*Writing*ReadPoem
+//     ^ entity.name.function.utopir

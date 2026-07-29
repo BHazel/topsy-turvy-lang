@@ -916,6 +916,232 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
     }
 
     /// <summary>
+    /// Runs a Topsy Turvy programme calling its own user-defined function through the complete
+    /// pipeline, verifying the function lowers to its own <c>duty</c>/<c>discharged</c> block and the
+    /// compiled assembly runs the body of that function.
+    /// </summary>
+    [Fact]
+    public void Pipeline_UserDefinedFunctionCall_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The Adder"
+
+            IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+                AND SO I FIND SUM OF Num1 AND Num2
+            MY DUTY IS DISCHARGED.
+
+            PRAY WELCOME Total AS A PEER BEING SUMMON Add WITH 4 AND 5 IF YOU PLEASE.
+            AND SO I FIND Total
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("duty &Add, term peer %Num1, term peer %Num2, finds peer");
+        utopIrSource.ShouldContain("duty &Opera, finds peer");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(utopIrProgram, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(9);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme where a user-defined function calls itself recursively through the
+    /// complete pipeline, verifying the compiled assembly resolves the self-call and computes the
+    /// correct result.
+    /// </summary>
+    [Fact]
+    public void Pipeline_RecursiveUserDefinedFunctionCall_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The Recursive Factorial"
+
+            IT IS MY DUTY TO PERFORM Factorial UNDER THE TERMS OF N AS A PEER TO FIND PEER
+                SHOULD IT TRANSPIRE THAT ALIKE N AND 0
+                    QUITE SO.
+                        AND SO I FIND 1
+                SO MUCH FOR THAT.
+                AND SO I FIND PRODUCT OF N AND SUMMON Factorial WITH DIFFERENCE OF N AND 1 IF YOU PLEASE.
+            MY DUTY IS DISCHARGED.
+
+            PRAY WELCOME Result AS A PEER BEING SUMMON Factorial WITH 5 IF YOU PLEASE.
+            AND SO I FIND Result
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(utopIrProgram, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(120);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme declaring a function under a namespace and calling it
+    /// by bare name from within that same namespace, through the complete pipeline, verifying the
+    /// function is lowered to its <c>*</c>-qualified name and the call resolves and runs correctly.
+    /// </summary>
+    [Fact]
+    public void Pipeline_NamespacedFunctionCall_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The Poet"
+
+            TOWN Aesthetic WITH DISTRICT Writing
+
+            IT IS MY DUTY TO PERFORM GetAnswer UNDER NO OBLIGATION TO FIND PEER
+                AND SO I FIND 42
+            MY DUTY IS DISCHARGED.
+
+            PRAY WELCOME Answer AS A PEER BEING SUMMON GetAnswer WITH NOTHING IF YOU PLEASE.
+            AND SO I FIND Answer
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("duty &Aesthetic*Writing*GetAnswer, finds peer");
+        utopIrSource.ShouldContain("summon.find &Aesthetic*Writing*GetAnswer");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(utopIrProgram, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(42);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a Topsy Turvy programme passing an array to a user-defined function through the complete
+    /// pipeline, verifying the array-typed parameter lowers to the <c>list.&lt;type&gt;</c> signature
+    /// form and the compiled assembly can index into it via <c>VICTIM</c>.
+    /// </summary>
+    [Fact]
+    public void Pipeline_ArrayParameterFunctionCall_ProducesCorrectExitCode()
+    {
+        const string source = """
+            HARK! "The List Keeper"
+
+            IT IS MY DUTY TO PERFORM FirstElement UNDER THE TERMS OF Numbers AS A LITTLE LIST OF PEER TO FIND PEER
+                AND SO I FIND VICTIM 1 ON Numbers
+            MY DUTY IS DISCHARGED.
+
+            PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 42 AND 7 AND 13 IF YOU PLEASE.
+            PRAY WELCOME Result AS A PEER BEING SUMMON FirstElement WITH Numbers IF YOU PLEASE.
+            AND SO I FIND Result
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string utopIrSource = new UtopIRCodeGenerator().Generate(utopIrProgram);
+        utopIrSource.ShouldContain("term list.peer %Numbers");
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            new CilEmitter().Emit(utopIrProgram, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(42);
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// The Standard Library <c>PreviewBehold</c>/<c>PreviewPrayTell</c>, projected into
     /// <see cref="CilExternalFunction"/>, so the CIL emitter can resolve a real <c>summon</c>/<c>summon.find</c>.
     /// </summary>

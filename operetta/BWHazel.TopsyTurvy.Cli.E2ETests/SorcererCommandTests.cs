@@ -30,9 +30,11 @@ public sealed class SorcererCommandTests(CliFixture fixture)
 
     private const string ValidUtopIrSource =
         """
-        £result = welcome peer
-        £result = appoint 13
-        find £result
+        duty &Opera, finds peer
+            £result = welcome peer
+            £result = appoint 13
+            find £result
+        discharged
         """;
 
     private const string ExternalLibraryCallSource =

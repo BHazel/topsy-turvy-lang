@@ -29,8 +29,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(1);
-        WelcomeInstruction welcome = result.Instructions[0].ShouldBeOfType<WelcomeInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(1);
+        WelcomeInstruction welcome = result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>();
         welcome.Target.Name.ShouldBe("x");
         welcome.Type.ShouldBe(UtopIRType.Peer);
     }
@@ -53,9 +53,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("n");
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(2);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("n");
+        AppointInstruction appoint = result.Functions[0].Body[1].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("n");
         LiteralOperand literal = appoint.Value.ShouldBeOfType<LiteralOperand>();
         literal.Value.ShouldBe(42);
@@ -79,12 +79,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("big_number");
-        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("big_number");
+        WereInstruction were = result.Functions[0].Body[1].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Chancellor);
         were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(200);
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("big_number");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
@@ -106,10 +106,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        WereInstruction were = result.Functions[0].Body[1].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
 
@@ -132,8 +132,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         VariableOperand variable = appoint.Value.ShouldBeOfType<VariableOperand>();
         variable.Variable.Name.ShouldBe("x");
     }
@@ -157,9 +157,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("a");
-        result.Instructions[1].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("b");
+        result.Functions[0].Body.Count.ShouldBe(2);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("a");
+        result.Functions[0].Body[1].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("b");
     }
 
     /// <summary>
@@ -179,8 +179,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(2);
+        AppointInstruction appoint = result.Functions[0].Body[1].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("x");
         appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(99);
     }
@@ -203,8 +203,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("y");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("x");
     }
@@ -224,8 +224,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(1);
-        FindInstruction find = result.Instructions[0].ShouldBeOfType<FindInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(1);
+        FindInstruction find = result.Functions[0].Body[0].ShouldBeOfType<FindInstruction>();
         find.Value.ShouldNotBeNull();
         find.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
     }
@@ -245,7 +245,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        FindInstruction find = result.Instructions[0].ShouldBeOfType<FindInstruction>();
+        FindInstruction find = result.Functions[0].Body[0].ShouldBeOfType<FindInstruction>();
         find.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("exitCode");
     }
 
@@ -286,7 +286,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operation.ShouldBe(expectedUtopirOperation);
     }
 
@@ -327,7 +327,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operation.ShouldBe(expectedUtopirOperation);
     }
 
@@ -359,10 +359,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[3].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         were.Type.ShouldBe(UtopIRType.Fathom);
-        ArithmeticInstruction arithmetic = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[4].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operation.ShouldBe(UtopIRArithmeticOperation.SumFloat);
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
@@ -386,12 +386,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Foot);
-        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Foot);
+        WereInstruction were = result.Functions[0].Body[1].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Foot);
         were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(8.5);
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
 
@@ -423,12 +423,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(5);
-        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(5);
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Target.Name.ShouldBe("_sum_Peer1_Peer2");
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Peer1");
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Peer2");
-        AppointInstruction appoint = result.Instructions[4].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[4].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum_Peer1_Peer2");
     }
@@ -466,7 +466,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        BitwiseInstruction bitwise = result.Instructions[3].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction bitwise = result.Functions[0].Body[3].ShouldBeOfType<BitwiseInstruction>();
         bitwise.Operation.ShouldBe(expectedUtopirOperation);
         bitwise.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         bitwise.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
@@ -495,10 +495,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        InvInstruction inv = result.Instructions[2].ShouldBeOfType<InvInstruction>();
+        InvInstruction inv = result.Functions[0].Body[2].ShouldBeOfType<InvInstruction>();
         inv.Target.Name.ShouldBe("_inv_a");
         inv.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
-        result.Instructions[3].ShouldBeOfType<AppointInstruction>()
+        result.Functions[0].Body[3].ShouldBeOfType<AppointInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_inv_a");
     }
 
@@ -525,7 +525,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        BitwiseInstruction shift = result.Instructions[2].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction shift = result.Functions[0].Body[2].ShouldBeOfType<BitwiseInstruction>();
         shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
         shift.Target.Name.ShouldBe("_transup_a_1");
         shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
@@ -555,7 +555,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        BitwiseInstruction shift = result.Instructions[2].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction shift = result.Functions[0].Body[2].ShouldBeOfType<BitwiseInstruction>();
         shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransDown);
         shift.Target.Name.ShouldBe("_transdown_a_1");
         shift.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
@@ -589,7 +589,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        BitwiseInstruction shift = result.Instructions[3].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction shift = result.Functions[0].Body[3].ShouldBeOfType<BitwiseInstruction>();
         shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
         shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         shift.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("shiftAmount");
@@ -623,10 +623,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[3].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Chancellor);
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("shiftAmount");
-        BitwiseInstruction shift = result.Instructions[4].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction shift = result.Functions[0].Body[4].ShouldBeOfType<BitwiseInstruction>();
         shift.Operation.ShouldBe(UtopIRBitwiseOperation.TransUp);
         shift.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         shift.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
@@ -660,10 +660,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[3].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        BitwiseInstruction bitwise = result.Instructions[4].ShouldBeOfType<BitwiseInstruction>();
+        BitwiseInstruction bitwise = result.Functions[0].Body[4].ShouldBeOfType<BitwiseInstruction>();
         bitwise.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
         bitwise.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
     }
@@ -702,7 +702,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction comparison = result.Functions[0].Body[3].ShouldBeOfType<ComparisonInstruction>();
         comparison.Operation.ShouldBe(expectedUtopirOperation);
     }
 
@@ -740,7 +740,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ComparisonInstruction comparison = result.Instructions[3].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction comparison = result.Functions[0].Body[3].ShouldBeOfType<ComparisonInstruction>();
         comparison.Operation.ShouldBe(expectedUtopirOperation);
     }
 
@@ -772,10 +772,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[3].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        ComparisonInstruction comparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction comparison = result.Functions[0].Body[4].ShouldBeOfType<ComparisonInstruction>();
         comparison.Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
         comparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
         comparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
@@ -819,8 +819,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ComparisonInstruction innerComparison = result.Instructions[4].ShouldBeOfType<ComparisonInstruction>();
-        ComparisonInstruction outerComparison = result.Instructions[5].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction innerComparison = result.Functions[0].Body[4].ShouldBeOfType<ComparisonInstruction>();
+        ComparisonInstruction outerComparison = result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>();
         outerComparison.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(innerComparison.Target.Name);
         outerComparison.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("flag");
     }
@@ -857,7 +857,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        LogicalInstruction logical = result.Instructions[3].ShouldBeOfType<LogicalInstruction>();
+        LogicalInstruction logical = result.Functions[0].Body[3].ShouldBeOfType<LogicalInstruction>();
         logical.Operation.ShouldBe(expectedUtopirOperation);
         logical.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         logical.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
@@ -886,10 +886,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        HardlyInstruction hardly = result.Instructions[2].ShouldBeOfType<HardlyInstruction>();
+        HardlyInstruction hardly = result.Functions[0].Body[2].ShouldBeOfType<HardlyInstruction>();
         hardly.Target.Name.ShouldBe("_hardly_a");
         hardly.Operand.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
-        result.Instructions[3].ShouldBeOfType<AppointInstruction>()
+        result.Functions[0].Body[3].ShouldBeOfType<AppointInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_hardly_a");
     }
 
@@ -911,9 +911,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Stitch);
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(2);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(UtopIRType.Stitch);
+        AppointInstruction appoint = result.Functions[0].Body[1].ShouldBeOfType<AppointInstruction>();
         appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe('A');
     }
 
@@ -940,10 +940,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[2].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[2].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Stitch);
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("n");
-        AppointInstruction appoint = result.Instructions[3].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[3].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("c");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
@@ -970,11 +970,11 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        WereInstruction were = result.Instructions[1].ShouldBeOfType<WereInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        WereInstruction were = result.Functions[0].Body[1].ShouldBeOfType<WereInstruction>();
         were.Type.ShouldBe(UtopIRType.Chancellor);
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Lords");
-        AppointInstruction appoint = result.Instructions[2].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[2].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
@@ -1009,10 +1009,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WereInstruction were = result.Instructions[3].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[3].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(narrowerOperandName);
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        ArithmeticInstruction arithmetic = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[4].ShouldBeOfType<ArithmeticInstruction>();
         (arithmetic.Operand1 as VariableOperand)!.Variable.Name.ShouldBe(narrowerOperandName == "a" ? were.Target.Name : "a");
         (arithmetic.Operand2 as VariableOperand)!.Variable.Name.ShouldBe(narrowerOperandName == "b" ? were.Target.Name : "b");
     }
@@ -1045,8 +1045,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.ShouldNotContain(instruction => instruction is WereInstruction);
-        ArithmeticInstruction arithmetic = result.Instructions[3].ShouldBeOfType<ArithmeticInstruction>();
+        result.Functions[0].Body.ShouldNotContain(instruction => instruction is WereInstruction);
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[3].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("a");
         arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("b");
     }
@@ -1077,7 +1077,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction arithmetic = result.Instructions[1].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction arithmetic = result.Functions[0].Body[1].ShouldBeOfType<ArithmeticInstruction>();
         arithmetic.Target.Name.ShouldBe("_sum_3_4");
     }
 
@@ -1120,16 +1120,16 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(7);
-        ArithmeticInstruction prod = result.Instructions[4].ShouldBeOfType<ArithmeticInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(7);
+        ArithmeticInstruction prod = result.Functions[0].Body[4].ShouldBeOfType<ArithmeticInstruction>();
         prod.Operation.ShouldBe(UtopIRArithmeticOperation.Prod);
         prod.Target.Name.ShouldBe("_prod_a_b");
-        ArithmeticInstruction sum = result.Instructions[5].ShouldBeOfType<ArithmeticInstruction>();
+        ArithmeticInstruction sum = result.Functions[0].Body[5].ShouldBeOfType<ArithmeticInstruction>();
         sum.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
         sum.Target.Name.ShouldBe("_sum__prod_a_b_c");
         sum.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_prod_a_b");
         sum.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("c");
-        result.Instructions[6].ShouldBeOfType<AppointInstruction>()
+        result.Functions[0].Body[6].ShouldBeOfType<AppointInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum__prod_a_b_c");
     }
 
@@ -1159,7 +1159,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(expectedUtopirType);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Type.ShouldBe(expectedUtopirType);
     }
 
     /// <summary>
@@ -1242,18 +1242,18 @@ public class TopsyTurvyToUtopIRTransformerTests
         // £_sum_Peer1_Peer2 = sum £Peer1, £Peer2
         // £PeerResult = appoint £_sum_Peer1_Peer2
         // find £PeerResult
-        result.Instructions.Count.ShouldBe(8);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer1");
-        result.Instructions[1].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(42);
-        result.Instructions[2].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer2");
-        result.Instructions[3].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(30);
-        result.Instructions[4].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("PeerResult");
-        ArithmeticInstruction sum = result.Instructions[5].ShouldBeOfType<ArithmeticInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(8);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer1");
+        result.Functions[0].Body[1].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(42);
+        result.Functions[0].Body[2].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Peer2");
+        result.Functions[0].Body[3].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(30);
+        result.Functions[0].Body[4].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("PeerResult");
+        ArithmeticInstruction sum = result.Functions[0].Body[5].ShouldBeOfType<ArithmeticInstruction>();
         sum.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
         sum.Target.Name.ShouldBe("_sum_Peer1_Peer2");
-        result.Instructions[6].ShouldBeOfType<AppointInstruction>()
+        result.Functions[0].Body[6].ShouldBeOfType<AppointInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("_sum_Peer1_Peer2");
-        result.Instructions[7].ShouldBeOfType<FindInstruction>()
+        result.Functions[0].Body[7].ShouldBeOfType<FindInstruction>()
             .Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PeerResult");
     }
 
@@ -1279,21 +1279,21 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(19);
-        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
-        result.Instructions[6].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
-        result.Instructions[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
-        result.Instructions[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
-        result.Instructions[9].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
-        result.Instructions[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
-        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
-        result.Instructions[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
-        result.Instructions[14].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
-        result.Instructions[15].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
-        result.Instructions[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
-        result.Instructions[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
-        result.Instructions[18].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
+        result.Functions[0].Body.Count.ShouldBe(19);
+        result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        result.Functions[0].Body[6].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
+        result.Functions[0].Body[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
+        result.Functions[0].Body[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
+        result.Functions[0].Body[9].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
+        result.Functions[0].Body[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_PREADAM_PEER1_PEER2");
+        result.Functions[0].Body[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Functions[0].Body[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Functions[0].Body[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1OIN_ALIKE_PEER1_PEER2");
+        result.Functions[0].Body[14].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
+        result.Functions[0].Body[15].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Functions[0].Body[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
+        result.Functions[0].Body[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
+        result.Functions[0].Body[18].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
     }
 
     /// <summary>
@@ -1315,10 +1315,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(8);
-        result.Instructions[2].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_A");
-        result.Instructions[3].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
-        result.Instructions.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name == "T1O");
+        result.Functions[0].Body.Count.ShouldBe(8);
+        result.Functions[0].Body[2].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_A");
+        result.Functions[0].Body[3].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Functions[0].Body.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name == "T1O");
     }
 
     /// <summary>
@@ -1347,23 +1347,23 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(16);
-        ComparisonInstruction comparison = result.Instructions[5].ShouldBeOfType<ComparisonInstruction>();
-        UtopIRVariable sharedTemporary = result.Instructions[6].ShouldBeOfType<WelcomeInstruction>().Target;
+        result.Functions[0].Body.Count.ShouldBe(16);
+        ComparisonInstruction comparison = result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>();
+        UtopIRVariable sharedTemporary = result.Functions[0].Body[6].ShouldBeOfType<WelcomeInstruction>().Target;
         sharedTemporary.Name.ShouldNotBe(comparison.Target.Name);
-        result.Instructions[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
-        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
-        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
-        AppointInstruction trueAppoint = result.Instructions[10].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body[7].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
+        result.Functions[0].Body[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1O");
+        result.Functions[0].Body[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1QS_ALIKE_PEER1_PEER2");
+        AppointInstruction trueAppoint = result.Functions[0].Body[10].ShouldBeOfType<AppointInstruction>();
         trueAppoint.Target.Name.ShouldBe(sharedTemporary.Name);
         trueAppoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
-        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
-        AppointInstruction falseAppoint = result.Instructions[13].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("T1SMFT");
+        result.Functions[0].Body[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1O");
+        AppointInstruction falseAppoint = result.Functions[0].Body[13].ShouldBeOfType<AppointInstruction>();
         falseAppoint.Target.Name.ShouldBe(sharedTemporary.Name);
         falseAppoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
-        result.Instructions[14].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
-        AppointInstruction finalAppoint = result.Instructions[15].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body[14].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T1SMFT");
+        AppointInstruction finalAppoint = result.Functions[0].Body[15].ShouldBeOfType<AppointInstruction>();
         finalAppoint.Target.Name.ShouldBe("PeerResult");
         finalAppoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(sharedTemporary.Name);
     }
@@ -1388,15 +1388,15 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(12);
-        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
-        result.Instructions[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("G1O");
-        result.Instructions[7].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("G1UO");
-        result.Instructions[8].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1O");
-        result.Instructions[9].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
-        result.Instructions[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1UO");
-        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name.StartsWith("G1QS"));
+        result.Functions[0].Body.Count.ShouldBe(12);
+        result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.Alike);
+        result.Functions[0].Body[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("G1O");
+        result.Functions[0].Body[7].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("G1UO");
+        result.Functions[0].Body[8].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1O");
+        result.Functions[0].Body[9].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(0);
+        result.Functions[0].Body[10].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("G1UO");
+        result.Functions[0].Body[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Functions[0].Body.OfType<LabelInstruction>().Select(l => l.Name.Name).ShouldNotContain(name => name.StartsWith("G1QS"));
     }
 
     /// <summary>
@@ -1425,24 +1425,24 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(24);
-        result.Instructions[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_10");
-        result.Instructions[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_20");
-        result.Instructions[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_40");
-        result.Instructions[10].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_100");
-        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1FAIL");
-        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_10");
-        result.Instructions[13].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions[14].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
-        result.Instructions[15].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_20");
-        result.Instructions[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_40");
-        result.Instructions[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
-        result.Instructions[18].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
-        result.Instructions[19].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_100");
-        result.Instructions[20].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
-        result.Instructions[21].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1FAIL");
-        result.Instructions[22].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
-        result.Instructions[23].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1NCBMS");
+        result.Functions[0].Body.Count.ShouldBe(24);
+        result.Functions[0].Body[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_10");
+        result.Functions[0].Body[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_20");
+        result.Functions[0].Body[8].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_40");
+        result.Functions[0].Body[10].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("C1AS_100");
+        result.Functions[0].Body[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1FAIL");
+        result.Functions[0].Body[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_10");
+        result.Functions[0].Body[13].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
+        result.Functions[0].Body[14].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
+        result.Functions[0].Body[15].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_20");
+        result.Functions[0].Body[16].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_40");
+        result.Functions[0].Body[17].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
+        result.Functions[0].Body[18].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("C1NCBMS");
+        result.Functions[0].Body[19].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1AS_100");
+        result.Functions[0].Body[20].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
+        result.Functions[0].Body[21].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1FAIL");
+        result.Functions[0].Body[22].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(-1);
+        result.Functions[0].Body[23].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("C1NCBMS");
     }
 
     /// <summary>
@@ -1462,12 +1462,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(7);
-        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1");
-        result.Instructions[3].ShouldBeOfType<HardlyInstruction>();
-        result.Instructions[4].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Toggle");
-        result.Instructions[5].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1");
-        result.Instructions[6].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1TTE");
+        result.Functions[0].Body.Count.ShouldBe(7);
+        result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1");
+        result.Functions[0].Body[3].ShouldBeOfType<HardlyInstruction>();
+        result.Functions[0].Body[4].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Toggle");
+        result.Functions[0].Body[5].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1");
+        result.Functions[0].Body[6].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1TTE");
     }
 
     /// <summary>
@@ -1493,16 +1493,16 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(13);
-        result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
-        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.LowerDeg);
-        result.Instructions[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("L1WTTE");
-        result.Instructions[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
-        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
-        result.Instructions[9].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
-        result.Instructions[10].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
-        result.Instructions[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
-        result.Instructions[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1WTTE");
+        result.Functions[0].Body.Count.ShouldBe(13);
+        result.Functions[0].Body[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
+        result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.LowerDeg);
+        result.Functions[0].Body[6].ShouldBeOfType<SailUnlikeInstruction>().Label.Name.ShouldBe("L1WTTE");
+        result.Functions[0].Body[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Functions[0].Body[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
+        result.Functions[0].Body[9].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Functions[0].Body[10].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
+        result.Functions[0].Body[11].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_LOWERDEG_COUNTER_10");
+        result.Functions[0].Body[12].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1WTTE");
     }
 
     /// <summary>
@@ -1530,19 +1530,19 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(14);
-        result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
-        result.Instructions[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
-        result.Instructions[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1ASCTTE");
-        result.Instructions[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
-        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
-        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCOM");
-        ArithmeticInstruction step = result.Instructions[10].ShouldBeOfType<ArithmeticInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(14);
+        result.Functions[0].Body[4].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
+        result.Functions[0].Body[5].ShouldBeOfType<ComparisonInstruction>().Operation.ShouldBe(UtopIRComparisonOperation.PreAdam);
+        result.Functions[0].Body[6].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1ASCTTE");
+        result.Functions[0].Body[7].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
+        result.Functions[0].Body[8].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Total");
+        result.Functions[0].Body[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCOM");
+        ArithmeticInstruction step = result.Functions[0].Body[10].ShouldBeOfType<ArithmeticInstruction>();
         step.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
         step.Operand2.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
-        result.Instructions[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
-        result.Instructions[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCTTE");
+        result.Functions[0].Body[11].ShouldBeOfType<AppointInstruction>().Target.Name.ShouldBe("Counter");
+        result.Functions[0].Body[12].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1ASC_INCREMENTER_PREADAM_COUNTER_10");
+        result.Functions[0].Body[13].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1ASCTTE");
     }
 
     /// <summary>
@@ -1565,13 +1565,13 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(10);
-        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
-        result.Instructions[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1DESCTTE");
-        result.Instructions[5].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCOM");
-        result.Instructions[6].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Diff);
-        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
-        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCTTE");
+        result.Functions[0].Body.Count.ShouldBe(10);
+        result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
+        result.Functions[0].Body[4].ShouldBeOfType<SailAlikeInstruction>().Label.Name.ShouldBe("L1DESCTTE");
+        result.Functions[0].Body[5].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCOM");
+        result.Functions[0].Body[6].ShouldBeOfType<ArithmeticInstruction>().Operation.ShouldBe(UtopIRArithmeticOperation.Diff);
+        result.Functions[0].Body[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1DESC_LOWERDEG_COUNTER_0");
+        result.Functions[0].Body[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1DESCTTE");
     }
 
     /// <summary>
@@ -1596,7 +1596,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction step = result.Instructions.OfType<ArithmeticInstruction>().Single();
+        ArithmeticInstruction step = result.Functions[0].Body.OfType<ArithmeticInstruction>().Single();
         step.Operation.ShouldBe(UtopIRArithmeticOperation.Sum);
         step.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("StepAmount");
     }
@@ -1621,7 +1621,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ArithmeticInstruction step = result.Instructions.OfType<ArithmeticInstruction>().Single();
+        ArithmeticInstruction step = result.Functions[0].Body.OfType<ArithmeticInstruction>().Single();
         LiteralOperand stepOperand = step.Operand2.ShouldBeOfType<LiteralOperand>();
         stepOperand.Value.ShouldBeOfType<long>();
         stepOperand.Value.ShouldBe(1L);
@@ -1646,8 +1646,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        string closingLabel = result.Instructions[3].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
-        result.Instructions[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(closingLabel);
+        string closingLabel = result.Functions[0].Body[3].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
+        result.Functions[0].Body[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(closingLabel);
     }
 
     /// <summary>
@@ -1669,8 +1669,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        string openingLabel = result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name;
-        result.Instructions[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(openingLabel);
+        string openingLabel = result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name;
+        result.Functions[0].Body[4].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe(openingLabel);
     }
 
     /// <summary>
@@ -1704,8 +1704,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        string loopClosingLabel = result.Instructions[5].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
-        SailInstruction breakSail = result.Instructions.OfType<SailInstruction>().First(s => s.Label.Name.StartsWith("C2"));
+        string loopClosingLabel = result.Functions[0].Body[5].ShouldBeOfType<SailUnlikeInstruction>().Label.Name;
+        SailInstruction breakSail = result.Functions[0].Body.OfType<SailInstruction>().First(s => s.Label.Name.StartsWith("C2"));
         breakSail.Label.Name.ShouldBe("C2NCBMS");
         breakSail.Label.Name.ShouldNotBe(loopClosingLabel);
     }
@@ -1738,8 +1738,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        string loopOpeningLabel = result.Instructions[4].ShouldBeOfType<LabelInstruction>().Name.Name;
-        SailInstruction continueSail = result.Instructions.OfType<SailInstruction>().First(sailInstruction => sailInstruction.Label.Name == loopOpeningLabel);
+        string loopOpeningLabel = result.Functions[0].Body[4].ShouldBeOfType<LabelInstruction>().Name.Name;
+        SailInstruction continueSail = result.Functions[0].Body.OfType<SailInstruction>().First(sailInstruction => sailInstruction.Label.Name == loopOpeningLabel);
         continueSail.Label.Name.ShouldBe(loopOpeningLabel);
     }
 
@@ -1798,8 +1798,8 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_FLAG");
-        LabelInstruction conditionalTrueLabel = result.Instructions.OfType<LabelInstruction>().First(l => l.Name.Name.StartsWith("T"));
+        result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_FLAG");
+        LabelInstruction conditionalTrueLabel = result.Functions[0].Body.OfType<LabelInstruction>().First(l => l.Name.Name.StartsWith("T"));
         conditionalTrueLabel.Name.Name.ShouldBe("T2QS_FLAG");
     }
 
@@ -1832,11 +1832,11 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(14);
-        result.Instructions[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_FLAG");
-        result.Instructions[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2OIN_B");
-        result.Instructions[10].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1WTTE");
-        result.Instructions[11].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2SMFT");
+        result.Functions[0].Body.Count.ShouldBe(14);
+        result.Functions[0].Body[8].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1W_FLAG");
+        result.Functions[0].Body[9].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2OIN_B");
+        result.Functions[0].Body[10].ShouldBeOfType<SailInstruction>().Label.Name.ShouldBe("L1WTTE");
+        result.Functions[0].Body[11].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("T2SMFT");
     }
 
     /// <summary>
@@ -1859,13 +1859,13 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction sharedTemporary = result.Instructions[3].ShouldBeOfType<WelcomeInstruction>();
+        WelcomeInstruction sharedTemporary = result.Functions[0].Body[3].ShouldBeOfType<WelcomeInstruction>();
         sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
-        WereInstruction were = result.Instructions[7].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[7].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
         were.Type.ShouldBe(UtopIRType.Chancellor);
-        result.Instructions[8].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
-        result.Instructions[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2L);
+        result.Functions[0].Body[8].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
+        result.Functions[0].Body[11].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2L);
     }
 
     /// <summary>
@@ -1890,9 +1890,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction sharedTemporary = result.Instructions[5].ShouldBeOfType<WelcomeInstruction>();
+        WelcomeInstruction sharedTemporary = result.Functions[0].Body[5].ShouldBeOfType<WelcomeInstruction>();
         sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
-        WereInstruction were = result.Instructions[9].ShouldBeOfType<WereInstruction>();
+        WereInstruction were = result.Functions[0].Body[9].ShouldBeOfType<WereInstruction>();
         were.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("A");
         were.Type.ShouldBe(UtopIRType.Chancellor);
     }
@@ -1916,9 +1916,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        WelcomeInstruction sharedTemporary = result.Functions[0].Body.OfType<WelcomeInstruction>().Last();
         sharedTemporary.Type.ShouldBe(UtopIRType.Decree);
-        result.Instructions.OfType<WereInstruction>().ShouldBeEmpty();
+        result.Functions[0].Body.OfType<WereInstruction>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -1940,9 +1940,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        WelcomeInstruction sharedTemporary = result.Functions[0].Body.OfType<WelcomeInstruction>().Last();
         sharedTemporary.Type.ShouldBe(UtopIRType.Decree);
-        result.Instructions.OfType<WereInstruction>().ShouldBeEmpty();
+        result.Functions[0].Body.OfType<WereInstruction>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -1965,9 +1965,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction sharedTemporary = result.Instructions.OfType<WelcomeInstruction>().Last();
+        WelcomeInstruction sharedTemporary = result.Functions[0].Body.OfType<WelcomeInstruction>().Last();
         sharedTemporary.Type.ShouldBe(UtopIRType.Chancellor);
-        result.Instructions.OfType<WereInstruction>().ShouldNotBeEmpty();
+        result.Functions[0].Body.OfType<WereInstruction>().ShouldNotBeEmpty();
     }
 
     /// <summary>
@@ -1989,7 +1989,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_ALIKE_REM_COUNTER_2_0");
+        result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe("L1W_ALIKE_REM_COUNTER_2_0");
     }
 
     /// <summary>
@@ -2020,7 +2020,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe($"L1W_{expectedMnemonic}_COUNTER");
+        result.Functions[0].Body[2].ShouldBeOfType<LabelInstruction>().Name.Name.ShouldBe($"L1W_{expectedMnemonic}_COUNTER");
     }
 
     /// <summary>
@@ -2048,7 +2048,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.OfType<SailAlikeInstruction>().Single().Label.Name.ShouldBe("C1AS_0");
+        result.Functions[0].Body.OfType<SailAlikeInstruction>().Single().Label.Name.ShouldBe("C1AS_0");
     }
 
     /// <summary>
@@ -2081,14 +2081,14 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeInstruction welcomeLetter = result.Instructions.OfType<WelcomeInstruction>().Single(welcomeInstruction => welcomeInstruction.Target.Name == "PoemSubjectLetter4");
+        WelcomeInstruction welcomeLetter = result.Functions[0].Body.OfType<WelcomeInstruction>().Single(welcomeInstruction => welcomeInstruction.Target.Name == "PoemSubjectLetter4");
         welcomeLetter.Type.ShouldBe(UtopIRType.Stitch);
 
-        VictimYarnInstruction victimYarn = result.Instructions.OfType<VictimYarnInstruction>().Single();
+        VictimYarnInstruction victimYarn = result.Functions[0].Body.OfType<VictimYarnInstruction>().Single();
         victimYarn.YarnString.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("PoemSubject");
         victimYarn.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(4);
 
-        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        AppointInstruction appoint = result.Functions[0].Body.OfType<AppointInstruction>().Last();
         appoint.Target.Name.ShouldBe("PoemSubjectLetter4");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(victimYarn.Target.Name);
     }
@@ -2114,12 +2114,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeListInstruction welcomeList = result.Instructions.OfType<WelcomeListInstruction>().Single();
+        WelcomeListInstruction welcomeList = result.Functions[0].Body.OfType<WelcomeListInstruction>().Single();
         welcomeList.Target.Name.ShouldBe("Numbers");
         welcomeList.ElementType.ShouldBe(UtopIRType.Peer);
         welcomeList.Size.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
 
-        AppointVictimInstruction[] appointVictims = [.. result.Instructions.OfType<AppointVictimInstruction>()];
+        AppointVictimInstruction[] appointVictims = [.. result.Functions[0].Body.OfType<AppointVictimInstruction>()];
         appointVictims.Length.ShouldBe(3);
         for (int i = 0; i < appointVictims.Length; i++)
         {
@@ -2151,10 +2151,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(1);
-        WelcomeListInstruction welcomeList = result.Instructions[0].ShouldBeOfType<WelcomeListInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(1);
+        WelcomeListInstruction welcomeList = result.Functions[0].Body[0].ShouldBeOfType<WelcomeListInstruction>();
         welcomeList.Size.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(3);
-        result.Instructions.OfType<AppointVictimInstruction>().ShouldBeEmpty();
+        result.Functions[0].Body.OfType<AppointVictimInstruction>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -2179,7 +2179,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeListInstruction welcomeList = result.Instructions.OfType<WelcomeListInstruction>().Single();
+        WelcomeListInstruction welcomeList = result.Functions[0].Body.OfType<WelcomeListInstruction>().Single();
         VariableOperand size = welcomeList.Size.ShouldBeOfType<VariableOperand>();
         size.Variable.Name.ShouldBe("Count");
     }
@@ -2212,7 +2212,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        AppointVictimInstruction appointVictim = result.Instructions.OfType<AppointVictimInstruction>().Single();
+        AppointVictimInstruction appointVictim = result.Functions[0].Body.OfType<AppointVictimInstruction>().Single();
         appointVictim.Array.Name.ShouldBe("Numbers");
         appointVictim.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
         appointVictim.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(20);
@@ -2246,11 +2246,11 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        VictimListInstruction victimList = result.Instructions.OfType<VictimListInstruction>().Single();
+        VictimListInstruction victimList = result.Functions[0].Body.OfType<VictimListInstruction>().Single();
         victimList.Array.Name.ShouldBe("Numbers");
         victimList.Index.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(2);
 
-        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        AppointInstruction appoint = result.Functions[0].Body.OfType<AppointInstruction>().Last();
         appoint.Target.Name.ShouldBe("NumbersElement2");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(victimList.Target.Name);
     }
@@ -2277,15 +2277,15 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        WelcomeGallerypicInstruction welcomeGallerypic = result.Instructions.OfType<WelcomeGallerypicInstruction>().Single();
+        WelcomeGallerypicInstruction welcomeGallerypic = result.Functions[0].Body.OfType<WelcomeGallerypicInstruction>().Single();
         welcomeGallerypic.Target.Name.ShouldBe("NumberPointer");
         welcomeGallerypic.PointeeType.ShouldBe(UtopIRType.Peer);
 
-        PicturetoInstruction pictureto = result.Instructions.OfType<PicturetoInstruction>().Single();
+        PicturetoInstruction pictureto = result.Functions[0].Body.OfType<PicturetoInstruction>().Single();
         pictureto.Target.Name.ShouldBe("NumberPointer");
         pictureto.Pointee.Name.ShouldBe("Number");
 
-        result.Instructions.OfType<AppointInstruction>().ShouldAllBe(appoint => appoint.Target.Name == "Number");
+        result.Functions[0].Body.OfType<AppointInstruction>().ShouldAllBe(appoint => appoint.Target.Name == "Number");
     }
 
     /// <summary>
@@ -2307,12 +2307,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        result.Instructions[0].ShouldBeOfType<WelcomeGallerypicInstruction>();
-        AppointInstruction appoint = result.Instructions[1].ShouldBeOfType<AppointInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(2);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeGallerypicInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[1].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("NumberPointer");
         appoint.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBeOfType<NaughtLiteral>();
-        result.Instructions.OfType<PicturetoInstruction>().ShouldBeEmpty();
+        result.Functions[0].Body.OfType<PicturetoInstruction>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -2343,10 +2343,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ViewfromInstruction viewfrom = result.Instructions.OfType<ViewfromInstruction>().Single();
+        ViewfromInstruction viewfrom = result.Functions[0].Body.OfType<ViewfromInstruction>().Single();
         viewfrom.Pointer.Name.ShouldBe("NumberPointer");
 
-        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Last();
+        AppointInstruction appoint = result.Functions[0].Body.OfType<AppointInstruction>().Last();
         appoint.Target.Name.ShouldBe("NumberValue");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(viewfrom.Target.Name);
     }
@@ -2376,7 +2376,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        ViewtoInstruction viewto = result.Instructions.OfType<ViewtoInstruction>().Single();
+        ViewtoInstruction viewto = result.Functions[0].Body.OfType<ViewtoInstruction>().Single();
         viewto.Pointer.Name.ShouldBe("NumberPointer");
         viewto.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(23);
     }
@@ -2416,11 +2416,11 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = this.transformer.Transform(program);
 
-        PointerArithmeticInstruction pointerArithmetic = result.Instructions.OfType<PointerArithmeticInstruction>().Single();
+        PointerArithmeticInstruction pointerArithmetic = result.Functions[0].Body.OfType<PointerArithmeticInstruction>().Single();
         pointerArithmetic.Operation.ShouldBe(UtopIRPointerArithmeticOperation.Sum);
         pointerArithmetic.Pointer.Name.ShouldBe("NumberPointer");
         pointerArithmetic.Offset.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(1);
-        result.Instructions.OfType<ArithmeticInstruction>().ShouldBeEmpty();
+        result.Functions[0].Body.OfType<ArithmeticInstruction>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -2440,10 +2440,10 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        result.Instructions.Count.ShouldBe(2);
-        PrenticeInstruction prentice = result.Instructions[0].ShouldBeOfType<PrenticeInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(2);
+        PrenticeInstruction prentice = result.Functions[0].Body[0].ShouldBeOfType<PrenticeInstruction>();
         prentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(5);
-        SummonInstruction summon = result.Instructions[1].ShouldBeOfType<SummonInstruction>();
+        SummonInstruction summon = result.Functions[0].Body[1].ShouldBeOfType<SummonInstruction>();
         summon.Function.Name.ShouldBe("TestVoid");
     }
 
@@ -2462,13 +2462,13 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        result.Instructions.Count.ShouldBe(4);
-        result.Instructions[0].ShouldBeOfType<WelcomeInstruction>();
-        PrenticeInstruction prentice = result.Instructions[1].ShouldBeOfType<PrenticeInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(4);
+        result.Functions[0].Body[0].ShouldBeOfType<WelcomeInstruction>();
+        PrenticeInstruction prentice = result.Functions[0].Body[1].ShouldBeOfType<PrenticeInstruction>();
         prentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(7);
-        SummonFindInstruction summonFind = result.Instructions[2].ShouldBeOfType<SummonFindInstruction>();
+        SummonFindInstruction summonFind = result.Functions[0].Body[2].ShouldBeOfType<SummonFindInstruction>();
         summonFind.Function.Name.ShouldBe("TestValue");
-        AppointInstruction appoint = result.Instructions[3].ShouldBeOfType<AppointInstruction>();
+        AppointInstruction appoint = result.Functions[0].Body[3].ShouldBeOfType<AppointInstruction>();
         appoint.Target.Name.ShouldBe("result");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(summonFind.Target.Name);
     }
@@ -2487,20 +2487,20 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        WereInstruction were = result.Instructions.OfType<WereInstruction>().Single();
+        WereInstruction were = result.Functions[0].Body.OfType<WereInstruction>().Single();
         were.Type.ShouldBe(UtopIRType.Chancellor);
         were.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(5);
-        PrenticeInstruction prentice = result.Instructions.OfType<PrenticeInstruction>().Single();
+        PrenticeInstruction prentice = result.Functions[0].Body.OfType<PrenticeInstruction>().Single();
         prentice.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(were.Target.Name);
     }
 
     /// <summary>
     /// Tests that a <c>SUMMON</c> of a name that is also a user-defined function in the programme
-    /// throws, even though a catalogue function of the same name exists: a user-defined function must
-    /// always shadow an external one of the same name.
+    /// resolves to that user-defined function, even though a catalogue function of the same name
+    /// exists: a user-defined function always shadows an external one of the same name.
     /// </summary>
     [Fact]
-    public void Transform_SummonStatement_WithUserDefinedFunctionName_ThrowsNotSupportedException()
+    public void Transform_SummonStatement_WithUserDefinedFunctionName_ShadowsExternalCatalogueFunction()
     {
         TopsyTurvyToUtopIRTransformer transformerWithTestCatalogue = TransformerWithTestCatalogue();
         ProgramNode program = Programme(
@@ -2518,7 +2518,16 @@ public class TopsyTurvyToUtopIRTransformerTests
                 Span = PlaceholderSpan
             });
 
-        Should.Throw<NotSupportedException>(() => transformerWithTestCatalogue.Transform(program));
+        UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
+
+        result.Functions.Count.ShouldBe(2);
+        UtopIRFunctionDefinition userFunction = result.Functions.Single(function => function.Name == "TestVoid");
+        userFunction.Parameters.ShouldBeEmpty();
+
+        UtopIRFunctionDefinition opera = result.Functions.Single(function => function.Name == "Opera");
+        SummonInstruction summon = opera.Body[0].ShouldBeOfType<SummonInstruction>();
+        summon.Function.Name.ShouldBe("TestVoid");
+        summon.ParameterTypes.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -2589,12 +2598,12 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        result.Instructions.Count.ShouldBe(3);
-        PrenticeInstruction textPrentice = result.Instructions[0].ShouldBeOfType<PrenticeInstruction>();
+        result.Functions[0].Body.Count.ShouldBe(3);
+        PrenticeInstruction textPrentice = result.Functions[0].Body[0].ShouldBeOfType<PrenticeInstruction>();
         textPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe("hello");
-        PrenticeInstruction ceremonyPrentice = result.Instructions[1].ShouldBeOfType<PrenticeInstruction>();
+        PrenticeInstruction ceremonyPrentice = result.Functions[0].Body[1].ShouldBeOfType<PrenticeInstruction>();
         ceremonyPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(true);
-        SummonInstruction summon = result.Instructions[2].ShouldBeOfType<SummonInstruction>();
+        SummonInstruction summon = result.Functions[0].Body[2].ShouldBeOfType<SummonInstruction>();
         summon.Function.Name.ShouldBe("PreviewBehold");
     }
 
@@ -2615,7 +2624,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        PrenticeInstruction ceremonyPrentice = result.Instructions.OfType<PrenticeInstruction>().ElementAt(1);
+        PrenticeInstruction ceremonyPrentice = result.Functions[0].Body.OfType<PrenticeInstruction>().ElementAt(1);
         ceremonyPrentice.Value.ShouldBeOfType<LiteralOperand>().Value.ShouldBe(false);
     }
 
@@ -2653,7 +2662,7 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        PrenticeInstruction textPrentice = result.Instructions.OfType<PrenticeInstruction>().First();
+        PrenticeInstruction textPrentice = result.Functions[0].Body.OfType<PrenticeInstruction>().First();
         textPrentice.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Greeting");
     }
 
@@ -2718,9 +2727,9 @@ public class TopsyTurvyToUtopIRTransformerTests
 
         UtopIRProgram result = transformerWithTestCatalogue.Transform(program);
 
-        SummonFindInstruction summonFind = result.Instructions.OfType<SummonFindInstruction>().Single();
+        SummonFindInstruction summonFind = result.Functions[0].Body.OfType<SummonFindInstruction>().Single();
         summonFind.Function.Name.ShouldBe("PreviewPrayTell");
-        AppointInstruction appoint = result.Instructions.OfType<AppointInstruction>().Single();
+        AppointInstruction appoint = result.Functions[0].Body.OfType<AppointInstruction>().Single();
         appoint.Target.Name.ShouldBe("Greeting");
         appoint.Value.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe(summonFind.Target.Name);
     }
@@ -2738,6 +2747,132 @@ public class TopsyTurvyToUtopIRTransformerTests
             new InputNode { Target = "Greeting", Span = PlaceholderSpan });
 
         Should.Throw<NotSupportedException>(() => transformerWithEmptyCatalogue.Transform(program));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyToUtopIRTransformer.Transform"/> lowers a top-level
+    /// <see cref="FunctionDefinitionNode"/> into its own <see cref="UtopIRFunctionDefinition"/>,
+    /// separate from the implicit <c>Opera</c> entry point.
+    /// </summary>
+    [Fact]
+    public void Transform_FunctionDefinition_ProducesSeparateFunctionDefinition()
+    {
+        TopsyTurvyToUtopIRTransformer transformer = new();
+        ProgramNode program = Programme(
+            new FunctionDefinitionNode()
+            {
+                Name = "Add",
+                NameSpan = PlaceholderSpan,
+                Parameters =
+                [
+                    new TypedParameter("Num1", LiteralType.Integer, PlaceholderSpan),
+                    new TypedParameter("Num2", LiteralType.Integer, PlaceholderSpan)
+                ],
+                ReturnType = LiteralType.Integer,
+                Body = [new ReturnNode() { Value = Prefix(Operator.Sum, Identifier("Num1"), Identifier("Num2")), Span = PlaceholderSpan }],
+                Span = PlaceholderSpan
+            });
+
+        UtopIRProgram result = transformer.Transform(program);
+
+        result.Functions.Count.ShouldBe(2);
+        UtopIRFunctionDefinition add = result.Functions.Single(function => function.Name == "Add");
+        add.Parameters.Count.ShouldBe(2);
+        add.Parameters[0].Type.Type.ShouldBe(UtopIRType.Peer);
+        add.ReturnType.ShouldNotBeNull();
+        add.ReturnType!.Type.ShouldBe(UtopIRType.Peer);
+
+        add.Body.Count.ShouldBe(6);
+        add.Body[0].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Num1");
+        add.Body[1].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<ParameterOperand>().Parameter.Name.ShouldBe("Num1");
+        add.Body[2].ShouldBeOfType<WelcomeInstruction>().Target.Name.ShouldBe("Num2");
+        add.Body[3].ShouldBeOfType<AppointInstruction>().Value.ShouldBeOfType<ParameterOperand>().Parameter.Name.ShouldBe("Num2");
+        ArithmeticInstruction arithmetic = add.Body[4].ShouldBeOfType<ArithmeticInstruction>();
+        arithmetic.Operand1.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Num1");
+        arithmetic.Operand2.ShouldBeOfType<VariableOperand>().Variable.Name.ShouldBe("Num2");
+        add.Body[5].ShouldBeOfType<FindInstruction>();
+
+        result.Functions.Single(function => function.Name == "Opera").Parameters.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyToUtopIRTransformer.Transform"/> lowers a <c>SUMMON</c> of a
+    /// user-defined function, used in an expression so it must produce a value, into a real
+    /// <see cref="SummonFindInstruction"/> targeting it.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonFindExpression_WithUserDefinedFunction_ResolvesToUserFunction()
+    {
+        TopsyTurvyToUtopIRTransformer transformer = new();
+        ProgramNode program = Programme(
+            new FunctionDefinitionNode()
+            {
+                Name = "Double",
+                NameSpan = PlaceholderSpan,
+                Parameters = [new TypedParameter("N", LiteralType.Integer, PlaceholderSpan)],
+                ReturnType = LiteralType.Integer,
+                Body = [new ReturnNode() { Value = Prefix(Operator.Sum, Identifier("N"), Identifier("N")), Span = PlaceholderSpan }],
+                Span = PlaceholderSpan
+            },
+            new DeclarationNode() { Name = "result", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan },
+            Assign("result", Prefix(Operator.Summon, Identifier("Double"), IntLiteral(21))));
+
+        UtopIRProgram result = transformer.Transform(program);
+
+        UtopIRFunctionDefinition opera = result.Functions.Single(function => function.Name == "Opera");
+        SummonFindInstruction summonFind = opera.Body.OfType<SummonFindInstruction>().Single();
+        summonFind.Function.Name.ShouldBe("Double");
+        summonFind.ParameterTypes.Count.ShouldBe(1);
+        summonFind.ParameterTypes[0].Type.ShouldBe(UtopIRType.Peer);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyToUtopIRTransformer.Transform"/> qualifies both the name of the
+    /// declared function and a same-namespace bare <c>SUMMON</c> call with the <c>TOWN</c> namespace
+    /// path of the file, joined with <c>*</c>.
+    /// </summary>
+    [Fact]
+    public void Transform_SummonStatement_WithinDeclaringNamespace_ResolvesToQualifiedName()
+    {
+        TopsyTurvyToUtopIRTransformer transformer = new();
+        ProgramNode program = Programme(
+            new NamespaceDeclarationNode() { Path = ["Aesthetic", "Writing"], Span = PlaceholderSpan },
+            new FunctionDefinitionNode()
+            {
+                Name = "ReadPoem",
+                NameSpan = PlaceholderSpan,
+                Parameters = [],
+                Body = [],
+                Span = PlaceholderSpan
+            },
+            new ExpressionStatement() { Expression = Prefix(Operator.Summon, Identifier("ReadPoem")), Span = PlaceholderSpan });
+
+        UtopIRProgram result = transformer.Transform(program);
+
+        result.Functions.Single(function => function.Name == "Aesthetic*Writing*ReadPoem").ShouldNotBeNull();
+        UtopIRFunctionDefinition opera = result.Functions.Single(function => function.Name == "Opera");
+        SummonInstruction summon = opera.Body.OfType<SummonInstruction>().Single();
+        summon.Function.Name.ShouldBe("Aesthetic*Writing*ReadPoem");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TopsyTurvyToUtopIRTransformer.Transform"/> lowers a <see cref="RecogniseNode"/>
+    /// (<c>PRAY RECOGNISE</c>) to no instruction at all, matching how it is a pure compile-time
+    /// resolution hint rather than a runtime operation.
+    /// </summary>
+    [Fact]
+    public void Transform_RecogniseStatement_EmitsNoInstruction()
+    {
+        TopsyTurvyToUtopIRTransformer transformer = new();
+        ProgramNode program = Programme(
+            new RecogniseNode { Path = ["Aesthetic", "Writing"], Span = PlaceholderSpan },
+            new DeclarationNode { Name = "x", NameSpan = PlaceholderSpan, Type = LiteralType.Integer, Span = PlaceholderSpan });
+
+        UtopIRProgram result = transformer.Transform(program);
+
+        UtopIRFunctionDefinition opera = result.Functions.Single(function => function.Name == "Opera");
+        opera.Body.Count.ShouldBe(1);
+        opera.Body[0].ShouldBeOfType<WelcomeInstruction>();
     }
 
     /// <summary>

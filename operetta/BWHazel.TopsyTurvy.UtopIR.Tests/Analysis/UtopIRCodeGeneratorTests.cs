@@ -34,11 +34,11 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRType.Yarn, "yarn")]
     public void Generate_WelcomeInstruction_EmitsCorrectTypeKeyword(UtopIRType type, string expectedKeyword)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new UtopIRVariable("x"), type)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£x = welcome {expectedKeyword}");
     }
@@ -49,11 +49,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WelcomeInstruction_PrefixesVariableNameWithPound()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new UtopIRVariable("LovesickMaidens"), UtopIRType.Peer)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£LovesickMaidens = welcome peer");
     }
@@ -64,13 +64,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithVariableOperand_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("y"),
                 new VariableOperand(new UtopIRVariable("x")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£y = appoint £x");
     }
@@ -81,13 +81,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithIntegerLiteral_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("n"),
                 new LiteralOperand(42))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£n = appoint 42");
     }
@@ -98,13 +98,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithNaughtLiteral_EmitsNaughtKeyword()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("NumberPointer"),
                 new LiteralOperand(NaughtLiteral.Instance))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£NumberPointer = appoint naught");
     }
@@ -116,9 +116,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_AppointInstruction_WithNaughtLiteral_RoundTripsThroughParser()
     {
         AppointInstruction original = new(new UtopIRVariable("NumberPointer"), new LiteralOperand(NaughtLiteral.Instance));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -136,13 +136,13 @@ public class UtopIRCodeGeneratorTests
     [InlineData(false, "nay")]
     public void Generate_AppointInstruction_WithBooleanLiteral_EmitsLowercaseKeyword(bool value, string expectedToken)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("flag"),
                 new LiteralOperand(value))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£flag = appoint {expectedToken}");
     }
@@ -153,13 +153,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithWholeNumberFloat_AppendsDotZero()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("f"),
                 new LiteralOperand(3.0f))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£f = appoint 3.0");
     }
@@ -170,13 +170,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithWholeNumberDouble_AppendsDotZero()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("d"),
                 new LiteralOperand(5.0))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£d = appoint 5.0");
     }
@@ -187,13 +187,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithFractionalDouble_PreservesDecimalPoint()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("d"),
                 new LiteralOperand(3.14))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£d = appoint 3.14");
     }
@@ -204,13 +204,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithStringLiteral_EmitsQuotedString()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("s"),
                 new LiteralOperand("hello"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£s = appoint \"hello\"");
     }
@@ -221,13 +221,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithStringContainingDoubleQuote_EscapesIt()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("s"),
                 new LiteralOperand("say \"hello\""))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£s = appoint \"say ~\"hello~\"\"");
     }
@@ -238,13 +238,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithStringContainingTilde_EscapesIt()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("s"),
                 new LiteralOperand("a~b"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£s = appoint \"a~~b\"");
     }
@@ -255,13 +255,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointInstruction_WithCharLiteral_EmitsSingleQuoted()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointInstruction(
                 new UtopIRVariable("c"),
                 new LiteralOperand('A'))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£c = appoint 'A'");
     }
@@ -288,15 +288,15 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRArithmeticOperation.MinFloat, "min.f")]
     public void Generate_ArithmeticInstruction_EmitsCorrectMnemonic(UtopIRArithmeticOperation operation, string expectedMnemonic)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ArithmeticInstruction(
                 operation,
                 new UtopIRVariable("result"),
                 new VariableOperand(new UtopIRVariable("a")),
                 new VariableOperand(new UtopIRVariable("b")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£result = {expectedMnemonic} £a, £b");
     }
@@ -307,15 +307,15 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_ArithmeticInstruction_WithLiteralOperands_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ArithmeticInstruction(
                 UtopIRArithmeticOperation.Sum,
                 new UtopIRVariable("total"),
                 new LiteralOperand(10),
                 new LiteralOperand(20))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£total = sum 10, 20");
     }
@@ -326,15 +326,15 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_ArithmeticInstruction_WithFloatLiteralOperands_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ArithmeticInstruction(
                 UtopIRArithmeticOperation.SumFloat,
                 new UtopIRVariable("total"),
                 new LiteralOperand(1.5),
                 new LiteralOperand(2.5))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£total = sum.f 1.5, 2.5");
     }
@@ -352,15 +352,15 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRBitwiseOperation.TransDown, "transdown")]
     public void Generate_BitwiseInstruction_EmitsCorrectMnemonic(UtopIRBitwiseOperation operation, string expectedMnemonic)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new BitwiseInstruction(
                 operation,
                 new UtopIRVariable("result"),
                 new VariableOperand(new UtopIRVariable("a")),
                 new VariableOperand(new UtopIRVariable("b")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£result = {expectedMnemonic} £a, £b");
     }
@@ -371,13 +371,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_InvInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new InvInstruction(
                 new UtopIRVariable("result"),
                 new VariableOperand(new UtopIRVariable("a")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£result = inv £a");
     }
@@ -398,15 +398,15 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRComparisonOperation.LowerDegFloat, "lowerdeg.f")]
     public void Generate_ComparisonInstruction_EmitsCorrectMnemonic(UtopIRComparisonOperation operation, string expectedMnemonic)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ComparisonInstruction(
                 operation,
                 new UtopIRVariable("result"),
                 new VariableOperand(new UtopIRVariable("a")),
                 new VariableOperand(new UtopIRVariable("b")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£result = {expectedMnemonic} £a, £b");
     }
@@ -421,15 +421,15 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRLogicalOperation.Either, "either")]
     public void Generate_LogicalInstruction_EmitsCorrectMnemonic(UtopIRLogicalOperation operation, string expectedMnemonic)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new LogicalInstruction(
                 operation,
                 new UtopIRVariable("result"),
                 new LiteralOperand(true),
                 new LiteralOperand(false))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£result = {expectedMnemonic} verity, nay");
     }
@@ -440,13 +440,13 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_HardlyInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new HardlyInstruction(
                 new UtopIRVariable("result"),
                 new VariableOperand(new UtopIRVariable("a")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£result = hardly £a");
     }
@@ -457,14 +457,14 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_VictimYarnInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new VictimYarnInstruction(
                 new UtopIRVariable("PoemSubjectLetter4"),
                 new VariableOperand(new UtopIRVariable("PoemSubject")),
                 new LiteralOperand(4))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£PoemSubjectLetter4 = victim.yarn £PoemSubject, 4");
     }
@@ -475,11 +475,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WelcomeListInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeListInstruction(new UtopIRVariable("Numbers"), UtopIRType.Peer, new LiteralOperand(3))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£Numbers = welcome.list peer, 3");
     }
@@ -490,11 +490,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_AppointVictimInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new AppointVictimInstruction(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("appoint.victim £Numbers, 1, 10");
     }
@@ -505,11 +505,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_VictimListInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new VictimListInstruction(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£NumbersElement2 = victim.list £Numbers, 2");
     }
@@ -520,11 +520,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WelcomeGallerypicInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeGallerypicInstruction(new UtopIRVariable("NumberPointer"), UtopIRType.Peer)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£NumberPointer = welcome.gallerypic peer");
     }
@@ -535,11 +535,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_PicturetoInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new PicturetoInstruction(new UtopIRVariable("NumberPointer"), new UtopIRVariable("Number"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£NumberPointer = pictureto £Number");
     }
@@ -550,11 +550,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_ViewfromInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ViewfromInstruction(new UtopIRVariable("NumberValue"), new UtopIRVariable("NumberPointer"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£NumberValue = viewfrom £NumberPointer");
     }
@@ -565,11 +565,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_ViewtoInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ViewtoInstruction(new UtopIRVariable("NumberPointer"), new LiteralOperand(23))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("viewto £NumberPointer, 23");
     }
@@ -584,11 +584,11 @@ public class UtopIRCodeGeneratorTests
     [InlineData(UtopIRPointerArithmeticOperation.Diff, "diff.g")]
     public void Generate_PointerArithmeticInstruction_EmitsCorrectLine(UtopIRPointerArithmeticOperation operation, string expectedMnemonic)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new PointerArithmeticInstruction(operation, new UtopIRVariable("result"), new UtopIRVariable("NumbersPointer"), new LiteralOperand(2))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe($"£result = {expectedMnemonic} £NumbersPointer, 2");
     }
@@ -599,11 +599,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SailInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new SailInstruction(new UtopIRLabel("LOGIC"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("sail !LOGIC");
     }
@@ -614,11 +614,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SailAlikeInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new SailAlikeInstruction(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_ALIKE"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("sailalike £Boolean, !IS_ALIKE");
     }
@@ -629,11 +629,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SailUnlikeInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new SailUnlikeInstruction(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_UNLIKE"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("sailunlike £Boolean, !IS_UNLIKE");
     }
@@ -644,11 +644,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_LabelInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new LabelInstruction(new UtopIRLabel("LOGIC"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("!LOGIC");
     }
@@ -659,14 +659,14 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WereInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WereInstruction(
                 new UtopIRVariable("Lords"),
                 new VariableOperand(new UtopIRVariable("LovesickMaidens")),
                 UtopIRType.Chancellor)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£Lords = were £LovesickMaidens, chancellor");
     }
@@ -677,11 +677,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_WereInstruction_WithLiteralOperand_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WereInstruction(new UtopIRVariable("x"), new LiteralOperand(10), UtopIRType.Chancellor)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£x = were 10, chancellor");
     }
@@ -692,11 +692,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_PrenticeInstruction_WithVariableOperand_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new PrenticeInstruction(new VariableOperand(new UtopIRVariable("x")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("prentice £x");
     }
@@ -707,11 +707,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_PrenticeInstruction_WithLiteralOperand_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new PrenticeInstruction(new LiteralOperand(99))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("prentice 99");
     }
@@ -722,11 +722,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SummonInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
-            new SummonInstruction(new FunctionReference("PreviewBehold"))
-        ]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new SummonInstruction(new FunctionReference("PreviewBehold"), [])
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("summon &PreviewBehold");
     }
@@ -738,11 +738,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SummonFindInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
-            new SummonFindInstruction(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"))
-        ]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new SummonFindInstruction(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"), [])
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£input = summon.find &PreviewPrayTell");
     }
@@ -753,11 +753,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_LeaveInstruction_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new LeaveInstruction(new UtopIRVariable("result"))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("£result = leave");
     }
@@ -768,11 +768,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_FindInstruction_WithVariableOperand_EmitsCorrectLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new FindInstruction(new VariableOperand(new UtopIRVariable("exitCode")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("find £exitCode");
     }
@@ -783,11 +783,11 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_FindInstruction_WithNoOperand_EmitsFindKeywordOnly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new FindInstruction(null)
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.Trim().ShouldBe("find");
     }
@@ -798,7 +798,7 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_MultipleInstructions_EmitsEachOnSeparateLine()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new UtopIRVariable("a"), UtopIRType.Peer),
             new AppointInstruction(new UtopIRVariable("a"), new LiteralOperand(10)),
             new WelcomeInstruction(new UtopIRVariable("b"), UtopIRType.Peer),
@@ -809,9 +809,9 @@ public class UtopIRCodeGeneratorTests
                 new VariableOperand(new UtopIRVariable("a")),
                 new VariableOperand(new UtopIRVariable("b"))),
             new FindInstruction(new VariableOperand(new UtopIRVariable("_sum_a_b")))
-        ]);
+        ])]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         string[] lines = result.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
         lines.Length.ShouldBe(6);
@@ -829,9 +829,9 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_EmptyProgramme_ReturnsEmptyString()
     {
-        UtopIRProgram program = new(new List<UtopIRInstruction>());
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), new List<UtopIRInstruction>())]);
 
-        string result = this.generator.Generate(program);
+        string result = ExtractBody(this.generator.Generate(program));
 
         result.ShouldBe(string.Empty);
     }
@@ -847,9 +847,9 @@ public class UtopIRCodeGeneratorTests
             new UtopIRVariable("result"),
             new VariableOperand(new UtopIRVariable("a")),
             new VariableOperand(new UtopIRVariable("b")));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -865,9 +865,9 @@ public class UtopIRCodeGeneratorTests
         HardlyInstruction original = new(
             new UtopIRVariable("result"),
             new VariableOperand(new UtopIRVariable("a")));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -884,9 +884,9 @@ public class UtopIRCodeGeneratorTests
             new UtopIRVariable("PoemSubjectLetter4"),
             new VariableOperand(new UtopIRVariable("PoemSubject")),
             new LiteralOperand(4));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -900,9 +900,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_WelcomeListInstruction_RoundTripsThroughParser()
     {
         WelcomeListInstruction original = new(new UtopIRVariable("Numbers"), UtopIRType.Peer, new LiteralOperand(3));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -916,9 +916,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_AppointVictimInstruction_RoundTripsThroughParser()
     {
         AppointVictimInstruction original = new(new UtopIRVariable("Numbers"), new LiteralOperand(1), new LiteralOperand(10));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -932,9 +932,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_VictimListInstruction_RoundTripsThroughParser()
     {
         VictimListInstruction original = new(new UtopIRVariable("NumbersElement2"), new UtopIRVariable("Numbers"), new LiteralOperand(2));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -948,9 +948,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_WelcomeGallerypicInstruction_RoundTripsThroughParser()
     {
         WelcomeGallerypicInstruction original = new(new UtopIRVariable("NumberPointer"), UtopIRType.Peer);
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -964,9 +964,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_PicturetoInstruction_RoundTripsThroughParser()
     {
         PicturetoInstruction original = new(new UtopIRVariable("NumberPointer"), new UtopIRVariable("Number"));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -980,9 +980,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_ViewfromInstruction_RoundTripsThroughParser()
     {
         ViewfromInstruction original = new(new UtopIRVariable("NumberValue"), new UtopIRVariable("NumberPointer"));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -996,9 +996,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_ViewtoInstruction_RoundTripsThroughParser()
     {
         ViewtoInstruction original = new(new UtopIRVariable("NumberPointer"), new LiteralOperand(23));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -1012,9 +1012,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_PointerArithmeticInstruction_RoundTripsThroughParser()
     {
         PointerArithmeticInstruction original = new(UtopIRPointerArithmeticOperation.Sum, new UtopIRVariable("result"), new UtopIRVariable("NumbersPointer"), new LiteralOperand(2));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -1028,9 +1028,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_SailAlikeInstruction_RoundTripsThroughParser()
     {
         SailAlikeInstruction original = new(new VariableOperand(new UtopIRVariable("Boolean")), new UtopIRLabel("IS_ALIKE"));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -1044,9 +1044,9 @@ public class UtopIRCodeGeneratorTests
     public void Generate_LabelInstruction_RoundTripsThroughParser()
     {
         LabelInstruction original = new(new UtopIRLabel("LOGIC"));
-        UtopIRProgram program = new([original]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -1059,10 +1059,10 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SummonInstruction_RoundTripsThroughParser()
     {
-        SummonInstruction original = new(new FunctionReference("PreviewBehold"));
-        UtopIRProgram program = new([original]);
+        SummonInstruction original = new(new FunctionReference("PreviewBehold"), []);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
@@ -1075,13 +1075,159 @@ public class UtopIRCodeGeneratorTests
     [Fact]
     public void Generate_SummonFindInstruction_RoundTripsThroughParser()
     {
-        SummonFindInstruction original = new(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"));
-        UtopIRProgram program = new([original]);
+        SummonFindInstruction original = new(new UtopIRVariable("input"), new FunctionReference("PreviewPrayTell"), []);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [original])]);
 
-        string generated = this.generator.Generate(program).Trim();
+        string generated = ExtractBody(this.generator.Generate(program)).Trim();
         Result<UtopIRInstruction> parsed = InstructionParser.Instruction(new(generated));
 
         parsed.HasValue.ShouldBeTrue();
         parsed.Value.ShouldBe(original);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UtopIRCodeGenerator.Generate"/> renders a <c>duty</c> header with
+    /// parameters and a return type, and the matching <c>discharged</c> closer.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinition_WithParametersAndReturnType_EmitsDutyHeaderAndDischarged()
+    {
+        UtopIRFunctionDefinition add = new(
+            "Add",
+            [
+                new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Peer), "Num1"),
+                new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Peer), "Num2")
+            ],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new UtopIRVariable("_sum_Num1_Num2"), new ParameterOperand(new UtopIRParameter("Num1")), new ParameterOperand(new UtopIRParameter("Num2"))),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("_sum_Num1_Num2")))
+            ]);
+        UtopIRProgram program = new([add]);
+
+        string result = this.generator.Generate(program);
+
+        result.ShouldContain("duty &Add, term peer %Num1, term peer %Num2, finds peer");
+        result.ShouldContain("£_sum_Num1_Num2 = sum %Num1, %Num2");
+        result.ShouldContain("discharged");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UtopIRCodeGenerator.Generate"/> renders a void, parameterless <c>duty</c>
+    /// header with no trailing <c>term</c>/<c>finds</c> clause.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinition_WithNoParametersOrReturnType_EmitsBareDutyHeader()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("DoNothing", [], null, [])]);
+
+        string result = this.generator.Generate(program);
+
+        result.ShouldContain("duty &DoNothing");
+        result.ShouldNotContain("term");
+        result.ShouldNotContain("finds");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UtopIRCodeGenerator.Generate"/> renders an array-typed parameter using the
+    /// <c>list.&lt;type&gt;</c> form.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinition_WithArrayParameter_EmitsListDotTypeForm()
+    {
+        UtopIRFunctionDefinition function = new(
+            "FirstElement",
+            [new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Array, UtopIRType.Peer), "Numbers")],
+            new UtopIRTermType(UtopIRType.Peer),
+            [new FindInstruction(new LiteralOperand(0))]);
+        UtopIRProgram program = new([function]);
+
+        string result = this.generator.Generate(program);
+
+        result.ShouldContain("term list.peer %Numbers");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UtopIRCodeGenerator.Generate"/> renders the <c>summon</c>/<c>summon.find</c>
+    /// trailing signature clause, including the array <c>list.&lt;type&gt;</c> form.
+    /// </summary>
+    [Fact]
+    public void Generate_SummonFindInstruction_WithArrayParameterType_EmitsListDotTypeSignature()
+    {
+        SummonFindInstruction summonFind = new(
+            new UtopIRVariable("first"),
+            new FunctionReference("FirstElement"),
+            [new UtopIRTermType(UtopIRType.Array, UtopIRType.Peer)]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [summonFind])]);
+
+        string result = ExtractBody(this.generator.Generate(program));
+
+        result.Trim().ShouldBe("£first = summon.find &FirstElement, term list.peer");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UtopIRCodeGenerator.Generate"/> renders a namespace-qualified function
+    /// name unchanged, with the <c>*</c> delimiter preserved.
+    /// </summary>
+    [Fact]
+    public void Generate_FunctionDefinition_WithNamespaceQualifiedName_PreservesDelimiter()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Aesthetic*Writing*Greet", [], null, [])]);
+
+        string result = this.generator.Generate(program);
+
+        result.ShouldContain("duty &Aesthetic*Writing*Greet");
+    }
+
+    /// <summary>
+    /// Tests that a generated multi-function programme, including a <c>list.&lt;type&gt;</c> parameter
+    /// and a namespace-qualified name, re-parses to a structurally-equal <see cref="UtopIRProgram"/>.
+    /// </summary>
+    [Fact]
+    public void Generate_MultiFunctionProgramme_RoundTripsThroughParser()
+    {
+        UtopIRProgram original = new([
+            new UtopIRFunctionDefinition(
+                "Aesthetic*Writing*FirstElement",
+                [new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Array, UtopIRType.Peer), "Numbers")],
+                new UtopIRTermType(UtopIRType.Peer),
+                [new FindInstruction(new LiteralOperand(0))]),
+            new UtopIRFunctionDefinition(
+                "Opera",
+                [],
+                new UtopIRTermType(UtopIRType.Peer),
+                [new FindInstruction(new LiteralOperand(0))])
+        ]);
+
+        string generated = this.generator.Generate(original);
+        UtopIRParseResult result = new UtopIRParser().TryParse(generated);
+
+        result.Success.ShouldBeTrue();
+        result.Program!.Functions.ShouldBe(original.Functions);
+    }
+
+    /// <summary>
+    /// Extracts and de-indents the body lines of a generated <c>duty &amp;Opera ... discharged</c> block,
+    /// so existing single-instruction assertions can keep asserting on just the instruction text itself.
+    /// </summary>
+    /// <param name="generated">The full generated UtopIR source, including the <c>duty</c>/<c>discharged</c> wrapper.</param>
+    /// <returns>The function body, with the fixed 4-space indent removed from each line.</returns>
+    private static string ExtractBody(string generated)
+    {
+        string[] lines = generated.Replace("\r\n", "\n").Split('\n');
+        List<string> body = [];
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (lines[i].TrimStart() == "discharged")
+            {
+                break;
+            }
+
+            body.Add(lines[i].Length >= 4
+                ? lines[i][4..]
+                : lines[i]);
+        }
+
+        return string.Join('\n', body);
     }
 }

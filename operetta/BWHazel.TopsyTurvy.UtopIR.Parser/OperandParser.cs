@@ -29,8 +29,12 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// <see cref="LiteralOperand"/> only ever arise from an explicit <c>were</c> cast, never directly
 /// from parsed literal text.
 /// * <see cref="Operand"/> matches either a <see cref="Lexer.Variable"/> reference, wrapped as a
-/// <see cref="VariableOperand"/>, or a <see cref="Literal"/>, wrapped as a
+/// <see cref="VariableOperand"/>, a <see cref="Lexer.Parameter"/> reference, wrapped as a
+/// <see cref="ParameterOperand"/>, or a <see cref="Literal"/>, wrapped as a
 /// <see cref="LiteralOperand"/>.
+/// * <see cref="TermType"/> matches a type valid in a <c>term</c>/<c>finds</c> signature position,
+/// either a plain <see cref="Type"/> or the array form <c>list.&lt;type&gt;</c>, returning the
+/// corresponding <see cref="UtopIRTermType"/>.
 /// </para>
 /// </remarks>
 public static class OperandParser
@@ -151,11 +155,24 @@ public static class OperandParser
             .Named("literal");
 
     /// <summary>
-    /// Parses an operand, either a variable reference or a literal value.
+    /// Parses an operand, either a variable reference, a parameter reference or a literal value.
     /// </summary>
     public static readonly TextParser<UtopIROperand> Operand =
         Lexer.Variable
             .Select(name => (UtopIROperand)new VariableOperand(new UtopIRVariable(name)))
+            .Or(Lexer.Parameter.Select(name => (UtopIROperand)new ParameterOperand(new UtopIRParameter(name))))
             .Or(Literal.Select(value => (UtopIROperand)new LiteralOperand(value)))
             .Named("operand");
+
+    /// <summary>
+    /// Parses a type valid in a <c>term</c>/<c>finds</c> signature position, returning the
+    /// corresponding <see cref="UtopIRTermType"/>.
+    /// </summary>
+    public static readonly TextParser<UtopIRTermType> TermType =
+        (from listPrefix in Lexer.Keyword(UtopIRKeywords.SpecialTypes.ListPrefix)
+         from elementType in Type
+         select new UtopIRTermType(UtopIRType.Array, elementType))
+            .Try()
+            .Or(Type.Select(type => new UtopIRTermType(type)))
+            .Named("term type");
 }

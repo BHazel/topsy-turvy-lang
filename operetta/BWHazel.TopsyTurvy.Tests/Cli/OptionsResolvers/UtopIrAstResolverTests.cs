@@ -13,9 +13,11 @@ public class UtopIrAstResolverTests
 {
     private const string SampleUtopIrSource =
         """
-        £result = welcome peer
-        £result = appoint 21
-        find £result
+        duty &Opera, finds peer
+            £result = welcome peer
+            £result = appoint 21
+            find £result
+        discharged
         """;
 
     /// <summary>
