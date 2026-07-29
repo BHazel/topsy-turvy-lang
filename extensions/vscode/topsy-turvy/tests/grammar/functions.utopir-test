@@ -1,0 +1,37 @@
+// SYNTAX TEST "source.utopir"
+
+// ── Function definitions ─────────────────────────────────────────
+
+duty &Greet, term yarn %Name
+//^ keyword.control.utopir
+//        ^ entity.name.function.utopir
+//              ^ keyword.other.signature.utopir
+//                   ^ storage.type.utopir
+//                        ^ variable.parameter.utopir
+    prentice %Name
+discharged
+//^ keyword.control.utopir
+
+duty &Add, term peer %Num1, term peer %Num2, finds peer
+//                                            ^ keyword.other.signature.utopir
+//                                                  ^ storage.type.utopir
+    find %Num1
+discharged
+
+// ── Array term type: the caret lands on the "list." prefix itself, so this fails if the plain type group is ever accidentally reordered before this one ─
+
+duty &Sort, term list.peer %Numbers, finds list.peer
+//               ^ storage.type.utopir
+//                          ^ variable.parameter.utopir
+//                                         ^ storage.type.utopir
+    find %Numbers
+discharged
+
+// ── Summon signature clause ──────────────────────────────────────
+
+summon &Add, term peer, term peer
+//           ^ keyword.other.signature.utopir
+//                ^ storage.type.utopir
+
+£r = summon.find &Add, term peer, term peer
+//                     ^ keyword.other.signature.utopir

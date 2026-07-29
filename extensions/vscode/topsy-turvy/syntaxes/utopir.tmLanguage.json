@@ -26,8 +26,11 @@
     { "include": "#summon" },
     { "include": "#control-flow" },
     { "include": "#victim" },
+    { "include": "#functions" },
+    { "include": "#array-types" },
     { "include": "#types" },
     { "include": "#variables" },
+    { "include": "#parameters" },
     { "include": "#labels" },
     { "include": "#function-references" }
   ],
@@ -158,6 +161,22 @@
       "name": "keyword.other.access.utopir",
       "match": "(?i)\\bvictim\\.(yarn|list)\\b"
     },
+    "functions": {
+      "patterns": [
+        {
+          "name": "keyword.control.utopir",
+          "match": "(?i)\\b(duty|discharged)\\b"
+        },
+        {
+          "name": "keyword.other.signature.utopir",
+          "match": "(?i)\\b(term|finds)\\b"
+        }
+      ]
+    },
+    "array-types": {
+      "name": "storage.type.utopir",
+      "match": "(?i)\\blist\\.(chancellor|peer|pirate|sausageroll|standingchancellor|standingpeer|standingpirate|standingsausageroll|fathom|foot|decree|stitch|yarn)\\b"
+    },
     "types": {
       "name": "storage.type.utopir",
       "match": "(?i)\\b(chancellor|peer|pirate|sausageroll|standingchancellor|standingpeer|standingpirate|standingsausageroll|fathom|foot|decree|stitch|yarn)\\b"
@@ -166,13 +185,17 @@
       "name": "variable.other.utopir",
       "match": "£[A-Za-z_][A-Za-z0-9_-]*"
     },
+    "parameters": {
+      "name": "variable.parameter.utopir",
+      "match": "%[A-Za-z_][A-Za-z0-9_-]*"
+    },
     "labels": {
       "name": "entity.name.label.utopir",
       "match": "![A-Za-z_][A-Za-z0-9_-]*"
     },
     "function-references": {
       "name": "entity.name.function.utopir",
-      "match": "&[A-Za-z_][A-Za-z0-9_-]*"
+      "match": "&[A-Za-z_][A-Za-z0-9_-]*(?:\\*[A-Za-z_][A-Za-z0-9_-]*)*"
     }
   }
 }
