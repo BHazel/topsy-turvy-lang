@@ -48,8 +48,8 @@ StringLiteral   = '"', { AnyCharExceptQuoteOrTilde | "~", AnyChar }, '"' ;
 CharLiteral     = "'", ( AnyCharExceptSingleQuoteOrTilde | "~", AnyChar ), "'" ;
 (* CharLiteral holds exactly one character or one escape sequence. *)
 BooleanLiteral  = "verity" | "nay" ;
-(* Boolean literals in UtopIR mirror Topsy Turvy's VERITY and NAY, lowercased:
-   "verity" for true, "nay" for false. *)
+(* Boolean literals in UtopIR mirror the VERITY and NAY literals of Topsy Turvy,
+   lowercased: "verity" for true, "nay" for false. *)
 
 NaughtLiteral   = "naught" ;
 (* The null literal, assignable to a pointer, array or yarn variable. *)
@@ -71,22 +71,22 @@ Programme       = { BlankLine }, FunctionDefinition,
    implicit entry point wrapping every top-level Topsy Turvy statement (see
    UtopIR.md §1); user-declared functions appear alongside it. Unlike earlier
    grammar versions, a bare Instruction is never valid directly at the
-   programme level — every instruction lives inside some FunctionDefinition's
-   body. *)
+   programme level: every instruction lives inside the body of some
+   FunctionDefinition. *)
 
 BlankLine       = [ Comment ], Newline ;
 (* A line containing only optional leading/trailing whitespace and an
-   optional Comment, with no Instruction — permitted between function
-   definitions (and, via Line below, within a function body). *)
+   optional Comment, with no Instruction. Permitted between function
+   definitions, and, via Line below, within a function body. *)
 
 Line            = [ Instruction | Comment ], Newline ;
-(* Blank lines and comment-only lines are permitted anywhere within a
-   FunctionDefinition's body. *)
+(* Blank lines and comment-only lines are permitted anywhere within the
+   body of a FunctionDefinition. *)
 
 FunctionDefinition = DutyHeader, Newline, { Line }, Discharged, Newline ;
 (* The duty header, then the function body (zero or more Line, exactly as
    within any instruction sequence), then the discharged closer.  The
-   closer's own newline is consumed as part of this rule, mirroring how
+   newline of the closer is consumed as part of this rule, mirroring how
    Line consumes its own trailing newline. *)
 
 DutyHeader      = "duty", FunctionReference,
@@ -162,7 +162,7 @@ VictimYarnRhs   = "victim.yarn", Operand, ",", Operand ;
    (the first Operand).  The target register is of type stitch. *)
 VictimListRhs   = "victim.list", Variable, ",", Operand ;
 (* Selects the element at the 1-based Operand index of the array named by
-   Variable.  The target register has the array's declared element type. *)
+   Variable.  The target register has the declared element type of the array. *)
 
 SummonFindRhs   = "summon.find", FunctionReference, Signature ;
 (* Calls the named function and assigns its return value to the target
@@ -178,7 +178,7 @@ Signature       = { ",", SignatureTerm } ;
    parameterless function. *)
 
 SignatureTerm   = "term", TermType ;
-(* One entry of a summon/summon.find trailing signature clause — unlike
+(* One entry of a summon/summon.find trailing signature clause. Unlike
    DutyParameter, carries no Parameter name, only the type. *)
 
 (* Standalone form: no assignment target *)
@@ -247,8 +247,8 @@ FloatArithmeticOp   = "sum.f" | "diff.f" | "prod.f" | "quot.f" | "rem.f"
 
 PointerArithmeticOp = "sum.g" | "diff.g" ;
 (* Pointer arithmetic operands are (pointer, integer offset), a different
-   shape to ArithmeticOp's same-type operand pair, so this is kept as its own
-   production rather than folded into ArithmeticOp. *)
+   shape to the same-type operand pair of ArithmeticOp, so this is kept as
+   its own production rather than folded into ArithmeticOp. *)
 
 (*----------------------------------------------------------------------------*)
 (* Bitwise Operations                                                         *)
@@ -256,8 +256,8 @@ PointerArithmeticOp = "sum.g" | "diff.g" ;
 BitwiseOp       = "chord" | "harmony" | "discord" | "transup" | "transdown" ;
 (* All bitwise operations require integer operands.  The unary bitwise NOT,
    "inv", has its own single-operand rule (InvRhs) rather than appearing here.
-   For the shifts, the second operand is the shift amount; Topsy Turvy's
-   transposition operators default to a shift of one but accept an optional
+   For the shifts, the second operand is the shift amount; the transposition
+   operators of Topsy Turvy default to a shift of one but accept an optional
    "BY <expr>" clause to explicitly set it, lowering directly to this same
    two-operand form. *)
 
@@ -297,7 +297,7 @@ SignedIntegerType   = "chancellor" | "peer" | "pirate" | "sausageroll" ;
 
 UnsignedIntegerType = "standingchancellor" | "standingpeer"
                     | "standingpirate"     | "standingsausageroll" ;
-(* Unsigned types are single compound tokens — "standing" is fused directly to
+(* Unsigned types are single compound tokens: "standing" is fused directly to
    the base type name with no whitespace, e.g. standingpeer, not "standing peer".
    This mirrors the Topsy Turvy convention of "STANDING PEER" collapsing to
    a single UtopIR keyword. *)
@@ -305,15 +305,14 @@ UnsignedIntegerType = "standingchancellor" | "standingpeer"
 FloatType           = "fathom" | "foot" ;
 
 TermType        = "list.", Type | Type ;
-(* A type valid only in a term/finds signature position (a duty parameter, a
-   duty return type, or a summon/summon.find signature clause) — never in a
-   welcome/were/etc. type position.  The "list.<type>" array form is tried
+(* A type valid only in a term/finds signature position: a duty parameter, a
+   duty return type, or a summon/summon.find signature clause. Not valid in a
+   welcome/were/etc. type position. The "list.<type>" array form is tried
    first: "list." has no plain-Type counterpart it could be confused with,
-   but the ordering still follows this grammar's longest/most-specific-first
-   discipline throughout. list.<type> is a special type used exclusively in
-   term/finds operands; it cannot be used in declaration or assignment
-   instructions (see WelcomeListRhs, which carries its element Type and size
-   separately instead). *)
+   but the ordering still follows the longest/most-specific-first discipline
+   used throughout this grammar. list.<type> cannot be used in a declaration
+   or assignment instruction (see WelcomeListRhs, which carries its element
+   Type and size separately instead). *)
 
 (*----------------------------------------------------------------------------*)
 (* Control Flow                                                               *)
