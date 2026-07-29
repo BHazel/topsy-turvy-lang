@@ -17,15 +17,23 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// <remarks>
 /// <para>
 /// ### Assembly Structure
-/// The emitter wraps the UtopIR instruction sequence in the minimum required .NET assembly structure:
+/// The emitter wraps every <see cref="UtopIRFunctionDefinition"/> in <see cref="UtopIRProgram.Functions"/>
+/// in the minimum required .NET assembly structure:
 /// * <c>AssemblyBuilder</c>: Sets the CLR assembly identity.
 /// * <c>ModuleBuilder</c>: Creates a single module inside the assembly.
-/// * Entry Point <c>TypeBuilder</c>: Defines a public static class named "Opera" to hold the entry
-///   point.  A C# <c>static class</c> compiles to exactly <c>TypeAttributes.Abstract |
-///   TypeAttributes.Sealed</c>, the CLR way of forbidding instantiation, which is correct here since
-///   <c>Main</c> is static and never needs an instance.
-/// * <c>MethodBuilder</c>: Defines the public static <c>int Main(string[] args)</c> method serving as
-///   the programme entry point.
+/// * Entry Point <c>TypeBuilder</c>: Defines a public static class named "Opera" to hold every function
+///   as a same-named static method, including the implicit <c>Opera</c> entry-point function: it is
+///   just another entry in <see cref="UtopIRProgram.Functions"/>, not special-cased here. A C#
+///   <c>static class</c> compiles to exactly <c>TypeAttributes.Abstract | TypeAttributes.Sealed</c>,
+///   the CLR way of forbidding instantiation, which is correct here since every method is static and
+///   never needs an instance.
+/// * Function <c>MethodBuilder</c>s: defined in two passes (see <see cref="Emit"/>). The first pass
+///   defines the signature of every function, so a forward reference or recursive call resolves to a
+///   <see cref="MethodBuilder"/> regardless of declaration order. The second pass emits the body
+///   of every function.
+/// * CLR Entry Point <c>MethodBuilder</c>: a separate, hand-written <c>int Main(string[] args)</c>
+///   method, a thin wrapper that calls the zero-parameter <c>Opera</c> function and returns its
+///   <c>peer</c> result as the process exit code.
 /// * Pointer Handle <c>TypeBuilder</c>: Defines the <c>PointerHandle</c> value type (see
 ///   <see cref="PointerHandleType"/>) used to represent every UtopIR pointer at runtime. It is a
 ///   managed handle, not a real CLR pointer or byref, so no <c>unsafe</c> code is involved anywhere
@@ -38,7 +46,18 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// in a <c>Dictionary&lt;string, LocalBuilder&gt;</c> keyed on the variable name without the <c>£</c> prefix.
 /// Every <see cref="ILGenerator.DeclareLocal(Type)"/> call is paired with a
 /// <see cref="CilGenerator.RegisterLocalName"/> call so the name for a UtopIR local can be recovered later
-/// when producing IL source text: .NET metadata alone does not retain local names.
+/// when producing IL source text: .NET metadata alone does not retain local names. Every one of these
+/// maps (locals, their declared types, array element types, pointer pointee types, and labels) is
+/// reset once per function, never shared across functions: Topsy Turvy functions are not closures
+/// so no state from the body of one function, or from the top-level statements
+/// of <c>Opera</c>, should leak into another.
+/// </para>
+/// <para>
+/// ### Parameters
+/// Function parameters are tracked separately from locals, in a <c>Dictionary&lt;string, int&gt;</c>
+/// mapping each parameter name to its zero-based CLR argument index, and are loaded with <c>ldarg</c>
+/// rather than <c>ldloc</c>: a parameter is never declared with <c>welcome</c> and has no
+/// <see cref="LocalBuilder"/>.
 /// </para>
 /// <para>
 /// ### Output Kinds
@@ -63,28 +82,27 @@ namespace BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 /// simply never written to disk or returned to the caller in that mode.
 /// </para>
 /// <para>
-/// ### Supported Types
-/// All integer, floating-point and character types are supported as of v0.0.1-preview2.  As of
-/// v0.0.1-preview3, the <c>decree</c> (boolean) type is supported as the result of a comparison or
-/// logical instruction, and as the operand of a conditional branch but not yet as a <c>were</c>
-/// cast source or target (<see cref="EmitConversion"/> has no <c>decree</c> case).  The <c>yarn</c>
-/// (string) type is supported for declaration, assignment and <see cref="VictimYarnInstruction"/>
-/// character access (see <see cref="EmitVictimYarn"/>).
-/// </para>
-/// <para>
-/// ### External Function Calls
-/// As of v0.0.1-preview4, <c>summon</c>/<c>summon.find</c> call functions listed in
-/// <see cref="CilEmitOptions.ExternalFunctions"/>:
-/// * Each entry is plain reflection data: a real <see cref="MethodInfo"/> plus CLR parameter/return
-///   types.
+/// ### Function Calls
+/// <c>summon</c>/<c>summon.find</c> call functions listed in <see cref="CilEmitOptions.ExternalFunctions"/>.
+/// By the time either instruction is emitted, this list also holds one <see cref="CilExternalFunction"/>
+/// entry per user-defined <see cref="UtopIRFunctionDefinition"/>, added during Pass 1 and keyed by its
+/// fully-qualified name, excluding the implicit <c>Opera</c> entry point. A <see cref="MethodBuilder"/>
+/// is itself a <see cref="MethodInfo"/>, and the CIL <c>call</c> opcode resolves a same-module
+/// <see cref="MethodBuilder"/> just as well as an external one, even before the body of that method
+/// has been emitted. This means <see cref="EmitSummon"/>, <see cref="EmitSummonFind"/> and
+/// <see cref="EmitHostInjectedArguments"/> need no separate code path for a user-defined callee:
+/// * Each entry is plain reflection data: a real <see cref="MethodInfo"/> plus CLR parameter and return
+///   types. An entry for a user-defined function always has an empty
+///   <see cref="CilExternalFunction.HostInjectedParameterTypes"/> list.
 /// * A function with a trailing host-injected parameter (see
 ///   <see cref="CilExternalFunction.HostInjectedParameterTypes"/>) is passed an instance from
 ///   <see cref="CilEmitOptions.HostInjectedServices"/>. The first call needing a given service type
-///   constructs one and stores it in an emitter-owned local; every later call needing that same type
+///   constructs one and stores it in an emitter-owned local. Every later call needing that same type
 ///   reuses it.
-/// * <see cref="ValidateExternalFunctionReferences"/> runs as a pre-pass before emission begins,
-///   mirroring <see cref="ValidateLabelReferences"/>: a <c>summon</c> naming a function absent from
-///   <see cref="CilEmitOptions.ExternalFunctions"/> is rejected there, with a clear error.
+/// * <see cref="ValidateExternalFunctionReferences"/> runs after Pass 1 has registered every
+///   user-defined function, mirroring <see cref="ValidateLabelReferences"/>: a <c>summon</c> naming a
+///   function absent from both the external catalogue and the functions of the programme is rejected
+///   there, with a clear error.
 /// </para>
 /// </remarks>
 public sealed class CilEmitter
@@ -96,6 +114,22 @@ public sealed class CilEmitter
     /// <param name="options">The CLI emitter options.</param>
     /// <returns>A <see cref="CilEmitResult"/> carrying the readable IL listing for the emitted method body.</returns>
     /// <exception cref="NotSupportedException">Thrown when the programme contains a type or literal that is not supported by the emitter in this version.</exception>
+    /// <remarks>
+    /// <para>
+    /// Runs in two passes over <see cref="UtopIRProgram.Functions"/>. Pass 1 defines every function
+    /// signature before any body is emitted, so a forward reference or recursive call resolves to a
+    /// real <see cref="MethodBuilder"/> regardless of declaration order: each user-defined function is
+    /// registered as a <see cref="CilExternalFunction"/> alongside the real external catalogue, since a
+    /// <see cref="MethodBuilder"/> is itself a <see cref="MethodInfo"/> and the CIL <c>call</c> opcode
+    /// resolves a same-module <see cref="MethodBuilder"/> just as well as a real external
+    /// <see cref="MethodInfo"/>, even before that method's own body has been emitted.
+    /// </para>
+    /// <para>
+    /// Pass 2 emits the body of each function into its own <see cref="MethodBuilder"/>, with a
+    /// completely fresh scope (locals, labels, array element types, pointer pointee types) per
+    /// function, matching the transformer rule that functions are not closures.
+    /// </para>
+    /// </remarks>
     public CilEmitResult Emit(UtopIRProgram program, CilEmitOptions options)
     {
         AssemblyName assemblyName = new(options.AssemblyName);
@@ -112,27 +146,9 @@ public sealed class CilEmitter
             parent: typeof(ValueType));
         FieldBuilder pointerHandleContainerField = pointerHandleTypeBuilder.DefineField("Container", typeof(object), FieldAttributes.Public);
         FieldBuilder pointerHandleIndexField = pointerHandleTypeBuilder.DefineField("Index", typeof(int), FieldAttributes.Public);
-
-        MethodBuilder mainMethod = typeBuilder.DefineMethod(
-            name: "Main",
-            attributes: MethodAttributes.Public | MethodAttributes.Static,
-            returnType: typeof(int),
-            parameterTypes: [typeof(string[])]);
-
-        // .NET metadata does not retain parameter names by default (mirroring the same gap for locals.
-        // DefineParameter records it so <c>CilGenerator.ToIlText</c> can recover "args" instead of
-        // falling back to a generic name when disassembling.
-        mainMethod.DefineParameter(1, ParameterAttributes.None, "args");
-
-        ILGenerator ilGenerator = mainMethod.GetILGenerator();
-        CilGenerator cilGenerator = new();
-
-        Dictionary<string, LocalBuilder> locals = [];
-        Dictionary<string, UtopIRType> localTypes = [];
-        Dictionary<string, UtopIRType> arrayElementTypes = [];
-        Dictionary<string, UtopIRType> pointerPointeeTypes = [];
-        Dictionary<string, Label> labels = [];
         PointerHandleType pointerHandleType = new(pointerHandleTypeBuilder, pointerHandleContainerField, pointerHandleIndexField);
+
+        CilGenerator cilGenerator = new();
 
         Dictionary<string, CilExternalFunction> externalFunctions = (options.ExternalFunctions ?? [])
             .ToDictionary(function => function.Name);
@@ -140,45 +156,116 @@ public sealed class CilEmitter
         Dictionary<Type, CilHostInjectedService> hostInjectedServices = (options.HostInjectedServices ?? [])
             .ToDictionary(service => service.ServiceType);
 
-        Dictionary<Type, LocalBuilder> hostInjectedLocals = [];
-
         this.ValidateLabelReferences(program);
+
+        // Pass 1: define every function's signature before any body is emitted.
+        Dictionary<string, MethodBuilder> functionMethods = [];
+        foreach (UtopIRFunctionDefinition function in program.Functions)
+        {
+            Type[] parameterClrTypes = [.. function.Parameters.Select(parameter => this.MapTermTypeToClrType(parameter.Type))];
+            Type returnClrType = function.ReturnType is UtopIRTermType returnType
+                ? this.MapTermTypeToClrType(returnType)
+                : typeof(void);
+
+            MethodBuilder method = typeBuilder.DefineMethod(
+                name: function.Name,
+                attributes: MethodAttributes.Public | MethodAttributes.Static,
+                returnType: returnClrType,
+                parameterTypes: parameterClrTypes);
+
+            for (int i = 0; i < function.Parameters.Count; i++)
+            {
+                method.DefineParameter(i + 1, ParameterAttributes.None, function.Parameters[i].Name);
+            }
+
+            functionMethods[function.Name] = method;
+            if (function.Name != "Opera")
+            {
+                externalFunctions[function.Name] = new CilExternalFunction(
+                    function.Name,
+                    method,
+                    parameterClrTypes,
+                    function.ReturnType is null ? null : returnClrType,
+                    []);
+            }
+        }
+
         this.ValidateExternalFunctionReferences(program, externalFunctions);
 
-        bool hasReturn = false;
+        // Pass 2: emit the body of each function into its own MethodBuilder.
         bool hasExternalCalls = false;
-        foreach (UtopIRInstruction instruction in program.Instructions)
+        foreach (UtopIRFunctionDefinition function in program.Functions)
         {
-            if (instruction is FindInstruction)
+            MethodBuilder method = functionMethods[function.Name];
+            ILGenerator ilGenerator = method.GetILGenerator();
+            cilGenerator.CurrentMethodName = function.Name;
+
+            Dictionary<string, LocalBuilder> locals = [];
+            Dictionary<string, UtopIRType> localTypes = [];
+            Dictionary<string, UtopIRType> arrayElementTypes = [];
+            Dictionary<string, UtopIRType> pointerPointeeTypes = [];
+            Dictionary<string, Label> labels = [];
+            Dictionary<Type, LocalBuilder> hostInjectedLocals = [];
+
+            Dictionary<string, int> parameterIndexes = [];
+            for (int i = 0; i < function.Parameters.Count; i++)
             {
-                hasReturn = true;
+                UtopIRFunctionParameter parameter = function.Parameters[i];
+                parameterIndexes[parameter.Name] = i;
+                localTypes[parameter.Name] = parameter.Type.Type;
+                if (parameter.Type.ElementType is UtopIRType elementType)
+                {
+                    arrayElementTypes[parameter.Name] = elementType;
+                }
             }
 
-            if (instruction is SummonInstruction or SummonFindInstruction)
+            bool hasReturn = false;
+            foreach (UtopIRInstruction instruction in function.Body)
             {
-                hasExternalCalls = true;
+                if (instruction is FindInstruction)
+                {
+                    hasReturn = true;
+                }
+
+                if (instruction is SummonInstruction or SummonFindInstruction)
+                {
+                    hasExternalCalls = true;
+                }
+
+                this.EmitInstruction(
+                    instruction,
+                    ilGenerator,
+                    cilGenerator,
+                    locals,
+                    parameterIndexes,
+                    localTypes,
+                    arrayElementTypes,
+                    pointerPointeeTypes,
+                    pointerHandleType,
+                    labels,
+                    externalFunctions,
+                    hostInjectedServices,
+                    hostInjectedLocals);
             }
 
-            this.EmitInstruction(
-                instruction,
-                ilGenerator,
-                cilGenerator,
-                locals,
-                localTypes,
-                arrayElementTypes,
-                pointerPointeeTypes,
-                pointerHandleType,
-                labels,
-                externalFunctions,
-                hostInjectedServices,
-                hostInjectedLocals);
+            if (!hasReturn)
+            {
+                this.EmitDefaultReturn(function.ReturnType, ilGenerator);
+            }
         }
 
-        if (!hasReturn)
-        {
-            ilGenerator.Emit(OpCodes.Ldc_I4_0);
-            ilGenerator.Emit(OpCodes.Ret);
-        }
+        // The real CLR entry point: a thin wrapper calling the zero-parameter Opera function and
+        // returning its peer result as the process exit code.
+        MethodBuilder mainMethod = typeBuilder.DefineMethod(
+            name: "Main",
+            attributes: MethodAttributes.Public | MethodAttributes.Static,
+            returnType: typeof(int),
+            parameterTypes: [typeof(string[])]);
+        mainMethod.DefineParameter(1, ParameterAttributes.None, "args");
+
+        ILGenerator mainIlGenerator = mainMethod.GetILGenerator();
+        mainIlGenerator.Emit(OpCodes.Call, functionMethods["Opera"]);
+        mainIlGenerator.Emit(OpCodes.Ret);
 
         pointerHandleTypeBuilder.CreateType();
         typeBuilder.CreateType();
@@ -205,42 +292,89 @@ public sealed class CilEmitter
     }
 
     /// <summary>
+    /// Emits a type-appropriate default return for a function whose body reached the end without an
+    /// explicit <see cref="FindInstruction"/>.
+    /// </summary>
+    /// <remarks>
+    /// For a void function this is just <c>ret</c>: reachable whenever a function has no
+    /// <c>TO FIND</c> clause and simply falls off the end, which is common and not an error. For a
+    /// non-void function this is a defensive fallback only, since the type checker already guarantees
+    /// every code path ends in <c>AND SO I FIND</c>.
+    /// </remarks>
+    /// <param name="returnType">The declared return type of the function, or <c>null</c> for a void function.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    private void EmitDefaultReturn(UtopIRTermType? returnType, ILGenerator ilGenerator)
+    {
+        if (returnType is not UtopIRTermType type)
+        {
+            ilGenerator.Emit(OpCodes.Ret);
+            return;
+        }
+
+        switch (type.Type)
+        {
+            case UtopIRType.Fathom:
+                ilGenerator.Emit(OpCodes.Ldc_R8, 0.0);
+                break;
+            case UtopIRType.Foot:
+                ilGenerator.Emit(OpCodes.Ldc_R4, 0.0f);
+                break;
+            case UtopIRType.Chancellor or UtopIRType.StandingChancellor:
+                ilGenerator.Emit(OpCodes.Ldc_I8, 0L);
+                break;
+            case UtopIRType.Yarn or UtopIRType.Array:
+                ilGenerator.Emit(OpCodes.Ldnull);
+                break;
+            default:
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                break;
+        }
+
+        ilGenerator.Emit(OpCodes.Ret);
+    }
+
+    /// <summary>
     /// Validates that every label referenced by a <see cref="SailInstruction"/>,
     /// <see cref="SailAlikeInstruction"/> or <see cref="SailUnlikeInstruction"/> has a matching
-    /// <see cref="LabelInstruction"/> declared somewhere in the programme.
+    /// <see cref="LabelInstruction"/> declared somewhere within the same function.
     /// </summary>
     /// <remarks>
     /// Without this check, a mistyped label name would surface as an opaque CLR metadata exception
     /// when <see cref="ILGenerator"/> finalises a branch to a <see cref="Label"/> that was never
-    /// marked, rather than a clear UtopIR-level error naming the offending instruction.
+    /// marked, rather than a clear UtopIR-level error naming the offending instruction. Labels are
+    /// checked per function, not across the whole programme, since a label declared in one function
+    /// is never a valid branch target from another.
     /// </remarks>
     /// <param name="program">The UtopIR programme to validate.</param>
-    /// <exception cref="InvalidOperationException">Thrown when a branch instruction references a label with no matching declaration.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a branch instruction references a label with no matching declaration in the same function.</exception>
     private void ValidateLabelReferences(UtopIRProgram program)
     {
-        HashSet<string> declaredLabels = [];
-        foreach (UtopIRInstruction instruction in program.Instructions)
+        foreach (UtopIRFunctionDefinition function in program.Functions)
         {
-            if (instruction is LabelInstruction label)
+            HashSet<string> declaredLabels = [];
+            foreach (UtopIRInstruction instruction in function.Body)
             {
-                declaredLabels.Add(label.Name.Name);
+                if (instruction is LabelInstruction label)
+                {
+                    declaredLabels.Add(label.Name.Name);
+                }
             }
-        }
 
-        foreach (UtopIRInstruction instruction in program.Instructions)
-        {
-            string? referencedLabel = instruction switch
+            foreach (UtopIRInstruction instruction in function.Body)
             {
-                SailInstruction sail => sail.Label.Name,
-                SailAlikeInstruction sailAlike => sailAlike.Label.Name,
-                SailUnlikeInstruction sailUnlike => sailUnlike.Label.Name,
-                _ => null
-            };
+                string? referencedLabel = instruction switch
+                {
+                    SailInstruction sail => sail.Label.Name,
+                    SailAlikeInstruction sailAlike => sailAlike.Label.Name,
+                    SailUnlikeInstruction sailUnlike => sailUnlike.Label.Name,
+                    _ => null
+                };
 
-            if (referencedLabel is not null && !declaredLabels.Contains(referencedLabel))
-            {
-                throw new InvalidOperationException(
-                    $"Branch instruction references undeclared label '!{referencedLabel}'.");
+                if (referencedLabel is not null && !declaredLabels.Contains(referencedLabel))
+                {
+                    throw new InvalidOperationException(
+                        $"Branch instruction references undeclared label '!{referencedLabel}' in function '&{function.Name}'.");
+                }
             }
         }
     }
@@ -253,26 +387,31 @@ public sealed class CilEmitter
     /// <remarks>
     /// Without this check an unresolvable function name would surface only as a <see cref="KeyNotFoundException"/> from deep
     /// inside <see cref="EmitSummon"/> or <see cref="EmitSummonFind"/>, rather than a clear, up-front UtopIR-level error
-    /// naming the offending function.
+    /// naming the offending function. Run after Pass 1 has registered every user-defined function
+    /// alongside the real external catalogue in <paramref name="externalFunctions"/>, so a call to
+    /// either kind of function is accepted here.
     /// </remarks>
     /// <param name="program">The UtopIR programme to validate.</param>
-    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor, including user-defined functions.</param>
     /// <exception cref="InvalidOperationException">Thrown when a <c>summon</c> or <c>summon.find</c> instruction references a function with no matching descriptor.</exception>
     private void ValidateExternalFunctionReferences(UtopIRProgram program, Dictionary<string, CilExternalFunction> externalFunctions)
     {
-        foreach (UtopIRInstruction instruction in program.Instructions)
+        foreach (UtopIRFunctionDefinition function in program.Functions)
         {
-            string? referencedFunction = instruction switch
+            foreach (UtopIRInstruction instruction in function.Body)
             {
-                SummonInstruction summon => summon.Function.Name,
-                SummonFindInstruction summonFind => summonFind.Function.Name,
-                _ => null
-            };
+                string? referencedFunction = instruction switch
+                {
+                    SummonInstruction summon => summon.Function.Name,
+                    SummonFindInstruction summonFind => summonFind.Function.Name,
+                    _ => null
+                };
 
-            if (referencedFunction is not null && !externalFunctions.ContainsKey(referencedFunction))
-            {
-                throw new InvalidOperationException(
-                    $"'summon'/'summon.find' instruction references unknown function '&{referencedFunction}'.");
+                if (referencedFunction is not null && !externalFunctions.ContainsKey(referencedFunction))
+                {
+                    throw new InvalidOperationException(
+                        $"'summon'/'summon.find' instruction references unknown function '&{referencedFunction}'.");
+                }
             }
         }
     }
@@ -361,6 +500,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record UtopIR names for locals declared while emitting this instruction.</param>
     /// <param name="locals">The map from variable name (without <c>£</c>) to its <see cref="LocalBuilder"/> slot.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to its <see cref="UtopIRType"/> for type-context lookups.</param>
     /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
@@ -374,6 +514,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> arrayElementTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
@@ -386,46 +527,46 @@ public sealed class CilEmitter
         switch (instruction)
         {
             case WelcomeInstruction welcome:
-                this.EmitWelcome(welcome, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitWelcome(welcome, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case AppointInstruction appoint:
-                this.EmitAppoint(appoint, ilGenerator, locals, localTypes, pointerHandleType);
+                this.EmitAppoint(appoint, ilGenerator, locals, parameterIndexes, localTypes, pointerHandleType);
                 break;
             case ArithmeticInstruction arithmetic:
-                this.EmitArithmetic(arithmetic, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitArithmetic(arithmetic, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case BitwiseInstruction bitwise:
-                this.EmitBitwise(bitwise, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitBitwise(bitwise, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case InvInstruction inv:
-                this.EmitInv(inv, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitInv(inv, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case ComparisonInstruction comparison:
-                this.EmitComparison(comparison, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitComparison(comparison, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case LogicalInstruction logical:
-                this.EmitLogical(logical, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitLogical(logical, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case HardlyInstruction hardly:
-                this.EmitHardly(hardly, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitHardly(hardly, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case PrenticeInstruction prentice:
-                this.EmitPrentice(prentice, ilGenerator, locals);
+                this.EmitPrentice(prentice, ilGenerator, locals, parameterIndexes);
                 break;
             case SummonInstruction summon:
                 this.EmitSummon(summon, ilGenerator, cilGenerator, externalFunctions, hostInjectedServices, hostInjectedLocals);
                 break;
             case SummonFindInstruction summonFind:
-                this.EmitSummonFind(summonFind, ilGenerator, cilGenerator, locals, localTypes, externalFunctions, hostInjectedServices, hostInjectedLocals);
+                this.EmitSummonFind(summonFind, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, externalFunctions, hostInjectedServices, hostInjectedLocals);
                 break;
             case LeaveInstruction leave:
-                this.EmitLeave(leave, ilGenerator, locals);
+                this.EmitLeave(leave, ilGenerator, locals, parameterIndexes);
                 break;
             case FindInstruction find:
-                this.EmitFind(find, ilGenerator, locals, localTypes);
+                this.EmitFind(find, ilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case WereInstruction were:
-                this.EmitWere(were, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitWere(were, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case LabelInstruction label:
                 this.EmitLabel(label, ilGenerator, labels);
@@ -434,37 +575,37 @@ public sealed class CilEmitter
                 this.EmitSail(sail, ilGenerator, labels);
                 break;
             case SailAlikeInstruction sailAlike:
-                this.EmitSailAlike(sailAlike, ilGenerator, locals, labels);
+                this.EmitSailAlike(sailAlike, ilGenerator, locals, parameterIndexes, labels);
                 break;
             case SailUnlikeInstruction sailUnlike:
-                this.EmitSailUnlike(sailUnlike, ilGenerator, locals, labels);
+                this.EmitSailUnlike(sailUnlike, ilGenerator, locals, parameterIndexes, labels);
                 break;
             case VictimYarnInstruction victimYarn:
-                this.EmitVictimYarn(victimYarn, ilGenerator, cilGenerator, locals, localTypes);
+                this.EmitVictimYarn(victimYarn, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes);
                 break;
             case WelcomeListInstruction welcomeList:
-                this.EmitWelcomeList(welcomeList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
+                this.EmitWelcomeList(welcomeList, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, arrayElementTypes);
                 break;
             case AppointVictimInstruction appointVictim:
-                this.EmitAppointVictim(appointVictim, ilGenerator, locals, arrayElementTypes);
+                this.EmitAppointVictim(appointVictim, ilGenerator, locals, parameterIndexes, arrayElementTypes);
                 break;
             case VictimListInstruction victimList:
-                this.EmitVictimList(victimList, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes);
+                this.EmitVictimList(victimList, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, arrayElementTypes);
                 break;
             case WelcomeGallerypicInstruction welcomeGallerypic:
-                this.EmitWelcomeGallerypic(welcomeGallerypic, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                this.EmitWelcomeGallerypic(welcomeGallerypic, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, pointerPointeeTypes, pointerHandleType);
                 break;
             case PicturetoInstruction pictureto:
-                this.EmitPictureto(pictureto, ilGenerator, cilGenerator, locals, localTypes, arrayElementTypes, pointerPointeeTypes, pointerHandleType);
+                this.EmitPictureto(pictureto, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, arrayElementTypes, pointerPointeeTypes, pointerHandleType);
                 break;
             case ViewfromInstruction viewfrom:
-                this.EmitViewfrom(viewfrom, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                this.EmitViewfrom(viewfrom, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, pointerPointeeTypes, pointerHandleType);
                 break;
             case ViewtoInstruction viewto:
-                this.EmitViewto(viewto, ilGenerator, locals, pointerPointeeTypes, pointerHandleType);
+                this.EmitViewto(viewto, ilGenerator, locals, parameterIndexes, pointerPointeeTypes, pointerHandleType);
                 break;
             case PointerArithmeticInstruction pointerArithmetic:
-                this.EmitPointerArithmetic(pointerArithmetic, ilGenerator, cilGenerator, locals, localTypes, pointerPointeeTypes, pointerHandleType);
+                this.EmitPointerArithmetic(pointerArithmetic, ilGenerator, cilGenerator, locals, parameterIndexes, localTypes, pointerPointeeTypes, pointerHandleType);
                 break;
         }
     }
@@ -476,12 +617,14 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     private void EmitWelcome(
         WelcomeInstruction welcome,
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         Type clrType = this.MapToClrType(welcome.Type);
@@ -509,12 +652,14 @@ public sealed class CilEmitter
     /// <param name="appoint">The appoint instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
     private void EmitAppoint(
         AppointInstruction appoint,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         PointerHandleType pointerHandleType)
     {
@@ -529,7 +674,7 @@ public sealed class CilEmitter
             return;
         }
 
-        this.EmitStackLoadOperand(appoint.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(appoint.Value, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Stloc, target);
     }
 
@@ -547,6 +692,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when the two operands have different inferred types.</exception>
     private void EmitArithmetic(
@@ -554,6 +700,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operand1Type = this.InferOperandType(arithmeticInstruction.Operand1, localTypes);
@@ -600,12 +747,12 @@ public sealed class CilEmitter
             or UtopIRArithmeticOperation.MaxFloat
             or UtopIRArithmeticOperation.MinFloat)
         {
-            this.EmitMaxMin(arithmeticInstruction.Operation, arithmeticInstruction.Operand1, arithmeticInstruction.Operand2, targetType, ilGenerator, locals);
+            this.EmitMaxMin(arithmeticInstruction.Operation, arithmeticInstruction.Operand1, arithmeticInstruction.Operand2, targetType, ilGenerator, locals, parameterIndexes);
         }
         else
         {
-            this.EmitStackLoadOperand(arithmeticInstruction.Operand1, ilGenerator, locals);
-            this.EmitStackLoadOperand(arithmeticInstruction.Operand2, ilGenerator, locals);
+            this.EmitStackLoadOperand(arithmeticInstruction.Operand1, ilGenerator, locals, parameterIndexes);
+            this.EmitStackLoadOperand(arithmeticInstruction.Operand2, ilGenerator, locals, parameterIndexes);
             this.EmitArithmeticOpcode(arithmeticInstruction.Operation, targetType, ilGenerator);
         }
 
@@ -627,22 +774,24 @@ public sealed class CilEmitter
     /// <param name="type">The type of the target register, used to resolve the correct <see cref="Math"/> overload.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     private void EmitMaxMin(
         UtopIRArithmeticOperation arithmeticOperation,
         UtopIROperand operand1,
         UtopIROperand operand2,
         UtopIRType type,
         ILGenerator ilGenerator,
-        Dictionary<string, LocalBuilder> locals)
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes)
     {
         Type clrType = this.MapToClrType(type);
         string methodName = arithmeticOperation is UtopIRArithmeticOperation.Max or UtopIRArithmeticOperation.MaxFloat
             ? "Max"
             : "Min";
 
-        this.EmitStackLoadOperand(operand1, ilGenerator, locals);
+        this.EmitStackLoadOperand(operand1, ilGenerator, locals, parameterIndexes);
         this.EmitConversion(type, ilGenerator);
-        this.EmitStackLoadOperand(operand2, ilGenerator, locals);
+        this.EmitStackLoadOperand(operand2, ilGenerator, locals, parameterIndexes);
         this.EmitConversion(type, ilGenerator);
 
         MethodInfo mathMethod = typeof(Math).GetMethod(methodName, [clrType, clrType])
@@ -670,6 +819,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when the operands have different inferred types or are not integer types.</exception>
     private void EmitBitwise(
@@ -677,6 +827,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operand1Type = this.InferOperandType(bitwiseInstruction.Operand1, localTypes);
@@ -707,8 +858,8 @@ public sealed class CilEmitter
         UtopIRType targetType = localTypes[bitwiseInstruction.Target.Name];
         bool isShift = bitwiseInstruction.Operation is UtopIRBitwiseOperation.TransUp or UtopIRBitwiseOperation.TransDown;
 
-        this.EmitStackLoadOperand(bitwiseInstruction.Operand1, ilGenerator, locals);
-        this.EmitStackLoadOperand(bitwiseInstruction.Operand2, ilGenerator, locals);
+        this.EmitStackLoadOperand(bitwiseInstruction.Operand1, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(bitwiseInstruction.Operand2, ilGenerator, locals, parameterIndexes);
         if (isShift && this.Is64BitType(operand1Type))
         {
             ilGenerator.Emit(OpCodes.Conv_I4);
@@ -729,6 +880,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when the operand is not an integer type.</exception>
     private void EmitInv(
@@ -736,6 +888,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operandType = this.InferOperandType(invInstruction.Operand, localTypes);
@@ -754,7 +907,7 @@ public sealed class CilEmitter
             localTypes[invInstruction.Target.Name] = operandType;
         }
 
-        this.EmitStackLoadOperand(invInstruction.Operand, ilGenerator, locals);
+        this.EmitStackLoadOperand(invInstruction.Operand, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Not);
         ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
     }
@@ -770,6 +923,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when the two operands have different inferred types.</exception>
     private void EmitComparison(
@@ -777,6 +931,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operand1Type = this.InferOperandType(comparisonInstruction.Operand1, localTypes);
@@ -796,8 +951,8 @@ public sealed class CilEmitter
             localTypes[comparisonInstruction.Target.Name] = UtopIRType.Decree;
         }
 
-        this.EmitStackLoadOperand(comparisonInstruction.Operand1, ilGenerator, locals);
-        this.EmitStackLoadOperand(comparisonInstruction.Operand2, ilGenerator, locals);
+        this.EmitStackLoadOperand(comparisonInstruction.Operand1, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(comparisonInstruction.Operand2, ilGenerator, locals, parameterIndexes);
         this.EmitComparisonOpcode(comparisonInstruction.Operation, operand1Type, ilGenerator);
         ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
     }
@@ -813,6 +968,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when either operand is not of the <c>decree</c> type.</exception>
     private void EmitLogical(
@@ -820,6 +976,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operand1Type = this.InferOperandType(logicalInstruction.Operand1, localTypes);
@@ -839,8 +996,8 @@ public sealed class CilEmitter
             localTypes[logicalInstruction.Target.Name] = UtopIRType.Decree;
         }
 
-        this.EmitStackLoadOperand(logicalInstruction.Operand1, ilGenerator, locals);
-        this.EmitStackLoadOperand(logicalInstruction.Operand2, ilGenerator, locals);
+        this.EmitStackLoadOperand(logicalInstruction.Operand1, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(logicalInstruction.Operand2, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(logicalInstruction.Operation == UtopIRLogicalOperation.Both
             ? OpCodes.And
             : OpCodes.Or);
@@ -855,6 +1012,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when the operand is not of the <c>decree</c> type.</exception>
     private void EmitHardly(
@@ -862,6 +1020,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         UtopIRType operandType = this.InferOperandType(hardlyInstruction.Operand, localTypes);
@@ -880,7 +1039,7 @@ public sealed class CilEmitter
             localTypes[hardlyInstruction.Target.Name] = UtopIRType.Decree;
         }
 
-        this.EmitStackLoadOperand(hardlyInstruction.Operand, ilGenerator, locals);
+        this.EmitStackLoadOperand(hardlyInstruction.Operand, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Ldc_I4_0);
         ilGenerator.Emit(OpCodes.Ceq);
         ilGenerator.Emit(OpCodes.Stloc, declaredLocal);
@@ -893,12 +1052,14 @@ public sealed class CilEmitter
     /// <param name="prentice">The prentice instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     private void EmitPrentice(
         PrenticeInstruction prentice,
         ILGenerator ilGenerator,
-        Dictionary<string, LocalBuilder> locals)
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes)
     {
-        this.EmitStackLoadOperand(prentice.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(prentice.Value, ilGenerator, locals, parameterIndexes);
     }
 
     /// <summary>
@@ -948,6 +1109,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for any newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
     /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
@@ -958,6 +1120,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, CilExternalFunction> externalFunctions,
         Dictionary<Type, CilHostInjectedService> hostInjectedServices,
@@ -1025,10 +1188,12 @@ public sealed class CilEmitter
     /// <param name="leave">The leave instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     private void EmitLeave(
         LeaveInstruction leave,
         ILGenerator ilGenerator,
-        Dictionary<string, LocalBuilder> locals)
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes)
     {
         ilGenerator.Emit(OpCodes.Stloc, locals[leave.Target.Name]);
     }
@@ -1041,15 +1206,25 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
+    /// <exception cref="NotSupportedException">Thrown when the source operand is a <c>Yarn</c>, <c>Decree</c>, <c>Array</c> or <c>Pointer</c>, none of which convert to a number by reinterpreting bits.</exception>
     private void EmitWere(
         WereInstruction were,
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
-        this.EmitStackLoadOperand(were.Value, ilGenerator, locals);
+        UtopIRType sourceType = this.InferOperandType(were.Value, localTypes);
+        if (sourceType is UtopIRType.Yarn or UtopIRType.Decree or UtopIRType.Array or UtopIRType.Pointer)
+        {
+            throw new NotSupportedException(
+                $"'were' cannot cast from '{sourceType}' in this version: {were.Value} has no numeric representation to convert via a CIL 'conv.*' opcode, which would otherwise silently reinterpret its reference bits as a number.");
+        }
+
+        this.EmitStackLoadOperand(were.Value, ilGenerator, locals, parameterIndexes);
         this.EmitConversion(were.Type, ilGenerator);
 
         if (!locals.TryGetValue(were.Target.Name, out LocalBuilder? target))
@@ -1074,6 +1249,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <exception cref="InvalidOperationException">Thrown when <c>string.get_Chars(int)</c> cannot be resolved via reflection.</exception>
     private void EmitVictimYarn(
@@ -1081,6 +1257,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         if (!locals.TryGetValue(victimYarn.Target.Name, out LocalBuilder? declaredLocal))
@@ -1091,8 +1268,8 @@ public sealed class CilEmitter
             localTypes[victimYarn.Target.Name] = UtopIRType.Stitch;
         }
 
-        this.EmitStackLoadOperand(victimYarn.YarnString, ilGenerator, locals);
-        this.EmitStackLoadOperand(victimYarn.Index, ilGenerator, locals);
+        this.EmitStackLoadOperand(victimYarn.YarnString, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(victimYarn.Index, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Ldc_I4_1);
         ilGenerator.Emit(OpCodes.Sub);
 
@@ -1116,6 +1293,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     private void EmitWelcomeList(
@@ -1123,12 +1301,13 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> arrayElementTypes)
     {
         Type elementClrType = this.MapToClrType(welcomeList.ElementType);
 
-        this.EmitStackLoadOperand(welcomeList.Size, ilGenerator, locals);
+        this.EmitStackLoadOperand(welcomeList.Size, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Newarr, elementClrType);
 
         LocalBuilder local = ilGenerator.DeclareLocal(elementClrType.MakeArrayType());
@@ -1147,20 +1326,22 @@ public sealed class CilEmitter
     /// <param name="appointVictim">The appoint.victim instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     private void EmitAppointVictim(
         AppointVictimInstruction appointVictim,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> arrayElementTypes)
     {
         UtopIRType elementType = arrayElementTypes[appointVictim.Array.Name];
 
-        ilGenerator.Emit(OpCodes.Ldloc, locals[appointVictim.Array.Name]);
-        this.EmitStackLoadOperand(appointVictim.Index, ilGenerator, locals);
+        this.EmitLoadValueByName(appointVictim.Array.Name, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(appointVictim.Index, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Ldc_I4_1);
         ilGenerator.Emit(OpCodes.Sub);
-        this.EmitStackLoadOperand(appointVictim.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(appointVictim.Value, ilGenerator, locals, parameterIndexes);
         this.EmitArrayElementStoreOpcode(elementType, ilGenerator);
     }
 
@@ -1175,6 +1356,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     private void EmitVictimList(
@@ -1182,6 +1364,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> arrayElementTypes)
     {
@@ -1195,8 +1378,8 @@ public sealed class CilEmitter
             localTypes[victimList.Target.Name] = elementType;
         }
 
-        ilGenerator.Emit(OpCodes.Ldloc, locals[victimList.Array.Name]);
-        this.EmitStackLoadOperand(victimList.Index, ilGenerator, locals);
+        this.EmitLoadValueByName(victimList.Array.Name, ilGenerator, locals, parameterIndexes);
+        this.EmitStackLoadOperand(victimList.Index, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Ldc_I4_1);
         ilGenerator.Emit(OpCodes.Sub);
         this.EmitArrayElementLoadOpcode(elementType, ilGenerator);
@@ -1217,6 +1400,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for the newly declared local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
@@ -1225,6 +1409,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
         PointerHandleType pointerHandleType)
@@ -1253,6 +1438,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="arrayElementTypes">The map from array variable name to its declared element <see cref="UtopIRType"/>.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
@@ -1263,6 +1449,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> arrayElementTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
@@ -1314,6 +1501,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
@@ -1323,6 +1511,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
         PointerHandleType pointerHandleType)
@@ -1384,6 +1573,7 @@ public sealed class CilEmitter
     /// <param name="viewto">The viewto instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
     /// <exception cref="InvalidOperationException">Thrown when the <c>string</c> constructor of <see cref="InvalidOperationException"/> cannot be resolved via reflection, or, at runtime, by the emitted IL, when the pointer refers into a <c>yarn</c>.</exception>
@@ -1391,6 +1581,7 @@ public sealed class CilEmitter
         ViewtoInstruction viewto,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
         PointerHandleType pointerHandleType)
     {
@@ -1416,7 +1607,7 @@ public sealed class CilEmitter
         ilGenerator.Emit(OpCodes.Castclass, this.MapToClrType(pointeeType).MakeArrayType());
         ilGenerator.Emit(OpCodes.Ldloca, handleLocal);
         ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
-        this.EmitStackLoadOperand(viewto.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(viewto.Value, ilGenerator, locals, parameterIndexes);
         this.EmitArrayElementStoreOpcode(pointeeType, ilGenerator);
     }
 
@@ -1434,6 +1625,7 @@ public sealed class CilEmitter
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for an auto-declared target local.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     /// <param name="pointerPointeeTypes">The map from pointer variable name to its declared pointee <see cref="UtopIRType"/>.</param>
     /// <param name="pointerHandleType">The CLR members of the emitted <c>PointerHandle</c> value type.</param>
@@ -1442,6 +1634,7 @@ public sealed class CilEmitter
         ILGenerator ilGenerator,
         CilGenerator cilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes,
         Dictionary<string, UtopIRType> pointerPointeeTypes,
         PointerHandleType pointerHandleType)
@@ -1468,7 +1661,7 @@ public sealed class CilEmitter
         ilGenerator.Emit(OpCodes.Ldloca, targetLocal);
         ilGenerator.Emit(OpCodes.Ldloca, sourceLocal);
         ilGenerator.Emit(OpCodes.Ldfld, pointerHandleType.Index);
-        this.EmitStackLoadOperand(pointerArithmetic.Offset, ilGenerator, locals);
+        this.EmitStackLoadOperand(pointerArithmetic.Offset, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(pointerArithmetic.Operation == UtopIRPointerArithmeticOperation.Sum
             ? OpCodes.Add
             : OpCodes.Sub);
@@ -1530,14 +1723,16 @@ public sealed class CilEmitter
     /// <param name="sailAlikeInstruction">The sailalike instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
     private void EmitSailAlike(
         SailAlikeInstruction sailAlikeInstruction,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, Label> labels)
     {
-        this.EmitStackLoadOperand(sailAlikeInstruction.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(sailAlikeInstruction.Value, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Brtrue, this.GetOrDefineLabel(sailAlikeInstruction.Label.Name, ilGenerator, labels));
     }
 
@@ -1548,14 +1743,16 @@ public sealed class CilEmitter
     /// <param name="sailUnlikeInstruction">The sailunlike instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="labels">The map from label name to <see cref="Label"/>.</param>
     private void EmitSailUnlike(
         SailUnlikeInstruction sailUnlikeInstruction,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, Label> labels)
     {
-        this.EmitStackLoadOperand(sailUnlikeInstruction.Value, ilGenerator, locals);
+        this.EmitStackLoadOperand(sailUnlikeInstruction.Value, ilGenerator, locals, parameterIndexes);
         ilGenerator.Emit(OpCodes.Brfalse, this.GetOrDefineLabel(sailUnlikeInstruction.Label.Name, ilGenerator, labels));
     }
 
@@ -1573,11 +1770,13 @@ public sealed class CilEmitter
     /// <param name="find">The find instruction.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     /// <param name="localTypes">The map from variable name to <see cref="UtopIRType"/>.</param>
     private void EmitFind(
         FindInstruction find,
         ILGenerator ilGenerator,
         Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes,
         Dictionary<string, UtopIRType> localTypes)
     {
         if (find.Value is null)
@@ -1586,7 +1785,7 @@ public sealed class CilEmitter
         }
         else
         {
-            this.EmitStackLoadOperand(find.Value, ilGenerator, locals);
+            this.EmitStackLoadOperand(find.Value, ilGenerator, locals, parameterIndexes);
             UtopIRType valueType = this.InferOperandType(find.Value, localTypes);
             if (this.Is64BitType(valueType) || this.IsFloatType(valueType))
             {
@@ -1608,19 +1807,56 @@ public sealed class CilEmitter
     /// <param name="operand">The operand to load.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
     private void EmitStackLoadOperand(
         UtopIROperand operand,
         ILGenerator ilGenerator,
-        Dictionary<string, LocalBuilder> locals)
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes)
     {
         switch (operand)
         {
             case VariableOperand variableOperand:
                 ilGenerator.Emit(OpCodes.Ldloc, locals[variableOperand.Variable.Name]);
                 break;
+            case ParameterOperand parameterOperand:
+                ilGenerator.Emit(OpCodes.Ldarg, parameterIndexes[parameterOperand.Parameter.Name]);
+                break;
             case LiteralOperand literalOperand:
                 this.EmitLoadLiteralValue(literalOperand.Value, ilGenerator);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Loads the value of a variable or parameter named by a bare string (rather than a
+    /// <see cref="UtopIROperand"/>) onto the CIL evaluation stack, whether it is a declared local or a
+    /// function parameter.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="VictimListInstruction.Array"/> and <see cref="AppointVictimInstruction.Array"/>
+    /// reference the array by its bare name, not through the transformer distinction between
+    /// <see cref="VariableOperand"/> and <see cref="ParameterOperand"/>, so this method checks both
+    /// maps directly. Works for any type: an array-typed function parameter is already a CLR array
+    /// reference, pushed with <c>ldarg</c> exactly like any other reference-typed parameter.
+    /// </remarks>
+    /// <param name="name">The variable or parameter name.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="locals">The map from variable name to <see cref="LocalBuilder"/>.</param>
+    /// <param name="parameterIndexes">The map from parameter name to its zero-based CLR argument index.</param>
+    private void EmitLoadValueByName(
+        string name,
+        ILGenerator ilGenerator,
+        Dictionary<string, LocalBuilder> locals,
+        Dictionary<string, int> parameterIndexes)
+    {
+        if (locals.TryGetValue(name, out LocalBuilder? local))
+        {
+            ilGenerator.Emit(OpCodes.Ldloc, local);
+        }
+        else
+        {
+            ilGenerator.Emit(OpCodes.Ldarg, parameterIndexes[name]);
         }
     }
 
@@ -1789,8 +2025,12 @@ public sealed class CilEmitter
     /// Emits the CIL comparison opcode(s) corresponding to the given <see cref="UtopIRComparisonOperation"/>.
     /// </summary>
     /// <remarks>
-    /// * <c>alike</c> uses <c>ceq</c> directly.
-    /// * <c>unlike</c> has no direct CIL opcode, so it is synthesised as <c>ceq</c> followed by <c>ldc.i4.0</c>/<c>ceq</c> (the standard "not equal" idiom: negate an equality result).
+    /// * <c>alike</c> uses <c>ceq</c> directly, except on a <see cref="UtopIRType.Yarn"/> operand,
+    ///   where <c>ceq</c> would compare string references rather than their contents: that case
+    ///   calls <see cref="string.Equals(string, string)"/> instead.
+    /// * <c>unlike</c> has no direct CIL opcode, so it is synthesised as the <c>alike</c> sequence
+    ///   above followed by <c>ldc.i4.0</c>/<c>ceq</c> (the standard "not equal" idiom: negate an
+    ///   equality result).
     /// * <c>preadam</c> and <c>lowerdeg</c> use <c>cgt</c> and <c>clt</c> respectively, selecting the unsigned variant for unsigned operand types for the same reason <see cref="EmitArithmeticOpcode"/> selects <c>div.un</c>/<c>rem.un</c>.
     /// </remarks>
     /// <param name="operation">The comparison operation.</param>
@@ -1803,10 +2043,10 @@ public sealed class CilEmitter
         switch (operation)
         {
             case UtopIRComparisonOperation.Alike or UtopIRComparisonOperation.AlikeFloat:
-                ilGenerator.Emit(OpCodes.Ceq);
+                this.EmitAlikeOpcode(operandType, ilGenerator);
                 break;
             case UtopIRComparisonOperation.Unlike or UtopIRComparisonOperation.UnlikeFloat:
-                ilGenerator.Emit(OpCodes.Ceq);
+                this.EmitAlikeOpcode(operandType, ilGenerator);
                 ilGenerator.Emit(OpCodes.Ldc_I4_0);
                 ilGenerator.Emit(OpCodes.Ceq);
                 break;
@@ -1822,6 +2062,30 @@ public sealed class CilEmitter
                 break;
             default:
                 throw new InvalidOperationException($"Operation '{operation}' not supported.");
+        }
+    }
+
+    /// <summary>
+    /// Emits the CIL sequence testing equality of the two values already on the evaluation stack,
+    /// leaving a <c>bool</c> result.
+    /// </summary>
+    /// <remarks>
+    /// A <see cref="UtopIRType.Yarn"/> operand calls <see cref="string.Equals(string, string)"/>
+    /// instead of using <c>ceq</c>, since <c>ceq</c> on two string references compares identity, not
+    /// content, and two equal strings are not guaranteed to be the same reference, for example, one
+    /// read at runtime and one from a source-code literal.
+    /// </remarks>
+    /// <param name="operandType">The type of the two values on the stack.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    private void EmitAlikeOpcode(UtopIRType operandType, ILGenerator ilGenerator)
+    {
+        if (operandType == UtopIRType.Yarn)
+        {
+            ilGenerator.Emit(OpCodes.Call, typeof(string).GetMethod(nameof(string.Equals), [typeof(string), typeof(string)])!);
+        }
+        else
+        {
+            ilGenerator.Emit(OpCodes.Ceq);
         }
     }
 
@@ -2026,6 +2290,24 @@ public sealed class CilEmitter
     };
 
     /// <summary>
+    /// Maps a <see cref="UtopIRTermType"/>, valid in a <c>term</c>/<c>finds</c> signature position, to
+    /// the corresponding CLR <see cref="Type"/>.
+    /// </summary>
+    /// <remarks>
+    /// For the array form, where <see cref="UtopIRTermType.Type"/> is <see cref="UtopIRType.Array"/>,
+    /// the result is the CLR array type of the mapped element type, for example <c>list.peer</c>
+    /// becomes <c>int[]</c>. A CLR array is already a reference type, so a
+    /// <c>list.&lt;type&gt;</c> parameter or return value needs no special handling elsewhere in this
+    /// emitter.
+    /// </remarks>
+    /// <param name="type">The term type to map.</param>
+    /// <returns>The corresponding CLR <see cref="Type"/>.</returns>
+    private Type MapTermTypeToClrType(UtopIRTermType type) =>
+        type.Type == UtopIRType.Array
+            ? this.MapToClrType(type.ElementType!.Value).MakeArrayType()
+            : this.MapToClrType(type.Type);
+
+    /// <summary>
     /// Maps a CLR <see cref="Type"/> to the corresponding <see cref="UtopIRType"/>, the reverse of
     /// <see cref="MapToClrType"/>.
     /// </summary>
@@ -2074,6 +2356,7 @@ public sealed class CilEmitter
     private UtopIRType InferOperandType(UtopIROperand operand, Dictionary<string, UtopIRType> localTypes) => operand switch
     {
         VariableOperand variableOperand => localTypes[variableOperand.Variable.Name],
+        ParameterOperand parameterOperand => localTypes[parameterOperand.Parameter.Name],
         LiteralOperand literalOperand => literalOperand.Value switch
         {
             long => UtopIRType.Chancellor,
