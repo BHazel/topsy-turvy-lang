@@ -219,6 +219,8 @@ public sealed class CilEmitter
                 }
             }
 
+            this.EmitHostInjectedServicePrelude(function, ilGenerator, cilGenerator, externalFunctions, hostInjectedServices, hostInjectedLocals);
+
             bool hasReturn = false;
             foreach (UtopIRInstruction instruction in function.Body)
             {
@@ -1148,15 +1150,80 @@ public sealed class CilEmitter
     }
 
     /// <summary>
-    /// Loads one instance of each of a <see cref="CilExternalFunction"/> trailing host-injected
-    /// parameters onto the evaluation stack, in order, creating each service instance the first time
-    /// it is needed and reusing it for every subsequent call.
+    /// Eagerly constructs one instance of every host-injected service type needed anywhere in a
+    /// function body, unconditionally at the top of the method, before any other instruction is
+    /// emitted.
     /// </summary>
+    /// <remarks>
+    /// A function body is not straight-line: a <c>summon</c>/<c>summon.find</c> needing a host-injected
+    /// service can sit inside a branch (an <c>IN WHICH CAPACITY?</c> case, an <c>IF</c>) that is not the
+    /// first one emitted. Constructing the service lazily, right before the first call site reached
+    /// during code generation, only initialises the shared local along the code path that call site
+    /// sits on: if a different branch is the one actually taken at runtime, its <c>ldloc</c> reads an
+    /// uninitialised (<c>null</c>, for a reference type) local. Scanning the whole body up front and
+    /// constructing every needed service before branching begins means <see cref="EmitHostInjectedArguments"/>
+    /// always finds its local already populated, regardless of which branch runs.
+    /// </remarks>
+    /// <param name="function">The function whose body is about to be emitted.</param>
+    /// <param name="ilGenerator">The IL generator for the current method body.</param>
+    /// <param name="cilGenerator">The CIL generator to record the UtopIR name for each newly declared local.</param>
+    /// <param name="externalFunctions">The map from function name to its <see cref="CilExternalFunction"/> descriptor.</param>
+    /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local holding an instance of it, populated here.</param>
+    private void EmitHostInjectedServicePrelude(
+        UtopIRFunctionDefinition function,
+        ILGenerator ilGenerator,
+        CilGenerator cilGenerator,
+        Dictionary<string, CilExternalFunction> externalFunctions,
+        Dictionary<Type, CilHostInjectedService> hostInjectedServices,
+        Dictionary<Type, LocalBuilder> hostInjectedLocals)
+    {
+        foreach (UtopIRInstruction instruction in function.Body)
+        {
+            string? calleeName = instruction switch
+            {
+                SummonInstruction summon => summon.Function.Name,
+                SummonFindInstruction summonFind => summonFind.Function.Name,
+                _ => null
+            };
+
+            if (calleeName is null || !externalFunctions.TryGetValue(calleeName, out CilExternalFunction? callee))
+            {
+                continue;
+            }
+
+            foreach (Type serviceType in callee.HostInjectedParameterTypes)
+            {
+                if (hostInjectedLocals.ContainsKey(serviceType))
+                {
+                    continue;
+                }
+
+                CilHostInjectedService service = hostInjectedServices[serviceType];
+                LocalBuilder serviceLocal = ilGenerator.DeclareLocal(serviceType);
+                cilGenerator.RegisterLocalName(serviceLocal, $"_host_{serviceType.Name}");
+                ilGenerator.Emit(OpCodes.Newobj, service.ServiceConstructor);
+                ilGenerator.Emit(OpCodes.Stloc, serviceLocal);
+                hostInjectedLocals[serviceType] = serviceLocal;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Loads one instance of each of a <see cref="CilExternalFunction"/> trailing host-injected
+    /// parameters onto the evaluation stack, in order.
+    /// </summary>
+    /// <remarks>
+    /// Every needed service instance is already constructed by <see cref="EmitHostInjectedServicePrelude"/>
+    /// before the body is emitted, so <paramref name="hostInjectedLocals"/> is expected to already hold
+    /// an entry for each of <paramref name="function"/> <see cref="CilExternalFunction.HostInjectedParameterTypes"/>
+    /// instance.
+    /// </remarks>
     /// <param name="function">The external function about to be called.</param>
     /// <param name="ilGenerator">The IL generator for the current method body.</param>
     /// <param name="cilGenerator">The CIL generator to record the UtopIR name for any newly declared local.</param>
     /// <param name="hostInjectedServices">The map from host-injected service type to its <see cref="CilHostInjectedService"/> descriptor.</param>
-    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it, lazily populated on first use.</param>
+    /// <param name="hostInjectedLocals">The map from host-injected service type to the local already holding an instance of it.</param>
     /// <exception cref="KeyNotFoundException">Thrown when <paramref name="function"/> needs a host-injected service with no matching descriptor in <paramref name="hostInjectedServices"/>.</exception>
     private void EmitHostInjectedArguments(
         CilExternalFunction function,

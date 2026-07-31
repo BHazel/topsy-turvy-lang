@@ -916,6 +916,80 @@ public class TopsyTurvyUtopirCilPipelineIntegrationTests
     }
 
     /// <summary>
+    /// Runs a Topsy Turvy programme whose only <c>BEHOLD</c> calls sit inside the non-first branches of
+    /// a <c>IN WHICH CAPACITY?</c> switch, through the complete pipeline, taking each branch in turn.
+    /// </summary>
+    [Theory]
+    [InlineData("A", "Windows all the way!")]
+    [InlineData("B", "macOS for the win!")]
+    [InlineData("C", "I guess it's Linux!")]
+    public void Pipeline_BeholdInsideNonFirstSwitchBranch_ProducesCorrectOutput(string preference, string expectedOutput)
+    {
+        string source = $$"""
+            HARK! "Switch Branch Behold"
+
+            PRINCIPALS
+              PRAY WELCOME Preference AS A YARN
+            THE CURTAIN RISES.
+
+            Preference IS APPOINTED "{{preference}}"
+
+            IN WHICH CAPACITY? Preference
+                WHEN ACTING AS "A"
+                    BEHOLD "Windows all the way!"
+                    THAT WILL DO.
+                WHEN ACTING AS "B"
+                    BEHOLD "macOS for the win!"
+                    THAT WILL DO.
+                FAILING ALL OF THE ABOVE,
+                    BEHOLD "I guess it's Linux!"
+            NOTHING COULD BE MORE SATISFACTORY.
+
+            AND SO I FIND 0
+
+            FINALE.
+            """;
+
+        TopsyTurvyParser parser = new();
+        ParseResult parseResult = parser.TryParse(source);
+
+        parseResult.Diagnostics.ShouldBeEmpty();
+        parseResult.Program.ShouldNotBeNull();
+
+        UtopIRProgram utopIrProgram = new TopsyTurvyToUtopIRTransformer(new InstructionDetailVariableFormatter()).Transform(parseResult.Program!);
+
+        string assemblyName = $"TopsyTurvyPipelineTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        TextWriter originalOut = Console.Out;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+
+        try
+        {
+            new CilEmitter().Emit(
+                utopIrProgram,
+                new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library, StandardLibraryExternalFunctions, StandardLibraryHostInjectedServices));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            int exitCode = (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
+
+            exitCode.ShouldBe(0);
+            capturedOut.ToString().ShouldContain(expectedOutput);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Runs a Topsy Turvy programme calling its own user-defined function through the complete
     /// pipeline, verifying the function lowers to its own <c>duty</c>/<c>discharged</c> block and the
     /// compiled assembly runs the body of that function.
