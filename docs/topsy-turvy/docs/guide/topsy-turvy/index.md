@@ -1,0 +1,3 @@
+# Topsy Turvy
+
+Topsy Turvy is a high-level statically-typed esoteric, yet functional and fun-to-use, programming language inspired by the comic operas of Gilbert & Sullivan!  On the language side inspiration was provided by [LOLCODE](https://lolcode.org), another wonderful esoteric language to write programmes in _lolspeak_ as used in the _lolcat_ Internet memes!  However, inspiration from other languages are showing, including BBC BASIC, FORTRAN, COBOL, and more!
