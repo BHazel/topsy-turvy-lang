@@ -13,6 +13,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using BWHazel.TopsyTurvy.Analysis;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.TypeChecker;
 
@@ -41,11 +42,13 @@ namespace BWHazel.TopsyTurvy.LanguageServer;
 /// </remarks>
 /// <param name="languageServer">The language server facade used to send notifications to the client.</param>
 /// <param name="documentStateManager">The manager used to cache per-document symbol state.</param>
-public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, DocumentStateManager documentStateManager)
+/// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
+public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, DocumentStateManager documentStateManager, BindingCatalogue? externalFunctions = null)
     : TextDocumentSyncHandlerBase
 {
     private readonly ILanguageServerFacade languageServer = languageServer;
     private readonly DocumentStateManager documentStateManager = documentStateManager;
+    private readonly BindingCatalogue? externalFunctions = externalFunctions;
     private readonly TopsyTurvyParser parser = new();
 
     /// <summary>
@@ -155,7 +158,7 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
         try
         {
             ParseResult result = this.parser.TryParse(text);
-            this.documentStateManager.Update(uri, text, result);
+            this.documentStateManager.Update(uri, text, result, this.externalFunctions);
             List<Diagnostic> lspDiagnostics = [.. result.Diagnostics.Select(
                 (AstDiagnostic diagnostic) => new Diagnostic()
                 {
@@ -175,7 +178,7 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
             if (result.Success && result.Program is not null)
             {
                 TopsyTurvyTypeChecker typeChecker = new();
-                TypeCheckResult typeCheckResult = typeChecker.Check(result.Program, this.CreateFileResolver(uri));
+                TypeCheckResult typeCheckResult = typeChecker.Check(result.Program, this.CreateFileResolver(uri), this.externalFunctions);
                 lspDiagnostics.AddRange(typeCheckResult.Diagnostics.Select(
                     (AstDiagnostic diagnostic) => new Diagnostic()
                     {
@@ -221,6 +224,24 @@ public class TextDocumentSyncHandler(ILanguageServerFacade languageServer, Docum
                             Source = LanguageServerConstants.LanguageId
                         });
                     }
+                }
+
+                foreach (string shadowedName in documentState.ShadowedExternalFunctionNames)
+                {
+                    if (!documentState.SymbolTable.TryGetSymbol(shadowedName, out SymbolInfo? shadowingSymbol) || shadowingSymbol is null)
+                    {
+                        continue;
+                    }
+
+                    lspDiagnostics.Add(new()
+                    {
+                        Range = new(
+                            new(shadowingSymbol.DefinitionLine - 1, shadowingSymbol.DefinitionColumn - 1),
+                            new(shadowingSymbol.DefinitionLine - 1, shadowingSymbol.DefinitionColumn - 1 + shadowedName.Length)),
+                        Severity = DiagnosticSeverity.Warning,
+                        Message = $"'{shadowedName}' shadows an external function of the same name from the Standard Library.",
+                        Source = LanguageServerConstants.LanguageId
+                    });
                 }
             }
 

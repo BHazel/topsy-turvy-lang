@@ -1,5 +1,6 @@
 using System;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 
 namespace BWHazel.TopsyTurvy.TypeChecker;
 
@@ -41,10 +42,14 @@ public sealed class TopsyTurvyTypeChecker
     /// </summary>
     /// <param name="program">The parsed programme to check.</param>
     /// <param name="sourceFileResolver">An optional delegate that resolves an import filename to its source text, <c>null</c> to leave imported functions unresolved.</param>
+    /// <param name="externalFunctions">
+    /// The catalogue of external functions (Standard Library and any external library) available to <c>SUMMON</c>, or
+    /// <c>null</c> to use <see cref="BindingCatalogue.Default"/>.
+    /// </param>
     /// <returns>A <see cref="TypeCheckResult"/> containing any diagnostics and the semantic model.</returns>
-    public TypeCheckResult Check(ProgramNode program, Func<string, string?>? sourceFileResolver = null)
+    public TypeCheckResult Check(ProgramNode program, Func<string, string?>? sourceFileResolver = null, BindingCatalogue? externalFunctions = null)
     {
         TypeCheckVisitor visitor = new();
-        return visitor.Visit(program, sourceFileResolver);
+        return visitor.Visit(program, sourceFileResolver, externalFunctions ?? BindingCatalogue.Default);
     }
 }

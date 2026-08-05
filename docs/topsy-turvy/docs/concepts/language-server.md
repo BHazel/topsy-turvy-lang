@@ -1,5 +1,5 @@
 ---
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 # Language Server
@@ -9,6 +9,8 @@ The _Operetta Language Server_ implements the [Language Server Protocol](https:/
 ```sh
 operetta incantation
 ```
+
+Standard Library functions are always available to `SUMMON` and an external library assembly can be made available for the whole server session by passing one or many `--admit <path.dll>` flags (alias `--include`) on the same command.  There is no way to admit a library after the server has started.  Please see [Function Binding](./function-binding.md) for more details.
 
 The Visual Studio Code _Topsy Turvy_ extension automatically launches the language server.
 
@@ -42,7 +44,7 @@ An LSP server implements handlers to respond to requests from editors.  The _Ope
 |VS Code Functionality|Handler Class|Description|
 |-|-|-|
 |Document Synchronisation|`TextDocumentSyncHandler`|The backbone of the language server.  Triggered whenever a `.topsy` file is opened, edited, saved or closed.  Re-parses the document on each change, updates the document state and publishes diagnostic squiggles to the editor.|
-|Hover|`HoverHandler`|Returns a Markdown tooltip when hovering over a symbol: variable, function, parameter or namespace.  A namespace tooltip lists the functions declared under it, gathered from across all open documents that declare it.|
+|Hover|`HoverHandler`|Returns a Markdown tooltip when hovering over a symbol: variable, function, parameter or namespace.  A namespace tooltip lists the functions declared under it, gathered from across all open documents that declare it.  This also covers Standard Library and admitted external functions, since they are added to the `SymbolTable` alongside declared symbols; please see [Analysis](./analysis.md#constructing-the-symbol-table) and [Function Binding](./function-binding.md).|
 |Go to Definition|`DefinitionHandler`|Navigates to the declaration of the symbol under the cursor: `PRAY WELCOME` for variables and parameters, `IT IS MY DUTY TO PERFORM` for functions.  Searches the current document first, then other open documents.|
 |IntelliSense / Completion|`CompletionHandler`|Suggests declared symbols and all Topsy Turvy keywords as the user types.  Uses server-side filtering to handle multi-word keywords incrementally as each word is typed.  Also offers known namespace path segments after `TOWN`, `PRAY RECOGNISE` or a `SUMMON` target and scopes function-name suggestions to the exact namespace once a fully-qualified `WITH DUTY` segment is being typed.|
 |Semantic Syntax Highlighting|`SemanticTokensHandler`|Assigns semantic colours to variables, parameters and functions, enriching the base TextMate grammar colouring with symbol-aware information.|
@@ -67,6 +69,8 @@ The `DocumentStateManager` is a central registry: a singleton that holds the cur
 * The document namespace path, if declared, populated alongside the `SymbolTable`.  Empty for a document that declares no namespace.
 
 A key concept is that the `SymbolTable` is only rebuilt when the parse succeeds.  While mid-edit with a temporary syntax error, the server keeps the last good `SymbolTable`, which means hover tooltips, completions and Go-to-Definition continue to work even while the code is in a broken state.
+
+The `BindingCatalogue` admitted at startup, covering the Standard Library and any `--admit` libraries, is fixed for the lifetime of the server: it is registered once and reused for every document, so there is no per-document or in-session way to change it.  Since a bound function has no real source position, its symbol entry uses placeholder positions, so Go-to-Definition on a Standard Library or admitted function name does not navigate anywhere useful.
 
 When a document is closed its state is removed and any squiggles are cleared from the editor.
 

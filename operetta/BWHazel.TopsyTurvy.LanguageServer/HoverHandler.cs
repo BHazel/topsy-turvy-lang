@@ -49,8 +49,9 @@ public class HoverHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c>, <c>null</c> is returned so no hover pop-up is displayed.
     /// * The word at the cursor position is extracted from the source using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
-    /// * The word is looked up in the current document symbol table, then in other open documents via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, <see cref="TryBuildNamespaceHoverAsync"/> checks whether it matches a namespace segment instead.
-    /// * A Markdown hover card is built using <see cref="HoverMarkdownBuilder.Build"/> and returned to the client.
+    /// * <see cref="SymbolTable.GetFunctionOverloads"/> is checked first: if the word names one or more declared function overloads, <see cref="HoverMarkdownBuilder.Build(IReadOnlyList{SymbolInfo}, int)"/> renders just the one declared on the hovered line if the cursor is directly on a specific overload, otherwise every overload, since <see cref="SymbolTable.TryGetSymbol"/> alone only ever surfaces the first.
+    /// * Otherwise the word is looked up in the current document symbol table, then in other open documents via <see cref="DocumentStateManager.FindSymbolInOtherDocuments"/>.  If still not found, <see cref="TryBuildNamespaceHoverAsync"/> checks whether it matches a namespace segment instead.
+    /// * A Markdown hover card is built using <see cref="HoverMarkdownBuilder.Build(SymbolInfo)"/> and returned to the client.
     /// </remarks>
     /// <returns>
     /// A task resolving to a <see cref="Hover"/> containing a Markdown card for the symbol under the cursor,
@@ -74,6 +75,20 @@ public class HoverHandler(DocumentStateManager documentStateManager)
             if (word is null)
             {
                 return Task.FromResult<Hover?>(null);
+            }
+
+            IReadOnlyList<SymbolInfo> overloads = state.SymbolTable.GetFunctionOverloads(word);
+            if (overloads.Count > 0)
+            {
+                return Task.FromResult<Hover?>(
+                    new()
+                    {
+                        Contents = new(new MarkupContent()
+                        {
+                            Kind = MarkupKind.Markdown,
+                            Value = HoverMarkdownBuilder.Build(overloads, request.Position.Line)
+                        })
+                    });
             }
 
             if (!state.SymbolTable.TryGetSymbol(word, out SymbolInfo? symbolInfo) || symbolInfo is null)

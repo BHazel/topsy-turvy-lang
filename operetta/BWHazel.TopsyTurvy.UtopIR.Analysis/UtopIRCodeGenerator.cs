@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
@@ -14,19 +15,56 @@ namespace BWHazel.TopsyTurvy.UtopIR.Analysis;
 public sealed class UtopIRCodeGenerator
 {
     /// <summary>
+    /// The indentation applied to every instruction line within a function body.
+    /// </summary>
+    private const string BodyIndent = "    ";
+
+    /// <summary>
     /// Generates UtopIR source code for the given programme.
     /// </summary>
     /// <param name="program">The root UtopIR AST node to generate source from.</param>
-    /// <returns>A string containing the complete UtopIR source, one instruction per line.</returns>
+    /// <returns>
+    /// A string containing the complete UtopIR source.
+    /// </returns>
     public string Generate(UtopIRProgram program)
     {
         StringBuilder generatedCodeBuilder = new();
-        foreach (UtopIRInstruction instruction in program.Instructions)
+        foreach (UtopIRFunctionDefinition function in program.Functions)
         {
-            this.WriteInstruction(instruction, generatedCodeBuilder);
+            this.WriteFunctionDefinition(function, generatedCodeBuilder);
+            generatedCodeBuilder.AppendLine();
         }
 
         return generatedCodeBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Writes a single <c>duty</c> ... <c>discharged</c> function definition block to the builder.
+    /// </summary>
+    /// <param name="function">The function definition to emit.</param>
+    /// <param name="builder">The <see cref="StringBuilder"/> to append to.</param>
+    private void WriteFunctionDefinition(UtopIRFunctionDefinition function, StringBuilder builder)
+    {
+        StringBuilder header = new($"{UtopIRKeywords.Instructions.Duty} &{function.Name}");
+        foreach (UtopIRFunctionParameter parameter in function.Parameters)
+        {
+            header.Append($", {UtopIRKeywords.Instructions.Term} {this.TermTypeKeyword(parameter.Type)} %{parameter.Name}");
+        }
+
+        if (function.ReturnType is UtopIRTermType returnType)
+        {
+            header.Append($", {UtopIRKeywords.Instructions.Finds} {this.TermTypeKeyword(returnType)}");
+        }
+
+        builder.AppendLine(header.ToString());
+
+        foreach (UtopIRInstruction instruction in function.Body)
+        {
+            builder.Append(BodyIndent);
+            this.WriteInstruction(instruction, builder);
+        }
+
+        builder.AppendLine(UtopIRKeywords.Instructions.Discharged);
     }
 
     /// <summary>
@@ -91,6 +129,47 @@ public sealed class UtopIRCodeGenerator
             case WereInstruction were:
                 builder.AppendLine($"£{were.Target.Name} = {UtopIRKeywords.Instructions.Were} {this.FormatOperand(were.Value)}, {this.TypeKeyword(were.Type)}");
                 break;
+            case VictimYarnInstruction victimYarn:
+                builder.AppendLine(
+                    $"£{victimYarn.Target.Name} = {UtopIRKeywords.Instructions.VictimYarn} " +
+                    $"{this.FormatOperand(victimYarn.YarnString)}, {this.FormatOperand(victimYarn.Index)}");
+                break;
+            case WelcomeListInstruction welcomeList:
+                builder.AppendLine($"£{welcomeList.Target.Name} = {UtopIRKeywords.Instructions.WelcomeList} {this.TypeKeyword(welcomeList.ElementType)}, {this.FormatOperand(welcomeList.Size)}");
+                break;
+            case AppointVictimInstruction appointVictim:
+                builder.AppendLine(
+                    $"{UtopIRKeywords.Instructions.AppointVictim} £{appointVictim.Array.Name}, " +
+                    $"{this.FormatOperand(appointVictim.Index)}, {this.FormatOperand(appointVictim.Value)}");
+                break;
+            case VictimListInstruction victimList:
+                builder.AppendLine(
+                    $"£{victimList.Target.Name} = {UtopIRKeywords.Instructions.VictimList} " +
+                    $"£{victimList.Array.Name}, {this.FormatOperand(victimList.Index)}");
+                break;
+            case WelcomeGallerypicInstruction welcomeGallerypic:
+                builder.AppendLine($"£{welcomeGallerypic.Target.Name} = {UtopIRKeywords.Instructions.WelcomeGallerypic} {this.TypeKeyword(welcomeGallerypic.PointeeType)}");
+                break;
+            case PicturetoInstruction pictureto:
+                builder.AppendLine($"£{pictureto.Target.Name} = {UtopIRKeywords.Instructions.PictureTo} £{pictureto.Pointee.Name}");
+                break;
+            case ViewfromInstruction viewfrom:
+                builder.AppendLine($"£{viewfrom.Target.Name} = {UtopIRKeywords.Instructions.ViewFrom} £{viewfrom.Pointer.Name}");
+                break;
+            case ViewtoInstruction viewto:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.ViewTo} £{viewto.Pointer.Name}, {this.FormatOperand(viewto.Value)}");
+                break;
+            case PointerArithmeticInstruction pointerArithmetic:
+                builder.AppendLine(
+                    $"£{pointerArithmetic.Target.Name} = {this.PointerArithmeticOperationMnemonic(pointerArithmetic.Operation)} " +
+                    $"£{pointerArithmetic.Pointer.Name}, {this.FormatOperand(pointerArithmetic.Offset)}");
+                break;
+            case SummonInstruction summon:
+                builder.AppendLine($"{UtopIRKeywords.Instructions.Summon} &{summon.Function.Name}{this.FormatSignature(summon.ParameterTypes)}");
+                break;
+            case SummonFindInstruction summonFind:
+                builder.AppendLine($"£{summonFind.Target.Name} = {UtopIRKeywords.Instructions.SummonFind} &{summonFind.Function.Name}{this.FormatSignature(summonFind.ParameterTypes)}");
+                break;
             case FindInstruction find:
                 if (find.Value is null)
                 {
@@ -116,9 +195,31 @@ public sealed class UtopIRCodeGenerator
     private string FormatOperand(UtopIROperand operand) => operand switch
     {
         VariableOperand variable => $"£{variable.Variable.Name}",
+        ParameterOperand parameter => $"%{parameter.Parameter.Name}",
         LiteralOperand literal => this.FormatLiteral(literal.Value),
         _ => throw new ArgumentOutOfRangeException(nameof(operand), operand, "Unknown operand type.")
     };
+
+    /// <summary>
+    /// Formats the trailing <c>, term &lt;type&gt;, ...</c> signature clause of a <c>summon</c>/<c>summon.find</c> instruction.
+    /// </summary>
+    /// <param name="parameterTypes">The declared type of each parameter, in declaration order.</param>
+    /// <returns>The formatted clause, or an empty string for a parameterless function.</returns>
+    private string FormatSignature(IReadOnlyList<UtopIRTermType> parameterTypes)
+    {
+        if (parameterTypes.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        StringBuilder signature = new();
+        foreach (UtopIRTermType parameterType in parameterTypes)
+        {
+            signature.Append($", {UtopIRKeywords.Instructions.Term} {this.TermTypeKeyword(parameterType)}");
+        }
+
+        return signature.ToString();
+    }
 
     /// <summary>
     /// Formats a literal value as its UtopIR source representation.
@@ -132,6 +233,7 @@ public sealed class UtopIRCodeGenerator
             bool boolValue => boolValue
                 ? UtopIRKeywords.Literals.Verity
                 : UtopIRKeywords.Literals.Nay,
+            NaughtLiteral => UtopIRKeywords.Literals.Naught,
             string stringValue => $"\"{this.EscapeString(stringValue)}\"",
             char charValue => $"'{this.EscapeChar(charValue)}'",
             float floatValue => this.FormatFloat(
@@ -209,6 +311,20 @@ public sealed class UtopIRCodeGenerator
     };
 
     /// <summary>
+    /// Returns the UtopIR keyword for the given <see cref="UtopIRTermType"/>, valid in a
+    /// <c>term</c>/<c>finds</c> signature position.
+    /// </summary>
+    /// <param name="type">The term type to convert.</param>
+    /// <returns>
+    /// <c>list.&lt;ElementType&gt;</c> when <see cref="UtopIRTermType.Type"/> is
+    /// <see cref="UtopIRType.Array"/>, e.g. <c>list.peer</c>, otherwise the plain type keyword.
+    /// </returns>
+    private string TermTypeKeyword(UtopIRTermType type) =>
+        type.Type == UtopIRType.Array
+            ? $"list.{this.TypeKeyword(type.ElementType!.Value)}"
+            : this.TypeKeyword(type.Type);
+
+    /// <summary>
     /// Returns the UtopIR mnemonic for the given <see cref="UtopIRArithmeticOperation"/>.
     /// </summary>
     /// <param name="operation">The arithmetic operation to convert.</param>
@@ -275,5 +391,17 @@ public sealed class UtopIRCodeGenerator
         UtopIRLogicalOperation.Both => UtopIRKeywords.Instructions.Both,
         UtopIRLogicalOperation.Either => UtopIRKeywords.Instructions.Either,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown logical operation.")
+    };
+
+    /// <summary>
+    /// Returns the UtopIR mnemonic for the given <see cref="UtopIRPointerArithmeticOperation"/>.
+    /// </summary>
+    /// <param name="operation">The pointer arithmetic operation to convert.</param>
+    /// <returns>The UtopIR operation mnemonic.</returns>
+    private string PointerArithmeticOperationMnemonic(UtopIRPointerArithmeticOperation operation) => operation switch
+    {
+        UtopIRPointerArithmeticOperation.Sum => UtopIRKeywords.Instructions.SumPointer,
+        UtopIRPointerArithmeticOperation.Diff => UtopIRKeywords.Instructions.DiffPointer,
+        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown pointer arithmetic operation.")
     };
 }

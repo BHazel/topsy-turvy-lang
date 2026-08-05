@@ -1,6 +1,6 @@
 # UtopIR
 ## An Intermediary Representation for Topsy Turvy
-### Language Specification: Version 0.0.1-preview3
+### Language Specification: Version 0.0.1-preview4
 
 ---
 
@@ -14,12 +14,12 @@ The language is designed around virtual registers and a stack.
 
 ## 1. File Structure
 
-> TODO: The `duty ... discharged` block structure is currently not in scope for development.  The current implementation are only concerned with instructions themselves that will eventually sit within this block.
+Unlike in Topsy Turvy, UtopIR does not have an equivalent to the `HARK!`...`FINALE.` keywords.  Instead a file must have an `Opera` function which serves as the entry point to a programme.  This `Opera` function will contain all top-level statements in a Topsy Turvy code file and variables declared in a `PRINCIPALS` block.
 
-Unlike in Topsy Turvy, UtopIR does not have an equivalent to the `HARK!`...`FINALE.` keywords.  Instead a file must have an `Opera` function which serves as the entry point to a programme.
+> TODO: Support for command-line arguments via the `term Props list.yarn` is not currently implemented but included for visibility for what an implementation will look like.
 
 ```utopir
-duty Opera terms TheProps: yarn finds peer
+duty &Opera, term Props list.yarn, finds peer
     @ Main programme code...
     find 0
 discharged
@@ -85,6 +85,88 @@ find 1
 
 !ARE_EQUAL_NAY
   find 0
+```
+
+## 3.4. Functions
+
+### 3.4.1. Function Identifiers
+
+Function identifiers all start with the `&` character, followed by the fully-qualified function name, including the complete namespace path if not in the global namespace.  The identifier can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.  The namespace delimiter is the `*` character.  Each namespace part has no prefix character.
+
+### 3.4.2. Function Parameters
+
+Function parameters all start with the `%` character, followed by the parameter name which can comprise a leading letter or underscore, then any mix of letters, digits, hyphens and underscores.  Parameters can only appear within a function definition, both in the declaration and body.
+
+### 3.4.3. Function Definitions
+
+A function is defined in a dedicated block:
+
+* The `duty` opener including parameters and return type.
+* The function body comprising regular UtopIR instructions.
+* The `discharged` closer to end the function definition.
+
+The `duty` opener takes the format:
+
+```utopir
+duty &<fn-name>, [term <type> %<param-name>, ...] [finds <ret-type>]
+```
+
+* **`&<fn-name>`:** The function name, as called in `summon`* instructions.
+* **`term <type> %<param-name>`:** The parameter type and name, one for each parameter separated by a comma, and optional if no parameters.
+* **`finds <type>`:** The return type, optional if no return value.
+
+**Format**
+
+```
+duty <fn-name>, [term <type> %<param-name>, ...] [finds <ret-type>]
+  @ Function instructions here.
+discharged
+```
+
+**Example**
+
+For the following Topsy Turvy code, without body for brevity:
+
+```topsy
+IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF Name
+  ASIDE: Logic.
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+  ASIDE: Logic.
+MY DUTY IS DISCHARGED.
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+duty &Greet, term yarn %Name
+  @ Logic
+discharged
+
+duty &Add, term peer %Num1, term peer %Num2, finds peer
+  @ Logic
+discharged
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Logic WITH DISTRICT UtilityFunctions
+ASIDE: or (but not both in the same file)...
+TOWN Logic*UtilityFunctions
+```
+
+then the function declarations in UtopIR would be:
+
+```utopir
+duty &Logic*UtilityFunctions*Greet, term yarn %Name
+  @ Logic
+discharged
+
+duty &Logic*UtilityFunctions*Add, term peer %Num1, term peer %Num2, finds peer
+  @ Logic
+discharged
 ```
 
 ## 4. Instructions
@@ -186,6 +268,248 @@ the following UtopIR is equivalent:
 
 ```utopir
 £LovesickMaidens = were £Lords, chancellor
+```
+
+#### 4.1.4. `welcome.list` Instruction
+
+The `welcome.list` instruction declares an array variable of a specified `type` and `size` and assigns it to a virtual register.
+
+**Operands**
+
+* **`<type>`:** The type of the array variable with options being any supported type; please see Appendix B for the complete type list.
+* **`<size>`:** The size of the array variable as a literal or a variable of type `peer`; any other type is a compilation error.
+
+**Format**
+
+```utopir
+£<var-name> = welcome.list <type>, <size>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PRAY WELCOME Numbers AS A LITTLE LIST OF 3 PEER
+```
+
+or,
+
+```topsy
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 1 AND 2 AND 3 IF YOU PLEASE.
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£Numbers = welcome.list peer, 3
+```
+
+#### 4.1.5. `appoint.victim` Instruction
+
+The `appoint.victim` instruction assigns a specified `value` to the element of an array variable at the specified `index`.  Assigning a value of a type that is incompatible with the variable declaration is a compilation error.
+
+**Operands**
+
+* **`<array>`:** The array variable to assign the value to an element; it must be an already declared variable.
+* **`<index>`:** The index of the array of the element to assign; it must be an integer value either literal or variable.
+* **`<value>`:** The value to assign to the array element; it must have a type compatible with the array variable type and can be either a literal or variable.
+
+**Format**
+
+```utopir
+appoint.victim <array>, <index>, <value>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+VICTIM 1 ON Numbers IS APPOINTED 10
+VICTIM 2 ON Numbers IS APPOINTED 20
+VICTIM 3 ON Numbers IS APPOINTED 30
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+```
+
+#### 4.1.6. `victim.yarn` Instruction
+
+The `victim.yarn` instruction selects the `stitch` at the 1-based index of a `yarn` value and assigns it to a virtual register.  The variable being selected from must be of `yarn` type and the target virtual register must be of `stitch` type; the index must be of an integer type.  Using any other types is a compilation error.
+
+**Operands**
+
+* **`<yarn>`:** The `yarn` variable being selected, either literal or variable.
+* **`<index>`:** The 1-based integer index of the `stitch` in the `yarn`, either a literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = victim.yarn <yarn>, <index>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PoemSubjectLetter4 IS APPOINTED VICTIM 4 ON PoemSubject
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£PoemSubjectLetter4 = victim.yarn £PoemSubject, 4
+```
+
+#### 4.1.7. `victim.list` Instruction
+
+The `victim.list` instruction selects the element at the 1-based index of an array variable and assigns it to a virtual register.  The array variable being selected from and the target virtual register must be of the same type; the index must be of an integer type.  Using any other types is a compilation error.
+
+**Operands**
+
+* **`<array>`:** The `array` variable being selected and must be an already declared and assigned variable.
+* **`<index>`:** The 1-based integer index of the element in the array, either a literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = victim.list <array>, <index>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersElement2 IS APPOINTED VICTIM 2 ON Numbers
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersElement2 = victim.list £Numbers, 2
+```
+
+#### 4.1.8. `welcome.gallerypic` Instruction
+
+The `welcome.gallerypic` instruction declares an pointer variable of a specified `type` and assigns it to a virtual register.
+
+**Operands**
+
+* **`<type>`:** The type of the pointer variable with options being any supported type (as outlined in Appendix B) or array; please see Appendix B for the complete type list.
+
+**Format**
+
+```utopir
+£<var-name> = welcome.gallerypic <type>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberPointer = welcome.gallerypic peer
+```
+
+#### 4.1.9. `pictureto` Instruction
+
+The `pictureto` instruction assigns a specified `variable` to a pointer variable.  The type of both the variable and its assigned pointer must be the same with the exceptions as outlined below; otherwise mismatched types is a compilation error.
+
+Pointers to string `yarn` and array variables point to an individual `stitch` character or array element respectively.  Therefore for `yarn` variables, pointers must be of type `stitch`.  For array variables, pointers must be of the type of the array.
+
+**Operands**
+
+* **`<variable>`:** The variable pointee as the target of the pointer; this must be an already declared variable and must have a compatible type as outlined above.
+
+**Format**
+
+```utopir
+£<pointer-name> = pictureto £<variable>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumberPointer IS APPOINTED GALLERY PICTURE TO Number
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberPointer = pictureto £Number
+```
+
+#### 4.1.10. `viewfrom` Instruction
+
+The `viewfrom` instruction dereferences a pointer and assigns the value to a virtual register.  The type of both the pointer being dereferenced and the target virtual register must be the same; using different types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer being dereferenced; this must be an already declared and assigned pointer.
+
+**Format**
+
+```utopir
+£<var-name> = viewfrom £<pointer>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumberValue IS APPOINTED VIEW FROM NumberPointer
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumberValue = viewfrom £NumberPointer
+```
+
+#### 4.1.11. `viewto` Instruction
+
+The `viewto` instruction assigns a variable value through a pointer.  The type of both the pointer and the value to assign must be the same; using different types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer used to assign the value; this must be an already declared and assigned pointer.
+* **`<value>`:** The value to assign, either a literal or variable.
+
+**Format**
+
+```utopir
+viewto £<pointer>, <value>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+VIEW FROM NumberPointer IS APPOINTED 42
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+viewto £NumberPointer, 42
 ```
 
 ### 4.2. Arithmetic Operations
@@ -627,6 +951,66 @@ the following UtopIR is equivalent:
 
 ```utopir
 £FairiesOrLords = min.f 10.5, 5.25
+```
+
+#### 4.2.3. Pointer Arithmetic
+
+##### 4.2.3.1. `sum.g` Instruction
+
+The `sum.g` instruction performs additive pointer arithmetic on a specified `pointer` by an `offset` and assigns the result to a variable.  The `pointer` must be a pointer variable to an array or `yarn` string and the offset must be an integer; using any other types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer to an array or `yarn` string, which must be an already declared and assigned pointer.
+* **`<offset>`:** The offset to add to the pointer position; must be an integer value, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = sum.g <pointer>, <offset>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersPointerOffset1 IS APPOINTED SUM OF NumbersPointer AND 1
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersPointerOffset1 = sum.g £NumbersPointer, 1
+```
+
+##### 4.2.3.2. `diff.g` Instruction
+
+The `diif.g` instruction performs subtractive pointer arithmetic on a specified `pointer` by an `offset` and assigns the result to a variable.  The `pointer` must be a pointer variable to an array or `yarn` string and the offset must be an integer; using any other types is a compilation error.
+
+**Operands**
+
+* **`<pointer>`:** The pointer to an array or `yarn` string, which must be an already declared and assigned pointer.
+* **`<offset>`:** The offset to subtract from the pointer position; must be an integer value, either literal or variable.
+
+**Format**
+
+```utopir
+£<var-name> = diff.g <pointer>, <offset>
+```
+
+**Example**
+
+For the following Topsy Turvy code:
+
+```topsy
+NumbersPointerOffset1 IS APPOINTED DIFFERENCE OF NumbersPointer AND 1
+```
+
+the following UtopIR is equivalent:
+
+```utopir
+£NumbersPointerOffset1 = diff.g £NumbersPointer, 1
 ```
 
 ### 4.3. Bitwise Operations
@@ -1361,6 +1745,124 @@ find 0
   find 1
 ```
 
+### 4.8. Function Call Instructions
+
+The following instructions are used to call functions:
+
+|Instruction|Description|Mechanism|Example|
+|-|-|-|-|
+|`summon <function>, [term <type>, ...]`|Calls a void function or ignores the result.|Stack|`summon &Function`|
+|`summon.find <function>, [term <type>, ...]`|Calls a returning function and collects the result.|Stack/Virtual Register|`£Result = summon.find &Function term peer`|
+
+The function call instructions use a combination of virtual registers and the stack to perform a function call:
+* Each parameter is pushed onto the stack using the `prentice` instruction in the order as defined in the function definition in Topsy Turvy.  If there are no parameters no values are pushed onto the stack.
+* A return value is stored in a virtual register.
+
+#### 4.8.1. `summon` Instruction
+
+The `summon` instruction calls a `function`, which must be accessible; the instruction includes the function signature, to allow for overloading, as a series of `term <type>` operands, one for each parameter; if there are no parameters no `term` operands are provided.  Calling an inaccessible function is a compilation error.  Both void and returning functions can be called using `summon`, however, a return value will always be ignored.
+
+**Operands**
+
+* **`<function>`:** The function to call.
+* **`term <type>`:** A functino parameter of the specified `type`; there should be one `term` for each parameter.
+
+**Format**
+
+```utopir
+summon <function>[, term <type>, ...]
+```
+
+**Example**
+
+The following example in Topsy Turvy calls the void `&ReadPoem` and `&RepeatPoem` functions:
+
+```topsy
+SUMMON ReadPoem WITH Name IF YOU PLEASE.
+SUMMON RepeatPoem WITH Name AND Times IF YOU PLEASE.
+```
+
+with the following equivalent in UtopIR:
+
+```utopir
+prentice £Name
+summon &ReadPoem, term yarn
+
+prentice £Name
+prentice £Times
+summon &RepeatPoem, term yarn, term peer
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+TOWN Aesthetic*Writing
+```
+
+then the `summon` instructions in UtopIR would be:
+
+```utopir
+prentice £Name
+summon &Aesthetic*Writing*ReadPoem, term yarn
+
+prentice £Name
+prentice £Times
+summon &Aesthetic*Writing*RepeatPoem, term yarn, term peer
+```
+
+#### 4.8.2. `summon.find` Instruction
+
+The `summon.find` instruction calls a `function`, which must be accessible; the instruction includes the function signature, to allow for overloading, as a series of `term <type>` operands, one for each parameter; if there are no parameters no `term` operands are provided.  Calling an inaccessible function is a compilation error.  Only returning functions can be called using `summon.find` and the return value is assigned to a virtual register.
+
+**Operands**
+
+* **`<function>`:** The function to call.
+
+**Format**
+
+```utopir
+£<var-name> = summon.find <function>[, term <type>, ...]
+```
+
+**Example**
+
+The following example in Topsy Turvy calls the `&GetPoem` and `&GetPoemRepeats` functions:
+
+```topsy
+Poem IS APPOINTED SUMMON GetPoem WITH Name IF YOU PLEASE.
+PoemRepeats IS APPOINTED SUMMON GetPoemRepeats WITH Name AND Times IF YOU PLEASE.
+```
+
+with the following equivalent in UtopIR:
+
+```utopir
+prentice £Name
+£Poem = summon.find &GetPoem, term yarn
+
+prentice £Name
+prentice £Times
+£PoemRepeats = summon.find &GetPoemRepeats, term yarn, term peer
+```
+
+If in the above example the functions were declared in a namespace (long-hand and short-hand forms), e.g.
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+TOWN Aesthetic*Writing
+```
+
+then the `summon.find` instructions in UtopIR would be:
+
+```utopir
+prentice £Name
+£Poem = summon.find &Aesthetic*Writing*GetPoem, term yarn
+
+prentice £Name
+prentice £Times
+£PoemRepeats = summon.find &Aesthetic*Writing*GetPoemRepeats, term yarn, term peer
+```
+
 ## 5. Examples
 
 This section includes brief examples demonstrating how UtopIR instructions are used with Topsy Turvy equivalents.  Not all instructions are covered but sufficient are included in these examples for a working knowledge of UtopIR.
@@ -1895,11 +2397,229 @@ the following is the equivalent UtopIR code:
 find £Total
 ```
 
+### 5.5. String & Array Operations
+
+This example demonstrates declaration and assignment of strings and arrays and accessing their characters and elements respectively.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME PoemSubject AS A YARN BEING "Hollow"
+PRAY WELCOME PoemSubjectLetter4 AS A STITCH
+PoemSubjectLetter4 IS APPOINTED VICTIM 4 ON PoemSubject
+
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME NumbersElement3 AS A PEER BEING VICTIM 3 ON Numbers
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£PoemSubject = welcome yarn
+£PoemSubject = appoint "Hollow"
+£PoemSubjectLetter4 = welcome stitch
+£_victim_yarn_PoemSubject_4 = victim.yarn £PoemSubject, 4
+£PoemSubjectLetter4 = appoint £_victim_yarn_PoemSubject_4
+
+£Numbers = welcome.list peer, 3
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+£NumbersElement2 = welcome peer
+£_victim_list_Numbers_2 = victim.list £Numbers, 2
+£NumbersElement2 = appoint £_victim_list_Numbers_2
+```
+
+### 5.6 Pointer Operations
+
+This example demonstrates declaration and assignment of pointers, how to dereference and perform arithmetic on them.
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRAY WELCOME Number AS A PEER BEING 42
+PRAY WELCOME NumberPointer AS A GALLERY PICTURE OF PEER BEING GALLERY PICTURE TO Number
+
+PRAY WELCOME NumberValue AS A PEER BEING VIEW FROM NumberPointer
+VIEW FROM NumberPointer IS APPOINTED 23
+
+PRAY WELCOME Numbers AS A LITTLE LIST OF PEER BEING 10 AND 20 AND 30 IF YOU PLEASE.
+PRAY WELCOME NumbersPointer AS A GALLERY PICTURE OF PEER
+NumbersPointer IS APPOINTED GALLERY PICTURE TO Numbers
+NumbersPointer IS APPOINTED SUM OF NumbersPointer AND 2
+
+PRAY WELCOME NullPointer AS A GALLERY PICTURE OF PEER
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+£Number = welcome peer
+£Number = appoint 42
+£NumberPointer = welcome.gallerypic peer
+£NumberPointer = pictureto £Number
+
+£NumberValue = welcome peer
+£NumberValue = viewfrom £NumberPointer
+viewto £NumberPointer, 23
+
+£Numbers = welcome.list peer, 3
+appoint.victim £Numbers, 1, 10
+appoint.victim £Numbers, 2, 20
+appoint.victim £Numbers, 3, 30
+£NumbersPointer = welcome.gallerypic peer
+£NumbersPointer = pictureto £Numbers
+£_sumg_NumbersPointer_2 = sum.g £NumbersPointer, 2
+£NumbersPointer = appoint £_sumg_NumbersPointer_2
+
+£NullPointer = welcome.gallerypic peer
+£NullPointer = appoint naught
+```
+
+### 5.7 Calling Functions
+
+This example demonstrates how to call functions, both void and returning.
+
+```topsy
+IT IS MY DUTY TO PERFORM DoNothing UNDER NO OBLIGATION
+  SUM OF 0 AND 0
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+  AND SO I FIND SUM OF Num1 AND Num2
+MY DUTY IS DISCHARGED.
+
+PRAY WELCOME AddResult AS A PEER
+
+SUMMON DoNothing WITH NOTHING IF YOU PLEASE.
+AddResult IS APPOINTED SUMMON Add WITH 4 AND 5 IF YOU PLEASE.
+
+AND SO I FIND AddResult
+```
+
+```utopir
+£AddResult = welcome peer
+£AddResult = appoint 0
+
+summon &DoNothing
+
+prentice 4
+prentice 5
+£_summonfind_Add_4_5 = summon.find &Add, term peer, term peer
+£AddResult = appoint £_summonfind_Add_4_5
+
+find £AddResult
+```
+
+### 5.8 Defining Functions & Main Function
+
+This example demonstrates how to define both void and returning functions and how to call them.  It also demonstrates how executable code outside of a function, i.e. the main code for a Topsy Turvy programme, is transformed to UtopIR.
+
+**Please note the `Behold` function in this example is a hypothetical call to the `BEHOLD` built-in and will change in the future when Standard Library and namespace support matures.**
+
+For the following example in Topsy Turvy:
+
+```topsy
+PRINCIPALS
+    PRAY WELCOME User AS A YARN BEING "Iolante"
+THE CURTAIN RISES.
+
+IT IS MY DUTY TO PERFORM Greet UNDER THE TERMS OF Name
+    BEHOLD "Hello, " WITHOUT CEREMONY
+    BEHOLD Name WITHOUT CEREMONY
+    BEHOLD "!"
+MY DUTY IS DISCHARGED.
+
+IT IS MY DUTY TO PERFORM Add UNDER THE TERMS OF Num1 AS A PEER AND Num2 AS A PEER TO FIND PEER
+    AND SO I FIND SUM OF Num1 AND Num2
+MY DUTY IS DISCHARGED.
+
+SUMMON Greet WITH User IF YOU PLEASE.
+
+PRAY WELCOME Total AS A PEER BEING SUMMON Add WITH 4 AND 5 IF YOU PLEASE.
+AND SO I FIND Total
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+duty &Greet, term yarn %Name
+    prentice "Hello, "
+    prentice verity
+    summon &Behold
+    prentice %Name
+    prentice verity
+    summon &Behold
+    prentice "!"
+    prentice nay
+    summon &Behold
+discharged
+
+duty &Add, term peer %Num1, term peer %Num2, finds peer
+    £_sum_Num1_Num2 = sum %Num1, %Num2
+    find £_sum_Num1_Num2
+discharged
+
+duty &Opera, finds peer
+    £User = welcome yarn
+    £User = appoint "Iolanthe"
+
+    prentice £User
+    summon &Greet, term yarn
+
+    £Total = welcome peer
+    £Total = appoint 0
+    prentice 4
+    prentice 5
+    £_summonfind_Add_4_5 = summon.find &Add, term peer, term peer
+    £Total = appoint £_summonfind_Add_4_5
+
+    find £Total
+discharged
+```
+
+### 5.9 Namespaced Functions
+
+This example demonstrates a function declared under a `TOWN` namespace, called by its bare name from
+within that same namespace.
+
+For the following example in Topsy Turvy:
+
+```topsy
+TOWN Aesthetic WITH DISTRICT Writing
+
+IT IS MY DUTY TO PERFORM ReadPoem UNDER THE TERMS OF Name
+    BEHOLD Name
+MY DUTY IS DISCHARGED.
+
+SUMMON ReadPoem WITH "Iolanthe" IF YOU PLEASE.
+
+AND SO I FIND 0
+```
+
+the following is the equivalent UtopIR code:
+
+```utopir
+duty &Aesthetic*Writing*ReadPoem, term yarn %Name
+    prentice %Name
+    prentice verity
+    summon &Behold
+discharged
+
+duty &Opera, finds peer
+    prentice "Iolanthe"
+    summon &Aesthetic*Writing*ReadPoem, term yarn
+
+    find 0
+discharged
+```
+
 ## Appendix A. Instruction Reference
 
 |Instruction|Description|Example|
 |-|-|-|
 |`welcome <type>`|Variable Declaration|`£LovesickMaidens = welcome peer`|
+|`welcome.list <type>, <size>`|Array Variable Declaration|`£Numbers = welcome.list peer, 3`|
 |`appoint <value>`|Variable Assignment|`£LovesickMaidens = appoint 20`|
 |`were <value>, <type>`|Variable Cast|`£LovesickMaidens = were £Lords, chancellor`|
 |`prentice <value>`|Push onto Stack|`prentice £LovesickMaidens`|
@@ -1918,6 +2638,8 @@ find £Total
 |`rem.f <op1>, <op2>`|Floating-Point Remainder|`£Lords = rem.f 10.0, 5.0`|
 |`max.f <op1>, <op2>`|Floating-Point Maximum Operand|`£Biggest = max.f 10.5, 5.25`|
 |`min.f <op1>, <op2>`|Floating-Point Minimum Operand|`£Smallest = min.f 10.5, 5.25`|
+|`sum.g <pointer>, <offset>`|Pointer Addition|`£LordsPointer = sum.g £LordsPointer, 2`|
+|`diff.g <pointer>, <offset>`|Pointer Subtraction|`£LordsPointer = diff.g £LordsPointer, 2`|
 |`find <value>`|Return a Value|`find £Lords`|
 |`chord <op1>, <op2>`|Bitwise AND|`£Result = chord 10, 20`|
 |`harmony <op1>, <op2>`|Bitwise OR|`£Result = harmony 10, 20`|
@@ -1939,6 +2661,8 @@ find £Total
 |`sail <label>`|Branches to the specified label.|`sail LABEL`|
 |`sailalike <value>, <label>`|Branches to the specified label if the `decree` value indicates equality.|`sailalike £IsLord, !LABEL`|
 |`sailunlike <value>, <label>`|Branches to the specified label if the `decree` value indicates inequality.|`sailunlike £IsLord, !LABEL`|
+|`summon <function>, [term <type>, ...]`|Calls a void function or ignores the result.|`summon &Function`|
+|`summon.find <function>, [term <type>, ...]`|Calls a returning function and collects the result.|`£Result = summon.find &Function term peer`|
 
 ## Appendix B. Type Reference
 
@@ -1953,6 +2677,9 @@ find £Total
 |Boolean|`DECREE`|`decree`|
 |Character|`STITCH`|`stitch`|
 |String|`YARN`|`yarn`|
+|Array|`LITTLE LIST OF <TYPE>`|`list.<type>`|
 
 * For unsigned integers append the type with `standing`, e.g. for an unsigned 64-bit integer the type would be `standingchancellor`.
 * The Boolean `decree` type defines its _true_ and _false_ literals as `verity` and `nay`.
+* The Null `naught` literal can be assigned to a pointer without a pointee, an array or `yarn` string.
+* `list.<type>` is a special type used exclusively in `term` operands; it cannot be used in declaration or assignment instructions.

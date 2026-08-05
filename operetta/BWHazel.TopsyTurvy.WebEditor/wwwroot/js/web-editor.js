@@ -213,6 +213,45 @@ Object.assign(window.topsyTurvy, {
     },
 
     /**
+     * Registers a Monaco signature-help provider for Topsy Turvy.
+     * @description Called once from Blazor in `OnAfterRenderAsync` on first render, alongside the hover and
+     *              completion providers. Triggers on a space character, since Topsy Turvy function arguments
+     *              are space-separated (`SUMMON name WITH arg1 AND arg2 IF YOU PLEASE.`). Monaco positions are
+     *              1-indexed; the C# bridge expects 0-indexed.
+     * @param {DotNetObjectReference} dotNetRef Blazor interop reference to the Editor component.
+     */
+    registerSignatureHelpProvider(dotNetRef) {
+        monaco.languages.registerSignatureHelpProvider('topsy-turvy', {
+            signatureHelpTriggerCharacters: [' '],
+            async provideSignatureHelp(model, position) {
+                const result = await dotNetRef.invokeMethodAsync(
+                    'GetSignatureHelp',
+                    position.lineNumber - 1,
+                    position.column - 1
+                );
+
+                if (!result) {
+                    return null;
+                }
+
+                return {
+                    value: {
+                        signatures: result.signatures.map(signature => ({
+                            label: signature.label,
+                            parameters: signature.parameters.map(parameterLabel => ({
+                                label: parameterLabel
+                            }))
+                        })),
+                        activeSignature: result.activeSignature,
+                        activeParameter: result.activeParameter
+                    },
+                    dispose() {}
+                };
+            }
+        });
+    },
+
+    /**
      * Registers a Monaco completion provider for Topsy Turvy.
      * @description Runs alongside the keyword provider already registered and
      *              Monaco merges both result sets.  Supplies

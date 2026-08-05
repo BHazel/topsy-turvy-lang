@@ -35,6 +35,11 @@ namespace BWHazel.TopsyTurvy.Parser;
 /// and the match fails as <c>STANDING</c> on its own is not a valid type keyword.
 /// </para>
 /// <para>
+/// <c>ParameterOrReturnTypeKeyword</c> builds on <c>TypeKeyword</c> to also accept <c>LITTLE LIST OF &lt;type&gt;</c>
+/// in a function parameter or return-type position, without the mutability modifier or size clause a full
+/// array variable declaration allows.
+/// </para>
+/// <para>
 /// ### Operators
 /// The <c>OperatorToken</c> parser matches on any of the operator keywords and returns the corresponding <see cref="Operator"/> value.
 /// * It uses the <c>Keyword</c> parser from the lexer to match on each operator keyword.
@@ -734,6 +739,28 @@ public static class ExpressionParser
             .Value(LiteralType.Boolean))
         .Or(Lexer.Keyword(Keywords.TypeNames.Naught)
             .Value(LiteralType.Null));
+
+    /// <summary>
+    /// Parses a parameter or return type annotation, which may be a scalar <see cref="TypeKeyword"/> or an
+    /// array type (<c>LITTLE LIST OF &lt;type&gt;</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Used by <see cref="StatementParser.ParameterList"/> and the <c>TO FIND</c> return-type clause of
+    /// <see cref="StatementParser.FunctionDefinition"/>. Unlike <see cref="StatementParser.ArrayDeclaration"/>,
+    /// this position has no mutability modifier or size clause: a parameter or return type is either a plain
+    /// scalar type or <c>LITTLE LIST OF &lt;type&gt;</c>, nothing else.
+    /// </para>
+    /// <para>
+    /// Pointer types are not currently supported here.
+    /// </para>
+    /// </remarks>
+    public static readonly TextParser<(LiteralType Type, LiteralType? ElementType)> ParameterOrReturnTypeKeyword =
+        (from _ in Lexer.Keyword(Keywords.TypeNames.LittleListOf)
+         from elementType in Ws(TypeKeyword)
+         select (LiteralType.Array, (LiteralType?)elementType))
+            .Try()
+            .Or(TypeKeyword.Select(static type => (type, (LiteralType?)null)));
 
     /// <summary>
     /// Parses an array element access expression.

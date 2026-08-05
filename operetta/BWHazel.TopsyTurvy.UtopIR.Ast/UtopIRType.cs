@@ -21,6 +21,15 @@ namespace BWHazel.TopsyTurvy.UtopIR.Ast;
 /// * <see cref="UtopIRType"/>.<c>Stitch</c>: <c>stitch</c> (single character)
 /// * <see cref="UtopIRType"/>.<c>Yarn</c>: <c>yarn</c> (string of characters)
 /// </para>
+/// <para>
+/// <see cref="Array"/> and <see cref="Pointer"/> are marker values only: the true element or pointee
+/// type of an array or pointer variable is recorded separately, in a side table keyed on
+/// variable name (<c>arrayElementTypes</c>/<c>pointerPointeeTypes</c> in
+/// <c>TopsyTurvyToUtopIRTransformer</c> and <c>CilEmitter</c>). Neither value is a valid operand to the bare
+/// <c>welcome</c> instruction: arrays and pointers are declared with the dedicated
+/// <c>welcome.list</c>/<c>welcome.gallerypic</c> instructions instead, which carry the element or pointee
+/// type directly rather than this marker.
+/// </para>
 /// </remarks>
 public enum UtopIRType
 {
@@ -62,4 +71,12 @@ public enum UtopIRType
 
     /// <summary>A string of characters (Topsy Turvy <c>YARN</c>, UtopIR <c>yarn</c>).</summary>
     Yarn,
+
+    /// <summary>An array (Topsy Turvy <c>LITTLE LIST</c>).</summary>
+    /// <remarks>The element type is recorded separately during usage transform and emit.</remarks>
+    Array,
+
+    /// <summary>A pointer (Topsy Turvy <c>GALLERY PICTURE</c>).</summary>
+    /// <remarks>The element type is recorded separately during usage transform and emit.</remarks>
+    Pointer,
 }

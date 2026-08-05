@@ -9,6 +9,9 @@
     { "include": "#char-literals" },
     { "include": "#numbers" },
     { "include": "#boolean-literals" },
+    { "include": "#naught-literal" },
+    { "include": "#array" },
+    { "include": "#pointer" },
     { "include": "#declaration" },
     { "include": "#assignment" },
     { "include": "#cast" },
@@ -19,10 +22,17 @@
     { "include": "#comparison-integer" },
     { "include": "#logical" },
     { "include": "#stack" },
+    { "include": "#summon-find" },
+    { "include": "#summon" },
     { "include": "#control-flow" },
+    { "include": "#victim" },
+    { "include": "#functions" },
+    { "include": "#array-types" },
     { "include": "#types" },
     { "include": "#variables" },
-    { "include": "#labels" }
+    { "include": "#parameters" },
+    { "include": "#labels" },
+    { "include": "#function-references" }
   ],
   "repository": {
     "comments": {
@@ -62,6 +72,38 @@
     "boolean-literals": {
       "name": "constant.language.boolean.utopir",
       "match": "(?i)\\b(verity|nay)\\b"
+    },
+    "naught-literal": {
+      "name": "constant.language.null.utopir",
+      "match": "(?i)\\bnaught\\b"
+    },
+    "array": {
+      "patterns": [
+        {
+          "name": "keyword.other.declaration.utopir",
+          "match": "(?i)\\bwelcome\\.list\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.utopir",
+          "match": "(?i)\\bappoint\\.victim\\b"
+        }
+      ]
+    },
+    "pointer": {
+      "patterns": [
+        {
+          "name": "keyword.other.declaration.utopir",
+          "match": "(?i)\\bwelcome\\.gallerypic\\b"
+        },
+        {
+          "name": "keyword.other.access.utopir",
+          "match": "(?i)\\b(pictureto|viewfrom|viewto)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.pointer.utopir",
+          "match": "(?i)\\b(sum|diff)\\.g\\b"
+        }
+      ]
     },
     "declaration": {
       "name": "keyword.other.declaration.utopir",
@@ -103,9 +145,37 @@
       "name": "keyword.other.stack.utopir",
       "match": "(?i)\\b(prentice|leave)\\b"
     },
+    "summon-find": {
+      "name": "keyword.control.utopir",
+      "match": "(?i)\\bsummon\\.find\\b"
+    },
+    "summon": {
+      "name": "keyword.control.utopir",
+      "match": "(?i)\\bsummon\\b"
+    },
     "control-flow": {
       "name": "keyword.control.utopir",
       "match": "(?i)\\b(sailalike|sailunlike|sail|find)\\b"
+    },
+    "victim": {
+      "name": "keyword.other.access.utopir",
+      "match": "(?i)\\bvictim\\.(yarn|list)\\b"
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "keyword.control.utopir",
+          "match": "(?i)\\b(duty|discharged)\\b"
+        },
+        {
+          "name": "keyword.other.signature.utopir",
+          "match": "(?i)\\b(term|finds)\\b"
+        }
+      ]
+    },
+    "array-types": {
+      "name": "storage.type.utopir",
+      "match": "(?i)\\blist\\.(chancellor|peer|pirate|sausageroll|standingchancellor|standingpeer|standingpirate|standingsausageroll|fathom|foot|decree|stitch|yarn)\\b"
     },
     "types": {
       "name": "storage.type.utopir",
@@ -115,9 +185,17 @@
       "name": "variable.other.utopir",
       "match": "£[A-Za-z_][A-Za-z0-9_-]*"
     },
+    "parameters": {
+      "name": "variable.parameter.utopir",
+      "match": "%[A-Za-z_][A-Za-z0-9_-]*"
+    },
     "labels": {
       "name": "entity.name.label.utopir",
       "match": "![A-Za-z_][A-Za-z0-9_-]*"
+    },
+    "function-references": {
+      "name": "entity.name.function.utopir",
+      "match": "&[A-Za-z_][A-Za-z0-9_-]*(?:\\*[A-Za-z_][A-Za-z0-9_-]*)*"
     }
   }
 }

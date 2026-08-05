@@ -241,19 +241,30 @@ Use the `/implement-utopir-feature` skill as it is the single source of truth fo
 | 3 | `Cli.E2ETests/` | New `*CommandTests.cs` test class. |
 | 4 | `DEVELOPMENT.md` §3 | Add a row to the CLI Commands table. |
 
-### Native Export (`operetta/BWHazel.TopsyTurvy.Embedded/`)
-
-The v1 native export contract (`TOURING_THEATRE_PLAN.md` §4.2) is frozen — any change to its shape must update every file below in the same commit, and bump `topsyturvy_api_version()`. The Embedded project is organised by utility, not flat: `NativeInterop/` (session/callback/IO plumbing, namespace `BWHazel.TopsyTurvy.Embedded.NativeInterop`) and `Analysis/` (hover/completion/format/diagnostic JSON payload types, namespace `BWHazel.TopsyTurvy.Embedded.Analysis`), with `NativeExports.cs` at the project root. All types are `public`.
+### New Standard Library Function or Binding Class
 
 | # | File | What to Update |
 |---|---|---|
-| 1 | `Embedded/NativeExports.cs` | The `[UnmanagedCallersOnly]` export itself (C# method is PascalCase; only the `EntryPoint` string is `topsyturvy_*`). |
-| 2 | `apps/apple/TopsyTurvy/Frameworks/include/topsyturvytoolchain.h` | The matching C declaration and any function-pointer typedef. |
-| 3 | `apps/apple/TopsyTurvy/TopsyTurvyToolchainTests/TopsyTurvyToolchainTests.swift` | Swift smoke coverage for the new/changed export. |
-| 4 | `operetta/BWHazel.TopsyTurvy.Tests/Embedded/NativeExportsTests.cs` | In-process xUnit coverage, calling the export via a `delegate* unmanaged<...>` obtained from `&NativeExports.Method` — `[UnmanagedCallersOnly]` methods cannot be called directly, even in-process (CS8901). |
+| 1 | `StandardLibrary/<BindingClass>.cs` | The `public static` method, decorated with `[TopsyTurvyFunction]` (and `[TopsyTurvyParameter]` per parameter, if the CLR parameter name shouldn't be the Topsy Turvy one). |
+| 2 | `Bindings/BindingCatalogue.cs` | Add the binding class to `Default`'s `Merge(...)` call via its own direct `BindingScanner.Scan(typeof(...))` — see the trap below. |
+| 3 | `Tests/StandardLibrary/` | Unit tests for the function itself. |
+| 4 | `Tests/Bindings/`, `Tests/Runtime/`, `Tests/TypeChecker/` | Scanner/catalogue coverage, plus a `SUMMON` test through the interpreter/type checker if the function is meant to be user-callable. |
+| 5 | `DEVELOPMENT.md` | New entry, per the usual discipline. |
+
+**Trap**: `BindingCatalogue.Default` must call `BindingScanner.Scan(typeof(X))` directly for every binding class, never via `Create(Type[])`'s `params` array — that array breaks the Native AOT trimmer's ability to verify the scan is safe, and once silently made the entire Standard Library unreachable via `SUMMON` in a real AOT-published build despite every JIT-run test passing.
+
+### Native Export (`operetta/BWHazel.TopsyTurvy.Embedded/`)
+
+The v2 native export contract is frozen — any change to its shape must update every file below in the same commit, and bump `topsyturvy_tc_api_version()`. The Embedded project is organised by utility, not flat: `NativeInterop/` (session/callback/IO plumbing, namespace `BWHazel.TopsyTurvy.Embedded.NativeInterop`), `Analysis/` (hover/completion/format/diagnostic JSON payload types, namespace `BWHazel.TopsyTurvy.Embedded.Analysis`), and `NativeExports/` (the exports themselves, one class per library namespace: `NativeExports/ToolchainExports.cs` for the core `topsyturvy_tc_*` surface, `NativeExports/StandardLibrary/GlobalExports.cs` for the `Global` namespace's `topsyturvy_std_*` surface, sharing `NativeExports/NativeExportSupport.cs`'s session/buffer helpers). All types are `public`. The Embedded project also owns the public, portable C headers under `Embedded/include/` — `topsyturvy.h` (umbrella), `topsyturvy/toolchain.h` (`topsyturvy_tc_*`), `topsyturvy/std/<namespace>.h` (`topsyturvy_std_*`, one file per Standard Library namespace) — which `scripts/build-embedded-xcframework.sh` copies into the Apple app's `Frameworks/include/` on every build; that copy is generated and gitignored, never hand-edited. `Frameworks/include/module.modulemap` stays hand-maintained and tracked at that Apple-side location instead, since a Clang module map is Xcode/Swift packaging metadata for this one consumer, not a portable C artefact the Embedded project should own.
+
+| # | File | What to Update |
+|---|---|---|
+| 1 | `Embedded/NativeExports/ToolchainExports.cs` or `Embedded/NativeExports/StandardLibrary/<Namespace>Exports.cs` | The `[UnmanagedCallersOnly]` export itself (C# method is PascalCase; only the `EntryPoint` string is `topsyturvy_tc_*`/`topsyturvy_std_*`). |
+| 2 | `Embedded/include/topsyturvy/toolchain.h` or `Embedded/include/topsyturvy/std/<namespace>.h` | The matching C declaration and any function-pointer typedef. |
+| 3 | `apps/apple/TopsyTurvy/TopsyTurvyToolchainTests/NativeExports/ToolchainExportsTests.swift` or `.../NativeExports/StandardLibrary/<Namespace>ExportsTests.swift` | Swift smoke coverage for the new/changed export. |
+| 4 | `operetta/BWHazel.TopsyTurvy.Tests/Embedded/NativeExports/ToolchainExportsTests.cs` or `.../NativeExports/StandardLibrary/<Namespace>ExportsTests.cs` | In-process xUnit coverage, calling the export via a `delegate* unmanaged<...>` obtained from `&ToolchainExports.Method` (or `&<Namespace>Exports.Method`) — `[UnmanagedCallersOnly]` methods cannot be called directly, even in-process (CS8901). |
 
 `apps/apple/TopsyTurvy/TopsyTurvy.xcodeproj` remains the umbrella project (like a `.sln`); within it, the app target is `Theatre` and the XCFramework/module the app and tests link against is `TopsyTurvyToolchain` — keep these three names distinct when adding new targets or files.
-| 5 | A future JNI shim (`apps/android/`, not yet built) | Once the Android lane exists, its bindings too. |
 
 `PhraseContext.cs` in this project deliberately duplicates `CompletionHandler.GetPhraseContext` in `BWHazel.TopsyTurvy.LanguageServer` (the Embedded project cannot reference the OmniSharp-dependent LanguageServer project) — if the phrase-parsing rule ever changes, update both.
 

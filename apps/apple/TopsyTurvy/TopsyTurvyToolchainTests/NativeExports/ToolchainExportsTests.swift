@@ -2,27 +2,28 @@ import XCTest
 import TopsyTurvyToolchain
 @testable import Theatre
 
-/// Tests for the `TopsyTurvyToolchain` framework.
-final class TopsyTurvyToolchainTests: XCTestCase {
+/// Tests for the toolchain-level native exports (`topsyturvy_tc_*`).
+final class ToolchainExportsTests: XCTestCase {
     /// Sets up the test fixture.
     override func setUp() {
         super.setUp()
         TestCallbackCapture.outputLines = []
+        TestCallbackCapture.inputLineResult = nil
     }
 
-    /// Tests that `topsyturvy_api_version` returns 1.
+    /// Tests that `topsyturvy_tc_api_version` returns the correct version.
     ///
     /// As the framework is built and imported separately, this ensures drift is captured early.
-    func testApiVersionReturnsOne() {
-        XCTAssertEqual(topsyturvy_api_version(), 1)
+    func testApiVersionReturnsCorrectVersion() {
+        XCTAssertEqual(topsyturvy_tc_api_version(), 2)
     }
 
-    /// Tests that `topsyturvy_analyse` reports success for a valid programme.
+    /// Tests that `topsyturvy_tc_analyse` reports success for a valid programme.
     func testAnalyseSourceReportsSuccessForValidProgramme() {
-        let session = topsyturvy_session_create(captureOutputLine, resolveImportStub, nil)
+        let session = topsyturvy_tc_session_create(captureOutputLine, resolveImportStub, provideInputLine, nil)
         XCTAssertNotNil(session)
         defer {
-            topsyturvy_session_destroy(session)
+            topsyturvy_tc_session_destroy(session)
         }
 
         let result = analyse(session: session, source: "HARK! \"Test\"\n\nFINALE.\n")
@@ -31,12 +32,12 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         XCTAssertTrue(result.Diagnostics.isEmpty)
     }
 
-    /// Tests that `topsyturvy_execute` invokes the registered output callback for a `BEHOLD` statement.
+    /// Tests that `topsyturvy_tc_execute` invokes the registered output callback for a `BEHOLD` statement.
     func testExecuteProgrammeInvokesOutputCallback() {
-        let session = topsyturvy_session_create(captureOutputLine, resolveImportStub, nil)
+        let session = topsyturvy_tc_session_create(captureOutputLine, resolveImportStub, provideInputLine, nil)
         XCTAssertNotNil(session)
         defer {
-            topsyturvy_session_destroy(session)
+            topsyturvy_tc_session_destroy(session)
         }
 
         let status = execute(session: session, source: "HARK! \"Test\"\n\nBEHOLD \"Hello\"\n\nFINALE.\n")
@@ -45,16 +46,16 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         XCTAssertTrue(TestCallbackCapture.outputLines.contains("Hello"))
     }
 
-    /// Tests that `topsyturvy_tokens` reports a single "comment" token spanning multiple lines for a block comment.
+    /// Tests that `topsyturvy_tc_tokens` reports a single "comment" token spanning multiple lines for a block comment.
     func testTokensReturnsCommentTokenSpanningMultipleLines() {
-        let session = topsyturvy_session_create(captureOutputLine, resolveImportStub, nil)
+        let session = topsyturvy_tc_session_create(captureOutputLine, resolveImportStub, provideInputLine, nil)
         XCTAssertNotNil(session)
         defer {
-            topsyturvy_session_destroy(session)
+            topsyturvy_tc_session_destroy(session)
         }
 
         let source = "HARK! \"Test\"\n\n(ASIDE, AT SOME LENGTH:\nspans several\nlines\nEND OF ASIDE.)\n\nFINALE.\n"
-        
+
         let result = tokens(session: session, source: source)
 
         let commentTokens = result.Tokens.filter { $0.Category == "comment" }
@@ -62,7 +63,25 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         XCTAssertNotEqual(commentTokens.first?.StartLine, commentTokens.first?.EndLine)
     }
 
-    /// Calls `topsyturvy_tokens` and decodes its JSON result.
+    /// Tests that the `topsyturvy_tc_execute` `PRAY TELL` falls through to the registered `input_line` callback
+    /// once the pre-supplied stdin queue (always empty here, since `execute(session:source:)` passes `nil`
+    /// for `stdin_utf8`) is exhausted.
+    func testExecuteProgrammeWithPrayTellFallsThroughToInputLineCallback() {
+        TestCallbackCapture.inputLineResult = "callback-supplied line"
+        let session = topsyturvy_tc_session_create(captureOutputLine, resolveImportStub, provideInputLine, nil)
+        XCTAssertNotNil(session)
+        defer {
+            topsyturvy_tc_session_destroy(session)
+        }
+
+        let source = "HARK! \"Test\"\n\nPRINCIPALS\nPRAY WELCOME Line AS A YARN\nTHE CURTAIN RISES.\n\nPRAY TELL Line\nBEHOLD Line\n\nFINALE.\n"
+        let status = execute(session: session, source: source)
+
+        XCTAssertEqual(status, 0)
+        XCTAssertTrue(TestCallbackCapture.outputLines.contains("callback-supplied line"))
+    }
+
+    /// Calls `topsyturvy_tc_tokens` and decodes its JSON result.
     ///
     /// - Parameters:
     ///   - session: The session to tokenise in.
@@ -72,13 +91,13 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     private func tokens(session: UnsafeMutableRawPointer?, source: String) -> TokenResult {
         let tokenResultJson = source.withCString { sourcePointer -> String in
             sourcePointer.withMemoryRebound(to: UInt8.self, capacity: source.utf8.count + 1) { utf8Pointer in
-                guard let resultPointer = topsyturvy_tokens(session, utf8Pointer) else {
-                    XCTFail("topsyturvy_tokens returned a null pointer")
+                guard let resultPointer = topsyturvy_tc_tokens(session, utf8Pointer) else {
+                    XCTFail("topsyturvy_tc_tokens returned a null pointer")
                     return "{}"
                 }
 
                 defer {
-                    topsyturvy_free(resultPointer)
+                    topsyturvy_tc_free(resultPointer)
                 }
 
                 return String(cString: resultPointer)
@@ -89,7 +108,7 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         return try! JSONDecoder().decode(TokenResult.self, from: data)
     }
 
-    /// Calls `topsyturvy_analyse` and decodes its JSON result.
+    /// Calls `topsyturvy_tc_analyse` and decodes its JSON result.
     ///
     /// - Parameters:
     ///   - session: The session to analyse in.
@@ -99,13 +118,13 @@ final class TopsyTurvyToolchainTests: XCTestCase {
     private func analyse(session: UnsafeMutableRawPointer?, source: String) -> AnalysisResult {
         let analysisResultJson = source.withCString { sourcePointer -> String in
             sourcePointer.withMemoryRebound(to: UInt8.self, capacity: source.utf8.count + 1) { utf8Pointer in
-                guard let resultPointer = topsyturvy_analyse(session, utf8Pointer) else {
-                    XCTFail("topsyturvy_analyse returned a null pointer")
+                guard let resultPointer = topsyturvy_tc_analyse(session, utf8Pointer) else {
+                    XCTFail("topsyturvy_tc_analyse returned a null pointer")
                     return "{}"
                 }
 
                 defer {
-                    topsyturvy_free(resultPointer)
+                    topsyturvy_tc_free(resultPointer)
                 }
 
                 return String(cString: resultPointer)
@@ -116,17 +135,17 @@ final class TopsyTurvyToolchainTests: XCTestCase {
         return try! JSONDecoder().decode(AnalysisResult.self, from: data)
     }
 
-    /// Calls `topsyturvy_execute` with no arguments or pre-seeded input.
+    /// Calls `topsyturvy_tc_execute` with no arguments or pre-seeded input.
     ///
     /// - Parameters:
     ///   - session: The session to execute in.
     ///   - source: The source code to execute.
-    /// 
-    /// - Returns: The exit status returned by `topsyturvy_execute`.
+    ///
+    /// - Returns: The exit status returned by `topsyturvy_tc_execute`.
     private func execute(session: UnsafeMutableRawPointer?, source: String) -> Int32 {
         source.withCString { sourcePointer -> Int32 in
             sourcePointer.withMemoryRebound(to: UInt8.self, capacity: source.utf8.count + 1) { utf8Pointer in
-                topsyturvy_execute(session, utf8Pointer, nil, nil)
+                topsyturvy_tc_execute(session, utf8Pointer, nil, nil)
             }
         }
     }

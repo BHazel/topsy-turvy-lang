@@ -12,3 +12,5 @@ out/
 xcuserdata/
 *.xcuserstate
 **/*.xcframework/
+apps/apple/TopsyTurvy/Frameworks/include/*
+!apps/apple/TopsyTurvy/Frameworks/include/module.modulemap

@@ -16,19 +16,23 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// diagnostics are instead reported directly from the parsing process via (see <see cref="TryParse"/>).
 /// </para>
 /// <para>
-/// The whole programme is parsed by <see cref="InstructionParser.InstructionSequence"/> run with no
-/// terminator, so it stops only at end-of-input.
+/// The whole programme is parsed by <see cref="InstructionParser.FunctionDefinitionSequence"/>, which
+/// matches one or more <c>duty</c> ... <c>discharged</c> function definition blocks to end-of-input.
 /// </para>
 /// <para>
 /// ### Example
 /// Given the UtopIR source text:
 /// <code>
-/// £result = welcome peer
-/// £result = appoint 13
-/// find £result
+/// duty &amp;Opera, finds peer
+///     £result = welcome peer
+///     £result = appoint 13
+///     find £result
+/// discharged
 /// </code>
 /// both <see cref="Parse"/> and <see cref="TryParse"/> return a <see cref="UtopIRProgram"/> whose
-/// <see cref="UtopIRProgram.Instructions"/> is a three-element list:
+/// <see cref="UtopIRProgram.Functions"/> is a single-element list: a <see cref="UtopIRFunctionDefinition"/>
+/// named <c>Opera</c>, returning <see cref="UtopIRType.Peer"/>, whose <see cref="UtopIRFunctionDefinition.Body"/>
+/// is a three-element list:
 /// * A <see cref="WelcomeInstruction"/> declaring <c>result</c> as <see cref="UtopIRType.Peer"/>.
 /// * A <see cref="AppointInstruction"/> assigning the literal <c>13</c>.
 /// * A <see cref="FindInstruction"/> returning the <c>result</c> value.
@@ -62,7 +66,7 @@ public sealed class UtopIRParser
     /// <returns>A <see cref="UtopIRParseResult"/> describing the outcome.</returns>
     public UtopIRParseResult TryParse(string source)
     {
-        Result<UtopIRInstruction[]> parseResult = InstructionParser.InstructionSequence().TryParse(source);
+        Result<UtopIRFunctionDefinition[]> parseResult = InstructionParser.FunctionDefinitionSequence().TryParse(source);
         if (!parseResult.HasValue)
         {
             string message = !string.IsNullOrEmpty(parseResult.ErrorMessage)

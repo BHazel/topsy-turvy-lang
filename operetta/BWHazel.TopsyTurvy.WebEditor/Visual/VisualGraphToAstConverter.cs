@@ -228,7 +228,7 @@ public sealed class VisualGraphToAstConverter
         return node.StatementType switch
         {
             "DeclarationNode" => this.ReconstructDeclarationFactory(node, diagram),
-            "ArrayDeclarationNode" => ReconstructArrayDeclarationFactory(node),
+            "ArrayDeclarationNode" => this.ReconstructArrayDeclarationFactory(node, diagram),
             "AssignmentNode" => this.ReconstructAssignmentFactory(node, diagram),
             "ArrayElementAssignmentNode" => this.ReconstructArrayElementAssignmentFactory(node, diagram),
             "DereferenceAssignmentNode" => this.ReconstructDereferenceAssignmentFactory(node, diagram),
@@ -363,16 +363,16 @@ public sealed class VisualGraphToAstConverter
             }
         }
 
-        int? size = initialValues.Count == 0 && int.TryParse(node.LiteralValue, out int initialArraySize)
-            ? initialArraySize
-            : (int?)null;
+        Expression? sizeExpression = initialValues.Count == 0
+            ? this.GetExpressionFromDataIn(node, "Size", diagram)
+            : null;
 
         return new()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
             NameSpan = PlaceholderSpan,
             ElementType = node.ArrayElementLiteralType ?? LiteralType.String,
-            Size = size,
+            SizeExpression = sizeExpression,
             IsConstant = node.IsIdentifierConstant,
             InitialValues = initialValues.AsReadOnly(),
             Span = PlaceholderSpan,
@@ -383,16 +383,16 @@ public sealed class VisualGraphToAstConverter
     /// Reconstructs an array declaration statement from a factory node in the diagram.
     /// </summary>
     /// <param name="node">The factory node representing the array declaration.</param>
+    /// <param name="diagram">The diagram containing the visual node.</param>
     /// <returns>The reconstructed array declaration statement.</returns>
-    private static ArrayDeclarationNode ReconstructArrayDeclarationFactory(TopsyTurvyVisualNodeModel node)
+    private ArrayDeclarationNode ReconstructArrayDeclarationFactory(TopsyTurvyVisualNodeModel node, BlazorDiagram diagram)
     {
-        int? size = int.TryParse(node.LiteralValue, out int initialArraySize) ? initialArraySize : (int?)null;
         return new()
         {
             Name = node.SymbolIdentifierNodeName ?? string.Empty,
             NameSpan = PlaceholderSpan,
             ElementType = node.ArrayElementLiteralType ?? LiteralType.String,
-            Size = size,
+            SizeExpression = this.GetExpressionFromDataIn(node, "Size", diagram),
             IsConstant = node.IsIdentifierConstant,
             InitialValues = (IReadOnlyList<Expression>)[],
             Span = PlaceholderSpan,
@@ -812,7 +812,8 @@ public sealed class VisualGraphToAstConverter
                     ? new TypedParameter(
                         termNode.SymbolIdentifierNodeName ?? string.Empty,
                         termNode.NodeLiteralType ?? LiteralType.String,
-                        PlaceholderSpan)
+                        PlaceholderSpan,
+                        termNode.ArrayElementLiteralType)
                     : null;
             })
             .OfType<TypedParameter>()];
@@ -823,6 +824,7 @@ public sealed class VisualGraphToAstConverter
             NameSpan = PlaceholderSpan,
             Parameters = parameters.AsReadOnly(),
             ReturnType = openerNode.NodeLiteralType,
+            ReturnArrayElementType = openerNode.ArrayElementLiteralType,
             Body = body,
             Span = PlaceholderSpan,
         };
@@ -925,7 +927,8 @@ public sealed class VisualGraphToAstConverter
                     ? new TypedParameter(
                         termNode.SymbolIdentifierNodeName ?? string.Empty,
                         termNode.NodeLiteralType ?? LiteralType.String,
-                        PlaceholderSpan)
+                        PlaceholderSpan,
+                        termNode.ArrayElementLiteralType)
                     : null;
             })
             .OfType<TypedParameter>()];
@@ -936,6 +939,7 @@ public sealed class VisualGraphToAstConverter
             NameSpan = original.NameSpan,
             Parameters = parameters.Count > 0 ? parameters.AsReadOnly() : original.Parameters,
             ReturnType = visualNode.NodeLiteralType ?? original.ReturnType,
+            ReturnArrayElementType = visualNode.ArrayElementLiteralType ?? original.ReturnArrayElementType,
             Body = this.WalkFlowStatements(visualNode, visualNode.PairedCloserId, diagram),
             Span = PlaceholderSpan,
         };
@@ -1001,14 +1005,17 @@ public sealed class VisualGraphToAstConverter
             }
         }
 
-        int? size = int.TryParse(visualNode.LiteralValue, out int initialArraySize) ? initialArraySize : original.Size;
+        Expression? sizeExpression = this.GetExpressionFromDataIn(visualNode, "Size", diagram)
+            ?? (original.SizeExpression is not null
+                ? this.ReconstructExpressionFromAst(original.SizeExpression, diagram)
+                : null);
 
         return new()
         {
             Name = visualNode.SymbolIdentifierNodeName ?? original.Name,
             NameSpan = original.NameSpan,
             ElementType = visualNode.ArrayElementLiteralType ?? original.ElementType,
-            Size = values.Count > 0 ? null : size,
+            SizeExpression = values.Count > 0 ? null : sizeExpression,
             IsConstant = visualNode.IsIdentifierConstant,
             InitialValues = values.AsReadOnly(),
             Span = PlaceholderSpan,

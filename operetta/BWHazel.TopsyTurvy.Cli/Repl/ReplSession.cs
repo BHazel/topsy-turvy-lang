@@ -44,11 +44,24 @@ public sealed class ReplSession
     /// Runs the REPL loop until the user exits.
     /// </summary>
     /// <param name="tiptoe">When <c>true</c>, uses plain-text I/O without styling; when <c>false</c>, renders styled output.</param>
-    public void Run(bool tiptoe)
+    /// <param name="externalLibraryAssemblyPaths">The paths to external library assemblies to admit, or <c>null</c> for none.</param>
+    /// <returns>An integer exit code with 0 for a normal session exit or 1 if an admitted external library failed to load at startup.</returns>
+    /// <remarks>
+    /// External libraries are loaded once here, at startup: there is no REPL command to admit external libraries, so
+    /// <see cref="Interpreter"/> stays fully immutable for the lifetime of the session.
+    /// </remarks>
+    public int Run(bool tiptoe, IReadOnlyList<string>? externalLibraryAssemblyPaths = null)
     {
         bool isInteractive = !Console.IsInputRedirected;
         this.io = new ReplIO(isTiptoe: tiptoe, isInteractive: isInteractive);
-        Interpreter interpreter = new(this.io);
+
+        ExternalLibraryLoadResult loadResult = ExternalLibraryLoader.Load(externalLibraryAssemblyPaths ?? []);
+        if (loadResult.ErrorMessage is not null)
+        {
+            return PanelHelper.ReportUserError(tiptoe, loadResult.ErrorMessage);
+        }
+
+        Interpreter interpreter = new(this.io, loadResult.Catalogue);
 
         // Set up THE PROPS as an empty array: no command-line arguments in the REPL.
         this.sessionEnvironment.Declare(Keywords.SpecialNames.TheProps, TopsyTurvyValue.Array([]), isConstant: true);
@@ -167,6 +180,8 @@ public sealed class ReplSession
 
             this.EvaluateInput(userInput, interpreter, tiptoe, isInteractive);
         }
+
+        return 0;
     }
 
     /// <summary>
@@ -377,7 +392,8 @@ public sealed class ReplSession
             .GetVariables()
             .Where(variable => variable.Key != Keywords.SpecialNames.TheProps);
 
-        IReadOnlyDictionary<string, FunctionDefinitionNode> functions = interpreter.Functions;
+        IEnumerable<(string Name, FunctionDefinitionNode Function)> functions = interpreter.Functions
+            .SelectMany(entry => entry.Value.Select(function => (entry.Key, function)));
 
         if (plainText)
         {
@@ -387,7 +403,7 @@ public sealed class ReplSession
                 Console.WriteLine($"  {"IDENTIFIER",-24} {"TYPE",-24} {"CONSTANT",-10} VALUE");
                 foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
                 {
-                    string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                    string typeName = LiteralTypeNames.ToDisplayName(variable.Value.LiteralType);
                     string constant = environment.IsConstant(variable.Key) ? "✓" : "✗";
                     Console.WriteLine($"  {variable.Key,-24} {typeName,-24} {constant,-10} {variable.Value}");
                 }
@@ -401,11 +417,12 @@ public sealed class ReplSession
             if (showFunctions)
             {
                 Console.WriteLine("FUNCTIONS:");
-                Console.WriteLine($"  {"IDENTIFIER",-24} PARAMETERS");
-                foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+                Console.WriteLine($"  {"IDENTIFIER",-24} {"RETURNS",-24} PARAMETERS");
+                foreach ((string name, FunctionDefinitionNode function) in functions)
                 {
-                    string parameters = string.Join(", ", function.Value.Parameters.Select(FormatParameter));
-                    Console.WriteLine($"  {function.Key,-24} {parameters}");
+                    string returnType = FormatReturnType(function);
+                    string parameters = string.Join(", ", function.Parameters.Select(FormatParameter));
+                    Console.WriteLine($"  {name,-24} {returnType,-24} {parameters}");
                 }
             }
 
@@ -428,7 +445,7 @@ public sealed class ReplSession
 
             foreach (KeyValuePair<string, TopsyTurvyValue> variable in variables)
             {
-                string typeName = SymbolTable.LiteralTypeToDisplayName(variable.Value.LiteralType);
+                string typeName = LiteralTypeNames.ToDisplayName(variable.Value.LiteralType);
                 bool isConstant = environment.IsConstant(variable.Key);
                 variablesTable.AddRow(
                     Markup.Escape(variable.Key),
@@ -450,15 +467,19 @@ public sealed class ReplSession
             };
 
             functionsTable.AddColumn(new("[bold]Identifier[/]"));
+            functionsTable.AddColumn(new("[bold]Return Type[/]"));
             functionsTable.AddColumn(new("[bold]Parameters[/]"));
 
-            foreach (KeyValuePair<string, FunctionDefinitionNode> function in functions)
+            foreach ((string name, FunctionDefinitionNode function) in functions)
             {
-                string parameters = function.Value.Parameters.Count == 0
+                string returnType = function.ReturnType.HasValue
+                    ? $"[cyan]{Markup.Escape(FormatReturnType(function))}[/]"
+                    : "[dim](void)[/]";
+                string parameters = function.Parameters.Count == 0
                     ? "[dim](none)[/]"
-                    : Markup.Escape(string.Join(", ", function.Value.Parameters.Select(FormatParameter)));
+                    : Markup.Escape(string.Join(", ", function.Parameters.Select(FormatParameter)));
 
-                functionsTable.AddRow(Markup.Escape(function.Key), parameters);
+                functionsTable.AddRow(Markup.Escape(name), returnType, parameters);
             }
 
             AnsiConsole.Write(functionsTable);
@@ -471,7 +492,18 @@ public sealed class ReplSession
     /// <param name="parameter">The parameter to format.</param>
     /// <returns>A string in the form <c>name: TYPE</c>.</returns>
     private static string FormatParameter(TypedParameter parameter) =>
-        $"{parameter.Name}: {SymbolTable.LiteralTypeToDisplayName(parameter.Type)}";
+        $"{parameter.Name}: {LiteralTypeNames.ToDisplayName(parameter.Type, parameter.ArrayElementType)}";
+
+    /// <summary>
+    /// Formats a function declared return type as a Topsy Turvy type keyword, or <c>(void)</c> for a function
+    /// with no <c>TO FIND</c> clause.
+    /// </summary>
+    /// <param name="function">The function to format the return type of.</param>
+    /// <returns>The return type keyword, or <c>(void)</c> when the function is void.</returns>
+    private static string FormatReturnType(FunctionDefinitionNode function) =>
+        function.ReturnType.HasValue
+            ? LiteralTypeNames.ToDisplayName(function.ReturnType.Value, function.ReturnArrayElementType)
+            : "(void)";
 
     /// <summary>
     /// Writes the REPL command help table.

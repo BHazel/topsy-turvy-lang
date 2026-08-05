@@ -57,7 +57,7 @@ public class PrepareRenameHandler(DocumentStateManager documentStateManager)
     /// <remarks>
     /// * The document state is retrieved from the document state manager.  If <c>null</c> or the symbol table is <c>null</c> then <c>null</c> is returned to suppress the rename input box.
     /// * The word at the cursor position is extracted using <see cref="SymbolTable.ExtractWordAt"/>.  If no word is found, <c>null</c> is returned.
-    /// * The word is looked up in the current document symbol table only.  If not found, or the symbol name contains a space, indicating a multi-word built-in that cannot be renamed, <c>null</c> is returned.
+    /// * The word is looked up in the current document symbol table only.  If not found, the symbol name contains a space (a multi-word built-in), or the symbol has no source position (an external function), <c>null</c> is returned.
     /// * The start column of the token is located by walking backwards from the cursor position using <see cref="SourceAnalyser.IsIdentifierChar"/> to build the token range.
     /// * A <see cref="PlaceholderRange"/> is returned containing the token range and the symbol name as placeholder text, which the editor uses to pre-fill the rename input box.
     /// </remarks>
@@ -89,7 +89,7 @@ public class PrepareRenameHandler(DocumentStateManager documentStateManager)
                 return Task.FromResult<RangeOrPlaceholderRange?>(null);
             }
 
-            if (info.Name.Contains(' '))
+            if (info.Name.Contains(' ') || info.DefinitionLine == 0)
             {
                 return Task.FromResult<RangeOrPlaceholderRange?>(null);
             }

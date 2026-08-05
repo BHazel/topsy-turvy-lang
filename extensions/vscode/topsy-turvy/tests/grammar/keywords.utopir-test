@@ -124,6 +124,14 @@ prentice 42
 £r = leave
 //   ^ keyword.other.stack.utopir
 
+// ── Function call: the caret for "summon.find" lands on the ".find" suffix itself, so this fails if the plain "summon" group is ever accidentally reordered before this one ─
+
+summon &DoNothing
+//^ keyword.control.utopir
+
+£r = summon.find &Sample
+//          ^ keyword.control.utopir
+
 // ── Control flow, valued and void ────────────────────────────────
 
 find £r
@@ -140,3 +148,41 @@ sailunlike £a, !LOGIC
 
 sail !LOGIC
 //^ keyword.control.utopir
+
+// ── Victim (string/array access) ─────────────────────────────────
+
+£r = victim.yarn £y, 4
+//   ^ keyword.other.access.utopir
+
+£r = victim.list £a, 2
+//   ^ keyword.other.access.utopir
+
+// ── Arrays: the caret lands on the ".list"/".victim" suffix itself, so this fails if the plain declaration/assignment groups are ever accidentally reordered before this one ─
+
+£a = welcome.list peer, 3
+//           ^ keyword.other.declaration.utopir
+
+appoint.victim £a, 1, 10
+//      ^ keyword.operator.assignment.utopir
+
+// ── Pointers ─────────────────────────────────────────────────────
+
+£p = welcome.gallerypic peer
+//           ^ keyword.other.declaration.utopir
+
+£p = pictureto £n
+//   ^ keyword.other.access.utopir
+
+£n = viewfrom £p
+//   ^ keyword.other.access.utopir
+
+viewto £p, 23
+//^ keyword.other.access.utopir
+
+// ── Pointer arithmetic: the caret lands on the ".g" suffix itself, so this fails if the plain arithmetic group is ever accidentally reordered before this one ─
+
+£r = sum.g £p, 1
+//       ^ keyword.operator.arithmetic.pointer.utopir
+
+£r = diff.g £p, 1
+//        ^ keyword.operator.arithmetic.pointer.utopir

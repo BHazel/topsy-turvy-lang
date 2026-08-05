@@ -168,6 +168,16 @@ public class SymbolInfo
     public LiteralType? DeclaredType { get; init; }
 
     /// <summary>
+    /// Gets or initialises the array element type of <see cref="DeclaredType"/>, when it is <see cref="LiteralType.Array"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only populated for a <see cref="SymbolKind.Function"/> symbol whose return type is an array; <c>null</c> otherwise.
+    /// A parameter element type is instead read directly from <see cref="TypedParameter.ArrayElementType"/> on
+    /// the matching entry in <see cref="TypedParameters"/>.
+    /// </remarks>
+    public LiteralType? DeclaredArrayElementType { get; init; }
+
+    /// <summary>
     /// Gets or initialises the typed parameter list for a function symbol.
     /// </summary>
     /// <remarks>

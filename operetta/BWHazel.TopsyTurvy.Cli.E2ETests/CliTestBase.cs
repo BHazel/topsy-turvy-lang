@@ -30,6 +30,18 @@ public abstract class CliTestBase : IDisposable
     protected string WorkingDirectory { get; }
 
     /// <summary>
+    /// Gets the absolute path to the compiled external library fixture assembly.
+    /// </summary>
+    /// <remarks>
+    /// Resolved the same way <see cref="CliFixture.BinaryPath"/> resolves the CLI binary: relative to the test
+    /// runner base directory, navigating to the sibling fixture project build output.
+    /// </remarks>
+    protected static string FixtureLibraryPath { get; } = Path.GetFullPath(Path.Combine(
+        AppContext.BaseDirectory, "..", "..", "..", "..",
+        "BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture", "bin", "Debug", "net10.0",
+        "BWHazel.TopsyTurvy.Tests.ExternalLibraryFixture.dll"));
+
+    /// <summary>
     /// Runs the CLI binary with the given argument string and returns the exit code, stdout and stderr.
     /// </summary>
     /// <param name="args">The command-line arguments to pass to the CLI binary.</param>

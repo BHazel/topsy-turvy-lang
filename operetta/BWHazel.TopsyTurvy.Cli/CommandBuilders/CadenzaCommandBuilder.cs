@@ -22,13 +22,20 @@ public static class CadenzaCommandBuilder
             Description = "A REPL with no styling that chooses to discard aestheticism."
         };
 
+        Option<string[]> admitOption = new("--admit")
+        {
+            Description = "Loads an external .NET assembly (.dll) so its functions become callable via SUMMON.  Can be specified multiple times."
+        };
+
+        admitOption.Aliases.Add("--include");
+
         cadenzaCommand.Options.Add(tiptoeOption);
+        cadenzaCommand.Options.Add(admitOption);
 
         cadenzaCommand.SetAction(parseResult =>
         {
             ReplSession replSession = new();
-            replSession.Run(parseResult.GetValue(tiptoeOption));
-            return 0;
+            return replSession.Run(parseResult.GetValue(tiptoeOption), parseResult.GetValue(admitOption) ?? []);
         });
 
         return cadenzaCommand;

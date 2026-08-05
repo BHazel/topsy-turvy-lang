@@ -35,7 +35,7 @@ final class SessionCallbacks {
 
 /// The callback when an output line is written by a running program.
 ///
-/// This corresponds to the `output_line` callback target registered with `topsyturvy_session_create`.
+/// This corresponds to the `output_line` callback target registered with `topsyturvy_tc_session_create`.
 ///
 /// - Parameters:
 ///   - context: The `Unmanaged<SessionCallbacks>` opaque pointer for the owning session.
@@ -53,7 +53,7 @@ func sessionOutputLineCallback(context: UnsafeMutableRawPointer?, utf8Line: Unsa
 
 /// The callback when a `PRAY ADMIT` import resolves a filename.
 ///
-/// This corresponds to the `resolve_import` callback target registered with `topsyturvy_session_create`.
+/// This corresponds to the `resolve_import` callback target registered with `topsyturvy_tc_session_create`.
 ///
 /// - Parameters:
 ///   - context: The `Unmanaged<SessionCallbacks>` opaque pointer for the owning session.

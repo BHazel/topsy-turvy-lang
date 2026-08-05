@@ -404,6 +404,59 @@ public class TopsyTurvyParserStatementTests
     }
 
     /// <summary>
+    /// Tests that a function parameter declared <c>AS A LITTLE LIST OF &lt;type&gt;</c> produces a <see cref="TypedParameter"/> with <see cref="LiteralType.Array"/> and the correct element type.
+    /// </summary>
+    [Fact]
+    public void Parse_FunctionDefinition_WithArrayParameter_SetsArrayTypeAndElementType()
+    {
+        string statements = """
+            IT IS MY DUTY TO PERFORM sumArray UNDER THE TERMS OF nums AS A LITTLE LIST OF PEER
+            MY DUTY IS DISCHARGED.
+            """;
+
+        FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
+
+        TypedParameter parameter = node.Parameters.ShouldHaveSingleItem();
+        parameter.Name.ShouldBe("nums");
+        parameter.Type.ShouldBe(LiteralType.Array);
+        parameter.ArrayElementType.ShouldBe(LiteralType.Integer);
+    }
+
+    /// <summary>
+    /// Tests that a function declared <c>TO FIND LITTLE LIST OF &lt;type&gt;</c> produces a <see cref="FunctionDefinitionNode"/> with <see cref="LiteralType.Array"/> and the correct return element type.
+    /// </summary>
+    [Fact]
+    public void Parse_FunctionDefinition_WithArrayReturnType_SetsReturnTypeAndElementType()
+    {
+        string statements = """
+            IT IS MY DUTY TO PERFORM makeArray UNDER NO OBLIGATION TO FIND LITTLE LIST OF YARN
+            MY DUTY IS DISCHARGED.
+            """;
+
+        FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
+
+        node.ReturnType.ShouldBe(LiteralType.Array);
+        node.ReturnArrayElementType.ShouldBe(LiteralType.String);
+    }
+
+    /// <summary>
+    /// Tests that a scalar-typed parameter still leaves <see cref="TypedParameter.ArrayElementType"/> as <c>null</c>.
+    /// </summary>
+    [Fact]
+    public void Parse_FunctionDefinition_WithScalarParameter_LeavesArrayElementTypeNull()
+    {
+        string statements = """
+            IT IS MY DUTY TO PERFORM greet UNDER THE TERMS OF name AS A YARN
+            MY DUTY IS DISCHARGED.
+            """;
+
+        FunctionDefinitionNode node = this.ParseFirstStatement<FunctionDefinitionNode>(statements);
+
+        TypedParameter parameter = node.Parameters.ShouldHaveSingleItem();
+        parameter.ArrayElementType.ShouldBeNull();
+    }
+
+    /// <summary>
     /// Tests that AND SO I FIND inside a function body produces a <see cref="ReturnNode"/> with a non-null value.
     /// </summary>
     [Fact]

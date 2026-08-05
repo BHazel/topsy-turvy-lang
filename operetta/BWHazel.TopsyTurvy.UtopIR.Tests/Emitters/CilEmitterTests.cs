@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
@@ -22,7 +23,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_FindNull_ReturnsZero()
     {
-        UtopIRProgram program = new([new FindInstruction(Value: null)]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [new FindInstruction(Value: null)])]);
 
         RunProgram(program).ShouldBe(0);
     }
@@ -33,7 +34,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_FindWithLiteral_ReturnsLiteralAsExitCode()
     {
-        UtopIRProgram program = new([new FindInstruction(new LiteralOperand(7))]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [new FindInstruction(new LiteralOperand(7))])]);
 
         RunProgram(program).ShouldBe(7);
     }
@@ -44,11 +45,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_FindWithVariable_ReturnsVariableValueAsExitCode()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Peer),
             new AppointInstruction(new("x"), new LiteralOperand(42)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(42);
     }
@@ -59,10 +60,10 @@ public class CilEmitterTests
     [Fact]
     public void Emit_NoFindInstruction_ImplicitlyReturnsZero()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Peer),
             new AppointInstruction(new("x"), new LiteralOperand(99))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(0);
     }
@@ -73,11 +74,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_AppointLiteral_StoresValueInRegister()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("n"), UtopIRType.Peer),
             new AppointInstruction(new("n"), new LiteralOperand(55)),
             new FindInstruction(new VariableOperand(new("n")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(55);
     }
@@ -88,13 +89,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_AppointVariable_CopiesValueToTarget()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("src"), UtopIRType.Peer),
             new WelcomeInstruction(new("dst"), UtopIRType.Peer),
             new AppointInstruction(new("src"), new LiteralOperand(33)),
             new AppointInstruction(new("dst"), new VariableOperand(new("src"))),
             new FindInstruction(new VariableOperand(new("dst")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(33);
     }
@@ -105,11 +106,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Chancellor_StoresAndReturnsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Chancellor),
             new AppointInstruction(new("x"), new LiteralOperand(100L)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(100);
     }
@@ -120,11 +121,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Pirate_StoresAndReturnsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Pirate),
             new AppointInstruction(new("x"), new LiteralOperand((short)20)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(20);
     }
@@ -135,11 +136,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_SausageRoll_StoresAndReturnsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.SausageRoll),
             new AppointInstruction(new("x"), new LiteralOperand((sbyte)10)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(10);
     }
@@ -150,11 +151,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_StandingPeer_StoresAndReturnsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.StandingPeer),
             new AppointInstruction(new("x"), new LiteralOperand(200u)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(200);
     }
@@ -165,11 +166,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_StandingChancellor_StoresAndReturnsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.StandingChancellor),
             new AppointInstruction(new("x"), new LiteralOperand(150UL)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(150);
     }
@@ -180,7 +181,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Sum_AddsOperands()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -188,7 +189,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(13);
     }
@@ -199,7 +200,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Diff_SubtractsOperands()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -207,7 +208,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Diff, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(7);
     }
@@ -218,7 +219,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Prod_MultipliesOperands()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -226,7 +227,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(7)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Prod, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(42);
     }
@@ -237,7 +238,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Quot_DividesOperands()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -245,7 +246,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(4)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Quot, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(5);
     }
@@ -256,7 +257,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Rem_ComputesRemainder()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -264,7 +265,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(5)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Rem, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(2);
     }
@@ -275,7 +276,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Max_ReturnsLargerOperand()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -283,7 +284,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(15)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Max, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(15);
     }
@@ -294,7 +295,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Min_ReturnsSmallerOperand()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -302,7 +303,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(15)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Min, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(8);
     }
@@ -313,11 +314,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Sum_WithLiteralOperands_AddsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new LiteralOperand(11), new LiteralOperand(22)),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(33);
     }
@@ -328,7 +329,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Quot_UnsignedPeer_UsesDivUn()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("r"), UtopIRType.StandingPeer),
@@ -336,7 +337,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3u)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Quot, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(7);
     }
@@ -347,11 +348,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Fathom_StoresAndReturnsTruncated()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Fathom),
             new AppointInstruction(new("x"), new LiteralOperand(42.9)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(42);
     }
@@ -362,11 +363,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Foot_StoresAndReturnsTruncated()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Foot),
             new AppointInstruction(new("x"), new LiteralOperand(8.5f)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(8);
     }
@@ -378,7 +379,7 @@ public class CilEmitterTests
     public void Emit_SumFloat_AddsOperands()
     {
         // 1.5 + 2.75 = 4.25, truncated to 4 on return.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
@@ -386,7 +387,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(2.75)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.SumFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(4);
     }
@@ -398,7 +399,7 @@ public class CilEmitterTests
     public void Emit_DiffFloat_SubtractsOperands()
     {
         // 10.0 - 2.5 = 7.5, truncated to 7 on return.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
@@ -406,7 +407,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(2.5)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.DiffFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(7);
     }
@@ -418,7 +419,7 @@ public class CilEmitterTests
     public void Emit_ProdFloat_MultipliesOperands()
     {
         // 1.25 * 3.5 = 4.375, truncated to 4 on return.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
@@ -426,7 +427,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3.5)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(4);
     }
@@ -439,7 +440,7 @@ public class CilEmitterTests
     {
         // 15.0 / 2.0 = 7.5, truncated to 7 on return; integer division of 15 / 2 would also give 7,
         // so scale by ten first (7.5 * 10 = 75) to prove the division was floating-point.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("scale"), UtopIRType.Fathom),
@@ -451,7 +452,7 @@ public class CilEmitterTests
             new ArithmeticInstruction(UtopIRArithmeticOperation.QuotFloat, new("q"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("q")), new VariableOperand(new("scale"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(75);
     }
@@ -463,7 +464,7 @@ public class CilEmitterTests
     public void Emit_RemFloat_ComputesRemainder()
     {
         // 7.5 rem 2.0 = 1.5, scaled by ten (15) to prove the fractional part survived.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("scale"), UtopIRType.Fathom),
@@ -475,7 +476,7 @@ public class CilEmitterTests
             new ArithmeticInstruction(UtopIRArithmeticOperation.RemFloat, new("m"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new ArithmeticInstruction(UtopIRArithmeticOperation.ProdFloat, new("r"), new VariableOperand(new("m")), new VariableOperand(new("scale"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(15);
     }
@@ -486,7 +487,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_MaxFloat_ReturnsLargerOperand()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
@@ -494,7 +495,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(5.25)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.MaxFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(10);
     }
@@ -505,7 +506,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_MinFloat_ReturnsSmallerOperand()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
@@ -513,7 +514,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(5.25)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.MinFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(5);
     }
@@ -524,7 +525,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_MaxFloat_OnFootOperands_ReturnsLargerOperand()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Foot),
             new WelcomeInstruction(new("b"), UtopIRType.Foot),
             new WelcomeInstruction(new("r"), UtopIRType.Foot),
@@ -532,7 +533,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(9.75f)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.MaxFloat, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(9);
     }
@@ -546,10 +547,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
             new ArithmeticInstruction(UtopIRArithmeticOperation.SumFloat, new("r"), new LiteralOperand(1), new LiteralOperand(2))
-        ]);
+        ])]);
 
         try
         {
@@ -573,10 +574,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new LiteralOperand(1.5), new LiteralOperand(2.5))
-        ]);
+        ])]);
 
         try
         {
@@ -607,7 +608,7 @@ public class CilEmitterTests
     [InlineData(UtopIRBitwiseOperation.TransUp, 1, 5, 32)]
     public void Emit_BitwiseOperation_ComputesCorrectResult(UtopIRBitwiseOperation operation, int operand1, int operand2, int expectedResult)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -615,7 +616,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(operand2)),
             new BitwiseInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(expectedResult);
     }
@@ -627,13 +628,13 @@ public class CilEmitterTests
     public void Emit_Inv_ComputesBitwiseComplement()
     {
         // ~10 = -11 in two's complement.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
             new AppointInstruction(new("a"), new LiteralOperand(10)),
             new InvInstruction(new("r"), new VariableOperand(new("a"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(-11);
     }
@@ -645,7 +646,7 @@ public class CilEmitterTests
     public void Emit_TransDown_UnsignedPeer_UsesShrUn()
     {
         // 0x80000000 >> 1 must be 0x40000000, not sign-extended.
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("r"), UtopIRType.StandingPeer),
@@ -653,7 +654,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(1u)),
             new BitwiseInstruction(UtopIRBitwiseOperation.TransDown, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -667,7 +668,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_TransUp_OnChancellor_ConvertsShiftAmountAndComputesCorrectResult()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
             new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
             new WelcomeInstruction(new("r"), UtopIRType.Chancellor),
@@ -675,7 +676,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(1L)),
             new BitwiseInstruction(UtopIRBitwiseOperation.TransUp, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(10);
     }
@@ -689,10 +690,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
             new BitwiseInstruction(UtopIRBitwiseOperation.Chord, new("r"), new LiteralOperand(1.5), new LiteralOperand(2.5))
-        ]);
+        ])]);
 
         try
         {
@@ -716,10 +717,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Fathom),
             new InvInstruction(new("r"), new LiteralOperand(1.5))
-        ]);
+        ])]);
 
         try
         {
@@ -752,7 +753,7 @@ public class CilEmitterTests
     [InlineData(UtopIRComparisonOperation.LowerDeg, 5, 3, 0)]
     public void Emit_Comparison_ComputesCorrectResult(UtopIRComparisonOperation operation, int operand1, int operand2, int expectedResult)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
@@ -760,7 +761,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(operand2)),
             new ComparisonInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(expectedResult);
     }
@@ -779,7 +780,7 @@ public class CilEmitterTests
     [InlineData(UtopIRComparisonOperation.LowerDegFloat, 1.5, 2.5, 1)]
     public void Emit_ComparisonFloat_ComputesCorrectResult(UtopIRComparisonOperation operation, double operand1, double operand2, int expectedResult)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
@@ -787,7 +788,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(operand2)),
             new ComparisonInstruction(operation, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(expectedResult);
     }
@@ -799,7 +800,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_PreAdam_UnsignedStandingPeer_UsesCgtUn()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
@@ -807,7 +808,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(1u)),
             new ComparisonInstruction(UtopIRComparisonOperation.PreAdam, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -822,7 +823,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_LowerDeg_UnsignedStandingPeer_UsesCltUn()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
@@ -830,7 +831,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(4_000_000_000u)),
             new ComparisonInstruction(UtopIRComparisonOperation.LowerDeg, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -847,10 +848,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
             new ComparisonInstruction(UtopIRComparisonOperation.Alike, new("r"), new LiteralOperand(1), new LiteralOperand(1.5))
-        ]);
+        ])]);
 
         try
         {
@@ -879,10 +880,10 @@ public class CilEmitterTests
     [InlineData(UtopIRLogicalOperation.Either, true, false, 1)]
     public void Emit_Logical_ComputesCorrectResult(UtopIRLogicalOperation operation, bool operand1, bool operand2, int expectedResult)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new LogicalInstruction(operation, new("r"), new LiteralOperand(operand1), new LiteralOperand(operand2)),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(expectedResult);
     }
@@ -896,10 +897,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
             new LogicalInstruction(UtopIRLogicalOperation.Both, new("r"), new LiteralOperand(1), new LiteralOperand(2))
-        ]);
+        ])]);
 
         try
         {
@@ -924,10 +925,10 @@ public class CilEmitterTests
     [InlineData(false, 1)]
     public void Emit_Hardly_NegatesOperand(bool operand, int expectedResult)
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new HardlyInstruction(new("r"), new LiteralOperand(operand)),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(expectedResult);
     }
@@ -941,10 +942,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("r"), UtopIRType.Decree),
             new HardlyInstruction(new("r"), new LiteralOperand(1))
-        ]);
+        ])]);
 
         try
         {
@@ -960,17 +961,281 @@ public class CilEmitterTests
     }
 
     /// <summary>
+    /// Tests that a <see cref="VictimYarnInstruction"/> selects the 4th (1-based) character of
+    /// <c>"Hollow"</c>, <c>'l'</c>, returning its code point 108 as the exit code.
+    /// </summary>
+    [Fact]
+    public void Emit_VictimYarn_SelectsCorrectCharacter()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new VictimYarnInstruction(new("r"), new VariableOperand(new("PoemSubject")), new LiteralOperand(4)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(108);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> followed by <see cref="AppointVictimInstruction"/>s
+    /// and a <see cref="VictimListInstruction"/> allocates a real CLR array, writes each element via
+    /// <c>stelem</c> and reads one back via <c>ldelem</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListAppointVictimVictimList_StoresAndReadsElement()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(2)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(20);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> whose size is a <see cref="VariableOperand"/> rather than
+    /// a <see cref="LiteralOperand"/> allocates a CLR array sized to the variable current value.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListWithVariableSize_AllocatesArraySizedToVariable()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("Count"), UtopIRType.Peer),
+            new AppointInstruction(new("Count"), new LiteralOperand(3)),
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new VariableOperand(new("Count"))),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(3)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(30);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="WelcomeListInstruction"/> declared with a bare size and no
+    /// <see cref="AppointVictimInstruction"/>s produces a <c>newarr</c>-zero-initialised element when
+    /// read back, matching the Topsy Turvy "pre-allocated with default values" semantics.
+    /// </summary>
+    [Fact]
+    public void Emit_WelcomeListWithBareSizeAndNoAppointVictim_ReadsZeroInitialisedElement()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(1)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PicturetoInstruction"/> and <see cref="ViewfromInstruction"/> allocate a
+    /// real <c>PointerHandle</c> referring to an array first element and read it back.
+    /// </summary>
+    [Fact]
+    public void Emit_PicturetoAndViewfromOnArray_ReadsFirstElement()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new ViewfromInstruction(new("r"), new("NumbersPointer")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(10);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ViewtoInstruction"/> genuinely writes through the pointer into the
+    /// referenced array. Verified by reading the element back directly via
+    /// <see cref="VictimListInstruction"/> afterward, not just through the pointer again.
+    /// </summary>
+    [Fact]
+    public void Emit_Viewto_WritesThroughIntoArrayElement()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new ViewtoInstruction(new("NumbersPointer"), new LiteralOperand(99)),
+            new VictimListInstruction(new("r"), new("Numbers"), new LiteralOperand(1)),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(99);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PointerArithmeticInstruction"/> (<c>sum.g</c>) advances the index of a
+    /// <c>PointerHandle</c> without touching its <c>Container</c>.
+    /// </summary>
+    [Fact]
+    public void Emit_PointerArithmeticSum_AdvancesToCorrectElement()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(2), new LiteralOperand(20)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(3), new LiteralOperand(30)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new PointerArithmeticInstruction(UtopIRPointerArithmeticOperation.Sum, new("NumbersPointerOffset"), new("NumbersPointer"), new LiteralOperand(2)),
+            new ViewfromInstruction(new("r"), new("NumbersPointerOffset")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(30);
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PointerArithmeticInstruction"/> on a pointer into a
+    /// <c>yarn</c> advances the index of a <c>PointerHandle</c> the same way it does for an array,
+    /// since <c>sum.g</c>/<c>diff.g</c> only ever adjust the index field, regardless of the runtime
+    /// type of the container.
+    /// </summary>
+    [Fact]
+    public void Emit_PointerArithmeticSumOnYarnPointer_AdvancesToCorrectCharacter()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new WelcomeGallerypicInstruction(new("PoemSubjectPointer"), UtopIRType.Stitch),
+            new PicturetoInstruction(new("PoemSubjectPointer"), new("PoemSubject")),
+            new PointerArithmeticInstruction(UtopIRPointerArithmeticOperation.Sum, new("PoemSubjectPointerOffset"), new("PoemSubjectPointer"), new LiteralOperand(2)),
+            new ViewfromInstruction(new("r"), new("PoemSubjectPointerOffset")),
+            new FindInstruction(new VariableOperand(new("r")))
+        ])]);
+
+        RunProgram(program).ShouldBe(108);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ViewtoInstruction"/> writing through a pointer into a <c>yarn</c>
+    /// character throws <see cref="InvalidOperationException"/> at runtime, since strings are immutable.
+    /// </summary>
+    [Fact]
+    public void Emit_ViewtoOnYarnPointer_ThrowsInvalidOperationExceptionAtRuntime()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand("Hollow")),
+            new WelcomeGallerypicInstruction(new("PoemSubjectPointer"), UtopIRType.Stitch),
+            new PicturetoInstruction(new("PoemSubjectPointer"), new("PoemSubject")),
+            new ViewtoInstruction(new("PoemSubjectPointer"), new LiteralOperand('X')),
+            new FindInstruction(new LiteralOperand(0))
+        ])]);
+
+        TargetInvocationException exception = Should.Throw<TargetInvocationException>(() => RunProgram(program));
+        exception.InnerException.ShouldBeOfType<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="PicturetoInstruction"/> targeting a plain scalar variable (not an
+    /// array or <c>yarn</c>) throws <see cref="NotSupportedException"/> at emit time.
+    /// </summary>
+    [Fact]
+    public void Emit_PicturetoOnScalarVariable_ThrowsNotSupportedException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("Number"), UtopIRType.Peer),
+            new AppointInstruction(new("Number"), new LiteralOperand(42)),
+            new WelcomeGallerypicInstruction(new("NumberPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumberPointer"), new("Number"))
+        ])]);
+
+        try
+        {
+            Should.Throw<NotSupportedException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to a pointer previously assigned via <see cref="PicturetoInstruction"/>
+    /// re-zeroes the <c>PointerHandle</c> via <c>initobj</c> without throwing, even though the local
+    /// already held a real <c>Container</c> reference.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToPointer_ReZeroesHandleWithoutThrowing()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(1)),
+            new AppointVictimInstruction(new("Numbers"), new LiteralOperand(1), new LiteralOperand(10)),
+            new WelcomeGallerypicInstruction(new("NumbersPointer"), UtopIRType.Peer),
+            new PicturetoInstruction(new("NumbersPointer"), new("Numbers")),
+            new AppointInstruction(new("NumbersPointer"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ])]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to an array variable emits <c>ldnull</c>/<c>stloc</c> via
+    /// the generic <see cref="LiteralOperand"/> path, since a CLR array is a reference type.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToArray_SetsArrayReferenceToNullWithoutThrowing()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeListInstruction(new("Numbers"), UtopIRType.Peer, new LiteralOperand(1)),
+            new AppointInstruction(new("Numbers"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ])]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that appointing <c>naught</c> to a <c>yarn</c> variable emits <c>ldnull</c>/<c>stloc</c>
+    /// via the generic <see cref="LiteralOperand"/> path, since a CLR <see cref="string"/> is a
+    /// reference type.
+    /// </summary>
+    [Fact]
+    public void Emit_AppointNaughtToYarn_SetsStringReferenceToNullWithoutThrowing()
+    {
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new WelcomeInstruction(new("PoemSubject"), UtopIRType.Yarn),
+            new AppointInstruction(new("PoemSubject"), new LiteralOperand(NaughtLiteral.Instance)),
+            new FindInstruction(new LiteralOperand(1))
+        ])]);
+
+        RunProgram(program).ShouldBe(1);
+    }
+
+    /// <summary>
     /// Tests that an unconditional <see cref="SailInstruction"/> skips the instruction immediately following it.
     /// </summary>
     [Fact]
     public void Emit_Sail_UnconditionalBranch_SkipsIntermediateInstruction()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new SailInstruction(new UtopIRLabel("LOGIC")),
             new FindInstruction(new LiteralOperand(0)),
             new LabelInstruction(new UtopIRLabel("LOGIC")),
             new FindInstruction(new LiteralOperand(1))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(1);
     }
@@ -982,13 +1247,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Label_WithNoPrecedingBranch_ExecutesInstructionsInOrder()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.Peer),
             new AppointInstruction(new("x"), new LiteralOperand(1)),
             new LabelInstruction(new UtopIRLabel("MARK")),
             new AppointInstruction(new("x"), new LiteralOperand(2)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(2);
     }
@@ -1000,14 +1265,14 @@ public class CilEmitterTests
     [Fact]
     public void Emit_SailAlike_ValueVerity_BranchesToLabel()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
             new AppointInstruction(new("Boolean"), new LiteralOperand(true)),
             new SailAlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_ALIKE")),
             new FindInstruction(new LiteralOperand(0)),
             new LabelInstruction(new UtopIRLabel("IS_ALIKE")),
             new FindInstruction(new LiteralOperand(1))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(1);
     }
@@ -1019,14 +1284,14 @@ public class CilEmitterTests
     [Fact]
     public void Emit_SailAlike_ValueNay_FallsThroughWithoutBranching()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
             new AppointInstruction(new("Boolean"), new LiteralOperand(false)),
             new SailAlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_ALIKE")),
             new FindInstruction(new LiteralOperand(0)),
             new LabelInstruction(new UtopIRLabel("IS_ALIKE")),
             new FindInstruction(new LiteralOperand(1))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(0);
     }
@@ -1038,14 +1303,14 @@ public class CilEmitterTests
     [Fact]
     public void Emit_SailUnlike_ValueNay_BranchesToLabel()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
             new AppointInstruction(new("Boolean"), new LiteralOperand(false)),
             new SailUnlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_UNLIKE")),
             new FindInstruction(new LiteralOperand(0)),
             new LabelInstruction(new UtopIRLabel("IS_UNLIKE")),
             new FindInstruction(new LiteralOperand(1))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(1);
     }
@@ -1057,14 +1322,14 @@ public class CilEmitterTests
     [Fact]
     public void Emit_SailUnlike_ValueVerity_FallsThroughWithoutBranching()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("Boolean"), UtopIRType.Decree),
             new AppointInstruction(new("Boolean"), new LiteralOperand(true)),
             new SailUnlikeInstruction(new VariableOperand(new("Boolean")), new UtopIRLabel("IS_UNLIKE")),
             new FindInstruction(new LiteralOperand(0)),
             new LabelInstruction(new UtopIRLabel("IS_UNLIKE")),
             new FindInstruction(new LiteralOperand(1))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(0);
     }
@@ -1080,10 +1345,10 @@ public class CilEmitterTests
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new SailInstruction(new UtopIRLabel("NOWHERE")),
             new FindInstruction(new LiteralOperand(0))
-        ]);
+        ])]);
 
         try
         {
@@ -1104,12 +1369,12 @@ public class CilEmitterTests
     [Fact]
     public void Emit_PrenticeAndLeave_MovesValueToTargetRegister()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("target"), UtopIRType.Peer),
             new PrenticeInstruction(new LiteralOperand(77)),
             new LeaveInstruction(new("target")),
             new FindInstruction(new VariableOperand(new("target")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(77);
     }
@@ -1121,7 +1386,7 @@ public class CilEmitterTests
     public void Emit_NestedArithmetic_ProducesCorrectResult()
     {
         // (3 * 4) + 5 = 17
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("c"), UtopIRType.Peer),
@@ -1133,7 +1398,7 @@ public class CilEmitterTests
             new ArithmeticInstruction(UtopIRArithmeticOperation.Prod, new("_prod_a_b"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("_prod_a_b")), new VariableOperand(new("c"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(17);
     }
@@ -1144,14 +1409,14 @@ public class CilEmitterTests
     [Fact]
     public void Emit_ArithmeticWithUndeclaredTarget_InfersTypeFromVariableOperandAndSucceeds()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new AppointInstruction(new("a"), new LiteralOperand(6)),
             new AppointInstruction(new("b"), new LiteralOperand(7)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("_sum_a_b"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("_sum_a_b")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(13);
     }
@@ -1162,10 +1427,10 @@ public class CilEmitterTests
     [Fact]
     public void Emit_ArithmeticWithUndeclaredTarget_InfersTypeFromLiteralOperandAndSucceeds()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("_sum_11_22"), new LiteralOperand(11), new LiteralOperand(22)),
             new FindInstruction(new VariableOperand(new("_sum_11_22")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(33);
     }
@@ -1173,15 +1438,22 @@ public class CilEmitterTests
     /// <summary>
     /// Tests that declaring a variable of an unsupported type throws <see cref="NotSupportedException"/>.
     /// </summary>
+    /// <remarks>
+    /// <see cref="UtopIRType.Array"/> and <see cref="UtopIRType.Pointer"/> are marker values only and are
+    /// never valid operands to the bare <c>welcome</c> instruction (arrays and pointers are declared via
+    /// the dedicated <c>welcome.list</c>/<c>welcome.gallerypic</c> instructions instead), so they remain
+    /// genuinely unsupported here even though <c>yarn</c> (formerly the only case) is now supported.
+    /// </remarks>
     /// <param name="type">The unsupported <see cref="UtopIRType"/> to declare.</param>
     [Theory]
-    [InlineData(UtopIRType.Yarn)]
+    [InlineData(UtopIRType.Array)]
+    [InlineData(UtopIRType.Pointer)]
     public void Emit_UnsupportedType_ThrowsNotSupportedException(UtopIRType type)
     {
         string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
 
-        UtopIRProgram program = new([new WelcomeInstruction(new("x"), type)]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [new WelcomeInstruction(new("x"), type)])]);
 
         try
         {
@@ -1202,11 +1474,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_StandingSausageRollMaxValue_RoundTripsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("x"), UtopIRType.StandingSausageRoll),
             new AppointInstruction(new("x"), new LiteralOperand((byte)255)),
             new FindInstruction(new VariableOperand(new("x")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(255);
     }
@@ -1222,7 +1494,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_StandingPeerValueAboveIntMaxValue_RoundTripsCorrectly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new WelcomeInstruction(new("r"), UtopIRType.StandingPeer),
@@ -1230,7 +1502,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(1u)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Diff, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         // 4_000_000_000 - 1 = 3_999_999_999; narrowed to Int32 via conv.i4 on return wraps
         // to the same bit pattern as an Int32, which we recover here via unchecked cast.
@@ -1247,7 +1519,7 @@ public class CilEmitterTests
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
         string runtimeConfigurationPath = Path.ChangeExtension(outputPath, ".runtimeconfig.json");
 
-        UtopIRProgram program = new([new FindInstruction(new LiteralOperand(9))]);
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [new FindInstruction(new LiteralOperand(9))])]);
         try
         {
             CilEmitter emitter = new();
@@ -1287,7 +1559,7 @@ public class CilEmitterTests
         string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
         string ilSourcePath = Path.ChangeExtension(outputPath, ".il");
 
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -1295,7 +1567,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         try
         {
@@ -1314,6 +1586,289 @@ public class CilEmitterTests
             result.IlSource.ShouldContain("ret");
 
             File.Exists(ilSourcePath).ShouldBeFalse();
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that a standalone <c>summon</c> calls the injected external function with the
+    /// <c>prentice</c>-pushed argument.
+    /// </summary>
+    [Fact]
+    public void Emit_Summon_CallsExternalVoidFunction()
+    {
+        TestHostService.ClearLog();
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.WriteText))!;
+        CilExternalFunction function = new("WriteText", method, [typeof(string)], null, [typeof(TestHostService)]);
+        CilHostInjectedService service = new(typeof(TestHostService), typeof(TestHostService).GetConstructor(Type.EmptyTypes)!);
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new PrenticeInstruction(new LiteralOperand("hello")),
+            new SummonInstruction(new FunctionReference("WriteText"), []),
+            new FindInstruction(null)
+        ])]);
+
+        int exitCode = RunProgramWithExternalFunctions(program, [function], [service]);
+
+        exitCode.ShouldBe(0);
+        TestHostService.Log.ShouldBe(["hello"]);
+    }
+
+    /// <summary>
+    /// Tests that <c>summon.find</c> stores the external function return value into the target
+    /// register, usable by a subsequent <see cref="FindInstruction"/>.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonFind_StoresReturnValueUsableByFind()
+    {
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.Double))!;
+        CilExternalFunction function = new("Double", method, [typeof(int)], typeof(int), []);
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new PrenticeInstruction(new LiteralOperand(21)),
+            new SummonFindInstruction(new("result"), new FunctionReference("Double"), []),
+            new FindInstruction(new VariableOperand(new("result")))
+        ])]);
+
+        RunProgramWithExternalFunctions(program, [function], []).ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that a bare <c>summon</c> of a value-returning function pops the unused result rather than
+    /// leaving it on the evaluation stack.
+    /// </summary>
+    [Fact]
+    public void Emit_Summon_OfValueReturningFunctionAsVoidStatement_PopsResultAndDoesNotCrash()
+    {
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.Double))!;
+        CilExternalFunction function = new("Double", method, [typeof(int)], typeof(int), []);
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new PrenticeInstruction(new LiteralOperand(21)),
+            new SummonInstruction(new FunctionReference("Double"), []),
+            new FindInstruction(new LiteralOperand(7))
+        ])]);
+
+        RunProgramWithExternalFunctions(program, [function], []).ShouldBe(7);
+    }
+
+    /// <summary>
+    /// Tests that a host-injected service is constructed once and reused across every subsequent
+    /// <c>summon</c> in the same programme that needs it.
+    /// </summary>
+    [Fact]
+    public void Emit_MultipleSummonCallsNeedingHostInjectedService_ConstructsServiceOnlyOnce()
+    {
+        TestHostService.ClearLog();
+        MethodInfo method = typeof(TestSummonTargets).GetMethod(nameof(TestSummonTargets.WriteText))!;
+        CilExternalFunction function = new("WriteText", method, [typeof(string)], null, [typeof(TestHostService)]);
+        CilHostInjectedService service = new(typeof(TestHostService), typeof(TestHostService).GetConstructor(Type.EmptyTypes)!);
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new PrenticeInstruction(new LiteralOperand("first")),
+            new SummonInstruction(new FunctionReference("WriteText"), []),
+            new PrenticeInstruction(new LiteralOperand("second")),
+            new SummonInstruction(new FunctionReference("WriteText"), []),
+            new FindInstruction(null)
+        ])]);
+
+        RunProgramWithExternalFunctions(program, [function], [service]);
+
+        TestHostService.Log.ShouldBe(["first", "second"]);
+        TestHostService.ConstructionCount.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Tests that <c>summon</c> of a function absent from the injected external function set throws a
+    /// clear <see cref="InvalidOperationException"/> naming the offending function, rather than an
+    /// opaque failure deep inside emission.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonUnknownFunction_ThrowsInvalidOperationException()
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
+            new SummonInstruction(new FunctionReference("DoesNotExist"), []),
+            new FindInstruction(null)
+        ])]);
+
+        try
+        {
+            Should.Throw<InvalidOperationException>(() => new CilEmitter().Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library)));
+        }
+        finally
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that calling a user-defined function from <c>Opera</c> runs its body and returns
+    /// its result.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonFindUserDefinedFunction_RunsFunctionBodyAndReturnsResult()
+    {
+        UtopIRFunctionDefinition add = new(
+            "Add",
+            [
+                new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Peer), "Num1"),
+                new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Peer), "Num2")
+            ],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new UtopIRVariable("result"), new ParameterOperand(new UtopIRParameter("Num1")), new ParameterOperand(new UtopIRParameter("Num2"))),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("result")))
+            ]);
+        UtopIRFunctionDefinition opera = new(
+            "Opera",
+            [],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new PrenticeInstruction(new LiteralOperand(4)),
+                new PrenticeInstruction(new LiteralOperand(5)),
+                new SummonFindInstruction(new UtopIRVariable("total"), new FunctionReference("Add"), [new UtopIRTermType(UtopIRType.Peer), new UtopIRTermType(UtopIRType.Peer)]),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("total")))
+            ]);
+
+        int exitCode = RunProgram(new([add, opera]));
+
+        exitCode.ShouldBe(9);
+    }
+
+    /// <summary>
+    /// Tests that a user-defined function calling itself recursively runs correctly, verifying that
+    /// the two-pass method definition of the emitter resolves the self-call regardless of declaration order.
+    /// </summary>
+    [Fact]
+    public void Emit_RecursiveUserDefinedFunction_ComputesCorrectResult()
+    {
+        UtopIRFunctionDefinition factorial = new(
+            "Factorial",
+            [new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Peer), "N")],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new ComparisonInstruction(UtopIRComparisonOperation.Alike, new UtopIRVariable("isZero"), new ParameterOperand(new UtopIRParameter("N")), new LiteralOperand(0)),
+                new SailAlikeInstruction(new VariableOperand(new UtopIRVariable("isZero")), new UtopIRLabel("BASE")),
+                new ArithmeticInstruction(UtopIRArithmeticOperation.Diff, new UtopIRVariable("nMinusOne"), new ParameterOperand(new UtopIRParameter("N")), new LiteralOperand(1)),
+                new PrenticeInstruction(new VariableOperand(new UtopIRVariable("nMinusOne"))),
+                new SummonFindInstruction(new UtopIRVariable("recursed"), new FunctionReference("Factorial"), [new UtopIRTermType(UtopIRType.Peer)]),
+                new ArithmeticInstruction(UtopIRArithmeticOperation.Prod, new UtopIRVariable("product"), new ParameterOperand(new UtopIRParameter("N")), new VariableOperand(new UtopIRVariable("recursed"))),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("product"))),
+                new LabelInstruction(new UtopIRLabel("BASE")),
+                new FindInstruction(new LiteralOperand(1))
+            ]);
+        UtopIRFunctionDefinition opera = new(
+            "Opera",
+            [],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new PrenticeInstruction(new LiteralOperand(5)),
+                new SummonFindInstruction(new UtopIRVariable("result"), new FunctionReference("Factorial"), [new UtopIRTermType(UtopIRType.Peer)]),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("result")))
+            ]);
+
+        int exitCode = RunProgram(new([factorial, opera]));
+
+        exitCode.ShouldBe(120);
+    }
+
+    /// <summary>
+    /// Tests that a namespace-qualified function name (containing the <c>*</c> delimiter) is a valid
+    /// CLR method name and can be called successfully.
+    /// </summary>
+    [Fact]
+    public void Emit_SummonNamespaceQualifiedFunction_RunsSuccessfully()
+    {
+        UtopIRFunctionDefinition greet = new(
+            "Aesthetic*Writing*GetAnswer",
+            [],
+            new UtopIRTermType(UtopIRType.Peer),
+            [new FindInstruction(new LiteralOperand(42))]);
+        UtopIRFunctionDefinition opera = new(
+            "Opera",
+            [],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new SummonFindInstruction(new UtopIRVariable("answer"), new FunctionReference("Aesthetic*Writing*GetAnswer"), []),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("answer")))
+            ]);
+
+        int exitCode = RunProgram(new([greet, opera]));
+
+        exitCode.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Tests that an array parameter is passed as a real CLR array reference and can be indexed via
+    /// <c>victim.list</c> inside the receiving function.
+    /// </summary>
+    [Fact]
+    public void Emit_ArrayParameterWithVictimList_ReadsCorrectElement()
+    {
+        UtopIRFunctionDefinition firstElement = new(
+            "FirstElement",
+            [new UtopIRFunctionParameter(new UtopIRTermType(UtopIRType.Array, UtopIRType.Peer), "Numbers")],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new VictimListInstruction(new UtopIRVariable("result"), new UtopIRVariable("Numbers"), new LiteralOperand(1)),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("result")))
+            ]);
+        UtopIRFunctionDefinition opera = new(
+            "Opera",
+            [],
+            new UtopIRTermType(UtopIRType.Peer),
+            [
+                new WelcomeListInstruction(new UtopIRVariable("numbers"), UtopIRType.Peer, new LiteralOperand(3)),
+                new AppointVictimInstruction(new UtopIRVariable("numbers"), new LiteralOperand(1), new LiteralOperand(42)),
+                new AppointVictimInstruction(new UtopIRVariable("numbers"), new LiteralOperand(2), new LiteralOperand(7)),
+                new AppointVictimInstruction(new UtopIRVariable("numbers"), new LiteralOperand(3), new LiteralOperand(13)),
+                new PrenticeInstruction(new VariableOperand(new UtopIRVariable("numbers"))),
+                new SummonFindInstruction(new UtopIRVariable("result"), new FunctionReference("FirstElement"), [new UtopIRTermType(UtopIRType.Array, UtopIRType.Peer)]),
+                new FindInstruction(new VariableOperand(new UtopIRVariable("result")))
+            ]);
+
+        int exitCode = RunProgram(new([firstElement, opera]));
+
+        exitCode.ShouldBe(42);
+    }
+
+    /// <summary>
+    /// Emits and runs a programme with the given external functions and host-injected services,
+    /// returning the exit code.
+    /// </summary>
+    /// <param name="program">The UtopIR programme to emit.</param>
+    /// <param name="externalFunctions">The external functions callable via <c>summon</c>/<c>summon.find</c>.</param>
+    /// <param name="hostInjectedServices">The host-injected services available to those functions.</param>
+    /// <returns>The exit code returned by the programme.</returns>
+    private static int RunProgramWithExternalFunctions(
+        UtopIRProgram program,
+        IReadOnlyList<CilExternalFunction> externalFunctions,
+        IReadOnlyList<CilHostInjectedService> hostInjectedServices)
+    {
+        string assemblyName = $"TopsyTurvyCilTest_{Guid.NewGuid():N}";
+        string outputPath = Path.Combine(Path.GetTempPath(), assemblyName + ".dll");
+
+        try
+        {
+            CilEmitter emitter = new();
+            emitter.Emit(program, new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Library, externalFunctions, hostInjectedServices));
+
+            Assembly assembly = Assembly.LoadFrom(outputPath);
+            Type operaType = assembly.GetType("Opera")!;
+            MethodInfo mainMethod = operaType.GetMethod("Main", BindingFlags.Public | BindingFlags.Static)!;
+            return (int)mainMethod.Invoke(null, [Array.Empty<string>()])!;
         }
         finally
         {
@@ -1359,7 +1914,7 @@ public class CilEmitterTests
     [Fact]
     public void Emit_IlSourceOnlyOutputKind_ProducesIlTextAndWritesNoAssembly()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new WelcomeInstruction(new("r"), UtopIRType.Peer),
@@ -1367,7 +1922,7 @@ public class CilEmitterTests
             new AppointInstruction(new("b"), new LiteralOperand(3)),
             new ArithmeticInstruction(UtopIRArithmeticOperation.Sum, new("r"), new VariableOperand(new("a")), new VariableOperand(new("b"))),
             new FindInstruction(new VariableOperand(new("r")))
-        ]);
+        ])]);
 
         string assemblyName = $"TopsyTurvyIlOnlyTest_{Guid.NewGuid():N}";
         string nonExistentDirectoryOutputPath = Path.Combine(
@@ -1395,13 +1950,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_WidensPeerToChancellor_EmitsConvI8()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Chancellor),
             new AppointInstruction(new("a"), new LiteralOperand(-5)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Chancellor),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1416,13 +1971,13 @@ public class CilEmitterTests
     public void Emit_Were_NarrowsChancellorToPeer_TruncatesToLow32Bits()
     {
         const long outOfRangeValue = (1L << 32) + 100_000;
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new AppointInstruction(new("a"), new LiteralOperand(outOfRangeValue)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Peer),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1436,13 +1991,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsPeerToStandingPeer_EmitsConvU4()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new AppointInstruction(new("a"), new LiteralOperand(7)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.StandingPeer),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1456,13 +2011,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_NarrowsChancellorToStandingPeer_RoundTripsValueAboveIntMaxValue()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Chancellor),
             new WelcomeInstruction(new("b"), UtopIRType.StandingPeer),
             new AppointInstruction(new("a"), new LiteralOperand(4_000_000_000L)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.StandingPeer),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(unchecked((int)4_000_000_000u));
     }
@@ -1473,13 +2028,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsPeerToFathom_EmitsConvR8()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Peer),
             new WelcomeInstruction(new("b"), UtopIRType.Fathom),
             new AppointInstruction(new("a"), new LiteralOperand(7)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Fathom),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1493,13 +2048,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_NarrowsFathomToPeer_TruncatesTowardZero()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Peer),
             new AppointInstruction(new("a"), new LiteralOperand(42.9)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Peer),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1513,13 +2068,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_NarrowsFathomToFoot_EmitsConvR4()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("a"), UtopIRType.Fathom),
             new WelcomeInstruction(new("b"), UtopIRType.Foot),
             new AppointInstruction(new("a"), new LiteralOperand(8.5)),
             new WereInstruction(new("b"), new VariableOperand(new("a")), UtopIRType.Foot),
             new FindInstruction(new VariableOperand(new("b")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1533,11 +2088,11 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Stitch_StoresCharacterAndReturnsCodePoint()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("c"), UtopIRType.Stitch),
             new AppointInstruction(new("c"), new LiteralOperand('A')),
             new FindInstruction(new VariableOperand(new("c")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(65);
     }
@@ -1548,13 +2103,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsPeerToStitch_EmitsConvU2()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("n"), UtopIRType.Peer),
             new WelcomeInstruction(new("c"), UtopIRType.Stitch),
             new AppointInstruction(new("n"), new LiteralOperand(66)),
             new WereInstruction(new("c"), new VariableOperand(new("n")), UtopIRType.Stitch),
             new FindInstruction(new VariableOperand(new("c")))
-        ]);
+        ])]);
 
         (int exitCode, string ilSource) = RunProgramWithIlSource(program);
 
@@ -1568,13 +2123,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsStitchToPeer_YieldsCodePoint()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("c"), UtopIRType.Stitch),
             new WelcomeInstruction(new("n"), UtopIRType.Peer),
             new AppointInstruction(new("c"), new LiteralOperand('Z')),
             new WereInstruction(new("n"), new VariableOperand(new("c")), UtopIRType.Peer),
             new FindInstruction(new VariableOperand(new("n")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(90);
     }
@@ -1585,13 +2140,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsStitchToFathom_YieldsCodePoint()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("c"), UtopIRType.Stitch),
             new WelcomeInstruction(new("d"), UtopIRType.Fathom),
             new AppointInstruction(new("c"), new LiteralOperand('A')),
             new WereInstruction(new("d"), new VariableOperand(new("c")), UtopIRType.Fathom),
             new FindInstruction(new VariableOperand(new("d")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(65);
     }
@@ -1602,13 +2157,13 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_ConvertsFathomToStitch_TruncatesToCodePoint()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WelcomeInstruction(new("d"), UtopIRType.Fathom),
             new WelcomeInstruction(new("c"), UtopIRType.Stitch),
             new AppointInstruction(new("d"), new LiteralOperand(65.9)),
             new WereInstruction(new("c"), new VariableOperand(new("d")), UtopIRType.Stitch),
             new FindInstruction(new VariableOperand(new("c")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(65);
     }
@@ -1619,10 +2174,10 @@ public class CilEmitterTests
     [Fact]
     public void Emit_Were_UndeclaredTarget_AutoDeclaresWithDestinationType()
     {
-        UtopIRProgram program = new([
+        UtopIRProgram program = new([new UtopIRFunctionDefinition("Opera", [], new UtopIRTermType(UtopIRType.Peer), [
             new WereInstruction(new("_were_11_chancellor"), new LiteralOperand(11), UtopIRType.Chancellor),
             new FindInstruction(new VariableOperand(new("_were_11_chancellor")))
-        ]);
+        ])]);
 
         RunProgram(program).ShouldBe(11);
     }

@@ -19,14 +19,16 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     {
         const string source =
             """
-            £lhs = welcome peer
-            £lhs = appoint 10
-            £rhs = welcome peer
-            £rhs = appoint 3
-            £_sum_lhs_rhs = sum £lhs, £rhs
-            £result = welcome peer
-            £result = appoint £_sum_lhs_rhs
-            find £result
+            duty &Opera, finds peer
+                £lhs = welcome peer
+                £lhs = appoint 10
+                £rhs = welcome peer
+                £rhs = appoint 3
+                £_sum_lhs_rhs = sum £lhs, £rhs
+                £result = welcome peer
+                £result = appoint £_sum_lhs_rhs
+                find £result
+            discharged
             """;
 
         UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
@@ -67,14 +69,16 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     {
         const string source =
             """
-            £lhs = welcome fathom
-            £lhs = appoint 1.5
-            £rhs = welcome fathom
-            £rhs = appoint 2.75
-            £_sumf_lhs_rhs = sum.f £lhs, £rhs
-            £result = welcome fathom
-            £result = appoint £_sumf_lhs_rhs
-            find £result
+            duty &Opera, finds peer
+                £lhs = welcome fathom
+                £lhs = appoint 1.5
+                £rhs = welcome fathom
+                £rhs = appoint 2.75
+                £_sumf_lhs_rhs = sum.f £lhs, £rhs
+                £result = welcome fathom
+                £result = appoint £_sumf_lhs_rhs
+                find £result
+            discharged
             """;
 
         UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
@@ -115,11 +119,13 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     {
         const string source =
             """
-            £small = welcome peer
-            £small = appoint 200
-            £big = welcome chancellor
-            £big = were £small, chancellor
-            find £big
+            duty &Opera, finds peer
+                £small = welcome peer
+                £small = appoint 200
+                £big = welcome chancellor
+                £big = were £small, chancellor
+                find £big
+            discharged
             """;
 
         UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
@@ -164,14 +170,16 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     {
         const string source =
             """
-            £Boolean = welcome decree
-            £Boolean = appoint verity
+            duty &Opera, finds peer
+                £Boolean = welcome decree
+                £Boolean = appoint verity
 
-            sailalike £Boolean, !IS_ALIKE
-            find 0
+                sailalike £Boolean, !IS_ALIKE
+                find 0
 
-            !IS_ALIKE
-              find 1
+                !IS_ALIKE
+                  find 1
+            discharged
             """;
 
         UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);
@@ -214,14 +222,16 @@ public sealed class UtopIrSourcePipelineIntegrationTests
     {
         const string source =
             """
-            £Boolean = welcome decree
-            £Boolean = appoint nay
+            duty &Opera, finds peer
+                £Boolean = welcome decree
+                £Boolean = appoint nay
 
-            sailalike £Boolean, !IS_ALIKE
-            find 0
+                sailalike £Boolean, !IS_ALIKE
+                find 0
 
-            !IS_ALIKE
-              find 1
+                !IS_ALIKE
+                  find 1
+            discharged
             """;
 
         UtopIRParseResult parseResult = new UtopIRParser().TryParse(source);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Emitters.Cil;
 using BWHazel.TopsyTurvy.UtopIR.Transformer.VariableNameFormatters;
@@ -21,7 +22,13 @@ namespace BWHazel.TopsyTurvy.Cli.OptionsResolvers;
 /// Ignored for <c>.utopir</c> input, which has no transformation step.
 ///
 /// ### Additional Configuration
-/// A <see cref="CilEmitOptions"/> instance is populated directly from the dedicated <c>--output</c> flag.
+/// A <see cref="CilEmitOptions"/> instance is populated directly from the dedicated <c>--output</c> flag,
+/// plus the Standard Library projected into <see cref="CilEmitOptions.ExternalFunctions"/>/
+/// <see cref="CilEmitOptions.HostInjectedServices"/> via <see cref="ExternalFunctionCilProjection"/>, so
+/// <c>summon</c>/<c>summon.find</c> calls resolve the same way regardless of input format. When the
+/// emitted executable made at least one such call, every path in
+/// <see cref="ExternalFunctionCilProjection.DeploymentAssemblyPaths"/> is copied alongside the output
+/// so it can run standalone.
 /// </remarks>
 public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTargetOptions>
 {
@@ -44,7 +51,7 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
         VariableFormatConfig.WarnIfIgnoredForUtopIrInput(filename, options.Format, tiptoe);
 
         ITemporaryVariableNameFormatter formatter = VariableFormatConfig.CreateFormatter(options.Format);
-        UtopIRProgram? program = ToolchainOperations.GetUtopIrProgram(filename, tiptoe, formatter);
+        UtopIRProgram? program = ToolchainOperations.GetUtopIrProgram(filename, tiptoe, formatter, options.ExternalFunctions);
         if (program is null)
         {
             return 1;
@@ -58,6 +65,16 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
                 Console.WriteLine(emitResult.IlSource);
                 break;
             case CilOutputKind.Executable:
+                if (emitResult.HasExternalCalls)
+                {
+                    string outputDirectory = Path.GetDirectoryName(emitOptions.OutputPath) ?? string.Empty;
+                    foreach (string dependencyPath in ExternalFunctionCilProjection.GetDeploymentAssemblyPaths(options.ExternalLibraryAssemblyPaths))
+                    {
+                        string deploymentPath = Path.Combine(outputDirectory, Path.GetFileName(dependencyPath));
+                        File.Copy(dependencyPath, deploymentPath, overwrite: true);
+                    }
+                }
+
                 if (!tiptoe)
                 {
                     PanelHelper.WriteSuccess(
@@ -77,11 +94,21 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
     /// Builds the base <see cref="CilTargetOptions"/> for <c>--emit dotnet-cil</c>, before any <c>--config</c> values are applied.
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
+    /// <param name="externalLibraryAssemblyPaths">The resolved paths of admitted external library assemblies, or <c>null</c> for none.</param>
     /// <returns>The base options.</returns>
-    public static CilTargetOptions BuildEmitOptions(string filename)
+    public static CilTargetOptions BuildEmitOptions(string filename, BindingCatalogue? externalFunctions = null, IReadOnlyList<string>? externalLibraryAssemblyPaths = null)
     {
         string assemblyName = Path.GetFileNameWithoutExtension(filename);
-        return new CilTargetOptions(new CilEmitOptions(assemblyName, string.Empty, CilOutputKind.IlSourceOnly));
+        return new CilTargetOptions(
+            new CilEmitOptions(
+                assemblyName,
+                string.Empty,
+                CilOutputKind.IlSourceOnly,
+                ExternalFunctionCilProjection.ProjectExternalFunctions(externalFunctions ?? BindingCatalogue.Default),
+                ExternalFunctionCilProjection.HostInjectedServices),
+            ExternalFunctions: externalFunctions,
+            ExternalLibraryAssemblyPaths: externalLibraryAssemblyPaths);
     }
 
     /// <summary>
@@ -89,11 +116,21 @@ public sealed class DotNetCilOptionsResolver : IEmitterOptionsResolver<CilTarget
     /// </summary>
     /// <param name="filename">The filename of the file to compile.</param>
     /// <param name="output">The requested output path, or <c>null</c> for the default.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
+    /// <param name="externalLibraryAssemblyPaths">The resolved paths of admitted external library assemblies, or <c>null</c> for none.</param>
     /// <returns>The base options.</returns>
-    public static CilTargetOptions BuildTargetOptions(string filename, string? output)
+    public static CilTargetOptions BuildTargetOptions(string filename, string? output, BindingCatalogue? externalFunctions = null, IReadOnlyList<string>? externalLibraryAssemblyPaths = null)
     {
         string outputPath = output ?? Path.ChangeExtension(filename, ".dll");
         string assemblyName = Path.GetFileNameWithoutExtension(outputPath);
-        return new CilTargetOptions(new CilEmitOptions(assemblyName, outputPath, CilOutputKind.Executable));
+        return new CilTargetOptions(
+            new CilEmitOptions(
+                assemblyName,
+                outputPath,
+                CilOutputKind.Executable,
+                ExternalFunctionCilProjection.ProjectExternalFunctions(externalFunctions ?? BindingCatalogue.Default),
+                ExternalFunctionCilProjection.HostInjectedServices),
+            ExternalFunctions: externalFunctions,
+            ExternalLibraryAssemblyPaths: externalLibraryAssemblyPaths);
     }
 }

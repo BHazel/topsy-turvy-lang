@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Runtime
@@ -122,4 +122,6 @@ Every `IT IS MY DUTY TO PERFORM` function, whether declared directly or contribu
 * Then the global, non-namespaced, table.
 
 This is mirrored by the same tiered resolution the [Type Checker](./type-checker.md) during static type-checking.  A bare name matching more than one open namespace is a runtime error requiring a fully-qualified name to disambiguate.  A fully-qualified call, using either the `WITH DISTRICT` ... `WITH DUTY` long form or the `*` short form, is looked up directly by its qualified key and does not go through this tiered resolution.
+
+At each of these tiers, the interpreter tries a Topsy Turvy function first and only consults the Standard Library or an admitted external function, resolved via a `BindingCatalogue`, if that same tier has no Topsy Turvy match.  A resolved external function is then invoked through an `ExternalFunctionInvoker`, which marshals arguments and return values between `TopsyTurvyValue` and the underlying .NET types.  The full mechanism, including how a function becomes bound in the first place, is described on the [Function Binding](./function-binding.md) page.
 

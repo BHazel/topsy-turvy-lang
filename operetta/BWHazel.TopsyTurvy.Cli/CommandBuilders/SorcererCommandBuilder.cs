@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
@@ -88,6 +89,13 @@ public static class SorcererCommandBuilder
         configOption.Aliases.Add("--tablet");
         configOption.Aliases.Add("-l");
 
+        Option<string[]> admitOption = new("--admit")
+        {
+            Description = "Loads an external .NET assembly (.dll) so its functions become callable via SUMMON.  Can be specified multiple times."
+        };
+
+        admitOption.Aliases.Add("--include");
+
         sorcererCommand.Arguments.Add(fileArgument);
         sorcererCommand.Options.Add(emitOption);
         sorcererCommand.Options.Add(targetOption);
@@ -96,6 +104,7 @@ public static class SorcererCommandBuilder
         sorcererCommand.Options.Add(chromaticOption);
         sorcererCommand.Options.Add(tiptoeOption);
         sorcererCommand.Options.Add(configOption);
+        sorcererCommand.Options.Add(admitOption);
 
         sorcererCommand.SetAction(parseResult =>
             HandleSorcerer(
@@ -106,7 +115,8 @@ public static class SorcererCommandBuilder
                 parseResult.GetValue(abridgedOption),
                 parseResult.GetValue(chromaticOption),
                 parseResult.GetValue(configOption) ?? [],
-                parseResult.GetValue(tiptoeOption)));
+                parseResult.GetValue(tiptoeOption),
+                parseResult.GetValue(admitOption) ?? []));
 
         return sorcererCommand;
     }
@@ -122,15 +132,23 @@ public static class SorcererCommandBuilder
     /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
     /// <param name="configEntries">The raw <c>key:value</c> configuration entries, if any.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="externalLibraryAssemblyPaths">The paths to external library assemblies to admit, or empty for none.</param>
     /// <remarks>
-    /// Checks the file exists, parses <c>--config</c>, then dispatches to the requested <c>--emit</c> or <c>--target</c> format.
+    /// Checks the file exists, loads any admitted external libraries, parses <c>--config</c>, then dispatches to
+    /// the requested <c>--emit</c> or <c>--target</c> format.
     /// </remarks>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleSorcerer(string filename, string? emit, string target, string? output, bool abridged, bool chromatic, string[] configEntries, bool tiptoe)
+    private static int HandleSorcerer(string filename, string? emit, string target, string? output, bool abridged, bool chromatic, string[] configEntries, bool tiptoe, string[] externalLibraryAssemblyPaths)
     {
         if (!File.Exists(filename))
         {
             return PanelHelper.ReportUserError(tiptoe, $"File not found: {filename}");
+        }
+
+        ExternalLibraryLoadResult loadResult = ExternalLibraryLoader.Load(externalLibraryAssemblyPaths);
+        if (loadResult.ErrorMessage is not null)
+        {
+            return PanelHelper.ReportUserError(tiptoe, loadResult.ErrorMessage);
         }
 
         Dictionary<string, string>? config = ParseConfig(configEntries, tiptoe);
@@ -141,10 +159,10 @@ public static class SorcererCommandBuilder
 
         if (!string.IsNullOrEmpty(emit))
         {
-            return HandleEmit(filename, emit, abridged, chromatic, config, tiptoe);
+            return HandleEmit(filename, emit, abridged, chromatic, config, tiptoe, loadResult);
         }
 
-        return HandleTarget(filename, target, output, config, tiptoe);
+        return HandleTarget(filename, target, output, config, tiptoe, loadResult);
     }
 
     /// <summary>
@@ -156,8 +174,9 @@ public static class SorcererCommandBuilder
     /// <param name="chromatic">A value indicating whether to syntax-highlight JSON output.</param>
     /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="loadResult">The result of loading any admitted external libraries.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleEmit(string filename, string emit, bool abridged, bool chromatic, IReadOnlyDictionary<string, string> config, bool tiptoe) =>
+    private static int HandleEmit(string filename, string emit, bool abridged, bool chromatic, IReadOnlyDictionary<string, string> config, bool tiptoe, ExternalLibraryLoadResult loadResult) =>
         emit.ToLowerInvariant() switch
         {
             "preprocess" or "p" or "cue" or "c" =>
@@ -169,7 +188,12 @@ public static class SorcererCommandBuilder
             "utopir-ast" or "s" =>
                 RunResolver(new UtopIrAstResolver(), filename, new JsonEmitOptions(abridged, chromatic), config, tiptoe),
             "dotnet-cil" or "d" =>
-                RunResolver(new DotNetCilOptionsResolver(), filename, DotNetCilOptionsResolver.BuildEmitOptions(filename), config, tiptoe),
+                RunResolver(
+                    new DotNetCilOptionsResolver(),
+                    filename,
+                    DotNetCilOptionsResolver.BuildEmitOptions(filename, loadResult.Catalogue, loadResult.ExternalLibraryAssemblyPaths),
+                    config,
+                    tiptoe),
             _ => PanelHelper.ReportUserError(tiptoe, $"Unknown --emit format: '{emit}'.")
         };
 
@@ -181,12 +205,18 @@ public static class SorcererCommandBuilder
     /// <param name="output">The requested output path, or <c>null</c> for the default.</param>
     /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="loadResult">The result of loading any admitted external libraries.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
-    private static int HandleTarget(string filename, string target, string? output, IReadOnlyDictionary<string, string> config, bool tiptoe) =>
+    private static int HandleTarget(string filename, string target, string? output, IReadOnlyDictionary<string, string> config, bool tiptoe, ExternalLibraryLoadResult loadResult) =>
         target.ToLowerInvariant() switch
         {
             "dotnet" =>
-                RunResolver(new DotNetCilOptionsResolver(), filename, DotNetCilOptionsResolver.BuildTargetOptions(filename, output), config, tiptoe),
+                RunResolver(
+                    new DotNetCilOptionsResolver(),
+                    filename,
+                    DotNetCilOptionsResolver.BuildTargetOptions(filename, output, loadResult.Catalogue, loadResult.ExternalLibraryAssemblyPaths),
+                    config,
+                    tiptoe),
             _ => PanelHelper.ReportUserError(tiptoe, $"Unknown --target: '{target}'.")
         };
 
@@ -200,6 +230,11 @@ public static class SorcererCommandBuilder
     /// <param name="config">The parsed configuration values.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <returns>An integer exit code with 0 for success or 1 for failure.</returns>
+    /// <remarks>
+    /// The UtopIR transformer and CIL emitter both signal an unsupported or malformed construct by throwing
+    /// <see cref="NotSupportedException"/> or <see cref="InvalidOperationException"/> directly, rather than
+    /// returning a structured diagnostic.
+    /// </remarks>
     private static int RunResolver<TOptions>(IEmitterOptionsResolver<TOptions> resolver, string filename, TOptions baseOptions, IReadOnlyDictionary<string, string> config, bool tiptoe)
     {
         if (!resolver.CanEmit(filename))
@@ -219,6 +254,10 @@ public static class SorcererCommandBuilder
             return resolver.Emit(filename, options, tiptoe);
         }
         catch (ToolchainConfigException exception)
+        {
+            return PanelHelper.ReportUserError(tiptoe, exception.Message);
+        }
+        catch (Exception exception) when (exception is NotSupportedException or InvalidOperationException)
         {
             return PanelHelper.ReportUserError(tiptoe, exception.Message);
         }

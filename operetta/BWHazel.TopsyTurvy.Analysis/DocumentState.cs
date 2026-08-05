@@ -35,4 +35,10 @@ public class DocumentState
     /// if it declares none.  Populated from the last successful parse, alongside <see cref="SymbolTable"/>.
     /// </summary>
     public IReadOnlyList<string> NamespacePath { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the names of any external functions shadowed by a Topsy Turvy function of the same name,
+    /// found while seeding <see cref="SymbolTable"/> with external functions. Populated alongside <see cref="SymbolTable"/>.
+    /// </summary>
+    public IReadOnlyList<string> ShadowedExternalFunctionNames { get; set; } = [];
 }

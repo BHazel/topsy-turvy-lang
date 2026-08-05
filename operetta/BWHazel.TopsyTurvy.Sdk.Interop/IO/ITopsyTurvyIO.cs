@@ -1,4 +1,4 @@
-namespace BWHazel.TopsyTurvy.Runtime;
+namespace BWHazel.TopsyTurvy.Sdk.Interop.IO;
 
 /// <summary>
 /// Defines the input and output operations for Topsy Turvy programmes.

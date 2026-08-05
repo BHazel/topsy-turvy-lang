@@ -213,6 +213,7 @@
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerHoverProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSymbolCompletionProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerDefinitionProvider", this.dotNetRef);
+            await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSignatureHelpProvider", this.dotNetRef);
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.registerSemanticTokensProvider");
             await this.JSRuntime.InvokeVoidAsync("topsyTurvy.enableSemanticHighlighting", "topsy-turvy-editor");
             await this.JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", this.IsDarkMode ? "topsy-turvy-dark" : "topsy-turvy-light");
@@ -558,10 +559,12 @@
         TopsyTurvyParser parser = new();
         ParseResult result = parser.TryParse(source);
         IEnumerable<object> deprecatedWarningMarkers = [];
+        IEnumerable<object> shadowedFunctionWarningMarkers = [];
 
         if (result.Program is not null)
         {
             SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            IReadOnlyList<string> shadowedExternalFunctionNames = ExternalFunctionRegistrar.Register(symbolTable);
             this.symbolTables[this.activeFileName] = symbolTable;
             this.parsedSources[this.activeFileName] = source;
 
@@ -585,6 +588,22 @@
                             : $"'{symbol.Name}' is deprecated: {symbol.Documentation.DeprecationMessage}",
                         severity = 4,
                     });
+
+            shadowedFunctionWarningMarkers = shadowedExternalFunctionNames
+                .Where(name => symbolTable.TryGetSymbol(name, out SymbolInfo? shadowingSymbol) && shadowingSymbol is not null)
+                .Select(name =>
+                {
+                    symbolTable.TryGetSymbol(name, out SymbolInfo? shadowingSymbol);
+                    return (object)new
+                    {
+                        startLineNumber = shadowingSymbol!.DefinitionLine,
+                        startColumn = shadowingSymbol.DefinitionColumn,
+                        endLineNumber = shadowingSymbol.DefinitionLine,
+                        endColumn = shadowingSymbol.DefinitionColumn + name.Length,
+                        message = $"'{name}' shadows an external function of the same name from the Standard Library.",
+                        severity = 4,
+                    };
+                });
         }
 
         IEnumerable<object> parseMarkers = result.Diagnostics
@@ -618,7 +637,7 @@
             });
         }
 
-        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers);
+        IEnumerable<object> markers = parseMarkers.Concat(typeMarkers).Concat(deprecatedWarningMarkers).Concat(shadowedFunctionWarningMarkers);
 
         await this.JSRuntime.InvokeVoidAsync("topsyTurvy.setModelMarkers", "topsy-turvy-editor", markers);
     }
@@ -629,6 +648,12 @@
     /// <param name="line">The 0-indexed line number.</param>
     /// <param name="column">The 0-indexed column number.</param>
     /// <returns>A Markdown string, or <c>null</c> if there is no recognised symbol at the position.</returns>
+    /// <remarks>
+    /// <see cref="SymbolTable.GetFunctionOverloads"/> is checked before <see cref="SymbolTable.TryGetSymbol"/>: a
+    /// name with more than one declared overload renders just the one declared on the hovered line if the cursor
+    /// is directly on a specific overload (<see cref="HoverMarkdownBuilder.Build(IReadOnlyList{SymbolInfo}, int)"/>),
+    /// otherwise every overload, since <c>TryGetSymbol</c> alone only ever surfaces the first-declared overload.
+    /// </remarks>
     [JSInvokable]
     public string? GetHoverMarkdown(int line, int column)
     {
@@ -636,6 +661,12 @@
         if (word is null)
         {
             return null;
+        }
+
+        IReadOnlyList<SymbolInfo> overloads = this.ActiveSymbolTable?.GetFunctionOverloads(word) ?? [];
+        if (overloads.Count > 0)
+        {
+            return HoverMarkdownBuilder.Build(overloads, line);
         }
 
         if (this.ActiveSymbolTable?.TryGetSymbol(word, out SymbolInfo? info) == true && info is not null)
@@ -652,6 +683,12 @@
                 continue;
             }
 
+            IReadOnlyList<SymbolInfo> otherOverloads = otherTable.GetFunctionOverloads(word);
+            if (otherOverloads.Count > 0)
+            {
+                return HoverMarkdownBuilder.Build(otherOverloads);
+            }
+
             if (otherTable.TryGetSymbol(word, out SymbolInfo? otherInfo) && otherInfo is not null)
             {
                 return otherInfo.Kind == SymbolKind.Namespace ? this.BuildNamespaceHoverMarkdown(otherInfo) : HoverMarkdownBuilder.Build(otherInfo);
@@ -659,6 +696,48 @@
         }
 
         return this.TryBuildNamespaceSegmentHoverMarkdown(word);
+    }
+
+    /// <summary>
+    /// Gets signature help for an in-progress <c>SUMMON</c> call at the given 0-indexed line and column, or
+    /// <c>null</c> if no such call is detected.
+    /// </summary>
+    /// <param name="line">The 0-indexed line number.</param>
+    /// <param name="column">The 0-indexed column number.</param>
+    /// <returns>
+    /// An anonymous object with lower-camel-case properties matching the Monaco <c>SignatureHelp</c> shape
+    /// (<c>signatures</c>, each with a <c>label</c> and a <c>parameters</c> array of parameter labels;
+    /// <c>activeSignature</c>; <c>activeParameter</c>), or <c>null</c> if there is no in-progress call at the
+    /// position.
+    /// </returns>
+    /// <remarks>
+    /// Delegates entirely to <see cref="SignatureHelpBuilder.Build"/>, the same resolution the LSP
+    /// <c>SignatureHelpHandler</c> uses.
+    /// </remarks>
+    [JSInvokable]
+    public object? GetSignatureHelp(int line, int column)
+    {
+        if (this.ActiveSymbolTable is null)
+        {
+            return null;
+        }
+
+        SignatureHelpResult? result = SignatureHelpBuilder.Build(this.ActiveParsedSource, line, column, this.ActiveSymbolTable);
+        if (result is null)
+        {
+            return null;
+        }
+
+        return new
+        {
+            signatures = result.Signatures.Select(signature => new
+            {
+                label = signature.Label,
+                parameters = signature.ParameterLabels
+            }),
+            activeSignature = result.ActiveSignature,
+            activeParameter = result.ActiveParameter
+        };
     }
 
     /// <summary>
@@ -1284,7 +1363,9 @@
         ParseResult result = parser.TryParse(source);
         if (result.Program is not null)
         {
-            this.symbolTables[fileName] = SymbolTable.Build(result.Program, source);
+            SymbolTable symbolTable = SymbolTable.Build(result.Program, source);
+            ExternalFunctionRegistrar.Register(symbolTable);
+            this.symbolTables[fileName] = symbolTable;
             this.parsedSources[fileName] = source;
         }
     }

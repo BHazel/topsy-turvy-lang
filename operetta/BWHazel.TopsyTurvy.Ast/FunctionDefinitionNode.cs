@@ -20,6 +20,10 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <see cref="LiteralType"/> that every <see cref="ReturnNode"/> in the body must evaluate to.
 /// </para>
 /// <para>
+/// When <see cref="ReturnType"/> is <see cref="LiteralType.Array"/>, <see cref="ReturnArrayElementType"/>
+/// holds the declared element type.
+/// </para>
+/// <para>
 /// For example, the following function sums the number of Conservative and Liberal lords:
 /// </para>
 /// <code>
@@ -97,6 +101,11 @@ public class FunctionDefinitionNode : Statement
     /// Gets or initialises the declared return type of the function, or <c>null</c> if the function is void.
     /// </summary>
     public LiteralType? ReturnType { get; init; }
+
+    /// <summary>
+    /// Gets or initialises the declared element type, when <see cref="ReturnType"/> is <see cref="LiteralType.Array"/>; otherwise <c>null</c>.
+    /// </summary>
+    public LiteralType? ReturnArrayElementType { get; init; }
 
     /// <summary>
     /// Gets or initialises the block of statements in the function body.

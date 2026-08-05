@@ -10,4 +10,5 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <param name="Name">The parameter identifier as written.</param>
 /// <param name="Type">The declared <see cref="LiteralType"/> for this parameter.</param>
 /// <param name="Span">The source span covering the parameter identifier token.</param>
-public record TypedParameter(string Name, LiteralType Type, SourceSpan Span);
+/// <param name="ArrayElementType">The declared element type, when <paramref name="Type"/> is <see cref="LiteralType.Array"/>; otherwise <c>null</c>.</param>
+public record TypedParameter(string Name, LiteralType Type, SourceSpan Span, LiteralType? ArrayElementType = null);

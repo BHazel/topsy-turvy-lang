@@ -29,6 +29,15 @@ namespace BWHazel.TopsyTurvy.UtopIR.Parser;
 /// returning just the identifier text with the <c>!</c> stripped.  Mirrors <see cref="Variable"/>
 /// exactly, but for branch targets rather than virtual registers.
 ///
+/// ### Function References
+/// * <see cref="FunctionReference"/> matches a <c>&amp;</c> character followed by one or more
+/// <see cref="Identifier"/> segments joined by <c>*</c>, returning the fully-qualified name with
+/// the <c>&amp;</c> stripped.
+///
+/// ### Parameters
+/// * <see cref="Parameter"/> matches a <c>%</c> character followed by an <see cref="Identifier"/>,
+/// returning just the identifier text with the <c>%</c> stripped.
+///
 /// ### Literals
 /// * <see cref="StringLiteral"/> and <see cref="CharacterLiteral"/> match on an individual string or
 /// character respectively.  The use the same <c>~</c>-escape "Victoria Flourish" convention as Topsy
@@ -62,9 +71,9 @@ public static class Lexer
     /// Parses and discards zero or more non-newline whitespace characters.
     /// </summary>
     /// <remarks>
-    /// Deliberately excludes <c>\r</c> and <c>\n</c>, unlike the Topsy Turvy lexer's equivalent — UtopIR
-    /// is line-oriented and newlines are structurally significant, consumed explicitly by
-    /// <see cref="InstructionParser.Newline"/>, not silently absorbed as incidental whitespace.
+    /// Deliberately excludes <c>\r</c> and <c>\n</c>, unlike the equivalent parser in the Topsy Turvy
+    /// lexer: UtopIR is line-oriented, and newlines are structurally significant, consumed explicitly
+    /// by <see cref="InstructionParser.Newline"/>, not silently absorbed as incidental whitespace.
     /// </remarks>
     public static readonly TextParser<char[]> Whitespace =
         Character
@@ -198,6 +207,38 @@ public static class Lexer
          from name in Identifier
          select name)
             .Named("label");
+
+    /// <summary>
+    /// Parses a <c>&amp;</c>-starting function reference, returning the fully-qualified name, with any
+    /// namespace segments joined by <see cref="UtopIRKeywords.NamespaceDelimiter"/>, without the
+    /// <c>&amp;</c> character.
+    /// </summary>
+    /// <remarks>
+    /// A namespace-qualified function reference, e.g. <c>&amp;Aesthetic*Writing*ReadPoem</c>, is one or
+    /// more <see cref="Identifier"/> segments joined by the <c>*</c> character; a bare reference, e.g.
+    /// <c>&amp;ReadPoem</c>, is a single segment for a function in the global namespace.
+    /// </remarks>
+    public static readonly TextParser<string> FunctionReference =
+        (from sigil in Character.EqualTo('&')
+         from firstSegment in Identifier
+         from remainingSegments in
+             (from delimiter in Character.EqualTo('*')
+              from segment in Identifier
+              select segment)
+             .Many()
+         select remainingSegments.Length == 0
+             ? firstSegment
+             : firstSegment + UtopIRKeywords.NamespaceDelimiter + string.Join(UtopIRKeywords.NamespaceDelimiter, remainingSegments))
+            .Named("function reference");
+
+    /// <summary>
+    /// Parses a <c>%</c>-starting parameter reference, returning the identifier text without the <c>%</c> character.
+    /// </summary>
+    public static readonly TextParser<string> Parameter =
+        (from sigil in Character.EqualTo('%')
+         from name in Identifier
+         select name)
+            .Named("parameter");
 
     /// <summary>
     /// Returns a parser that matches the exact <paramref name="keyword"/> text case-insensitively.

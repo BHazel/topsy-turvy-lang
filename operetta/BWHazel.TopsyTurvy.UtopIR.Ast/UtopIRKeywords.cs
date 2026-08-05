@@ -19,6 +19,9 @@ public static class UtopIRKeywords
 
         /// <summary>Boolean <c>false</c> literal.</summary>
         public const string Nay = "nay";
+
+        /// <summary>Null literal, assignable to a pointer, array or <c>yarn</c> variable.</summary>
+        public const string Naught = "naught";
     }
 
     /// <summary>
@@ -64,6 +67,20 @@ public static class UtopIRKeywords
 
         /// <summary>String type.</summary>
         public const string Yarn = "yarn";
+    }
+
+    /// <summary>
+    /// UtopIR keywords for special-case types.
+    /// </summary>
+    public static class SpecialTypes
+    {
+        /// <summary>Array type prefix.</summary>
+        /// <remarks>
+        /// This is a special type keyword used as a prefix for array types and only used within <c>term</c> and <c>finds</c>
+        /// operands only.  As a prefix it is never used alone but always with another type, e.g. an array of 32-bit integers
+        /// is written as <c>list.peer</c>.
+        /// </remarks>
+        public const string ListPrefix = "list.";
     }
 
     /// <summary>
@@ -190,5 +207,62 @@ public static class UtopIRKeywords
 
         /// <summary>The <c>sailunlike</c> instruction.</summary>
         public const string SailUnlike = "sailunlike";
+
+        /// <summary>The <c>victim.yarn</c> instruction.</summary>
+        public const string VictimYarn = "victim.yarn";
+
+        /// <summary>The <c>welcome.list</c> instruction.</summary>
+        public const string WelcomeList = "welcome.list";
+
+        /// <summary>The <c>appoint.victim</c> instruction.</summary>
+        public const string AppointVictim = "appoint.victim";
+
+        /// <summary>The <c>victim.list</c> instruction.</summary>
+        public const string VictimList = "victim.list";
+
+        /// <summary>The <c>welcome.gallerypic</c> instruction.</summary>
+        public const string WelcomeGallerypic = "welcome.gallerypic";
+
+        /// <summary>The <c>pictureto</c> instruction.</summary>
+        public const string PictureTo = "pictureto";
+
+        /// <summary>The <c>viewfrom</c> instruction.</summary>
+        public const string ViewFrom = "viewfrom";
+
+        /// <summary>The <c>viewto</c> instruction.</summary>
+        public const string ViewTo = "viewto";
+
+        /// <summary>The <c>sum.g</c> instruction.</summary>
+        public const string SumPointer = "sum.g";
+
+        /// <summary>The <c>diff.g</c> instruction.</summary>
+        public const string DiffPointer = "diff.g";
+
+        /// <summary>The <c>summon</c> instruction.</summary>
+        public const string Summon = "summon";
+
+        /// <summary>The <c>summon.find</c> instruction.</summary>
+        public const string SummonFind = "summon.find";
+
+        /// <summary>The <c>duty</c> function definition opener.</summary>
+        public const string Duty = "duty";
+
+        /// <summary>The <c>discharged</c> function definition closer.</summary>
+        public const string Discharged = "discharged";
+
+        /// <summary>The <c>term</c> function parameter/signature operand.</summary>
+        public const string Term = "term";
+
+        /// <summary>The <c>finds</c> function return type operand.</summary>
+        public const string Finds = "finds";
     }
+
+    /// <summary>
+    /// The namespace segment delimiter used in fully-qualified function identifiers.
+    /// </summary>
+    /// <remarks>
+    /// For example, a function <c>Greet</c> declared under <c>TOWN Aesthetic WITH DISTRICT Writing</c>
+    /// is addressed in UtopIR as <c>&amp;Aesthetic*Writing*Greet</c>. See <see cref="FunctionReference"/>.
+    /// </remarks>
+    public const string NamespaceDelimiter = "*";
 }

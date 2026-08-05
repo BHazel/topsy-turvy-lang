@@ -2,6 +2,7 @@ using System;
 using Spectre.Console;
 using Spectre.Console.Json;
 using BWHazel.TopsyTurvy.Ast;
+using BWHazel.TopsyTurvy.Bindings;
 using BWHazel.TopsyTurvy.UtopIR.Ast;
 using BWHazel.TopsyTurvy.UtopIR.Parser;
 using BWHazel.TopsyTurvy.UtopIR.Transformer;
@@ -21,10 +22,11 @@ public static class ToolchainOperations
     /// </summary>
     /// <param name="filename">The filename to parse.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library.</param>
     /// <returns>The parsed programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
-    public static ProgramNode? ParseAndCheck(string filename, bool tiptoe)
+    public static ProgramNode? ParseAndCheck(string filename, bool tiptoe, BindingCatalogue? externalFunctions = null)
     {
-        (ProgramExecutionResult result, TopsyParseResult? parseData) = ProgramRunner.ParseFile(filename);
+        (ProgramExecutionResult result, TopsyParseResult? parseData) = ProgramRunner.ParseFile(filename, externalFunctions: externalFunctions);
         if (!result.IsSuccess)
         {
             PanelHelper.ReportErrors(result, tiptoe);
@@ -40,8 +42,9 @@ public static class ToolchainOperations
     /// <param name="filename">The filename to compile.</param>
     /// <param name="tiptoe">A value indicating whether to suppress panels and colours.</param>
     /// <param name="formatter">The formatter used to name temporary virtual registers when transforming Topsy Turvy source; unused for <c>.utopir</c> input, which has no transform step.</param>
+    /// <param name="externalFunctions">The catalogue of external functions available to <c>SUMMON</c>, or <c>null</c> to use only the Standard Library. Ignored for <c>.utopir</c> input, which has no type-check or transform step.</param>
     /// <returns>The UtopIR programme, or <c>null</c> if parsing or type-checking failed as errors are already reported.</returns>
-    public static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe, ITemporaryVariableNameFormatter formatter)
+    public static UtopIRProgram? GetUtopIrProgram(string filename, bool tiptoe, ITemporaryVariableNameFormatter formatter, BindingCatalogue? externalFunctions = null)
     {
         if (filename.EndsWith(FileManager.UtopirFileExtension, StringComparison.OrdinalIgnoreCase))
         {
@@ -66,10 +69,10 @@ public static class ToolchainOperations
             return parseResult.Program;
         }
 
-        ProgramNode? program = ParseAndCheck(filename, tiptoe);
+        ProgramNode? program = ParseAndCheck(filename, tiptoe, externalFunctions);
         return program is null
             ? null
-            : new TopsyTurvyToUtopIRTransformer(formatter).Transform(program);
+            : new TopsyTurvyToUtopIRTransformer(formatter, externalFunctions: externalFunctions).Transform(program);
     }
 
     /// <summary>

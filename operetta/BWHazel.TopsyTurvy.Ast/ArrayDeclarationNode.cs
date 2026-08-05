@@ -9,13 +9,13 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// <para>
 /// This corresponds to the <c>PRAY WELCOME ... AS A [CONSERVATIVE|LIBERAL] LITTLE LIST OF [size] type [BEING ... IF YOU PLEASE.]</c>
 /// array declaration statement in Topsy Turvy.  Every array declaration consists of the <see cref="Name"/> of the variable being
-/// declared, the declared <see cref="ElementType"/> of the array elements, an optional <see cref="Size"/> for pre-allocation,
-/// an optional <see cref="IsConstant"/> flag set by the <c>CONSERVATIVE</c> or <c>LIBERAL</c> mutability modifier and an optional
-/// list of initial values in <see cref="InitialValues"/>.
+/// declared, the declared <see cref="ElementType"/> of the array elements, an optional <see cref="SizeExpression"/> for
+/// pre-allocation, an optional <see cref="IsConstant"/> flag set by the <c>CONSERVATIVE</c> or <c>LIBERAL</c> mutability modifier
+/// and an optional list of initial values in <see cref="InitialValues"/>.
 /// </para>
 /// <para>
-/// When no initial values are provided and no <see cref="Size"/> is set, the array is initialised as an empty list; it is not set
-/// to <c>NAUGHT</c>.
+/// When no initial values are provided and no <see cref="SizeExpression"/> is set, the array is initialised as an empty list; it
+/// is not set to <c>NAUGHT</c>.
 /// </para>
 /// <para>
 /// For example, the following code in Topsy Turvy to declare an array variable <c>miscreants</c> with three initial string values:
@@ -56,14 +56,15 @@ namespace BWHazel.TopsyTurvy.Ast;
 /// PRAY WELCOME miscreants AS A LITTLE LIST OF 3 YARN
 /// </code>
 /// <para>
-/// would be represented as an <see cref="ArrayDeclarationNode"/> with <see cref="Size"/> set to <c>3</c>:
+/// would be represented as an <see cref="ArrayDeclarationNode"/> with <see cref="SizeExpression"/> set to a
+/// <see cref="LiteralNode"/> with value <c>3</c>:
 /// </para>
 /// <code>
 /// new ArrayDeclarationNode()
 /// {
 ///     Name = "miscreants",
 ///     ElementType = LiteralType.String,
-///     Size = 3,
+///     SizeExpression = new LiteralNode() { Type = LiteralType.Integer, Value = 3, Span = new() { /* ... */ } },
 ///     IsConstant = false,
 ///     InitialValues = [],
 ///     Span = new() { /* ... */ }
@@ -95,16 +96,17 @@ public class ArrayDeclarationNode : Statement
     public required LiteralType ElementType { get; init; }
 
     /// <summary>
-    /// Gets or initialises the optional pre-allocation size of the array.
+    /// Gets or initialises the optional pre-allocation size expression of the array.
     /// </summary>
     /// <remarks>
-    /// When set, the array is pre-allocated with this many <c>NAUGHT</c> elements at runtime.  This allows
-    /// element assignment via <c>VICTIM n ON arr IS APPOINTED val</c> without first populating the array
-    /// with a <c>BEING</c> clause.  This is mutually exclusive with a non-empty <see cref="InitialValues"/> list as
-    /// providing both is a runtime error.  A value of <c>0</c> produces an empty array, equivalent to omitting
-    /// the size entirely.  A negative value is a runtime error.
+    /// When set, the array is pre-allocated with this many elements at runtime, where "this many" is
+    /// the result of evaluating this expression when the declaration executes; it can be a literal or any expression
+    /// which evaluates to an integer.  This allows element assignment via <c>VICTIM n ON arr IS APPOINTED val</c> without
+    /// first populating the array with a <c>BEING</c> clause.  This is mutually exclusive with a non-empty
+    /// <see cref="InitialValues"/> list as providing both is a runtime error.  A result of <c>0</c> produces an empty array,
+    /// equivalent to omitting the size entirely.  A negative result is a runtime error.
     /// </remarks>
-    public int? Size { get; init; }
+    public Expression? SizeExpression { get; init; }
 
     /// <summary>
     /// Gets or initialises a value indicating whether this array declaration is a constant.

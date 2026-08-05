@@ -277,6 +277,53 @@ public class TopsyTurvyInterpreterArrayTests : TopsyTurvyInterpreterTestBase
     }
 
     /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method pre-allocates an array using the current
+    /// value of a variable as the size, evaluated at declaration time rather than requiring a compile-time constant.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayDeclaration_WithVariableSize_PreAllocatesUsingVariableValue()
+    {
+        string source = """
+            HARK! "Arrays"
+            PRAY WELCOME count AS A PEER BEING 3
+            PRAY WELCOME arr AS A LITTLE LIST OF count PEER
+            BEHOLD RECKONING OF arr
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> output) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeFalse();
+        output.ShouldHaveSingleItem();
+        output[0].ShouldBe("3");
+    }
+
+    /// <summary>
+    /// Tests that the <see cref="Interpreter.Execute"/> method produces a runtime error when an array size
+    /// expression evaluates to a negative value at runtime, not just for a negative literal.
+    /// </summary>
+    [Fact]
+    public void Execute_ArrayDeclaration_WithVariableNegativeSize_ProducesRuntimeError()
+    {
+        string source = """
+            HARK! "Arrays"
+            PRAY WELCOME count AS A PEER BEING DIFFERENCE OF 0 AND 3
+            PRAY WELCOME arr AS A LITTLE LIST OF count YARN
+            FINALE.
+            """;
+
+        ProgramNode program = this.parser.Parse(source);
+        (Interpreter interpreter, List<string> _) = this.CreateInterpreter();
+
+        DiagnosticCollection diagnostics = interpreter.Execute(program);
+
+        diagnostics.HasErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Tests that the <see cref="Interpreter.Execute"/> method implements reference semantics, so that two variables pointing to the same array share the same underlying storage.
     /// </summary>
     [Fact]

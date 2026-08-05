@@ -14,6 +14,7 @@ All Topsy Turvy releases are listed below.  Select one to view the detailed rele
 
 ||Date|Highlights|
 |-|-|-|
+|🔥🔮|[2026-08-05](./2026-08-05)|Standard Library and External Functions (Preview), UtopIR (Preview 4)|
 |🔮|[2026-07-18](./2026-07-18)|Namespaces, Pointers, UtopIR (Preview 3)|
 |⚠️🔮|[2026-07-13](./2026-07-13)|Sized Shifts, Native Support, iOS/iPadOS App, UtopIR (Preview 2)|
 |🔥🔮|[2026-07-03](./2026-07-03)|Flexible Loops, Programme-Level Return, Repurposed `sorcerer` Command, UtopIR (Preview 1)|

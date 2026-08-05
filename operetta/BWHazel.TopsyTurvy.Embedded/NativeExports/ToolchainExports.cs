@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using BWHazel.TopsyTurvy.Analysis;
@@ -13,19 +12,23 @@ using BWHazel.TopsyTurvy.Parser;
 using BWHazel.TopsyTurvy.Runtime;
 using BWHazel.TopsyTurvy.TypeChecker;
 
-namespace BWHazel.TopsyTurvy.Embedded;
+namespace BWHazel.TopsyTurvy.Embedded.NativeExports;
 
 /// <summary>
-/// Provides the native export surface consumed across the C ABI boundary.
+/// Provides the core toolchain native export surface consumed across the C ABI boundary: session lifecycle,
+/// analysis, hover, completion, formatting, tokenisation and execution.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Every export is <see cref="UnmanagedCallersOnlyAttribute"/>-annotated with an explicit <c>EntryPoint</c>
-/// naming the exported C symbol (<c>topsyturvy_*</c>).  The managed method name itself follows ordinary .NET
-/// <c>PascalCase</c> conventions since the two are independent once <c>EntryPoint</c> is specified.  Every export
-/// is wrapped in a try/catch: a managed exception escaping such an export is undefined behaviour, so each
-/// one returns a sentinel value (0 or a null pointer) on failure instead, stashing the exception message
-/// into the session <see cref="NativeSession.LastError"/> for retrieval via <see cref="GetLastError"/>.
+/// naming the exported C symbol.  The managed method name itself follows ordinary .NET <c>PascalCase</c> conventions
+/// since the two are independent once <c>EntryPoint</c> is specified.  Every export is wrapped in a try/catch:
+/// a managed exception escaping such an export is undefined behaviour, so each one returns a sentinel value (0 or a
+/// null pointer) on failure instead, stashing the exception message into the session
+/// <see cref="NativeSession.LastError"/> for retrieval via <see cref="GetLastError"/>.
+/// </para>
+/// <para>
+/// All exported symbols for the toolchain are prefixed with <c>topsyturvy_tc_</c>.
 /// </para>
 /// <para>
 /// Every pointer this class returns to the caller must be released via <see cref="FreeBuffer"/> exactly once and
@@ -38,37 +41,40 @@ namespace BWHazel.TopsyTurvy.Embedded;
 /// * <see cref="GetLastError"/>
 /// </para>
 /// </remarks>
-public static unsafe class NativeExports
+public static unsafe class ToolchainExports
 {
     /// <summary>
     /// Returns the native export contract version.
     /// </summary>
-    /// <returns>The contract version number, starting at <c>1</c>.</returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_api_version")]
-    public static int ApiVersion() => 1;
+    /// <returns>The contract version number.</returns>
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_api_version")]
+    public static int ApiVersion() => 2;
 
     /// <summary>
     /// Creates a new native session, capturing the registered callbacks from the caller.
     /// </summary>
     /// <param name="outputLine">The callback invoked once per output line written by a running programme.</param>
     /// <param name="resolveImport">The callback invoked to resolve a <c>PRAY ADMIT</c> import filename to source text.</param>
+    /// <param name="inputLine">The callback invoked to read one line of input on demand, or a null pointer to leave input unregistered.</param>
     /// <param name="context">
     /// A caller-supplied "userdata" pointer, for example one pointing at Swift-side state the caller wants
     /// to associate with this session. This library never dereferences or interprets the value: it stores
-    /// it and passes it back, unchanged, as the first argument to every invocation of <paramref name="outputLine"/>
-    /// and <paramref name="resolveImport"/>, so the caller can recover which session or object a callback
-    /// invocation belongs to, since a C function pointer cannot itself capture that context.
+    /// it and passes it back, unchanged, as the first argument to every invocation of <paramref name="outputLine"/>,
+    /// <paramref name="resolveImport"/> and <paramref name="inputLine"/>, so the caller can recover which
+    /// session or object a callback invocation belongs to, since a C function pointer cannot itself capture
+    /// that context.
     /// </param>
     /// <returns>An opaque session handle, or <c>0</c> if an exception was thrown.</returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_session_create")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_session_create")]
     public static nint CreateSession(
         delegate* unmanaged<nint, byte*, byte, void> outputLine,
         delegate* unmanaged<nint, byte*, byte*> resolveImport,
+        delegate* unmanaged<nint, byte*> inputLine,
         nint context)
     {
         try
         {
-            NativeCallbacks callbacks = new(outputLine, resolveImport, context);
+            NativeCallbacks callbacks = new(outputLine, resolveImport, inputLine, context);
             NativeSession session = new(callbacks);
 
             GCHandle handle = GCHandle.Alloc(session);
@@ -92,7 +98,7 @@ public static unsafe class NativeExports
     /// <see cref="SessionRegistry"/> is consulted first, since <see cref="GCHandle"/> APIs are unsafe to call
     /// on a handle value this method has not itself vouched for.
     /// </remarks>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_session_destroy")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_session_destroy")]
     public static void DestroySession(nint session)
     {
         if (!SessionRegistry.TryUnregister(session))
@@ -119,10 +125,10 @@ public static unsafe class NativeExports
     /// caller must release via <see cref="FreeBuffer"/>, or a null pointer if the session handle is invalid
     /// or an exception was thrown.
     /// </returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_analyse")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_analyse")]
     public static byte* AnalyseSource(nint session, byte* sourceUtf8)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return null;
         }
@@ -146,7 +152,7 @@ public static unsafe class NativeExports
 
             AnalysisResult result = new(success, diagnostics);
             string analysisResultJson = JsonSerializer.Serialize(result, EmbeddedJsonContext.Default.AnalysisResult);
-            return AllocateUtf8String(analysisResultJson);
+            return NativeExportSupport.AllocateUtf8String(analysisResultJson);
         }
         catch (Exception ex)
         {
@@ -167,10 +173,10 @@ public static unsafe class NativeExports
     /// caller must release via <see cref="FreeBuffer"/>, or a null pointer if the session handle is invalid
     /// or an exception was thrown.
     /// </returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_hover")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_hover")]
     public static byte* GetHover(nint session, byte* sourceUtf8, int line, int column)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return null;
         }
@@ -184,6 +190,7 @@ public static unsafe class NativeExports
             if (parseResult.Program is not null)
             {
                 SymbolTable symbolTable = SymbolTable.Build(parseResult.Program, source);
+                ExternalFunctionRegistrar.Register(symbolTable);
                 string? word = SymbolTable.ExtractWordAt(source, line, column);
                 if (word is not null && symbolTable.TryGetSymbol(word, out SymbolInfo? symbolInfo) && symbolInfo is not null)
                 {
@@ -192,7 +199,7 @@ public static unsafe class NativeExports
             }
 
             string hoverResultJson = JsonSerializer.Serialize(result, EmbeddedJsonContext.Default.HoverResult);
-            return AllocateUtf8String(hoverResultJson);
+            return NativeExportSupport.AllocateUtf8String(hoverResultJson);
         }
         catch (Exception ex)
         {
@@ -214,10 +221,10 @@ public static unsafe class NativeExports
     /// caller must release via <see cref="FreeBuffer"/>, or a null pointer if the session handle is invalid
     /// or an exception was thrown.
     /// </returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_complete")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_complete")]
     public static byte* GetCompletions(nint session, byte* sourceUtf8, int line, int column)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return null;
         }
@@ -231,7 +238,7 @@ public static unsafe class NativeExports
 
             bool isKeywordContext = phrase.Length == 0
                 || KeywordData.Keywords.Any(keywordInfo => keywordInfo.Keyword.StartsWith(phrase, StringComparison.OrdinalIgnoreCase));
-            
+
             int insertOffset = isKeywordContext
                 ? phrase.Length - lastWord.Length
                 : 0;
@@ -240,6 +247,7 @@ public static unsafe class NativeExports
             if (parseResult.Program is not null)
             {
                 SymbolTable symbolTable = SymbolTable.Build(parseResult.Program, source);
+                ExternalFunctionRegistrar.Register(symbolTable);
                 IEnumerable<CompletionItemInfo> symbolItems = symbolTable.AllSymbols()
                     // Namespace symbols use a synthesised "*"-joined display name, e.g. "Accounts*Payroll", that a
                     // user would never type as a single completion target, so they are excluded here.
@@ -258,7 +266,7 @@ public static unsafe class NativeExports
 
             CompletionResult result = new(items);
             string completionResultJson = JsonSerializer.Serialize(result, EmbeddedJsonContext.Default.CompletionResult);
-            return AllocateUtf8String(completionResultJson);
+            return NativeExportSupport.AllocateUtf8String(completionResultJson);
         }
         catch (Exception ex)
         {
@@ -277,10 +285,10 @@ public static unsafe class NativeExports
     /// must release via <see cref="FreeBuffer"/>, or a null pointer if the session handle is invalid or an
     /// exception was thrown.
     /// </returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_format")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_format")]
     public static byte* FormatSource(nint session, byte* sourceUtf8)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return null;
         }
@@ -289,7 +297,7 @@ public static unsafe class NativeExports
         {
             string source = Marshal.PtrToStringUTF8((nint)sourceUtf8) ?? string.Empty;
             string formattedSource = SourceFormatter.FormatSource(source);
-            return AllocateUtf8String(formattedSource);
+            return NativeExportSupport.AllocateUtf8String(formattedSource);
         }
         catch (Exception ex)
         {
@@ -313,10 +321,10 @@ public static unsafe class NativeExports
     /// source does not currently form valid syntax, since the editor calls it continuously while the user
     /// types.
     /// </remarks>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tokens")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_tokens")]
     public static byte* GetTokens(nint session, byte* sourceUtf8)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return null;
         }
@@ -328,7 +336,7 @@ public static unsafe class NativeExports
 
             TokenResult result = new(tokens);
             string tokenResultJson = JsonSerializer.Serialize(result, EmbeddedJsonContext.Default.TokenResult);
-            return AllocateUtf8String(tokenResultJson);
+            return NativeExportSupport.AllocateUtf8String(tokenResultJson);
         }
         catch (Exception ex)
         {
@@ -355,10 +363,10 @@ public static unsafe class NativeExports
     /// instead.  This export inspects that collection and the session <see cref="CancellationTokenSource"/>
     /// after execution completes, rather than relying on an exception ever escaping <see cref="Interpreter.Execute"/>.
     /// </remarks>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_execute")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_execute")]
     public static int ExecuteProgramme(nint session, byte* sourceUtf8, byte* argsJsonUtf8, byte* stdinUtf8)
     {
-        if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
+        if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession is null)
         {
             return 3;
         }
@@ -408,7 +416,7 @@ public static unsafe class NativeExports
                     runtimeDiagnostics.Diagnostics
                         .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
                         .Select(diagnostic => diagnostic.Message));
-            
+
                 return 3;
             }
 
@@ -426,12 +434,12 @@ public static unsafe class NativeExports
     /// </summary>
     /// <param name="session">The session handle.</param>
     /// <remarks>A no-op if the handle is invalid or no execution has started yet.</remarks>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_cancel")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_cancel")]
     public static void CancelExecution(nint session)
     {
         try
         {
-            if (TryGetSession(session, out NativeSession? nativeSession) && nativeSession is not null)
+            if (NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) && nativeSession is not null)
             {
                 nativeSession.CancellationTokenSource?.Cancel();
             }
@@ -449,17 +457,17 @@ public static unsafe class NativeExports
     /// A null-terminated, UTF-8 encoded pointer to the error message, which the caller must release via
     /// <see cref="FreeBuffer"/>, or a null pointer if the handle is invalid or no error has occurred.
     /// </returns>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_last_error")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_last_error")]
     public static byte* GetLastError(nint session)
     {
         try
         {
-            if (!TryGetSession(session, out NativeSession? nativeSession) || nativeSession?.LastError is null)
+            if (!NativeExportSupport.TryGetSession(session, out NativeSession? nativeSession) || nativeSession?.LastError is null)
             {
                 return null;
             }
 
-            return AllocateUtf8String(nativeSession.LastError);
+            return NativeExportSupport.AllocateUtf8String(nativeSession.LastError);
         }
         catch (Exception)
         {
@@ -468,45 +476,15 @@ public static unsafe class NativeExports
     }
 
     /// <summary>
-    /// Releases a buffer previously returned by another method.
+    /// Releases a buffer previously returned by any export.
     /// </summary>
     /// <param name="pointer">The pointer to release, or a null pointer, which is a no-op.</param>
-    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_free")]
+    [UnmanagedCallersOnly(EntryPoint = "topsyturvy_tc_free")]
     public static void FreeBuffer(byte* pointer)
     {
         if (pointer is not null)
         {
             Marshal.FreeHGlobal((nint)pointer);
-        }
-    }
-
-    /// <summary>
-    /// Resolves a session handle to its <see cref="NativeSession"/>, treating any failure as an invalid handle.
-    /// </summary>
-    /// <param name="handle">The session handle to resolve.</param>
-    /// <param name="session">The resolved session, or <c>null</c> if resolution failed.</param>
-    /// <returns><c>true</c> if the handle resolved to a live session, otherwise <c>false</c>.</returns>
-    /// <remarks>
-    /// <see cref="SessionRegistry"/> is consulted first, since <see cref="GCHandle"/> APIs are unsafe to call
-    /// on a handle value that was not itself produced by <see cref="CreateSession"/>.
-    /// </remarks>
-    private static bool TryGetSession(nint handle, out NativeSession? session)
-    {
-        if (!SessionRegistry.IsActive(handle))
-        {
-            session = null;
-            return false;
-        }
-
-        try
-        {
-            session = GCHandle.FromIntPtr(handle).Target as NativeSession;
-            return session is not null;
-        }
-        catch (Exception)
-        {
-            session = null;
-            return false;
         }
     }
 
@@ -601,20 +579,5 @@ public static unsafe class NativeExports
         return stdinText.Length == 0
             ? []
             : stdinText.Split('\n');
-    }
-
-    /// <summary>
-    /// Copies a managed string to a null-terminated, UTF-8 encoded unmanaged buffer.
-    /// </summary>
-    /// <param name="value">The string to copy.</param>
-    /// <returns>A pointer to the newly allocated buffer, owned by the caller until released via <see cref="FreeBuffer"/>.</returns>
-    private static byte* AllocateUtf8String(string value)
-    {
-        int byteCount = Encoding.UTF8.GetByteCount(value);
-        nint buffer = Marshal.AllocHGlobal(byteCount + 1);
-        Span<byte> destination = new((void*)buffer, byteCount + 1);
-        Encoding.UTF8.GetBytes(value, destination);
-        destination[byteCount] = 0;
-        return (byte*)buffer;
     }
 }

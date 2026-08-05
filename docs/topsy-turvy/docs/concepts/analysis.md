@@ -1,5 +1,5 @@
 ---
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Analysis
@@ -54,6 +54,8 @@ The `SymbolKind` enum classifies what type of named entity a symbol represents:
 #### Constructing the Symbol Table
 
 The `SymbolTable` is constructed by calling `SymbolTable.Build(program, originalSource)`, which takes the root `ProgramNode` from the [AST](./ast.md) and the original, unprocessed source text.
+
+Standard Library and admitted external functions are added separately, after `Build`, by calling `SymbolTable.AddExternalFunction(name, parameters, returnType, returnArrayElementType, documentation)` once per function.  This call returns `false`, without overwriting the existing entry, if a symbol of that name already exists and was not itself added by an earlier call to `AddExternalFunction`: a Topsy Turvy declaration always shadows an external function of the same bare name.  This population step is performed by a per-host `ExternalFunctionRegistrar` class, one each in the Language Server, Web Editor and Embedded components rather than in `Analysis` itself, since each host loads its own `BindingCatalogue` differently.  Please see [Function Binding](./function-binding.md) for more details of how Standard Library and external functions become available to `SUMMON` calls.
 
 The builder walks the AST recursively, collecting `DeclarationNode` instances (variables), `FunctionDefinitionNode` instances (functions and their parameters) and descending into nested blocks such as conditionals, loops and switch statements.  For declarations and functions, definition positions are taken from the node `NameSpan`, not `Span`: `Span` covers the whole statement starting at its opening keyword, while `NameSpan` covers only the declared identifier (please see the Source Positions section on the [AST](./ast.md#source-positions) page).  Parameters carry their own `Span` independently of the function they belong to, so each reports its own position within the `UNDER THE TERMS OF` clause rather than reusing the position of the function.
 

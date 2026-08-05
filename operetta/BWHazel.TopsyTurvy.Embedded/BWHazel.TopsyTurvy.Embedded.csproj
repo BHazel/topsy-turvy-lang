@@ -24,6 +24,11 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.TypeChecker\BWHazel.TopsyTurvy.TypeChecker.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Analysis\BWHazel.TopsyTurvy.Analysis.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Runtime\BWHazel.TopsyTurvy.Runtime.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.StandardLibrary\BWHazel.TopsyTurvy.StandardLibrary.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\BWHazel.TopsyTurvy.StandardLibrary\bin\$(Configuration)\$(TargetFramework)\BWHazel.TopsyTurvy.StandardLibrary.xml" LogicalName="BWHazel.TopsyTurvy.StandardLibrary.xml" Link="BWHazel.TopsyTurvy.StandardLibrary.xml" />
   </ItemGroup>
 
 </Project>
