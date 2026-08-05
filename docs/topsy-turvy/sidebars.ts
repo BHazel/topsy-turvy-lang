@@ -52,6 +52,7 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'concepts/parser'},
         {type: 'doc', id: 'concepts/ast'},
         {type: 'doc', id: 'concepts/type-checker'},
+        {type: 'doc', id: 'concepts/function-binding'},
         {type: 'doc', id: 'concepts/runtime'},
         {type: 'doc', id: 'concepts/analysis'},
         {type: 'doc', id: 'concepts/language-server'},

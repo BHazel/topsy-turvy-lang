@@ -8,7 +8,7 @@ The Type Checker analyses a parsed Topsy Turvy programme and verifies that all t
 
 ## Implementation
 
-The Type Checker is implemented in the `BWHazel.TopsyTurvy.TypeChecker` namespace.  Its public entry point is the `TopsyTurvyTypeChecker` class, which exposes a single `Check(ProgramNode, sourceFileResolver)` method and returns a `TypeCheckResult`.  The optional `sourceFileResolver` delegate resolves a `PRAY ADMIT` import filename to its source text so that functions declared in imported files are visible to the check.  Passing `null` leaves imported functions unresolved.
+The Type Checker is implemented in the `BWHazel.TopsyTurvy.TypeChecker` namespace.  Its public entry point is the `TopsyTurvyTypeChecker` class, which exposes a single `Check(ProgramNode, sourceFileResolver, externalFunctions)` method and returns a `TypeCheckResult`.  The optional `sourceFileResolver` delegate resolves a `PRAY ADMIT` import filename to its source text so that functions declared in imported files are visible to the check.  Passing `null` leaves imported functions unresolved.  The optional `externalFunctions` parameter is a `BindingCatalogue`, defaulting to `BindingCatalogue.Default`, that supplies the signatures of Standard Library and admitted external functions so that a `SUMMON` call to one of them also type-checks.  Please see [Function Binding](./function-binding.md) for how this catalogue is built.
 
 ### Type Check Result
 
@@ -47,6 +47,8 @@ This pass exists solely to support **forward references** where a call to a func
 
 When the current file declares a namespace with `TOWN`, every signature collected from it is recorded under a namespace-qualified key rather than its bare name.  The same qualification applies when collecting signatures contributed by a `PRAY ADMIT`-imported file: its own namespace, if it declares one, is used, not the importing file.
 
+Once every Topsy Turvy function signature has been collected, a further step records a signature for each function in the `externalFunctions` catalogue that has not already been claimed by a Topsy Turvy function of the same qualified name and parameter types.  This means a Topsy Turvy function always takes priority over a Standard Library or admitted external function of the same signature: the external one is simply skipped.  This shadowing rule is enforced independently by several parts of the toolchain and is described fully on the [Function Binding](./function-binding.md) page.
+
 ### Pass 2: Statement and Expression Type Checking
 
 The second pass walks every node in the programme carrying four parallel scope stacks:
@@ -61,7 +63,7 @@ The second pass walks every node in the programme carrying four parallel scope s
 Each expression node in the AST is visited to infer its type and the result is recorded in the `SemanticModel`.  Statement nodes are checked against the inferred types of their constituent expressions.  Examples include:
 
 * **Assignment:** The right-hand side type must be compatible with the variable declared type.
-* **Function call:** Argument count and types must match the callee `FunctionSignature`.  A bare function name is resolved to a signature by trying, in order:
+* **Function call:** Argument count and types must match the callee `FunctionSignature`, whether the callee is a Topsy Turvy function or one recorded from the `externalFunctions` catalogue.  A bare function name is resolved to a signature by trying, in order:
     * The caller namespace.
     * Each namespace opened with `PRAY RECOGNISE`.
     * Then the global, non-namespaced, table.

@@ -11,6 +11,7 @@ The _Operetta_ implementation of Topsy Turvy uses standard conventions in progra
 * The transformed code is then parsed through a [**Parser**](./parser.md), which is split into several layers, all underpinned by the Lexer, which identifies individual tokens.
 * The result of the parser is an [**Abstract Syntax Tree (AST)**](./ast.md) which is a hierarchical tree-like representation of the source code.
 * The AST is then checked by the [**Type Checker**](./type-checker.md), which verifies that all types are used consistently before execution begins.
+* Standard Library and external functions undergo [**Function Binding**](./function-binding.md) so they are available to code during execution.
 * The checked AST can then be run in a [**Runtime**](./runtime.md) environment, such as by the Interpreter, as an actual running programme.
 
 Additionally, the AST can undergo [**Analysis**](./analysis.md) to provide useful information and rich experiences when working with code, exposed to editors and tools via a [**Language Server**](./language-server.md) or even regenerate valid Topsy Turvy source code.
@@ -22,12 +23,13 @@ flowchart LR
     P["Parser"]
     AST["AST"]
     TC["Type Checker"]
+    FB["Function Binding"]
     R["Runtime"]
     A["Analysis"]
     LS["Language Server"]
 
     G --> PP --> P --> AST
-    AST --> TC --> R
+    AST --> TC --> FB --> R
     AST --> A --> LS
 
     click G "./grammar"
@@ -35,6 +37,7 @@ flowchart LR
     click P "./parser"
     click AST "./ast"
     click TC "./type-checker"
+    click FB "./function-binding"
     click R "./runtime"
     click A "./analysis"
     click LS "./language-server"
