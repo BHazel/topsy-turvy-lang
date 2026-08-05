@@ -1,6 +1,6 @@
 # Topsy Turvy
 ## A Gilbert & Sullivan Operetta Programming Language
-### Language Specification — Version 0.8.0
+### Language Specification — Version 0.9.0
 
 > *"Things are seldom what they seem; skim milk masquerades as cream."*
 > — H.M.S. Pinafore
