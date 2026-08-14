@@ -17,6 +17,7 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// </summary>
 /// <param name="io">The I/O handler used for all input and output operations.</param>
 /// <param name="externalFunctions">The catalogue of external functions (Standard Library and any external library) available to <c>SUMMON</c>.</param>
+/// <param name="observer">An optional observer notified before each statement executes and around each function call, used by a debugger; <c>null</c> for normal execution.</param>
 /// <remarks>
 /// <para>
 /// The interpreter is a tree-walking interpreter that executes the AST of a parsed programme directly.  It works by recursively
@@ -98,13 +99,22 @@ namespace BWHazel.TopsyTurvy.Runtime;
 /// DiagnosticCollection diagnostics = interpreter.Execute(program, options: options);
 /// </code>
 /// </remarks>
-public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunctions = null)
+public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunctions = null, IExecutionObserver? observer = null)
 {
+    /// <summary>
+    /// The <see cref="Exception.Data"/> key used to mark a <see cref="TopsyTurvyRuntimeException"/> or
+    /// <see cref="TopsyTurvyThrowException"/> as already reported to <see cref="IExecutionObserver.OnUnhandledError"/>,
+    /// so it is not reported again at each enclosing <see cref="ExecuteStatement"/> frame as it unwinds.
+    /// </summary>
+    private const string ObservedByExecutionObserverDataKey = "BWHazel.TopsyTurvy.Runtime.ObservedByExecutionObserver";
+
     private readonly ITopsyTurvyIO io = io;
     private readonly ExternalFunctionInvoker externalFunctions = new(externalFunctions ?? BindingCatalogue.Default);
+    private readonly IExecutionObserver? executionObserver = observer;
     private readonly Dictionary<string, List<FunctionDefinitionNode>> functions = [];
     private readonly Dictionary<FunctionDefinitionNode, string?> functionNamespaces = [];
     private readonly HashSet<string> openNamespaces = [];
+    private readonly HashSet<FunctionDefinitionNode> importedFunctions = [];
     private CancellationToken cancellationToken;
     private DateTime executionTimeout = DateTime.MinValue;
     private string? sourceDirectory;
@@ -239,12 +249,42 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     /// </summary>
     /// <param name="statement">The statement to execute.</param>
     /// <param name="environment">The environment.</param>
+    /// <remarks>
+    /// If an exception is thrown during execution, the observer is notified exactly once, at the innermost point,
+    /// before any enclosing finally block, for example <see cref="EvaluateFunctionCall"/>s frame-exit notification,
+    /// has started to unwind.
+    /// </remarks>
     /// <exception cref="ReturnSignalException">Thrown when a return statement is encountered.</exception>
     /// <exception cref="TopsyTurvyThrowException">Thrown when a throw statement is encountered.</exception>
     /// <exception cref="BreakSignalException">Thrown when a break statement is encountered.</exception>
     /// <exception cref="ContinueSignalException">Thrown when a continue statement is encountered.</exception>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when an unexpected runtime error occurs.</exception>
     private void ExecuteStatement(Statement statement, TopsyTurvyEnvironment environment)
+    {
+        this.executionObserver?.OnBeforeStatement(statement, environment);
+
+        try
+        {
+            this.DispatchStatement(statement, environment);
+        }
+        catch (Exception exception) when (exception is TopsyTurvyRuntimeException or TopsyTurvyThrowException)
+        {
+            if (!exception.Data.Contains(ObservedByExecutionObserverDataKey))
+            {
+                exception.Data[ObservedByExecutionObserverDataKey] = true;
+                this.executionObserver?.OnUnhandledError(exception);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Dispatches a single statement to the executor matching its AST node type.
+    /// </summary>
+    /// <param name="statement">The statement to execute.</param>
+    /// <param name="environment">The environment.</param>
+    private void DispatchStatement(Statement statement, TopsyTurvyEnvironment environment)
     {
         switch (statement)
         {
@@ -877,6 +917,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
             {
                 this.AddFunction(QualifyName(importedNamespace, functionDefinition.Name), functionDefinition);
                 this.functionNamespaces[functionDefinition] = importedNamespace;
+                this.importedFunctions.Add(functionDefinition);
             }
         }
     }
@@ -947,7 +988,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
     /// <param name="environment">The environment.</param>
     /// <returns>The value of the expression.</returns>
     /// <exception cref="TopsyTurvyRuntimeException">Thrown when the expression type is unhandled.</exception>
-    private TopsyTurvyValue EvaluateExpression(Expression expression, TopsyTurvyEnvironment environment) => expression switch
+    public TopsyTurvyValue EvaluateExpression(Expression expression, TopsyTurvyEnvironment environment) => expression switch
     {
         LiteralNode literal => EvaluateLiteral(literal),
         IdentifierNode ident => environment.Get(ident.Name),
@@ -1667,6 +1708,9 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         string? callerNamespace = this.currentExecutionNamespace;
         this.currentExecutionNamespace = this.functionNamespaces.GetValueOrDefault(function);
 
+        bool isImportedFunction = this.importedFunctions.Contains(function);
+        this.executionObserver?.OnFunctionEnter(functionName, span, scope, isImportedFunction);
+
         TopsyTurvyValue returnValue = TopsyTurvyValue.Null();
         try
         {
@@ -1679,6 +1723,7 @@ public sealed class Interpreter(ITopsyTurvyIO io, BindingCatalogue? externalFunc
         finally
         {
             this.currentExecutionNamespace = callerNamespace;
+            this.executionObserver?.OnFunctionExit(functionName);
         }
 
         return returnValue;

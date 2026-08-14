@@ -140,6 +140,17 @@ public sealed class TopsyTurvyEnvironment
         this.variables;
 
     /// <summary>
+    /// Gets the enclosing environment in the scope chain, or <c>null</c> if this environment has none.
+    /// </summary>
+    /// <remarks>
+    /// Returns <c>null</c> for both the global environment and any function environment, since a function
+    /// environment is deliberately isolated with no enclosing chain (see <see cref="CreateFunctionEnvironment"/>).
+    /// An example use for this property is to walk the enclosing chain to build a full picture of all variables
+    /// in-scope for a paused frame in a debugger.
+    /// </remarks>
+    public TopsyTurvyEnvironment? Enclosing => this.enclosingEnvironment;
+
+    /// <summary>
     /// Determines whether a variable is declared as a constant in this environment.
     /// </summary>
     /// <param name="name">The variable name.</param>
