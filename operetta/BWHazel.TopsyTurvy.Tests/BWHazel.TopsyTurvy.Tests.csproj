@@ -28,6 +28,7 @@
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Bindings\BWHazel.TopsyTurvy.Bindings.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Cli\BWHazel.TopsyTurvy.Cli.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Debugger\BWHazel.TopsyTurvy.Debugger.csproj" />
+    <ProjectReference Include="..\BWHazel.TopsyTurvy.DebuggerHost\BWHazel.TopsyTurvy.DebuggerHost.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Embedded\BWHazel.TopsyTurvy.Embedded.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.LanguageServer\BWHazel.TopsyTurvy.LanguageServer.csproj" />
     <ProjectReference Include="..\BWHazel.TopsyTurvy.Parser\BWHazel.TopsyTurvy.Parser.csproj" />

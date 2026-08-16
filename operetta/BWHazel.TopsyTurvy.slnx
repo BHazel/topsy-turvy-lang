@@ -5,6 +5,7 @@
   <Project Path="BWHazel.TopsyTurvy.Cli/BWHazel.TopsyTurvy.Cli.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Cli.E2ETests/BWHazel.TopsyTurvy.Cli.E2ETests.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Debugger/BWHazel.TopsyTurvy.Debugger.csproj" />
+  <Project Path="BWHazel.TopsyTurvy.DebuggerHost/BWHazel.TopsyTurvy.DebuggerHost.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Embedded/BWHazel.TopsyTurvy.Embedded.csproj" />
   <Project Path="BWHazel.TopsyTurvy.LanguageServer/BWHazel.TopsyTurvy.LanguageServer.csproj" />
   <Project Path="BWHazel.TopsyTurvy.Parser/BWHazel.TopsyTurvy.Parser.csproj" />
