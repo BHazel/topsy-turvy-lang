@@ -22,12 +22,18 @@ public abstract class CliTestBase : IDisposable
         string subDirectory = Path.Combine(fixture.RootDirectory, Path.GetRandomFileName());
         Directory.CreateDirectory(subDirectory);
         this.WorkingDirectory = subDirectory;
+        this.BinaryPath = fixture.BinaryPath;
     }
 
     /// <summary>
     /// Gets the unique per-test working directory on the real filesystem.
     /// </summary>
     protected string WorkingDirectory { get; }
+
+    /// <summary>
+    /// Gets the absolute path to the CLI binary under test.
+    /// </summary>
+    protected string BinaryPath { get; }
 
     /// <summary>
     /// Gets the absolute path to the compiled external library fixture assembly.

@@ -42,6 +42,7 @@ public sealed class DebugSession(Func<string, string?>? sourceFileResolver = nul
 
     private readonly TopsyTurvyParser parser = new();
     private readonly TopsyTurvyTypeChecker typeChecker = new();
+    private string[] sourceLines = [];
     private DebuggerExecutionObserver? debuggerExecutionObserver;
     private Interpreter? interpreter;
     private InterpreterExecutionOptions? executionOptions;
@@ -118,6 +119,7 @@ public sealed class DebugSession(Func<string, string?>? sourceFileResolver = nul
 
         this.program = parsedProgram;
         this.sourceFilePath = sourceFilePath;
+        this.sourceLines = source.ReplaceLineEndings("\n").Split('\n');
         this.executionOptions = new(
             ExecutionTimeout: null,
             SourceFilePath: sourceFilePath,
@@ -194,6 +196,23 @@ public sealed class DebugSession(Func<string, string?>? sourceFileResolver = nul
     {
         this.EnsureStarted();
         return this.debuggerExecutionObserver!.GetBreakpoints();
+    }
+
+    /// <summary>
+    /// Gets the source text of a single line of the file being debugged.
+    /// </summary>
+    /// <param name="line">The 1-based source line.</param>
+    /// <returns>The text of the line, with no trailing line terminator.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="line"/> is outside the file.</exception>
+    public string GetSourceLine(int line)
+    {
+        this.EnsureStarted();
+        if (line < 1 || line > this.sourceLines.Length)
+        {
+            throw new ArgumentException($"Line {line} is outside '{this.sourceFilePath}'.", nameof(line));
+        }
+
+        return this.sourceLines[line - 1];
     }
 
     /// <summary>

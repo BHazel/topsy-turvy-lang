@@ -13,7 +13,8 @@ RootCommand rootCommand = new(rootDescription)
     PlaybillCommandBuilder.Build(),
     CadenzaCommandBuilder.Build(),
     SorcererCommandBuilder.Build(),
-    IncantationCommandBuilder.Build()
+    IncantationCommandBuilder.Build(),
+    DirectorCommandBuilder.Build()
 };
 
 return await rootCommand.Parse(args).InvokeAsync();
