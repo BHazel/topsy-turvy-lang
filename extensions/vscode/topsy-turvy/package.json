@@ -370,6 +370,53 @@
         "path": "./snippets/topsy-turvy.json"
       }
     ],
+    "breakpoints": [
+      {
+        "language": "topsy-turvy"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "topsy-turvy",
+        "label": "Topsy Turvy",
+        "languages": [
+          "topsy-turvy"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the .topsy file to debug."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "topsy-turvy",
+            "request": "launch",
+            "name": "Topsy Turvy File",
+            "program": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Topsy Turvy: Current File",
+            "description": "Starts a debug session against the active .topsy file.",
+            "body": {
+              "type": "topsy-turvy",
+              "request": "launch",
+              "name": "Topsy Turvy File",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
+    ],
     "semanticTokenScopes": [
       {
         "language": "topsy-turvy",
@@ -417,8 +464,8 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.120.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.5",

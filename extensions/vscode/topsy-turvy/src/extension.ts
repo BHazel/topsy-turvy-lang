@@ -10,6 +10,11 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 
+import {
+    TopsyTurvyDebugAdapterDescriptorFactory,
+    TopsyTurvyDebugAdapterTrackerFactory,
+    TopsyTurvyDebugConfigurationProvider,
+} from './debugAdapterFactory.js';
 import { resolveCliPath } from './paths.js';
 
 const execFileAsync = promisify(execFile);
@@ -24,6 +29,27 @@ function resolveConfiguredCliPath(context: vscode.ExtensionContext): string {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider(
+            'topsy-turvy',
+            new TopsyTurvyDebugConfigurationProvider(),
+        ),
+    );
+
+    context.subscriptions.push(
+        vscode.debug.registerDebugAdapterDescriptorFactory(
+            'topsy-turvy',
+            new TopsyTurvyDebugAdapterDescriptorFactory(() => resolveConfiguredCliPath(context)),
+        ),
+    );
+
+    context.subscriptions.push(
+        vscode.debug.registerDebugAdapterTrackerFactory(
+            'topsy-turvy',
+            new TopsyTurvyDebugAdapterTrackerFactory(),
+        ),
+    );
+
     const cliPath = resolveConfiguredCliPath(context);
 
     if (!fs.existsSync(cliPath)) {
